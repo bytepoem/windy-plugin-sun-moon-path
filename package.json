@@ -1,0 +1,40 @@
+{
+    "name": "windy-plugin-sun-path",
+    "version": "0.1.0",
+    "description": "Show sunrise and sunset direction lines on Windy.com",
+    "main": "dist/plugin.min.js",
+    "type": "module",
+    "scripts": {
+        "build": "rm -rf dist && mkdir dist && SERVE=false rollup -c && cp package.json dist/",
+        "build:win": "rmdir /s /q dist && mkdir dist && set SERVE=false && rollup -c && copy package.json dist\\",
+        "start": "rollup -w -c",
+        "example01": "CONFIG=example01 rollup -w -c",
+        "example02": "CONFIG=example02 rollup -w -c",
+        "example03": "CONFIG=example03 rollup -w -c",
+        "example04": "CONFIG=example04 rollup -w -c",
+        "example05": "CONFIG=example05 rollup -w -c",
+        "example06": "CONFIG=example06 rollup -w -c",
+        "example07": "CONFIG=example07 rollup -w -c",
+        "build:all-examples": "for number in 01 02 03 04 05 06; do CONFIG=example$number SERVE=false rollup -c; done",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/bytepoem/windy-plugin-sun-path.git"
+    },
+    "keywords": ["windy", "windy.com", "plugins", "sunrise", "sunset"],
+    "author": "Windyty, S.E.",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/bytepoem/windy-plugin-sun-path/issues"
+    },
+    "homepage": "https://docs.windy-plugins.com/",
+    "dependencies": {
+        "@windycom/plugin-devtools": "3.0.4",
+        "suncalc": "2.0.1"
+    },
+    "devDependencies": {
+        "vitest": "^4.1.10"
+    }
+}
