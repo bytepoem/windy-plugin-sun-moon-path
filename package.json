@@ -1,7 +1,7 @@
 {
     "name": "windy-plugin-sun-path",
-    "version": "0.1.0",
-    "description": "Show sunrise and sunset direction lines on Windy.com",
+    "version": "0.2.0",
+    "description": "Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.com",
     "main": "dist/plugin.min.js",
     "type": "module",
     "scripts": {
@@ -23,7 +23,7 @@
         "type": "git",
         "url": "git+https://github.com/bytepoem/windy-plugin-sun-path.git"
     },
-    "keywords": ["windy", "windy.com", "plugins", "sunrise", "sunset"],
+    "keywords": ["windy", "windy.com", "plugins", "sunrise", "sunset", "moonrise", "moonset"],
     "author": "Windyty, S.E.",
     "license": "ISC",
     "bugs": {

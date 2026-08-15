@@ -14,9 +14,11 @@ export const LINE_COLORS = {
     after: '#991b1b',
 } as const;
 export const CURRENT_DIRECTION_COLOR = '#ffffff';
+export const CURRENT_MOON_DIRECTION_COLOR = '#8ec5ff';
 
-export type SolarEvent = 'sunrise' | 'sunset';
+export type SolarEvent = 'sunrise' | 'sunset' | 'moonrise' | 'moonset';
 export type SolarSampleKind = 'before' | 'event' | 'after';
+export type CelestialBody = 'sun' | 'moon';
 
 export interface Coordinates {
     lat: number;
@@ -34,8 +36,25 @@ export interface SolarSample {
 }
 
 export interface SolarDirection {
+    body: 'sun';
     azimuth: number;
+    altitude: number;
     endpoint: Coordinates;
+}
+
+export interface CurrentCelestialDirection {
+    body: CelestialBody;
+    azimuth: number;
+    altitude: number;
+    endpoint: Coordinates;
+}
+
+export interface CurrentMoonInfo extends CurrentCelestialDirection {
+    body: 'moon';
+    distanceKm: number;
+    illuminationFraction: number;
+    phase: number;
+    waxing: boolean;
 }
 
 export interface SolarPathSuccess {
@@ -53,7 +72,23 @@ export interface SolarPathUnavailable {
 
 export type SolarPath = SolarPathSuccess | SolarPathUnavailable;
 
+export type AstronomyTimelineKind = 'dawn' | 'sunrise' | 'moonrise' | 'sunset' | 'dusk' | 'moonset';
+
+export interface AstronomyTimelineItem {
+    kind: AstronomyTimelineKind;
+    label: string;
+    body: CelestialBody;
+    time: Date | null;
+}
+
+export interface AstronomyTimeline {
+    dayStart: Date;
+    dayEnd: Date;
+    items: AstronomyTimelineItem[];
+}
+
 const SAMPLE_KINDS: SolarSampleKind[] = ['before', 'event', 'after'];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const isFiniteNumber = (value: number): boolean => Number.isFinite(value);
 
@@ -79,6 +114,11 @@ const parseDateInput = (dateInput: string): [number, number, number] => {
     return [year, month, day];
 };
 
+const formatDateInput = (date: Date): string =>
+    `${date.getUTCFullYear().toString().padStart(4, '0')}-${(date.getUTCMonth() + 1)
+        .toString()
+        .padStart(2, '0')}-${date.getUTCDate().toString().padStart(2, '0')}`;
+
 const getDateTimePart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): number => {
     const part = parts.find(({ type: partType }) => partType === type);
     return part ? Number(part.value) : Number.NaN;
@@ -89,6 +129,7 @@ const getTimeZoneOffsetMinutes = (instant: Date, timeZone: string): number => {
         const parts = new Intl.DateTimeFormat('en-US', {
             timeZone,
             hour12: false,
+            hourCycle: 'h23',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -103,8 +144,7 @@ const getTimeZoneOffsetMinutes = (instant: Date, timeZone: string): number => {
         const hour = getDateTimePart(parts, 'hour');
         const minute = getDateTimePart(parts, 'minute');
         const second = getDateTimePart(parts, 'second');
-        const normalizedHour = hour === 24 ? 0 : hour;
-        const localAsUtc = Date.UTC(year, month - 1, day, normalizedHour, minute, second);
+        const localAsUtc = Date.UTC(year, month - 1, day, hour, minute, second);
 
         return (localAsUtc - instant.getTime()) / 60_000;
     } catch {
@@ -112,17 +152,29 @@ const getTimeZoneOffsetMinutes = (instant: Date, timeZone: string): number => {
     }
 };
 
-/** Convert a date input value into a stable local-noon instant for a time zone. */
-export const dateInputToUtcNoon = (dateInput: string, timeZone = 'UTC'): Date => {
+const dateInputToUtcHour = (dateInput: string, timeZone: string, hour: number): Date => {
     const [year, month, day] = parseDateInput(dateInput);
-    const naiveUtcNoon = new Date(Date.UTC(year, month - 1, day, 12));
+    const naiveUtc = new Date(Date.UTC(year, month - 1, day, hour));
 
     if (!timeZone || timeZone === 'UTC') {
-        return naiveUtcNoon;
+        return naiveUtc;
     }
 
-    const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtcNoon, timeZone);
-    return new Date(naiveUtcNoon.getTime() - offsetMinutes * 60_000);
+    const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtc, timeZone);
+    return new Date(naiveUtc.getTime() - offsetMinutes * 60_000);
+};
+
+/** Convert a date input value into a stable local-noon instant for a time zone. */
+export const dateInputToUtcNoon = (dateInput: string, timeZone = 'UTC'): Date =>
+    dateInputToUtcHour(dateInput, timeZone, 12);
+
+/** Convert a date input value into the observer's local midnight instant. */
+export const dateInputToUtcMidnight = (dateInput: string, timeZone = 'UTC'): Date =>
+    dateInputToUtcHour(dateInput, timeZone, 0);
+
+export const addDaysToDateInput = (dateInput: string, days: number): string => {
+    const [year, month, day] = parseDateInput(dateInput);
+    return formatDateInput(new Date(Date.UTC(year, month - 1, day + days)));
 };
 
 /** Format a Date using the observer's local time zone. */
@@ -131,6 +183,15 @@ export const formatLocalDateTime = (date: Date, timeZone: string): string =>
         timeZone,
         dateStyle: 'medium',
         timeStyle: 'short',
+    }).format(date);
+
+/** Format a Date as a compact local clock value. */
+export const formatLocalClock = (date: Date, timeZone: string): string =>
+    new Intl.DateTimeFormat('en-GB', {
+        timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
     }).format(date);
 
 /** Format a Date as yyyy-mm-dd for a date input in the supplied time zone. */
@@ -158,6 +219,11 @@ export const normalizeAzimuth = (azimuth: number): number => {
 export const compassDirection = (azimuth: number): string => {
     const directions = ['北', '东北', '东', '东南', '南', '西南', '西', '西北'];
     return directions[Math.round(normalizeAzimuth(azimuth) / 45) % directions.length];
+};
+
+export const moonPhaseName = (phase: number): string => {
+    const names = ['新月', '娥眉月', '上弦月', '盈凸月', '满月', '亏凸月', '下弦月', '残月'];
+    return names[Math.round(((phase % 1) + 1) % 1 * 8) % names.length];
 };
 
 const normalizeLongitude = (longitude: number): number => {
@@ -264,15 +330,115 @@ export const splitPolylineAtDateLine = (points: Coordinates[]): Coordinates[][] 
     return segments;
 };
 
+const eventName = (event: SolarEvent): string => {
+    switch (event) {
+        case 'sunrise':
+            return '日出';
+        case 'sunset':
+            return '日落';
+        case 'moonrise':
+            return '月升';
+        case 'moonset':
+            return '月落';
+    }
+};
+
 const sampleLabel = (event: SolarEvent, kind: SolarSampleKind): string => {
-    const eventName = event === 'sunrise' ? '日出' : '日落';
+    const name = eventName(event);
     if (kind === 'before') {
-        return `${eventName}前 30 分钟`;
+        return `${name}前 30 分钟`;
     }
     if (kind === 'after') {
-        return `${eventName}后 30 分钟`;
+        return `${name}后 30 分钟`;
     }
-    return eventName;
+    return name;
+};
+
+interface LocalMoonTimes {
+    rise?: Date;
+    set?: Date;
+    alwaysUp?: boolean;
+    alwaysDown?: boolean;
+}
+
+const isValidDate = (value: Date | null | undefined): value is Date =>
+    value instanceof Date && !Number.isNaN(value.getTime());
+
+const getMoonTimesForLocalDate = (
+    dateInput: string,
+    timeZone: string,
+    location: Coordinates,
+): LocalMoonTimes => {
+    const dayStart = dateInputToUtcMidnight(dateInput, timeZone);
+    const dayEnd = dateInputToUtcMidnight(addDaysToDateInput(dateInput, 1), timeZone);
+    const candidates: Date[] = [];
+
+    // SunCalc scans UTC calendar days. Scan the UTC days touching the local civil day,
+    // then retain only events inside the observer's actual local-day interval.
+    for (const dayOffset of [-1, 0, 1]) {
+        const scanDate = new Date(dayStart.getTime() + dayOffset * DAY_MS);
+        const times = SunCalc.getMoonTimes(scanDate, location.lat, location.lon);
+        if (isValidDate(times.rise)) {
+            candidates.push(times.rise);
+        }
+        if (isValidDate(times.set)) {
+            candidates.push(times.set);
+        }
+    }
+
+    const localCandidates = candidates
+        .filter(candidate => candidate.getTime() >= dayStart.getTime() && candidate.getTime() < dayEnd.getTime())
+        .sort((first, second) => first.getTime() - second.getTime());
+    const rise = localCandidates.find(candidate => {
+        const times = SunCalc.getMoonTimes(candidate, location.lat, location.lon);
+        return isValidDate(times.rise) && Math.abs(times.rise.getTime() - candidate.getTime()) < 60_000;
+    });
+    const set = localCandidates.find(candidate => {
+        const times = SunCalc.getMoonTimes(candidate, location.lat, location.lon);
+        return isValidDate(times.set) && Math.abs(times.set.getTime() - candidate.getTime()) < 60_000;
+    });
+
+    if (rise || set) {
+        return { rise, set };
+    }
+
+    const midpoint = new Date(dayStart.getTime() + (dayEnd.getTime() - dayStart.getTime()) / 2);
+    const altitude = SunCalc.getMoonPosition(midpoint, location.lat, location.lon).altitude;
+    return altitude > 0 ? { alwaysUp: true } : { alwaysDown: true };
+};
+
+const eventUnavailable = (
+    event: SolarEvent,
+    times: { alwaysUp?: boolean; alwaysDown?: boolean },
+): SolarPathUnavailable => ({
+    status: 'unavailable',
+    event,
+    reason: times.alwaysUp ? 'always-up' : times.alwaysDown ? 'always-down' : 'not-available',
+});
+
+export const calculateCurrentCelestialDirection = ({
+    date,
+    location,
+    body,
+}: {
+    date: Date;
+    location: Coordinates;
+    body: CelestialBody;
+}): CurrentCelestialDirection => {
+    const position = body === 'moon'
+        ? SunCalc.getMoonPosition(date, location.lat, location.lon)
+        : SunCalc.getPosition(date, location.lat, location.lon);
+    if (!Number.isFinite(position.azimuth) || !Number.isFinite(position.altitude)) {
+        throw new RangeError(`${body === 'moon' ? 'Lunar' : 'Solar'} position is invalid`);
+    }
+
+    const azimuth = normalizeAzimuth(position.azimuth);
+    return {
+        body,
+        azimuth,
+        altitude: position.altitude,
+        endpoint: destinationPoint(location, azimuth, CURRENT_DIRECTION_LENGTH_KM),
+    };
 };
 
 export const calculateCurrentSolarDirection = ({
@@ -281,45 +447,78 @@ export const calculateCurrentSolarDirection = ({
 }: {
     date: Date;
     location: Coordinates;
-}): SolarDirection => {
-    const position = SunCalc.getPosition(date, location.lat, location.lon);
-    if (!Number.isFinite(position.azimuth)) {
-        throw new RangeError('Solar azimuth is invalid');
+}): SolarDirection => calculateCurrentCelestialDirection({ date, location, body: 'sun' }) as SolarDirection;
+
+export const calculateCurrentMoonInfo = ({
+    date,
+    location,
+}: {
+    date: Date;
+    location: Coordinates;
+}): CurrentMoonInfo => {
+    const position = SunCalc.getMoonPosition(date, location.lat, location.lon);
+    const illumination = SunCalc.getMoonIllumination(date);
+    if (
+        !Number.isFinite(position.azimuth) ||
+        !Number.isFinite(position.altitude) ||
+        !Number.isFinite(position.distance) ||
+        !Number.isFinite(illumination.fraction) ||
+        !Number.isFinite(illumination.phase)
+    ) {
+        throw new RangeError('Lunar position is invalid');
     }
 
-    const azimuth = normalizeAzimuth(position.azimuth);
+    const direction = calculateCurrentCelestialDirection({ date, location, body: 'moon' });
     return {
-        azimuth,
-        endpoint: destinationPoint(location, azimuth, CURRENT_DIRECTION_LENGTH_KM),
+        ...direction,
+        body: 'moon',
+        distanceKm: position.distance,
+        illuminationFraction: illumination.fraction,
+        phase: illumination.phase,
+        waxing: illumination.waxing,
     };
 };
 
 export const calculateSolarPath = ({
     date,
+    dateInput,
+    timeZone = 'UTC',
     location,
     event,
     elevationM = 0,
 }: {
     date: Date;
+    dateInput?: string;
+    timeZone?: string;
     location: Coordinates;
     event: SolarEvent;
     elevationM?: number;
 }): SolarPath => {
-    const times = SunCalc.getTimes(date, location.lat, location.lon, elevationM);
-    const eventTime = times[event];
+    let eventTime: Date | null | undefined;
+    let availability: { alwaysUp?: boolean; alwaysDown?: boolean } = {};
 
-    if (!(eventTime instanceof Date) || Number.isNaN(eventTime.getTime())) {
-        return {
-            status: 'unavailable',
-            event,
-            reason: times.alwaysUp ? 'always-up' : times.alwaysDown ? 'always-down' : 'not-available',
-        };
+    if (event === 'moonrise' || event === 'moonset') {
+        const localDateInput = dateInput || dateInputForInstant(date, timeZone);
+        const moonTimes = getMoonTimesForLocalDate(localDateInput, timeZone, location);
+        eventTime = event === 'moonrise' ? moonTimes.rise : moonTimes.set;
+        availability = moonTimes;
+    } else {
+        const times = SunCalc.getTimes(date, location.lat, location.lon, elevationM);
+        eventTime = event === 'sunrise' ? times.sunrise : times.sunset;
+        availability = times;
+    }
+
+    if (!isValidDate(eventTime)) {
+        return eventUnavailable(event, availability);
     }
 
     const samples = SAMPLE_OFFSETS_MINUTES.map((offsetMinutes, index) => {
         const kind = SAMPLE_KINDS[index];
         const time = new Date(eventTime.getTime() + offsetMinutes * 60_000);
-        const azimuth = normalizeAzimuth(SunCalc.getPosition(time, location.lat, location.lon).azimuth);
+        const position = event === 'moonrise' || event === 'moonset'
+            ? SunCalc.getMoonPosition(time, location.lat, location.lon)
+            : SunCalc.getPosition(time, location.lat, location.lon);
+        const azimuth = normalizeAzimuth(position.azimuth);
 
         return {
             kind,
@@ -337,5 +536,47 @@ export const calculateSolarPath = ({
         event,
         eventTime,
         samples,
+    };
+};
+
+const timelineItem = (
+    kind: AstronomyTimelineKind,
+    label: string,
+    body: CelestialBody,
+    time: Date | null | undefined,
+): AstronomyTimelineItem => ({
+    kind,
+    label,
+    body,
+    time: isValidDate(time) ? time : null,
+});
+
+export const calculateAstronomyTimeline = ({
+    dateInput,
+    timeZone,
+    location,
+    elevationM = 0,
+}: {
+    dateInput: string;
+    timeZone: string;
+    location: Coordinates;
+    elevationM?: number;
+}): AstronomyTimeline => {
+    const dayStart = dateInputToUtcMidnight(dateInput, timeZone);
+    const dayEnd = dateInputToUtcMidnight(addDaysToDateInput(dateInput, 1), timeZone);
+    const sunTimes = SunCalc.getTimes(dateInputToUtcNoon(dateInput, timeZone), location.lat, location.lon, elevationM);
+    const moonTimes = getMoonTimesForLocalDate(dateInput, timeZone, location);
+
+    return {
+        dayStart,
+        dayEnd,
+        items: [
+            timelineItem('dawn', '蓝调开始', 'sun', sunTimes.dawn),
+            timelineItem('sunrise', '日出', 'sun', sunTimes.sunrise),
+            timelineItem('moonrise', '月升', 'moon', moonTimes.rise),
+            timelineItem('sunset', '日落', 'sun', sunTimes.sunset),
+            timelineItem('dusk', '蓝调结束', 'sun', sunTimes.dusk),
+            timelineItem('moonset', '月落', 'moon', moonTimes.set),
+        ],
     };
 };

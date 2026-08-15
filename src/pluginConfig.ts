@@ -2,10 +2,10 @@ import type { ExternalPluginConfig } from '@windy/interfaces.d';
 
 const config: ExternalPluginConfig = {
     name: 'windy-plugin-sun-path',
-    version: '0.1.0',
+    version: '0.2.0',
     icon: '☀️',
-    title: '日出日落方向线工具',
-    description: '在 Windy 地图上显示日出、日落及前后 30 分钟方向线。',
+    title: 'Sun & Moon Path',
+    description: 'Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.',
     author: 'bytepoem',
     repository: 'https://github.com/bytepoem/windy-plugin-sun-path',
     desktopUI: 'embedded',

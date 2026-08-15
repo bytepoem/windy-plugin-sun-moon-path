@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    calculateAstronomyTimeline,
+    calculateCurrentMoonInfo,
     calculateCurrentSolarDirection,
     calculateSolarPath,
     CURRENT_DIRECTION_LENGTH_KM,
+    CURRENT_DIRECTION_LENGTH_KM as CURRENT_MOON_DIRECTION_LENGTH_KM,
+    dateInputToUtcMidnight,
     dateInputToUtcNoon,
     destinationPoint,
     distanceKm,
@@ -139,5 +143,75 @@ describe('solar path geometry', () => {
 
         expect(northern.status).toBe('ok');
         expect(southern.status).toBe('ok');
+    });
+
+    it('calculates local moonrise and moonset samples', () => {
+        const location = { lat: 23.05, lon: 113.37 };
+        const moonrise = calculateSolarPath({
+            date: dateInputToUtcMidnight('2026-08-15', 'Asia/Shanghai'),
+            dateInput: '2026-08-15',
+            timeZone: 'Asia/Shanghai',
+            location,
+            event: 'moonrise',
+        });
+        const moonset = calculateSolarPath({
+            date: dateInputToUtcMidnight('2026-08-15', 'Asia/Shanghai'),
+            dateInput: '2026-08-15',
+            timeZone: 'Asia/Shanghai',
+            location,
+            event: 'moonset',
+        });
+
+        expect(moonrise.status).toBe('ok');
+        expect(moonset.status).toBe('ok');
+        if (moonrise.status !== 'ok' || moonset.status !== 'ok') {
+            return;
+        }
+
+        expect(moonrise.samples.map(sample => sample.offsetMinutes)).toEqual([-30, 0, 30]);
+        expect(moonset.samples.map(sample => sample.offsetMinutes)).toEqual([-30, 0, 30]);
+        expect(moonrise.eventTime.getUTCHours()).toBe(0);
+        expect(moonset.eventTime.getUTCHours()).toBe(12);
+
+        for (const sample of moonrise.samples) {
+            expect(distanceKm(location, sample.point200)).toBeCloseTo(200, 5);
+            expect(distanceKm(location, sample.point400)).toBeCloseTo(400, 5);
+        }
+    });
+
+    it('returns current moon position and illumination', () => {
+        const origin = { lat: 23.1291, lon: 113.2644 };
+        const moon = calculateCurrentMoonInfo({
+            date: new Date('2026-08-15T10:30:00.000Z'),
+            location: origin,
+        });
+
+        expect(moon.body).toBe('moon');
+        expect(moon.azimuth).toBeGreaterThan(0);
+        expect(moon.azimuth).toBeLessThan(360);
+        expect(distanceKm(origin, moon.endpoint)).toBeCloseTo(CURRENT_MOON_DIRECTION_LENGTH_KM, 5);
+        expect(moon.illuminationFraction).toBeGreaterThanOrEqual(0);
+        expect(moon.illuminationFraction).toBeLessThanOrEqual(1);
+        expect(moon.distanceKm).toBeGreaterThan(300_000);
+        expect(moon.distanceKm).toBeLessThan(450_000);
+    });
+
+    it('builds the six-item astronomy timeline for a local civil day', () => {
+        const timeline = calculateAstronomyTimeline({
+            dateInput: '2026-08-15',
+            timeZone: 'Asia/Shanghai',
+            location: { lat: 23.05, lon: 113.37 },
+        });
+
+        expect(timeline.items.map(item => item.kind)).toEqual([
+            'dawn',
+            'sunrise',
+            'moonrise',
+            'sunset',
+            'dusk',
+            'moonset',
+        ]);
+        expect(timeline.items.every(item => item.time instanceof Date)).toBe(true);
+        expect(timeline.dayEnd.getTime() - timeline.dayStart.getTime()).toBe(24 * 60 * 60 * 1000);
     });
 });
