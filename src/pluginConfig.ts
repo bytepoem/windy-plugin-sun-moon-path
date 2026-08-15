@@ -6,7 +6,7 @@ const config: ExternalPluginConfig = {
     icon: '☀️',
     title: '日出日落方向线工具',
     description: '在 Windy 地图上显示日出、日落及前后 30 分钟方向线。',
-    author: 'Void',
+    author: 'bytepoem',
     repository: 'https://github.com/bytepoem/windy-plugin-sun-path',
     desktopUI: 'embedded',
     mobileUI: 'fullscreen',
