@@ -6,6 +6,8 @@ on:
 jobs:
     publish-plugin:
         runs-on: ubuntu-latest
+        permissions:
+            contents: read
         env:
             WINDY_API_KEY: '${{ secrets.WINDY_API_KEY }}'
         steps:
