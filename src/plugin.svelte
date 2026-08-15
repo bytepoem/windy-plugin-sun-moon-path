@@ -3,11 +3,6 @@
 </div>
 
 <section class="plugin__content sun-path-panel">
-    <button type="button" class="panel-title" on:click={() => bcast.emit('rqstOpen', 'menu')}>
-        <span class="panel-title__arrow" aria-hidden="true">←</span>
-        <span>{ title }</span>
-    </button>
-
     <div class="panel-intro">
         <div class="eyebrow">ASTRONOMY PATH</div>
         <p>查看太阳和月亮在事件前后 30 分钟的方位线，以及当天的日月时间轴。</p>
@@ -50,19 +45,36 @@
         {:else if status === 'error'}
             <div class="status-message status-message--error" role="alert">
                 <span>{errorMessage}</span>
-                <button type="button" class="text-button" on:click={() => void refreshPath(refreshKey)}>
+                <button type="button" class="text-button" on:click={() => void refreshPaths(refreshKey)}>
                     重试
                 </button>
             </div>
-        {:else if solarPath?.status === 'unavailable'}
-            <div class="status-message status-message--muted">
-                {unavailableMessage(solarPath.event, solarPath.reason)}
+        {:else if selectedEvent === 'all' && solarPaths.length > 0}
+            <div class="all-event-list" aria-label="全部事件方向线数据">
+                {#each celestialEvents as event}
+                    {@const path = pathForEvent(event)}
+                    <div class="all-event-row">
+                        <span class="all-event-row__name">{eventDisplayName(event)}</span>
+                        {#if path?.status === 'ok'}
+                            <strong>{formatLocalClock(path.eventTime, timeZone)}</strong>
+                            <span class="all-event-row__status">已绘制 3 条线</span>
+                        {:else if path?.status === 'unavailable'}
+                            <span class="all-event-row__status all-event-row__status--muted">{unavailableMessage(event, path.reason)}</span>
+                        {:else}
+                            <span class="all-event-row__status all-event-row__status--muted">--:--</span>
+                        {/if}
+                    </div>
+                {/each}
             </div>
-        {:else if solarPath?.status === 'ok'}
+        {:else if activeSolarPath?.status === 'unavailable'}
+            <div class="status-message status-message--muted">
+                {unavailableMessage(activeSolarPath.event, activeSolarPath.reason)}
+            </div>
+        {:else if activeSolarPath?.status === 'ok'}
             <div class="event-summary">
                 <div>
                     <span class="control-label">{eventDisplayName(selectedEvent)}时间</span>
-                    <strong>{formatLocalDateTime(solarPath.eventTime, timeZone)}</strong>
+                    <strong>{formatLocalDateTime(activeSolarPath.eventTime, timeZone)}</strong>
                 </div>
                 <div class="event-summary__meta">
                     <span>{timeZone}</span>
@@ -73,7 +85,7 @@
             </div>
 
             <div class="sample-list" aria-label={`${eventDisplayName(selectedEvent)}方向线数据`}>
-                {#each solarPath.samples as sample}
+                {#each activeSolarPath.samples as sample}
                     <div class="sample-row">
                         <span
                             class="line-swatch"
@@ -91,97 +103,158 @@
         {/if}
     </div>
 
-    <section class="timeline-card" aria-label="日月时间轴">
-        <div class="timeline-card__heading">
-            <div>
-                <div class="eyebrow">ASTRONOMY TIMELINE</div>
-                <strong>{timelineLead()}</strong>
-            </div>
-            <span class="timeline-card__now">现在 {formatLocalClock(currentInstant, timeZone)}</span>
-        </div>
+    <section class="map-bottom-module" aria-label="Sun Position 风格日月面板">
+        <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
+            <button type="button" class:active={summaryTab === 'diagram'} on:click={() => (summaryTab = 'diagram')}>图表</button>
+            <button type="button" class:active={summaryTab === 'current'} on:click={() => (summaryTab = 'current')}>当前</button>
+            <button type="button" class:active={summaryTab === 'timeline'} on:click={() => (summaryTab = 'timeline')}>时段</button>
+            <button type="button" class:active={summaryTab === 'about'} on:click={() => (summaryTab = 'about')}>说明</button>
+        </nav>
 
-        <div class="timeline-track" aria-hidden="true">
-            <span class="timeline-track__night"></span>
-            {#if timelineItemByKind('sunrise')?.time && timelineItemByKind('sunset')?.time}
-                <span
-                    class="timeline-track__daylight"
-                    style={`left: ${timelineProgress(timelineItemByKind('sunrise')?.time)}%; width: ${timelineProgress(timelineItemByKind('sunset')?.time) - timelineProgress(timelineItemByKind('sunrise')?.time)}%`}
-                ></span>
-            {/if}
-            {#each astronomyTimeline?.items || [] as item}
-                {#if item.time}
-                    <span
-                        class:item-moon={item.body === 'moon'}
-                        class="timeline-track__marker"
-                        style={`left: ${timelineProgress(item.time)}%`}
-                    ></span>
-                {/if}
-            {/each}
-            <span class="timeline-track__current" style={`left: ${timelineProgress(currentInstant)}%`}></span>
-        </div>
-
-        <div class="timeline-events">
-            {#each astronomyTimeline?.items || [] as item}
-                <div class:item-moon={item.body === 'moon'} class="timeline-event">
-                    <span class="timeline-event__dot" aria-hidden="true"></span>
-                    <span class="timeline-event__label">{item.label}</span>
-                    <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
+        {#if summaryTab === 'diagram'}
+            <section class="astronomy-panel" aria-label="今日天文时段">
+                <div class="astronomy-panel__heading">
+                    <div class="orbit-badge orbit-badge--sun">
+                        <span class="orbit-sun" aria-hidden="true">☀</span>
+                        <span class="orbit-badge__caption">太阳</span>
+                    </div>
+                    <div class="astronomy-panel__lead">
+                        <div class="eyebrow">ASTRONOMY TIMELINE</div>
+                        <strong>{timelineLead()}</strong>
+                        <span>现在 {formatLocalClock(currentInstant, timeZone)}</span>
+                    </div>
+                    <div class="orbit-badge orbit-badge--moon">
+                        <svg class="orbit-moon" viewBox="0 0 48 48" aria-label="当前月相" role="img">
+                            <circle cx="24" cy="24" r="18" fill="#f5efcf"></circle>
+                            <circle
+                                class="orbit-moon__shadow"
+                                cx={moonShadowCenter()}
+                                cy="24"
+                                r="18"
+                            ></circle>
+                        </svg>
+                        <span class="orbit-badge__caption">{moonPhaseLabel()}</span>
+                    </div>
                 </div>
-            {/each}
-        </div>
 
-        <div class="timeline-legend" aria-label="时间轴图例">
-            <span><i class="timeline-legend__line timeline-legend__line--sun" aria-hidden="true"></i>太阳轨迹</span>
-            <span><i class="timeline-legend__line timeline-legend__line--moon" aria-hidden="true"></i>月亮轨迹</span>
-        </div>
+                <div class="trajectory-chart">
+                    <svg viewBox="0 0 1000 390" role="img" aria-label="太阳和月亮当天轨迹">
+                        <line x1="20" x2="980" y1="336" y2="336" class="trajectory-chart__horizon"></line>
+                        <polyline points={trackPointString('sun')} class="trajectory-chart__track trajectory-chart__track--sun"></polyline>
+                        <polyline points={trackPointString('moon')} class="trajectory-chart__track trajectory-chart__track--moon"></polyline>
+                        <line
+                            x1={timelineProgress(currentInstant) * 10}
+                            x2={timelineProgress(currentInstant) * 10}
+                            y1="28"
+                            y2="350"
+                            class="trajectory-chart__now"
+                        ></line>
+                    </svg>
+                </div>
+
+                <div class="timeline-bar" aria-hidden="true">
+                    <span class="timeline-bar__night"></span>
+                    {#if timelineItemByKind('sunrise')?.time && timelineItemByKind('sunset')?.time}
+                        <span
+                            class="timeline-bar__daylight"
+                            style={`left: ${timelineProgress(timelineItemByKind('sunrise')?.time)}%; width: ${timelineProgress(timelineItemByKind('sunset')?.time) - timelineProgress(timelineItemByKind('sunrise')?.time)}%`}
+                        ></span>
+                    {/if}
+                    {#each astronomyTimeline?.items || [] as item}
+                        {#if item.time}
+                            <span
+                                class:item-moon={item.body === 'moon'}
+                                class="timeline-bar__marker"
+                                style={`left: ${timelineProgress(item.time)}%`}
+                            ></span>
+                        {/if}
+                    {/each}
+                    <span class="timeline-bar__current" style={`left: ${timelineProgress(currentInstant)}%`}></span>
+                </div>
+
+                <div class="timeline-events" aria-label="今日天文事件">
+                    {#each astronomyTimeline?.items || [] as item}
+                        <div class:item-moon={item.body === 'moon'} class="timeline-event">
+                            <span class="timeline-event__connector" aria-hidden="true"></span>
+                            <span class="timeline-event__label">{item.label}</span>
+                            <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
+                        </div>
+                    {/each}
+                </div>
+
+                <div class="timeline-legend" aria-label="轨迹图例">
+                    <span><i class="timeline-legend__line timeline-legend__line--sun" aria-hidden="true"></i>太阳轨迹</span>
+                    <span><i class="timeline-legend__line timeline-legend__line--moon" aria-hidden="true"></i>月亮轨迹</span>
+                </div>
+            </section>
+        {:else if summaryTab === 'current'}
+            <section class="position-cards" aria-label="实时日月位置">
+                <article class="position-card position-card--sun">
+                    <div class="position-card__heading">
+                        <span class="celestial-symbol celestial-symbol--sun" aria-hidden="true">☀</span>
+                        <div>
+                            <div class="eyebrow">LIVE SUN</div>
+                            <strong>实时太阳位置</strong>
+                        </div>
+                    </div>
+                    {#if currentSolarDirection}
+                        <div class="position-card__value">{Math.round(currentSolarDirection.azimuth)}° {compassDirection(currentSolarDirection.azimuth)}</div>
+                        <div class="position-card__meta">高度角 {currentSolarDirection.altitude.toFixed(1)}° · {currentSolarDirection.altitude >= 0 ? 'Daytime' : 'Nighttime'}</div>
+                    {:else}
+                        <div class="position-card__value">--</div>
+                    {/if}
+                    <div class="position-card__events">
+                        <span>日出 {eventTimeLabel('sunrise')}</span>
+                        <span>{eventAzimuthLabel('sunrise')}</span>
+                        <span>日落 {eventTimeLabel('sunset')}</span>
+                        <span>{eventAzimuthLabel('sunset')}</span>
+                    </div>
+                </article>
+
+                <article class="position-card position-card--moon">
+                    <div class="position-card__heading">
+                        <span class="celestial-symbol celestial-symbol--moon" aria-hidden="true">◐</span>
+                        <div>
+                            <div class="eyebrow">LIVE MOON</div>
+                            <strong>实时月亮位置</strong>
+                        </div>
+                    </div>
+                    {#if currentMoonInfo}
+                        <div class="position-card__value">{Math.round(currentMoonInfo.azimuth)}° {compassDirection(currentMoonInfo.azimuth)}</div>
+                        <div class="position-card__meta">高度角 {currentMoonInfo.altitude.toFixed(1)}° · {moonPhaseName(currentMoonInfo.phase)} · {Math.round(currentMoonInfo.illuminationFraction * 100)}%</div>
+                    {:else}
+                        <div class="position-card__value">--</div>
+                    {/if}
+                    <div class="position-card__events">
+                        <span>月升 {eventTimeLabel('moonrise')}</span>
+                        <span>{eventAzimuthLabel('moonrise')}</span>
+                        <span>月落 {eventTimeLabel('moonset')}</span>
+                        <span>{eventAzimuthLabel('moonset')}</span>
+                    </div>
+                </article>
+            </section>
+        {:else if summaryTab === 'timeline'}
+            <section class="event-table" aria-label="日月事件表">
+                {#each astronomyTimeline?.items || [] as item}
+                    <div class:item-moon={item.body === 'moon'} class="event-table__row">
+                        <span class="event-table__swatch" aria-hidden="true"></span>
+                        <span>{item.label}</span>
+                        <strong>{item.time ? formatLocalDateTime(item.time, timeZone) : '无可用时刻'}</strong>
+                    </div>
+                {/each}
+            </section>
+        {:else}
+            <section class="module-about" aria-label="数据说明">
+                <div class="module-about__title">方向线与时间轴</div>
+                <p>太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。</p>
+                <p>当前太阳方向为白线，当前月亮方向为蓝色虚线；地图底部图例保留用户位置、200 km 和 400 km 点位含义。</p>
+            </section>
+        {/if}
     </section>
 
-    <section class="celestial-grid" aria-label="实时日月位置">
-        <article class="celestial-card celestial-card--sun">
-            <div class="celestial-card__heading">
-                <span class="celestial-symbol celestial-symbol--sun" aria-hidden="true">☀</span>
-                <div>
-                    <div class="eyebrow">LIVE SUN</div>
-                    <strong>实时太阳位置</strong>
-                </div>
-            </div>
-            {#if currentSolarDirection}
-                <div class="celestial-card__value">
-                    {Math.round(currentSolarDirection.azimuth)}° {compassDirection(currentSolarDirection.azimuth)}
-                </div>
-                <div class="celestial-card__meta">
-                    高度角 {currentSolarDirection.altitude.toFixed(1)}° · 白线 · {formatLocalClock(currentInstant, timeZone)}
-                </div>
-            {:else}
-                <div class="celestial-card__value">--</div>
-            {/if}
-        </article>
-
-        <article class="celestial-card celestial-card--moon">
-            <div class="celestial-card__heading">
-                <span class="celestial-symbol celestial-symbol--moon" aria-hidden="true">◐</span>
-                <div>
-                    <div class="eyebrow">LIVE MOON</div>
-                    <strong>实时月亮位置</strong>
-                </div>
-            </div>
-            {#if currentMoonInfo}
-                <div class="celestial-card__value">
-                    {Math.round(currentMoonInfo.azimuth)}° {compassDirection(currentMoonInfo.azimuth)}
-                </div>
-                <div class="celestial-card__meta">
-                    高度角 {currentMoonInfo.altitude.toFixed(1)}° · {moonPhaseName(currentMoonInfo.phase)} · {Math.round(currentMoonInfo.illuminationFraction * 100)}%<br />
-                    距离 {Math.round(currentMoonInfo.distanceKm)} km · 蓝色虚线
-                </div>
-            {:else}
-                <div class="celestial-card__value">--</div>
-            {/if}
-        </article>
-    </section>
-
-    <div class="legend" aria-label="地图图例">
-        <div class="legend__title">地图图例</div>
-        <div class="legend__items">
+    <div class="sun-path-legend" aria-label="地图图例">
+        <div class="sun-path-legend__title">地图图例</div>
+        <div class="sun-path-legend__items">
             <span class="legend-item">
                 <span class="legend-dot legend-dot--origin" aria-hidden="true"></span>
                 用户位置
@@ -195,14 +268,14 @@
                 400 km
             </span>
         </div>
-        <div class="legend__items legend__items--lines">
+        <div class="sun-path-legend__items sun-path-legend__items--lines">
             <span class="legend-item">
                 <span class="legend-line legend-line--before" aria-hidden="true"></span>
                 前 30 分钟
             </span>
             <span class="legend-item">
                 <span class="legend-line legend-line--event" aria-hidden="true"></span>
-                {eventDisplayName(selectedEvent)}
+                {selectedEvent === 'all' ? '四类事件' : eventDisplayName(selectedEvent)}
             </span>
             <span class="legend-item">
                 <span class="legend-line legend-line--after" aria-hidden="true"></span>
@@ -225,7 +298,6 @@
 </section>
 
 <script lang="ts">
-    import bcast from '@windy/broadcast';
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { getMyLatestPos } from '@windy/geolocation';
     import { centerMap, map } from '@windy/map';
@@ -252,6 +324,7 @@
         moonPhaseName,
         splitPolylineAtDateLine,
         type AstronomyTimeline,
+        type CelestialBody,
         type Coordinates,
         type CurrentMoonInfo,
         type SolarDirection,
@@ -270,7 +343,11 @@
         }
     })();
     const latestPosition = getMyLatestPos();
-    const eventOptions: Array<{ value: SolarEvent; label: string }> = [
+    type DirectionEvent = SolarEvent | 'all';
+    type SummaryTab = 'diagram' | 'current' | 'timeline' | 'about';
+    const celestialEvents: SolarEvent[] = ['sunrise', 'sunset', 'moonrise', 'moonset'];
+    const eventOptions: { value: DirectionEvent; label: string }[] = [
+        { value: 'all', label: '全部' },
         { value: 'sunrise', label: '日出' },
         { value: 'sunset', label: '日落' },
         { value: 'moonrise', label: '月升' },
@@ -286,14 +363,16 @@
         lon: asFiniteCoordinate(latestPosition.lon, 113.37),
     };
     let selectedDate = dateInputForInstant(new Date(), systemTimeZone);
-    let selectedEvent: SolarEvent = 'sunset';
+    let selectedEvent: DirectionEvent = 'sunset';
     let timeZone = systemTimeZone;
     let elevationM = 0;
-    let solarPath: SolarPath | null = null;
+    let solarPaths: SolarPath[] = [];
+    let activeSolarPath: SolarPath | null = null;
     let astronomyTimeline: AstronomyTimeline | null = null;
     let currentSolarDirection: SolarDirection | null = null;
     let currentMoonInfo: CurrentMoonInfo | null = null;
     let currentInstant = new Date();
+    let summaryTab: SummaryTab = 'diagram';
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
     let isMounted = false;
@@ -309,14 +388,18 @@
     $: refreshKey = `${selectedDate}|${selectedEvent}|${selectedLocation.lat}|${selectedLocation.lon}`;
 
     $: if (isMounted && refreshKey) {
-        void refreshPath(refreshKey);
+        void refreshPaths(refreshKey);
     }
+
+    $: activeSolarPath = selectedEvent === 'all'
+        ? null
+        : solarPaths.find(path => path.event === selectedEvent) || null;
 
     $: if (isMounted) {
         setUrl(name, { lat: selectedLocation.lat, lon: selectedLocation.lon });
     }
 
-    const eventDisplayName = (event: SolarEvent): string => {
+    const eventDisplayName = (event: DirectionEvent): string => {
         const option = eventOptions.find(candidate => candidate.value === event);
         return option?.label || event;
     };
@@ -330,8 +413,11 @@
         }
     };
 
-    const makeRefreshKey = (location: Coordinates, dateInput: string, event: SolarEvent): string =>
+    const makeRefreshKey = (location: Coordinates, dateInput: string, event: DirectionEvent): string =>
         `${dateInput}|${event}|${location.lat}|${location.lon}`;
+
+    const pathForEvent = (event: SolarEvent): SolarPath | null =>
+        solarPaths.find(path => path.event === event) || null;
 
     const removeMapFeatures = () => {
         mapLayerGroup?.remove();
@@ -421,10 +507,13 @@
         }
     };
 
-    const drawMapFeatures = (path: SolarPath) => {
+    const drawMapFeatures = (paths: SolarPath[]) => {
         removeMapFeatures();
 
-        if (path.status !== 'ok') {
+        const availablePaths = paths.filter(
+            (path): path is Extract<SolarPath, { status: 'ok' }> => path.status === 'ok',
+        );
+        if (availablePaths.length === 0) {
             drawCurrentDirectionLines();
             return;
         }
@@ -439,34 +528,38 @@
         markers.push(originMarker);
         drawCurrentDirectionLines();
 
-        for (const sample of path.samples) {
-            const pathSegments = splitPolylineAtDateLine([
-                selectedLocation,
-                sample.point200,
-                sample.point400,
-            ]);
-            for (const segment of pathSegments) {
-                const line = new L.Polyline(segment.map(toLatLng), {
-                    color: LINE_COLORS[sample.kind],
-                    weight: 3,
-                    opacity: 0.95,
-                    lineCap: 'round',
-                    lineJoin: 'round',
+        for (const path of availablePaths) {
+            const isMoonEvent = path.event === 'moonrise' || path.event === 'moonset';
+            for (const sample of path.samples) {
+                const pathSegments = splitPolylineAtDateLine([
+                    selectedLocation,
+                    sample.point200,
+                    sample.point400,
+                ]);
+                for (const segment of pathSegments) {
+                    const line = new L.Polyline(segment.map(toLatLng), {
+                        color: LINE_COLORS[sample.kind],
+                        weight: 3,
+                        opacity: isMoonEvent ? 0.82 : 0.95,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                        ...(isMoonEvent ? { dashArray: '9 6' } : {}),
+                    }).addTo(layerGroup);
+                    lines.push(line);
+                }
+
+                const innerMarker = new L.Marker(toLatLng(sample.point200), {
+                    icon: markerIcon('inner'),
                 }).addTo(layerGroup);
-                lines.push(line);
+                innerMarker.bindTooltip(`${eventDisplayName(path.event)} · ${sample.label} · 200 km`, { direction: 'top', offset: [0, -6] });
+                markers.push(innerMarker);
+
+                const outerMarker = new L.Marker(toLatLng(sample.point400), {
+                    icon: markerIcon('outer'),
+                }).addTo(layerGroup);
+                outerMarker.bindTooltip(`${eventDisplayName(path.event)} · ${sample.label} · 400 km`, { direction: 'top', offset: [0, -6] });
+                markers.push(outerMarker);
             }
-
-            const innerMarker = new L.Marker(toLatLng(sample.point200), {
-                icon: markerIcon('inner'),
-            }).addTo(layerGroup);
-            innerMarker.bindTooltip(`${sample.label} · 200 km`, { direction: 'top', offset: [0, -6] });
-            markers.push(innerMarker);
-
-            const outerMarker = new L.Marker(toLatLng(sample.point400), {
-                icon: markerIcon('outer'),
-            }).addTo(layerGroup);
-            outerMarker.bindTooltip(`${sample.label} · 400 km`, { direction: 'top', offset: [0, -6] });
-            markers.push(outerMarker);
         }
     };
 
@@ -504,7 +597,7 @@
         return { timeZone: candidate, elevationM: resolvedElevation };
     };
 
-    const refreshPath = async (key: string) => {
+    const refreshPaths = async (key: string) => {
         const requestId = ++latestRequestId;
         const location = { ...selectedLocation };
         const dateInput = selectedDate;
@@ -520,16 +613,18 @@
                 return;
             }
 
-            const eventDate = event === 'moonrise' || event === 'moonset'
-                ? dateInputToUtcMidnight(dateInput, context.timeZone)
-                : dateInputToUtcNoon(dateInput, context.timeZone);
-            const nextPath = calculateSolarPath({
-                date: eventDate,
-                dateInput,
-                timeZone: context.timeZone,
-                location,
-                event,
-                elevationM: context.elevationM,
+            const nextPaths = celestialEvents.map(eventName => {
+                const eventDate = eventName === 'moonrise' || eventName === 'moonset'
+                    ? dateInputToUtcMidnight(dateInput, context.timeZone)
+                    : dateInputToUtcNoon(dateInput, context.timeZone);
+                return calculateSolarPath({
+                    date: eventDate,
+                    dateInput,
+                    timeZone: context.timeZone,
+                    location,
+                    event: eventName,
+                    elevationM: context.elevationM,
+                });
             });
             const nextTimeline = calculateAstronomyTimeline({
                 dateInput,
@@ -542,17 +637,20 @@
                 return;
             }
 
-            solarPath = nextPath;
+            solarPaths = nextPaths;
             astronomyTimeline = nextTimeline;
-            status = nextPath.status === 'ok' ? 'ready' : 'empty';
-            drawMapFeatures(nextPath);
+            const selectedPaths = event === 'all'
+                ? nextPaths
+                : nextPaths.filter(path => path.event === event);
+            status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
+            drawMapFeatures(selectedPaths);
         } catch (error) {
             if (requestId !== latestRequestId || key !== refreshKey) {
                 return;
             }
 
             status = 'error';
-            solarPath = null;
+            solarPaths = [];
             astronomyTimeline = null;
             errorMessage = error instanceof Error ? error.message : '日月方位计算失败，请稍后重试。';
         }
@@ -586,7 +684,7 @@
 
         if (!isMounted) {
             setUrl(name, nextLocation);
-            void refreshPath(nextKey);
+            void refreshPaths(nextKey);
         }
     };
 
@@ -601,6 +699,50 @@
         const total = astronomyTimeline.dayEnd.getTime() - astronomyTimeline.dayStart.getTime();
         const progress = ((time.getTime() - astronomyTimeline.dayStart.getTime()) / total) * 100;
         return Math.min(100, Math.max(0, progress));
+    };
+
+    const trackForBody = (body: CelestialBody) => astronomyTimeline?.tracks.find(track => track.body === body);
+
+    const trajectoryY = (altitude: number): number => {
+        const visibleAltitude = Math.min(90, Math.max(0, altitude));
+        return 336 - visibleAltitude * 3.25;
+    };
+
+    const trackPointString = (body: CelestialBody): string => {
+        const track = trackForBody(body);
+        if (!track || track.points.length === 0) {
+            return '';
+        }
+        return track.points
+            .map(point => `${timelineProgress(point.time) * 10},${trajectoryY(point.altitude)}`)
+            .join(' ');
+    };
+
+    const eventTimeLabel = (event: SolarEvent): string => {
+        const path = pathForEvent(event);
+        return path?.status === 'ok' ? formatLocalClock(path.eventTime, timeZone) : '--:--';
+    };
+
+    const eventAzimuthLabel = (event: SolarEvent): string => {
+        const path = pathForEvent(event);
+        if (!path || path.status !== 'ok') {
+            return '--°';
+        }
+        const eventSample = path.samples.find(sample => sample.kind === 'event');
+        return eventSample ? `${Math.round(eventSample.azimuth)}° ${compassDirection(eventSample.azimuth)}` : '--°';
+    };
+
+    const moonShadowCenter = (): number => {
+        const fraction = astronomyTimeline?.moonIllumination.fraction ?? currentMoonInfo?.illuminationFraction ?? 0;
+        const waxing = astronomyTimeline?.moonIllumination.waxing ?? currentMoonInfo?.waxing ?? true;
+        return 24 + (waxing ? -1 : 1) * fraction * 36;
+    };
+
+    const moonPhaseLabel = (): string => {
+        if (astronomyTimeline) {
+            return moonPhaseName(astronomyTimeline.moonIllumination.phase);
+        }
+        return currentMoonInfo ? moonPhaseName(currentMoonInfo.phase) : '月相';
     };
 
     const formatRemaining = (milliseconds: number): string => {
@@ -712,8 +854,8 @@
 
         box-sizing: border-box;
         width: 100%;
-        max-width: 460px;
-        max-height: calc(100dvh - 52px);
+        max-width: none;
+        max-height: 100%;
         overflow-y: auto;
         overscroll-behavior: contain;
         padding: 12px 16px calc(20px + env(safe-area-inset-bottom, 0px));
@@ -811,7 +953,7 @@
 
     .segmented-control {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         min-height: 44px;
         overflow: hidden;
         border: 1px solid var(--panel-border);
@@ -1245,6 +1387,498 @@
         background-size: 8px 3px;
     }
 
+    .all-event-list {
+        display: grid;
+        gap: 1px;
+        margin-top: 12px;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+    }
+
+    .all-event-row {
+        display: grid;
+        grid-template-columns: minmax(52px, 0.7fr) auto minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+        min-height: 44px;
+        padding: 8px 11px;
+        background: var(--panel-surface);
+    }
+
+    .all-event-row strong,
+    .all-event-row__status {
+        font-variant-numeric: tabular-nums;
+    }
+
+    .all-event-row strong {
+        color: var(--panel-text);
+    }
+
+    .all-event-row__name {
+        color: var(--panel-text);
+        font-weight: 600;
+    }
+
+    .all-event-row__status {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--panel-accent);
+        font-size: 12px;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .all-event-row__status--muted {
+        color: var(--panel-muted);
+    }
+
+    .map-bottom-module {
+        margin-top: 18px;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: rgba(5, 10, 20, 0.38);
+    }
+
+    .summary-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-bottom: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .summary-tabs button {
+        min-height: 44px;
+        padding: 8px 5px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        color: var(--panel-muted);
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .summary-tabs button + button {
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .summary-tabs button:hover,
+    .summary-tabs button.active {
+        color: var(--panel-text);
+        background: rgba(99, 185, 238, 0.14);
+    }
+
+    .summary-tabs button.active {
+        border-bottom-color: var(--panel-accent);
+    }
+
+    .astronomy-panel {
+        --astronomy-bg: #1d263d;
+        --astronomy-muted: #a8b1c1;
+        --astronomy-text: #f2f4fa;
+        --astronomy-sun: #ff9138;
+        --astronomy-moon: #4e91ed;
+
+        padding: 14px 14px 16px;
+        color: var(--astronomy-text);
+        background: var(--astronomy-bg);
+    }
+
+    .astronomy-panel__heading {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr) 64px;
+        gap: 8px;
+        align-items: center;
+        min-height: 64px;
+    }
+
+    .astronomy-panel__lead {
+        min-width: 0;
+        text-align: center;
+    }
+
+    .astronomy-panel__lead strong {
+        display: block;
+        margin-top: 3px;
+        overflow-wrap: anywhere;
+        color: var(--astronomy-text);
+        font-size: 15px;
+    }
+
+    .astronomy-panel__lead strong::first-letter {
+        color: var(--astronomy-text);
+    }
+
+    .astronomy-panel__lead > span {
+        display: block;
+        margin-top: 3px;
+        color: var(--astronomy-muted);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .orbit-badge {
+        display: grid;
+        justify-items: center;
+        gap: 3px;
+        color: var(--astronomy-muted);
+        font-size: 10px;
+        text-align: center;
+    }
+
+    .orbit-sun,
+    .orbit-moon {
+        display: block;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+    }
+
+    .orbit-sun {
+        display: grid;
+        place-items: center;
+        color: #f4d897;
+        background: radial-gradient(circle at 38% 36%, #fff3c1 0, #d99443 72%, #8b5b2b 100%);
+        font-size: 28px;
+    }
+
+    .orbit-moon {
+        overflow: hidden;
+        background: #182033;
+    }
+
+    .orbit-moon__shadow {
+        fill: #111727;
+    }
+
+    .orbit-badge__caption {
+        max-width: 64px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .trajectory-chart {
+        margin-top: 4px;
+    }
+
+    .trajectory-chart svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1000 / 390;
+    }
+
+    .trajectory-chart__horizon {
+        stroke: rgba(255, 255, 255, 0.14);
+        stroke-width: 2;
+    }
+
+    .trajectory-chart__track {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 5;
+        stroke-dasharray: 1 16;
+    }
+
+    .trajectory-chart__track--sun {
+        stroke: var(--astronomy-sun);
+    }
+
+    .trajectory-chart__track--moon {
+        stroke: var(--astronomy-moon);
+    }
+
+    .trajectory-chart__now {
+        stroke: rgba(255, 255, 255, 0.75);
+        stroke-dasharray: 2 7;
+        stroke-width: 2;
+    }
+
+    .timeline-bar {
+        position: relative;
+        height: 30px;
+        margin: -2px 2px 0;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #0b122b;
+    }
+
+    .timeline-bar__night,
+    .timeline-bar__daylight {
+        position: absolute;
+        inset: 0 auto 0 0;
+    }
+
+    .timeline-bar__night {
+        width: 100%;
+        background: #0b122b;
+    }
+
+    .timeline-bar__daylight {
+        background: rgba(65, 132, 194, 0.72);
+    }
+
+    .timeline-bar__marker,
+    .timeline-bar__current {
+        position: absolute;
+        top: 3px;
+        bottom: 3px;
+        width: 4px;
+        transform: translateX(-50%);
+        border-radius: 2px;
+        background: var(--astronomy-sun);
+        box-shadow: 0 0 0 2px rgba(11, 18, 43, 0.72);
+    }
+
+    .timeline-bar__marker.item-moon {
+        background: var(--astronomy-moon);
+    }
+
+    .timeline-bar__current {
+        z-index: 2;
+        top: -4px;
+        bottom: -4px;
+        width: 2px;
+        background: #ffffff;
+        box-shadow: none;
+    }
+
+    .timeline-events {
+        position: relative;
+        gap: 5px;
+        margin-top: 0;
+    }
+
+    .timeline-event {
+        position: relative;
+        min-width: 0;
+        padding-top: 14px;
+        color: var(--astronomy-muted);
+        font-size: 11px;
+        text-align: center;
+    }
+
+    .timeline-event__connector {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 1px;
+        height: 11px;
+        background: rgba(255, 255, 255, 0.36);
+        transform: translateX(-50%);
+    }
+
+    .timeline-event__label {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .timeline-event strong {
+        display: block;
+        margin-top: 2px;
+        color: var(--astronomy-text);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .timeline-event.item-moon .timeline-event__connector {
+        background: var(--astronomy-moon);
+    }
+
+    .timeline-event.item-moon strong {
+        color: #91bfff;
+    }
+
+    .timeline-legend {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 16px;
+        color: var(--astronomy-muted);
+        font-size: 11px;
+    }
+
+    .timeline-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .timeline-legend__line {
+        display: inline-block;
+        width: 28px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--astronomy-sun);
+    }
+
+    .timeline-legend__line--moon {
+        background: var(--astronomy-moon);
+        background-image: linear-gradient(90deg, var(--astronomy-moon) 0 55%, transparent 55% 100%);
+        background-size: 9px 4px;
+    }
+
+    .position-cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .position-card {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        background: var(--panel-surface);
+    }
+
+    .position-card__heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .position-card__heading strong {
+        display: block;
+        margin-top: 2px;
+        color: var(--panel-text);
+        font-size: 13px;
+    }
+
+    .position-card__value {
+        margin-top: 12px;
+        color: #ffffff;
+        font-size: 18px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+    }
+
+    .position-card__meta {
+        min-height: 34px;
+        margin-top: 4px;
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.55;
+    }
+
+    .position-card__events {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 5px 8px;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid var(--panel-border);
+        color: var(--panel-muted);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .position-card__events span:nth-child(even) {
+        color: var(--panel-text);
+        text-align: right;
+    }
+
+    .event-table {
+        display: grid;
+        gap: 1px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.16);
+    }
+
+    .event-table__row {
+        display: grid;
+        grid-template-columns: 8px minmax(0, 1fr) auto;
+        gap: 9px;
+        align-items: center;
+        min-height: 44px;
+        padding: 8px 10px;
+        color: var(--panel-muted);
+        background: var(--panel-surface);
+    }
+
+    .event-table__row strong {
+        color: var(--panel-text);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+
+    .event-table__swatch {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--timeline-sun);
+    }
+
+    .event-table__row.item-moon .event-table__swatch {
+        background: var(--timeline-moon);
+    }
+
+    .module-about {
+        padding: 14px;
+        color: var(--panel-muted);
+        background: rgba(0, 0, 0, 0.14);
+        font-size: 12px;
+    }
+
+    .module-about__title {
+        margin-bottom: 6px;
+        color: var(--panel-text);
+        font-weight: 600;
+    }
+
+    .module-about p {
+        margin: 6px 0 0;
+    }
+
+    .sun-path-legend {
+        margin-top: 18px;
+        padding: 14px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        background: var(--panel-bg) !important;
+        color: var(--panel-text) !important;
+    }
+
+    .sun-path-legend--module {
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent !important;
+    }
+
+    .sun-path-legend__title {
+        margin-bottom: 8px;
+        color: var(--panel-text) !important;
+        font-weight: 600;
+    }
+
+    .sun-path-legend__items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+    }
+
+    .sun-path-legend__items--lines {
+        margin-top: 8px;
+    }
+
+    .sun-path-legend .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--panel-muted) !important;
+        white-space: nowrap;
+    }
+
     .panel-note {
         margin-top: 16px;
         font-size: 12px;
@@ -1253,6 +1887,7 @@
     @media (max-width: 520px) {
         .sun-path-panel {
             max-width: none;
+            max-height: min(78dvh, 760px);
             padding-right: 14px;
             padding-left: 14px;
         }
@@ -1272,6 +1907,11 @@
 
         .segmented-control--events button:nth-child(4) {
             border-top: 1px solid var(--panel-border);
+        }
+
+        .segmented-control--events button:nth-child(5) {
+            border-top: 1px solid var(--panel-border);
+            border-left: 0;
         }
 
         .sample-row {
@@ -1313,6 +1953,37 @@
         }
 
         .celestial-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .all-event-row {
+            grid-template-columns: minmax(42px, 0.6fr) auto minmax(0, 1fr);
+            gap: 6px;
+            padding-right: 8px;
+            padding-left: 8px;
+        }
+
+        .astronomy-panel {
+            padding-right: 10px;
+            padding-left: 10px;
+        }
+
+        .astronomy-panel__heading {
+            grid-template-columns: 48px minmax(0, 1fr) 48px;
+            gap: 4px;
+        }
+
+        .orbit-sun,
+        .orbit-moon {
+            width: 40px;
+            height: 40px;
+        }
+
+        .orbit-sun {
+            font-size: 23px;
+        }
+
+        .position-cards {
             grid-template-columns: 1fr;
         }
     }

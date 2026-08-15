@@ -213,5 +213,15 @@ describe('solar path geometry', () => {
         ]);
         expect(timeline.items.every(item => item.time instanceof Date)).toBe(true);
         expect(timeline.dayEnd.getTime() - timeline.dayStart.getTime()).toBe(24 * 60 * 60 * 1000);
+        expect(timeline.tracks.map(track => track.body)).toEqual(['sun', 'moon']);
+        for (const track of timeline.tracks) {
+            expect(track.points.length).toBeGreaterThan(0);
+            expect(track.points.every(point => point.time >= timeline.dayStart && point.time <= timeline.dayEnd)).toBe(true);
+            expect(track.points.every(point => point.azimuth >= 0 && point.azimuth < 360)).toBe(true);
+        }
+        expect(timeline.moonIllumination.fraction).toBeGreaterThanOrEqual(0);
+        expect(timeline.moonIllumination.fraction).toBeLessThanOrEqual(1);
+        expect(timeline.moonIllumination.phase).toBeGreaterThanOrEqual(0);
+        expect(timeline.moonIllumination.phase).toBeLessThan(1);
     });
 });

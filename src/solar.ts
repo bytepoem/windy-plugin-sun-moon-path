@@ -81,14 +81,34 @@ export interface AstronomyTimelineItem {
     time: Date | null;
 }
 
+export interface AstronomyTrackPoint {
+    time: Date;
+    azimuth: number;
+    altitude: number;
+}
+
+export interface AstronomyTrack {
+    body: CelestialBody;
+    points: AstronomyTrackPoint[];
+}
+
+export interface TimelineMoonIllumination {
+    fraction: number;
+    phase: number;
+    waxing: boolean;
+}
+
 export interface AstronomyTimeline {
     dayStart: Date;
     dayEnd: Date;
     items: AstronomyTimelineItem[];
+    tracks: AstronomyTrack[];
+    moonIllumination: TimelineMoonIllumination;
 }
 
 const SAMPLE_KINDS: SolarSampleKind[] = ['before', 'event', 'after'];
 const DAY_MS = 24 * 60 * 60 * 1000;
+const TRACK_STEP_MS = 15 * 60 * 1000;
 
 const isFiniteNumber = (value: number): boolean => Number.isFinite(value);
 
@@ -551,6 +571,30 @@ const timelineItem = (
     time: isValidDate(time) ? time : null,
 });
 
+const calculateAstronomyTrack = (
+    body: CelestialBody,
+    dayStart: Date,
+    dayEnd: Date,
+    location: Coordinates,
+): AstronomyTrack => {
+    const points: AstronomyTrackPoint[] = [];
+    for (let timestamp = dayStart.getTime(); timestamp <= dayEnd.getTime(); timestamp += TRACK_STEP_MS) {
+        const time = new Date(timestamp);
+        const position = body === 'moon'
+            ? SunCalc.getMoonPosition(time, location.lat, location.lon)
+            : SunCalc.getPosition(time, location.lat, location.lon);
+        if (Number.isFinite(position.azimuth) && Number.isFinite(position.altitude) && position.altitude >= -1) {
+            points.push({
+                time,
+                azimuth: normalizeAzimuth(position.azimuth),
+                altitude: position.altitude,
+            });
+        }
+    }
+
+    return { body, points };
+};
+
 export const calculateAstronomyTimeline = ({
     dateInput,
     timeZone,
@@ -566,6 +610,7 @@ export const calculateAstronomyTimeline = ({
     const dayEnd = dateInputToUtcMidnight(addDaysToDateInput(dateInput, 1), timeZone);
     const sunTimes = SunCalc.getTimes(dateInputToUtcNoon(dateInput, timeZone), location.lat, location.lon, elevationM);
     const moonTimes = getMoonTimesForLocalDate(dateInput, timeZone, location);
+    const moonIllumination = SunCalc.getMoonIllumination(dateInputToUtcNoon(dateInput, timeZone));
 
     return {
         dayStart,
@@ -578,5 +623,14 @@ export const calculateAstronomyTimeline = ({
             timelineItem('dusk', '蓝调结束', 'sun', sunTimes.dusk),
             timelineItem('moonset', '月落', 'moon', moonTimes.set),
         ],
+        tracks: [
+            calculateAstronomyTrack('sun', dayStart, dayEnd, location),
+            calculateAstronomyTrack('moon', dayStart, dayEnd, location),
+        ],
+        moonIllumination: {
+            fraction: moonIllumination.fraction,
+            phase: moonIllumination.phase,
+            waxing: moonIllumination.waxing,
+        },
     };
 };
