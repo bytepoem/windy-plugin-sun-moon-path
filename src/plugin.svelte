@@ -104,7 +104,7 @@
         {:else if selectedEvent !== 'all' && activeSolarPath?.status === 'ok'}
             <div class="event-summary">
                 <div>
-                    <span class="control-label">{eventDisplayName(selectedEvent)}{text.eventTimeSuffix}</span>
+                    <span class="control-label">{eventDisplayName(selectedEvent, text)}{text.eventTimeSuffix}</span>
                     <strong>{formatLocalDateTime(activeSolarPath.eventTime, timeZone)}</strong>
                 </div>
                 <div class="event-summary__meta">
@@ -115,7 +115,7 @@
                 </div>
             </div>
 
-            <div class="sample-list" aria-label={`${eventDisplayName(selectedEvent)}方向线数据`}>
+            <div class="sample-list" aria-label={`${eventDisplayName(selectedEvent, text)}方向线数据`}>
                 {#each activeSolarPath.samples as sample}
                     <div class="sample-row">
                         <span
@@ -126,7 +126,7 @@
                         <span class="sample-row__name">{sample.label}</span>
                         <span class="sample-row__time">{formatLocalClock(sample.time, timeZone)}</span>
                         <span class="sample-row__azimuth">
-                            {Math.round(sample.azimuth)}° {compassDirectionLabel(sample.azimuth)}
+                            {Math.round(sample.azimuth)}° {compassDirectionLabel(sample.azimuth, uiLanguage)}
                         </span>
                     </div>
                 {/each}
@@ -161,7 +161,7 @@
                                     </svg>
                                 </span>
                                 {#if currentSolarDirection}
-                                    <strong>{Math.round(currentSolarDirection.azimuth)}° {compassDirectionLabel(currentSolarDirection.azimuth)}</strong>
+                                    <strong>{Math.round(currentSolarDirection.azimuth)}° {compassDirectionLabel(currentSolarDirection.azimuth, uiLanguage)}</strong>
                                     <em class="live-position__metric">
                                         <span>{text.altitude} {currentSolarDirection.altitude.toFixed(1)}°</span>
                                         <span class="live-position__event-azimuths">
@@ -184,7 +184,7 @@
                                     </svg>
                                 </span>
                                 {#if currentMoonInfo}
-                                    <strong>{Math.round(currentMoonInfo.azimuth)}° {compassDirectionLabel(currentMoonInfo.azimuth)}</strong>
+                                    <strong>{Math.round(currentMoonInfo.azimuth)}° {compassDirectionLabel(currentMoonInfo.azimuth, uiLanguage)}</strong>
                                     <em class="live-position__metric">
                                         <span>{text.altitude} {currentMoonInfo.altitude.toFixed(1)}°</span>
                                         <span class="live-position__event-azimuths">
@@ -235,8 +235,8 @@
                         {#each displayAstronomyIntervals as interval}
                             <article class:night-window--milky-way={interval.kind === 'milky-way'} class="night-window">
                                 <div class="night-window__body">
-                                    <strong>{intervalDisplayLabel(interval)}</strong>
-                                    <span>{formatInterval(interval)} · {formatIntervalDuration(interval)}</span>
+                                    <strong>{intervalDisplayLabel(interval, text)}</strong>
+                                    <span>{formatInterval(interval)} · {formatIntervalDuration(interval, uiLanguage)}</span>
                                 </div>
                             </article>
                         {/each}
@@ -579,8 +579,8 @@
         setUrl(name, { lat: selectedLocation.lat, lon: selectedLocation.lon });
     }
 
-    const eventDisplayName = (event: DirectionEvent): string => {
-        return text.events[event] || event;
+    const eventDisplayName = (event: DirectionEvent, labels = text): string => {
+        return labels.events[event] || event;
     };
 
     const toggleLanguage = () => {
@@ -602,8 +602,8 @@
     const lineColorForEvent = (event: DirectionEvent, kind: SolarSampleKind): string =>
         event === 'moonrise' || event === 'moonset' ? MOON_LINE_COLORS[kind] : LINE_COLORS[kind];
 
-    const compassDirectionLabel = (azimuth: number): string => {
-        if (uiLanguage === 'zh') {
+    const compassDirectionLabel = (azimuth: number, language = uiLanguage): string => {
+        if (language === 'zh') {
             return compassDirection(azimuth);
         }
         const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -742,13 +742,13 @@
                 const innerMarker = new L.Marker(toLatLng(sample.point200), {
                     icon: markerIcon('inner'),
                 }).addTo(layerGroup);
-                innerMarker.bindTooltip(`${eventDisplayName(path.event)} · ${sample.label} · 200 km`, { direction: 'top', offset: [0, -6] });
+                innerMarker.bindTooltip(`${eventDisplayName(path.event, text)} · ${sample.label} · 200 km`, { direction: 'top', offset: [0, -6] });
                 markers.push(innerMarker);
 
                 const outerMarker = new L.Marker(toLatLng(sample.point400), {
                     icon: markerIcon('outer'),
                 }).addTo(layerGroup);
-                outerMarker.bindTooltip(`${eventDisplayName(path.event)} · ${sample.label} · 400 km`, { direction: 'top', offset: [0, -6] });
+                outerMarker.bindTooltip(`${eventDisplayName(path.event, text)} · ${sample.label} · 400 km`, { direction: 'top', offset: [0, -6] });
                 markers.push(outerMarker);
             }
         }
@@ -851,7 +851,7 @@
         event: SolarEvent,
         reason: 'always-up' | 'always-down' | 'not-available',
     ): string => {
-        const nameForEvent = eventDisplayName(event);
+        const nameForEvent = eventDisplayName(event, text);
         if (uiLanguage === 'en') {
             const body = event === 'moonrise' || event === 'moonset' ? 'moon' : 'sun';
             if (reason === 'always-up') {
@@ -915,11 +915,11 @@
     const formatInterval = (interval: AstronomyInterval): string =>
         `${formatLocalClock(interval.start, timeZone)} ~ ${formatLocalClock(interval.end, timeZone)}`;
 
-    const intervalDisplayLabel = (interval: AstronomyInterval): string =>
-        text.intervals[interval.kind] || interval.label;
+    const intervalDisplayLabel = (interval: AstronomyInterval, labels = text): string =>
+        labels.intervals[interval.kind] || interval.label;
 
-    const formatIntervalDuration = (interval: AstronomyInterval): string =>
-        formatRemaining(interval.end.getTime() - interval.start.getTime());
+    const formatIntervalDuration = (interval: AstronomyInterval, language = uiLanguage): string =>
+        formatRemaining(interval.end.getTime() - interval.start.getTime(), language);
 
     const formatDateControlLabel = (dateInput: string): string => {
         const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
@@ -928,21 +928,21 @@
             : dateInput;
     };
 
-    const formatRemaining = (milliseconds: number): string => {
+    const formatRemaining = (milliseconds: number, language = uiLanguage): string => {
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        if (uiLanguage === 'en') {
+        if (language === 'en') {
             return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
         }
         return hours > 0 ? `${hours}小时${minutes}分钟` : `${minutes}分钟`;
     };
 
-    const formatCompactRemaining = (milliseconds: number): string => {
+    const formatCompactRemaining = (milliseconds: number, language = uiLanguage): string => {
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        if (uiLanguage === 'en') {
+        if (language === 'en') {
             return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
         }
         return hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
@@ -961,19 +961,19 @@
         return 24 + (waxing ? -1 : 1) * fraction * 36;
     })();
 
-    const nextWindowParts = (item: { kind: string; label: string; time?: Date | null }): { label: string; time: string } => {
+    const nextWindowParts = (item: { kind: string; label: string; time?: Date | null }, language = uiLanguage): { label: string; time: string } => {
         if (!item.time) {
-            return { label: uiLanguage === 'en' ? 'Ended' : '已结束', time: '' };
+            return { label: language === 'en' ? 'Ended' : '已结束', time: '' };
         }
-        if (uiLanguage === 'en') {
+        if (language === 'en') {
             return {
                 label: 'Next',
-                time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime()),
+                time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime(), language),
             };
         }
         return {
             label: '倒计时',
-            time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime()),
+            time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime(), language),
         };
     };
 
@@ -993,7 +993,7 @@
                 });
             const nextItem = next || nextDayTimeline?.items.find(item => item.time);
             const parts = nextItem?.time
-                ? nextWindowParts(nextItem)
+                ? nextWindowParts(nextItem, uiLanguage)
                 : { label: uiLanguage === 'en' ? 'Ended' : '已结束', time: '' };
             timelineLeadLabel = parts.label;
             timelineLeadTime = parts.time;
