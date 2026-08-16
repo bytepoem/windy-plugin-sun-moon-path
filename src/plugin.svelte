@@ -7,8 +7,8 @@
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
 >
+    <div class="mobile-scroll-content">
     <div class="panel-intro">
-        <div class="eyebrow">ASTRONOMY PATH</div>
         <p>日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。</p>
     </div>
 
@@ -105,8 +105,7 @@
             <section class="astronomy-panel" aria-label="今日天文时段">
                 <div class="astronomy-panel__heading">
                     <div class="astronomy-panel__lead">
-                        <div class="eyebrow">ASTRONOMY EVENTS</div>
-                        <strong>{timelineLead()}</strong>
+                        <strong>{timelineLeadText}</strong>
                         <span>现在 {formatLocalClock(currentInstant, timeZone)}</span>
                     </div>
                     <div class="orbit-badge orbit-badge--moon">
@@ -114,12 +113,12 @@
                             <circle cx="24" cy="24" r="18" fill="#f5efcf"></circle>
                             <circle
                                 class="orbit-moon__shadow"
-                                cx={moonShadowCenter()}
+                                cx={moonShadowCenterValue}
                                 cy="24"
                                 r="18"
                             ></circle>
                         </svg>
-                        <span class="orbit-badge__caption">{moonPhaseLabel()}</span>
+                        <span class="orbit-badge__caption">{moonPhaseLabelText}</span>
                     </div>
                 </div>
 
@@ -127,6 +126,7 @@
                     {#each astronomyTimeline?.items || [] as item}
                         <div
                             class:item-moon={item.body === 'moon'}
+                            class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
                             class:timeline-event--missing={!item.time}
                             class="timeline-event"
                         >
@@ -155,10 +155,7 @@
                 <article class="position-card position-card--sun">
                     <div class="position-card__heading">
                         <span class="celestial-symbol celestial-symbol--sun" aria-hidden="true">☀</span>
-                        <div>
-                            <div class="eyebrow">LIVE SUN</div>
-                            <strong>实时太阳位置</strong>
-                        </div>
+                        <strong>太阳</strong>
                     </div>
                     {#if currentSolarDirection}
                         <div class="position-card__value">{Math.round(currentSolarDirection.azimuth)}° {compassDirection(currentSolarDirection.azimuth)}</div>
@@ -177,10 +174,7 @@
                 <article class="position-card position-card--moon">
                     <div class="position-card__heading">
                         <span class="celestial-symbol celestial-symbol--moon" aria-hidden="true">◐</span>
-                        <div>
-                            <div class="eyebrow">LIVE MOON</div>
-                            <strong>实时月亮位置</strong>
-                        </div>
+                        <strong>月亮</strong>
                     </div>
                     {#if currentMoonInfo}
                         <div class="position-card__value">{Math.round(currentMoonInfo.azimuth)}° {compassDirection(currentMoonInfo.azimuth)}</div>
@@ -260,6 +254,7 @@
     <p class="panel-note">
         方向线表示天文方位，不代表山体、建筑或云层遮挡条件下的实际可见性。关闭面板后，方向线会保留在地图上；重新打开插件时会接管并更新同一组图层。
     </p>
+    </div>
 </section>
 
 <script lang="ts">
@@ -367,6 +362,9 @@
     let currentSolarDirection: SolarDirection | null = null;
     let currentMoonInfo: CurrentMoonInfo | null = null;
     let currentInstant = new Date();
+    let timelineLeadText = '正在计算…';
+    let moonPhaseLabelText = '月相计算中';
+    let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = isMobileOrTablet || isSmallViewport() ? 'current' : 'diagram';
     let eventDisplayData: Record<SolarEvent, EventDisplay> = { ...EMPTY_EVENT_DISPLAY };
     let displayAstronomyIntervals: AstronomyInterval[] = [];
@@ -745,19 +743,6 @@
     const formatIntervalDuration = (interval: AstronomyInterval): string =>
         formatRemaining(interval.end.getTime() - interval.start.getTime());
 
-    const moonShadowCenter = (): number => {
-        const fraction = astronomyTimeline?.moonIllumination.fraction ?? currentMoonInfo?.illuminationFraction ?? 0;
-        const waxing = astronomyTimeline?.moonIllumination.waxing ?? currentMoonInfo?.waxing ?? true;
-        return 24 + (waxing ? -1 : 1) * fraction * 36;
-    };
-
-    const moonPhaseLabel = (): string => {
-        if (astronomyTimeline) {
-            return moonPhaseName(astronomyTimeline.moonIllumination.phase);
-        }
-        return currentMoonInfo ? moonPhaseName(currentMoonInfo.phase) : '月相';
-    };
-
     const formatRemaining = (milliseconds: number): string => {
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
@@ -765,13 +750,28 @@
         return hours > 0 ? `${hours}小时${minutes}分钟` : `${minutes}分钟`;
     };
 
-    const timelineLead = (): string => {
-        const next = astronomyTimeline?.items.find(item => item.time && item.time.getTime() > currentInstant.getTime());
+    $: moonPhaseLabelText = astronomyTimeline
+        ? moonPhaseName(astronomyTimeline.moonIllumination.phase)
+        : currentMoonInfo
+            ? moonPhaseName(currentMoonInfo.phase)
+            : '月相计算中';
+
+    $: moonShadowCenterValue = (() => {
+        const fraction = astronomyTimeline?.moonIllumination.fraction ?? currentMoonInfo?.illuminationFraction ?? 0;
+        const waxing = astronomyTimeline?.moonIllumination.waxing ?? currentMoonInfo?.waxing ?? true;
+        return 24 + (waxing ? -1 : 1) * fraction * 36;
+    })();
+
+    $: timelineLeadText = (() => {
+        if (!astronomyTimeline) {
+            return '正在计算…';
+        }
+        const next = astronomyTimeline.items.find(item => item.time && item.time.getTime() > currentInstant.getTime());
         if (!next?.time) {
             return '今日天文时段已结束';
         }
         return `距离${timelineEventLabel(next)}开始还有 ${formatRemaining(next.time.getTime() - currentInstant.getTime())}`;
-    };
+    })();
 
     export const onopen = (params?: LatLon) => {
         const nextLocation = params ? coordinatesFromLocation(params) || { ...GUANGZHOU } : defaultLocation();
@@ -883,6 +883,10 @@
         line-height: 1.5;
     }
 
+    .mobile-scroll-content {
+        width: 100%;
+    }
+
     .sun-path-panel.mobile_ui {
         display: flex;
         flex-direction: column;
@@ -895,32 +899,46 @@
         height: min(380px, 68dvh);
         max-height: min(380px, 68dvh);
         margin-top: -4pt;
-        padding: 0 8px env(safe-area-inset-bottom, 0px);
-        overflow-y: auto;
+        padding: 0;
+        overflow: hidden;
     }
 
-    .sun-path-panel.mobile_ui > .panel-intro,
-    .sun-path-panel.mobile_ui > .location-summary,
-    .sun-path-panel.mobile_ui > .sun-path-legend,
-    .sun-path-panel.mobile_ui > .panel-note {
+    .sun-path-panel.mobile_ui .mobile-scroll-content {
+        box-sizing: border-box;
+        width: 100%;
+        height: 0;
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow-x: hidden;
+        overflow-y: scroll;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
+        padding: 0 8px env(safe-area-inset-bottom, 0px);
+    }
+
+    .sun-path-panel.mobile_ui .panel-intro,
+    .sun-path-panel.mobile_ui .location-summary,
+    .sun-path-panel.mobile_ui .sun-path-legend,
+    .sun-path-panel.mobile_ui .panel-note {
         display: none;
     }
 
-    .sun-path-panel.mobile_ui > .control-grid {
+    .sun-path-panel.mobile_ui .control-grid {
         order: -2;
         grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
         gap: 8px;
-        margin: 8px 0;
+        margin: 6px 0;
     }
 
-    .sun-path-panel.mobile_ui > .status-region--event-details {
+    .sun-path-panel.mobile_ui .status-region--event-details {
         display: none;
     }
 
-    .sun-path-panel.mobile_ui > .map-bottom-module {
+    .sun-path-panel.mobile_ui .map-bottom-module {
         order: -1;
         margin-top: 0;
-        margin-bottom: 16px;
+        margin-bottom: 8px;
     }
 
     .sun-path-panel.mobile_ui .position-cards {
@@ -942,13 +960,14 @@
     }
 
     .sun-path-panel.mobile_ui .position-card__value {
-        margin-top: 8px;
+        margin-top: 6px;
         font-size: 15px;
     }
 
-    .sun-path-panel.mobile_ui .position-card__meta,
-    .sun-path-panel.mobile_ui .position-card__events {
+    .sun-path-panel.mobile_ui .position-card__meta {
+        min-height: 0;
         font-size: 10px;
+        line-height: 1.35;
     }
 
     .sun-path-panel.mobile_ui .position-card__events {
@@ -1031,6 +1050,8 @@
     input[type='date'] {
         box-sizing: border-box;
         width: 100%;
+        min-width: 0;
+        max-width: 100%;
         min-height: 44px;
         padding: 8px 10px;
         border: 1px solid var(--panel-border);
@@ -1513,15 +1534,16 @@
         --astronomy-text: #f2f4fa;
         --astronomy-sun: #ff9138;
         --astronomy-moon: #4e91ed;
+        --astronomy-blue-hour: #c4b5fd;
 
-        padding: 10px 10px 12px;
+        padding: 8px 8px 10px;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
     }
 
     .astronomy-panel__heading {
         position: relative;
-        min-height: 52px;
+        min-height: 44px;
     }
 
     .astronomy-panel__lead {
@@ -1625,6 +1647,11 @@
     .timeline-event:not(.item-moon) .timeline-event__label,
     .timeline-event:not(.item-moon) strong {
         color: var(--astronomy-sun);
+    }
+
+    .timeline-event.item-blue-hour .timeline-event__label,
+    .timeline-event.item-blue-hour strong {
+        color: var(--astronomy-blue-hour);
     }
 
     .timeline-event.item-moon .timeline-event__label {
@@ -1827,8 +1854,8 @@
             margin-bottom: 16px;
         }
 
-        .control-grid {
-            grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
+        .sun-path-panel.mobile_ui .control-grid {
+            grid-template-columns: 1fr;
         }
 
         .segmented-control--events {
@@ -1907,8 +1934,8 @@
     }
 
     @media (max-width: 360px) {
-        .sun-path-panel.mobile_ui > .control-grid {
-            grid-template-columns: 1fr;
+        .sun-path-panel.mobile_ui .control-grid {
+            gap: 6px;
         }
     }
 
