@@ -37,7 +37,7 @@
                         aria-pressed={selectedEvent === option.value}
                         on:click={() => (selectedEvent = option.value)}
                     >
-                        {eventDisplayName(option.value)}
+                        {text.events[option.value]}
                     </button>
                 {/each}
             </div>
@@ -96,7 +96,7 @@
                         <span class="sample-row__name">{sample.label}</span>
                         <span class="sample-row__time">{formatLocalClock(sample.time, timeZone)}</span>
                         <span class="sample-row__azimuth">
-                            {Math.round(sample.azimuth)}° {compassDirection(sample.azimuth)}
+                            {Math.round(sample.azimuth)}° {compassDirectionLabel(sample.azimuth)}
                         </span>
                     </div>
                 {/each}
@@ -122,7 +122,7 @@
                             <div class="live-position live-position--sun">
                                 <span>{text.sun}</span>
                                 {#if currentSolarDirection}
-                                    <strong>{Math.round(currentSolarDirection.azimuth)}° {compassDirection(currentSolarDirection.azimuth)}</strong>
+                                    <strong>{Math.round(currentSolarDirection.azimuth)}° {compassDirectionLabel(currentSolarDirection.azimuth)}</strong>
                                     <em>{text.altitude} {currentSolarDirection.altitude.toFixed(1)}°</em>
                                 {:else}
                                     <strong>--</strong>
@@ -131,7 +131,7 @@
                             <div class="live-position live-position--moon">
                                 <span>{text.moon}</span>
                                 {#if currentMoonInfo}
-                                    <strong>{Math.round(currentMoonInfo.azimuth)}° {compassDirection(currentMoonInfo.azimuth)}</strong>
+                                    <strong>{Math.round(currentMoonInfo.azimuth)}° {compassDirectionLabel(currentMoonInfo.azimuth)}</strong>
                                     <em>{text.altitude} {currentMoonInfo.altitude.toFixed(1)}°</em>
                                 {:else}
                                     <strong>--</strong>
@@ -160,7 +160,7 @@
                                 class:timeline-event--missing={!item.time}
                                 class="timeline-event"
                             >
-                                <span class="timeline-event__label">{timelineEventLabel(item)}</span>
+                                <span class="timeline-event__label">{timelineEventLabel(item, text)}</span>
                                 <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
                             </div>
                         {/each}
@@ -532,6 +532,14 @@
     const lineColorForEvent = (event: DirectionEvent, kind: SolarSampleKind): string =>
         event === 'moonrise' || event === 'moonset' ? MOON_LINE_COLORS[kind] : LINE_COLORS[kind];
 
+    const compassDirectionLabel = (azimuth: number): string => {
+        if (uiLanguage === 'zh') {
+            return compassDirection(azimuth);
+        }
+        const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        return labels[Math.round(((azimuth % 360) + 360) % 360 / 45) % labels.length];
+    };
+
     const removeMapFeatures = () => {
         mapLayerGroup?.remove();
         mapLayerGroup = null;
@@ -814,11 +822,11 @@
         }
     };
 
-    const timelineEventLabel = (item: { kind: string; label: string }): string => {
+    const timelineEventLabel = (item: { kind: string; label: string }, labels = text): string => {
         if (item.kind === 'dawn' || item.kind === 'dusk') {
-            return text.timeline.dawn;
+            return labels.timeline.dawn;
         }
-        return text.timeline[item.kind] || item.label;
+        return labels.timeline[item.kind] || item.label;
     };
 
     const formatInterval = (interval: AstronomyInterval): string =>
@@ -873,9 +881,9 @@
             return text.timelineEnded;
         }
         if (uiLanguage === 'en') {
-            return `${timelineEventLabel(next)} ${text.timelineStartSuffix} ${formatRemaining(next.time.getTime() - currentInstant.getTime())}`;
+            return `${timelineEventLabel(next, text)} ${text.timelineStartSuffix} ${formatRemaining(next.time.getTime() - currentInstant.getTime())}`;
         }
-        return `${text.timelinePrefix}${timelineEventLabel(next)}${text.timelineStartSuffix} ${formatRemaining(next.time.getTime() - currentInstant.getTime())}`;
+        return `${text.timelinePrefix}${timelineEventLabel(next, text)}${text.timelineStartSuffix} ${formatRemaining(next.time.getTime() - currentInstant.getTime())}`;
     })();
 
     export const onopen = (params?: LatLon) => {
