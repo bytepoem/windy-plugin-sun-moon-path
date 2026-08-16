@@ -20,7 +20,11 @@
     <div class="control-grid">
         <label class="control-field">
             <span class="control-label">观测日期</span>
-            <input type="date" bind:value={selectedDate} aria-label="观测日期" />
+            <span class="date-control">
+                <span class="date-control__text">{formatDateControlLabel(selectedDate)}</span>
+                <span class="date-control__icon" aria-hidden="true">▣</span>
+                <input type="date" bind:value={selectedDate} aria-label="观测日期" />
+            </span>
         </label>
 
         <fieldset class="event-selector">
@@ -98,150 +102,152 @@
             <button type="button" class:active={summaryTab === 'about'} on:click={() => (summaryTab = 'about')}>说明</button>
         </nav>
 
-        {#if summaryTab === 'diagram'}
-            <section class="astronomy-panel" aria-label="今日天文时段">
-                <div class="astronomy-panel__heading">
-                    <div class="astronomy-panel__lead">
-                        <strong>{timelineLeadText}</strong>
-                        <span>现在 {formatLocalClock(currentInstant, timeZone)}</span>
-                    </div>
-                    <div class="orbit-badge orbit-badge--moon">
-                        <svg class="orbit-moon" viewBox="0 0 48 48" aria-label="当前月相" role="img">
-                            <circle cx="24" cy="24" r="18" fill="#f5efcf"></circle>
-                            <circle
-                                class="orbit-moon__shadow"
-                                cx={moonShadowCenterValue}
-                                cy="24"
-                                r="18"
-                            ></circle>
-                        </svg>
-                        <span class="orbit-badge__caption">{moonPhaseLabelText}</span>
-                    </div>
-                </div>
-
-                <div class="timeline-events" aria-label="今日天文事件">
-                    {#each astronomyTimeline?.items || [] as item}
-                        <div
-                            class:item-moon={item.body === 'moon'}
-                            class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
-                            class:timeline-event--missing={!item.time}
-                            class="timeline-event"
-                        >
-                            <span class="timeline-event__label">{timelineEventLabel(item)}</span>
-                            <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
+        <div class="summary-panel-frame">
+            {#if summaryTab === 'diagram'}
+                <section class="astronomy-panel" aria-label="今日天文时段">
+                    <div class="astronomy-panel__heading">
+                        <div class="astronomy-panel__lead">
+                            <strong>{timelineLeadText}</strong>
+                            <span>现在 {formatLocalClock(currentInstant, timeZone)}</span>
                         </div>
-                    {/each}
-                </div>
+                        <div class="orbit-badge orbit-badge--moon">
+                            <svg class="orbit-moon" viewBox="0 0 48 48" aria-label="当前月相" role="img">
+                                <circle cx="24" cy="24" r="18" fill="#f5efcf"></circle>
+                                <circle
+                                    class="orbit-moon__shadow"
+                                    cx={moonShadowCenterValue}
+                                    cy="24"
+                                    r="18"
+                                ></circle>
+                            </svg>
+                            <span class="orbit-badge__caption">{moonPhaseLabelText}</span>
+                        </div>
+                    </div>
 
-                <div class="night-window-list" aria-label="夜间观测时段">
-                    {#each displayAstronomyIntervals as interval}
-                        <article class:night-window--milky-way={interval.kind === 'milky-way'} class="night-window">
-                            <div class="night-window__body">
-                                <strong>{interval.label}</strong>
-                                <span>{formatInterval(interval)} · {formatIntervalDuration(interval)}</span>
+                    <div class="timeline-events" aria-label="今日天文事件">
+                        {#each astronomyTimeline?.items || [] as item}
+                            <div
+                                class:item-moon={item.body === 'moon'}
+                                class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
+                                class:timeline-event--missing={!item.time}
+                                class="timeline-event"
+                            >
+                                <span class="timeline-event__label">{timelineEventLabel(item)}</span>
+                                <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
                             </div>
-                        </article>
-                    {/each}
-                    {#if astronomyTimeline && displayAstronomyIntervals.length === 0}
-                        <p class="night-window-list__empty">当天没有满足条件的无月黑夜或银河时刻。</p>
-                    {/if}
-                </div>
-            </section>
-        {:else if summaryTab === 'current'}
-            <section class="position-cards" aria-label="实时日月位置">
-                <article class="position-card position-card--sun">
-                    <div class="position-card__heading">
-                        <span class="celestial-symbol celestial-symbol--sun" aria-hidden="true">☀</span>
-                        <strong>太阳</strong>
+                        {/each}
                     </div>
-                    {#if currentSolarDirection}
-                        <div class="position-card__value">{Math.round(currentSolarDirection.azimuth)}° {compassDirection(currentSolarDirection.azimuth)}</div>
-                        <div class="position-card__meta">高度角 {currentSolarDirection.altitude.toFixed(1)}° · {currentSolarDirection.altitude >= 0 ? 'Daytime' : 'Nighttime'}</div>
-                    {:else}
-                        <div class="position-card__value">--</div>
-                    {/if}
-                    <div class="position-card__events">
-                        <span>日出 {eventDisplayData.sunrise.time}</span>
-                        <span>{eventDisplayData.sunrise.azimuth}</span>
-                        <span>日落 {eventDisplayData.sunset.time}</span>
-                        <span>{eventDisplayData.sunset.azimuth}</span>
-                    </div>
-                </article>
 
-                <article class="position-card position-card--moon">
-                    <div class="position-card__heading">
-                        <span class="celestial-symbol celestial-symbol--moon" aria-hidden="true">◐</span>
-                        <strong>月亮</strong>
+                    <div class="night-window-list" aria-label="夜间观测时段">
+                        {#each displayAstronomyIntervals as interval}
+                            <article class:night-window--milky-way={interval.kind === 'milky-way'} class="night-window">
+                                <div class="night-window__body">
+                                    <strong>{interval.label}</strong>
+                                    <span>{formatInterval(interval)} · {formatIntervalDuration(interval)}</span>
+                                </div>
+                            </article>
+                        {/each}
+                        {#if astronomyTimeline && displayAstronomyIntervals.length === 0}
+                            <p class="night-window-list__empty">当天没有满足条件的无月黑夜或银河时刻。</p>
+                        {/if}
                     </div>
-                    {#if currentMoonInfo}
-                        <div class="position-card__value">{Math.round(currentMoonInfo.azimuth)}° {compassDirection(currentMoonInfo.azimuth)}</div>
-                        <div class="position-card__meta">高度角 {currentMoonInfo.altitude.toFixed(1)}° · {moonPhaseName(currentMoonInfo.phase)} · {Math.round(currentMoonInfo.illuminationFraction * 100)}%</div>
-                    {:else}
-                        <div class="position-card__value">--</div>
-                    {/if}
-                    <div class="position-card__events">
-                        <span>月升 {eventDisplayData.moonrise.time}</span>
-                        <span>{eventDisplayData.moonrise.azimuth}</span>
-                        <span>月落 {eventDisplayData.moonset.time}</span>
-                        <span>{eventDisplayData.moonset.azimuth}</span>
+                </section>
+            {:else if summaryTab === 'current'}
+                <section class="position-cards" aria-label="实时日月位置">
+                    <article class="position-card position-card--sun">
+                        <div class="position-card__heading">
+                            <span class="celestial-symbol celestial-symbol--sun" aria-hidden="true">☀</span>
+                            <strong>太阳</strong>
+                        </div>
+                        {#if currentSolarDirection}
+                            <div class="position-card__value">{Math.round(currentSolarDirection.azimuth)}° {compassDirection(currentSolarDirection.azimuth)}</div>
+                            <div class="position-card__meta">高度角 {currentSolarDirection.altitude.toFixed(1)}° · {currentSolarDirection.altitude >= 0 ? 'Daytime' : 'Nighttime'}</div>
+                        {:else}
+                            <div class="position-card__value">--</div>
+                        {/if}
+                        <div class="position-card__events">
+                            <span>日出 {eventDisplayData.sunrise.time}</span>
+                            <span>{eventDisplayData.sunrise.azimuth}</span>
+                            <span>日落 {eventDisplayData.sunset.time}</span>
+                            <span>{eventDisplayData.sunset.azimuth}</span>
+                        </div>
+                    </article>
+
+                    <article class="position-card position-card--moon">
+                        <div class="position-card__heading">
+                            <span class="celestial-symbol celestial-symbol--moon" aria-hidden="true">◐</span>
+                            <strong>月亮</strong>
+                        </div>
+                        {#if currentMoonInfo}
+                            <div class="position-card__value">{Math.round(currentMoonInfo.azimuth)}° {compassDirection(currentMoonInfo.azimuth)}</div>
+                            <div class="position-card__meta">高度角 {currentMoonInfo.altitude.toFixed(1)}° · {moonPhaseName(currentMoonInfo.phase)} · {Math.round(currentMoonInfo.illuminationFraction * 100)}%</div>
+                        {:else}
+                            <div class="position-card__value">--</div>
+                        {/if}
+                        <div class="position-card__events">
+                            <span>月升 {eventDisplayData.moonrise.time}</span>
+                            <span>{eventDisplayData.moonrise.azimuth}</span>
+                            <span>月落 {eventDisplayData.moonset.time}</span>
+                            <span>{eventDisplayData.moonset.azimuth}</span>
+                        </div>
+                    </article>
+                </section>
+            {:else}
+                <section class="module-about" aria-label="数据说明">
+                    <p>太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。</p>
+                    <div class="sun-path-legend sun-path-legend--module" aria-label="地图图例">
+                        <div class="sun-path-legend__items">
+                            <span class="legend-item">
+                                <span class="legend-dot legend-dot--origin" aria-hidden="true"></span>
+                                用户位置
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-dot legend-dot--inner" aria-hidden="true"></span>
+                                200 km
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-dot legend-dot--outer" aria-hidden="true"></span>
+                                400 km
+                            </span>
+                        </div>
+                        <div class="sun-path-legend__items sun-path-legend__items--lines">
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--before" aria-hidden="true"></span>
+                                太阳前 30 分钟
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--event" aria-hidden="true"></span>
+                                太阳事件时刻
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--after" aria-hidden="true"></span>
+                                太阳后 30 分钟
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--moon-before" aria-hidden="true"></span>
+                                月亮前 30 分钟
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--moon-event" aria-hidden="true"></span>
+                                月亮事件时刻
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--moon-after" aria-hidden="true"></span>
+                                月亮后 30 分钟
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--current" aria-hidden="true"></span>
+                                当前太阳方位
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line legend-line--moon" aria-hidden="true"></span>
+                                当前月亮方位
+                            </span>
+                        </div>
                     </div>
-                </article>
-            </section>
-        {:else}
-            <section class="module-about" aria-label="数据说明">
-                <p>太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。</p>
-                <div class="sun-path-legend sun-path-legend--module" aria-label="地图图例">
-                    <div class="sun-path-legend__items">
-                        <span class="legend-item">
-                            <span class="legend-dot legend-dot--origin" aria-hidden="true"></span>
-                            用户位置
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-dot legend-dot--inner" aria-hidden="true"></span>
-                            200 km
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-dot legend-dot--outer" aria-hidden="true"></span>
-                            400 km
-                        </span>
-                    </div>
-                    <div class="sun-path-legend__items sun-path-legend__items--lines">
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--before" aria-hidden="true"></span>
-                            太阳前 30 分钟
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--event" aria-hidden="true"></span>
-                            太阳事件时刻
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--after" aria-hidden="true"></span>
-                            太阳后 30 分钟
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--moon-before" aria-hidden="true"></span>
-                            月亮前 30 分钟
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--moon-event" aria-hidden="true"></span>
-                            月亮事件时刻
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--moon-after" aria-hidden="true"></span>
-                            月亮后 30 分钟
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--current" aria-hidden="true"></span>
-                            当前太阳方位
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-line legend-line--moon" aria-hidden="true"></span>
-                            当前月亮方位
-                        </span>
-                    </div>
-                </div>
-            </section>
-        {/if}
+                </section>
+            {/if}
+        </div>
     </section>
 
     <p class="panel-note">
@@ -705,6 +711,13 @@
     const formatIntervalDuration = (interval: AstronomyInterval): string =>
         formatRemaining(interval.end.getTime() - interval.start.getTime());
 
+    const formatDateControlLabel = (dateInput: string): string => {
+        const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
+        return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
+            ? `${year}年${month}月${day}日`
+            : dateInput;
+    };
+
     const formatRemaining = (milliseconds: number): string => {
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
@@ -815,6 +828,7 @@
         --timeline-bg: #111a31;
         --timeline-sun: #ff9c38;
         --timeline-moon: #5ca9ff;
+        --summary-panel-height: 164px;
 
         box-sizing: border-box;
         width: 100%;
@@ -849,6 +863,8 @@
     }
 
     .sun-path-panel.mobile_ui {
+        --summary-panel-height: clamp(178px, 21svh, 198px);
+
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -993,7 +1009,7 @@
 
     .control-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.55fr);
+        grid-template-columns: minmax(128px, 0.9fr) minmax(0, 1.65fr);
         gap: 6px;
         margin: 0 0 6px;
     }
@@ -1013,6 +1029,40 @@
         font-size: 12px;
     }
 
+    .date-control {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 36px;
+        gap: 6px;
+        padding: 0 8px;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        color: var(--panel-text);
+        background: #0e161f;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .date-control__text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .date-control__icon {
+        flex: 0 0 auto;
+        color: var(--panel-accent);
+        font-size: 13px;
+        line-height: 1;
+    }
+
     input[type='date'] {
         box-sizing: border-box;
         width: 100%;
@@ -1027,6 +1077,20 @@
         font: inherit;
         font-size: 14px;
         color-scheme: dark;
+    }
+
+    .date-control input[type='date'] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        opacity: 0;
+        appearance: none;
+        -webkit-appearance: none;
+        cursor: pointer;
     }
 
     .segmented-control {
@@ -1499,6 +1563,12 @@
         border-bottom-color: var(--panel-accent);
     }
 
+    .summary-panel-frame {
+        height: var(--summary-panel-height);
+        overflow: hidden;
+        background: #1d263d;
+    }
+
     .astronomy-panel {
         --astronomy-bg: #1d263d;
         --astronomy-muted: #a8b1c1;
@@ -1507,6 +1577,10 @@
         --astronomy-moon: #4e91ed;
         --astronomy-blue-hour: #c4b5fd;
 
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 100%;
+        overflow-y: auto;
         padding: 10px 10px 12px;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
@@ -1641,11 +1715,14 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
+        box-sizing: border-box;
+        min-height: 100%;
         padding: 8px;
     }
 
     .position-card {
         min-width: 0;
+        height: 100%;
         padding: 10px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -1749,6 +1826,9 @@
     }
 
     .module-about {
+        box-sizing: border-box;
+        height: 100%;
+        overflow-y: auto;
         padding: 14px;
         color: var(--panel-muted);
         background: rgba(0, 0, 0, 0.14);
@@ -1824,7 +1904,7 @@
         }
 
         .sun-path-panel.mobile_ui .control-grid {
-            grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
+            grid-template-columns: minmax(124px, 0.9fr) minmax(0, 1.6fr);
         }
 
         .segmented-control--events {
@@ -1903,8 +1983,27 @@
     }
 
     @media (max-width: 360px) {
+        .sun-path-panel.mobile_ui {
+            --summary-panel-height: 174px;
+        }
+
         .sun-path-panel.mobile_ui .control-grid {
             gap: 6px;
+        }
+    }
+
+    @media (max-height: 740px) {
+        .sun-path-panel.mobile_ui {
+            --summary-panel-height: 174px;
+        }
+
+        .astronomy-panel {
+            padding-top: 8px;
+            padding-bottom: 10px;
+        }
+
+        .astronomy-panel__heading {
+            min-height: 46px;
         }
     }
 
