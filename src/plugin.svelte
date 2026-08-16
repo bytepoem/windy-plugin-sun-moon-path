@@ -43,7 +43,11 @@
         <span class="location-hint">单击地图重新选择</span>
     </div>
 
-    <div class="status-region" aria-live="polite">
+    <div
+        class="status-region"
+        class:status-region--event-details={selectedEvent !== 'all' && activeSolarPath?.status !== undefined}
+        aria-live="polite"
+    >
         {#if status === 'loading'}
             <div class="status-message">正在计算日月方位…</div>
         {:else if status === 'error'}
@@ -94,7 +98,6 @@
         <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
             <button type="button" class:active={summaryTab === 'diagram'} on:click={() => (summaryTab = 'diagram')}>事件</button>
             <button type="button" class:active={summaryTab === 'current'} on:click={() => (summaryTab = 'current')}>当前</button>
-            <button type="button" class:active={summaryTab === 'timeline'} on:click={() => (summaryTab = 'timeline')}>时段</button>
             <button type="button" class:active={summaryTab === 'about'} on:click={() => (summaryTab = 'about')}>说明</button>
         </nav>
 
@@ -192,16 +195,6 @@
                         <span>{eventDisplayData.moonset.azimuth}</span>
                     </div>
                 </article>
-            </section>
-        {:else if summaryTab === 'timeline'}
-            <section class="event-table" aria-label="日月事件表">
-                {#each astronomyTimeline?.items || [] as item}
-                    <div class:item-moon={item.body === 'moon'} class="event-table__row">
-                        <span class="event-table__swatch" aria-hidden="true"></span>
-                        <span>{item.label}</span>
-                        <strong>{item.time ? formatLocalDateTime(item.time, timeZone) : '无可用时刻'}</strong>
-                    </div>
-                {/each}
             </section>
         {:else}
             <section class="module-about" aria-label="数据说明">
@@ -320,7 +313,7 @@
     })();
     const GUANGZHOU: Coordinates = { lat: 23.05, lon: 113.37 };
     type DirectionEvent = SolarEvent | 'all';
-    type SummaryTab = 'diagram' | 'current' | 'timeline' | 'about';
+    type SummaryTab = 'diagram' | 'current' | 'about';
     type EventDisplay = { time: string; azimuth: string };
     const celestialEvents: SolarEvent[] = ['sunrise', 'sunset', 'moonrise', 'moonset'];
     const eventOptions: { value: DirectionEvent; label: string }[] = [
@@ -895,18 +888,28 @@
         flex-direction: column;
         align-items: stretch;
         gap: 0;
-        height: 150px;
-        max-height: 150px;
+        height: 380px;
+        max-height: 380px;
         margin-top: -4pt;
         padding: 0 8px env(safe-area-inset-bottom, 0px);
         overflow-y: auto;
     }
 
     .sun-path-panel.mobile_ui > .panel-intro,
-    .sun-path-panel.mobile_ui > .control-grid,
     .sun-path-panel.mobile_ui > .location-summary,
     .sun-path-panel.mobile_ui > .sun-path-legend,
     .sun-path-panel.mobile_ui > .panel-note {
+        display: none;
+    }
+
+    .sun-path-panel.mobile_ui > .control-grid {
+        order: -2;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
+        gap: 8px;
+        margin: 8px 0;
+    }
+
+    .sun-path-panel.mobile_ui > .status-region--event-details {
         display: none;
     }
 
@@ -942,6 +945,10 @@
     .sun-path-panel.mobile_ui .position-card__meta,
     .sun-path-panel.mobile_ui .position-card__events {
         font-size: 10px;
+    }
+
+    .sun-path-panel.mobile_ui .position-card__events {
+        display: none;
     }
 
     .panel-title {
@@ -1466,7 +1473,7 @@
 
     .summary-tabs {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         border-bottom: 1px solid var(--panel-border);
         background: rgba(255, 255, 255, 0.04);
     }
@@ -1611,6 +1618,11 @@
         font-variant-numeric: tabular-nums;
     }
 
+    .timeline-event:not(.item-moon) .timeline-event__label,
+    .timeline-event:not(.item-moon) strong {
+        color: var(--astronomy-sun);
+    }
+
     .timeline-event.item-moon .timeline-event__label {
         color: #91bfff;
     }
@@ -1682,42 +1694,6 @@
     .position-card__events span:nth-child(even) {
         color: var(--panel-text);
         text-align: right;
-    }
-
-    .event-table {
-        display: grid;
-        gap: 1px;
-        padding: 12px;
-        background: rgba(0, 0, 0, 0.16);
-    }
-
-    .event-table__row {
-        display: grid;
-        grid-template-columns: 8px minmax(0, 1fr) auto;
-        gap: 9px;
-        align-items: center;
-        min-height: 44px;
-        padding: 8px 10px;
-        color: var(--panel-muted);
-        background: var(--panel-surface);
-    }
-
-    .event-table__row strong {
-        color: var(--panel-text);
-        font-size: 12px;
-        font-variant-numeric: tabular-nums;
-        text-align: right;
-    }
-
-    .event-table__swatch {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--timeline-sun);
-    }
-
-    .event-table__row.item-moon .event-table__swatch {
-        background: var(--timeline-moon);
     }
 
     .night-window-list {
@@ -1837,7 +1813,7 @@
             display: flex;
             flex-direction: column;
             max-width: none;
-            max-height: min(78dvh, 760px);
+            max-height: min(380px, 68dvh);
             padding-right: 14px;
             padding-left: 14px;
         }
@@ -1849,25 +1825,11 @@
         }
 
         .control-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
         }
 
         .segmented-control--events {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .segmented-control--events button:nth-child(3) {
-            border-top: 1px solid var(--panel-border);
-            border-left: 0;
-        }
-
-        .segmented-control--events button:nth-child(4) {
-            border-top: 1px solid var(--panel-border);
-        }
-
-        .segmented-control--events button:nth-child(5) {
-            border-top: 1px solid var(--panel-border);
-            border-left: 0;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
         }
 
         .sample-row {
@@ -1937,6 +1899,12 @@
         }
 
         .night-window-list {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .sun-path-panel.mobile_ui > .control-grid {
             grid-template-columns: 1fr;
         }
     }
