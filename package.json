@@ -24,7 +24,7 @@
         "url": "git+https://github.com/bytepoem/windy-plugin-sun-path.git"
     },
     "keywords": ["windy", "windy.com", "plugins", "sunrise", "sunset", "moonrise", "moonset"],
-    "author": "Windyty, S.E.",
+    "author": "bytepoem",
     "license": "ISC",
     "bugs": {
         "url": "https://github.com/bytepoem/windy-plugin-sun-path/issues"
