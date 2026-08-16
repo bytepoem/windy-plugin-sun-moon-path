@@ -1,16 +1,25 @@
-<div class="plugin__mobile-header">
-    { title }
-</div>
-
 <section
-    class="sun-path-panel plugin__content"
+    class="sun-path-panel"
+    class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
 >
     <div
-        class="plugin__title plugin__title--chevron-back panel-title"
-        on:click={() => bcast.emit('rqstOpen', 'menu')}
+        class="panel-title"
+        class:plugin__title={!isMobileOrTablet}
+        class:plugin__title--chevron-back={!isMobileOrTablet}
+        on:click={() => !isMobileOrTablet && bcast.emit('rqstOpen', 'menu')}
     >
-        {title}
+        <span>{title}</span>
+        {#if isMobileOrTablet}
+            <button
+                type="button"
+                class="panel-close"
+                aria-label="关闭面板"
+                on:click|stopPropagation={() => bcast.emit('rqstClose', name)}
+            >
+                ×
+            </button>
+        {/if}
     </div>
 
     <div class="mobile-scroll-content">
@@ -290,6 +299,7 @@
         MOON_LINE_COLORS,
         moonPhaseName,
         splitPolylineAtDateLine,
+        coordinatesFromLocation,
         type AstronomyInterval,
         type AstronomyTimeline,
         type Coordinates,
@@ -328,30 +338,11 @@
         moonrise: { time: '--:--', azimuth: '--°' },
         moonset: { time: '--:--', azimuth: '--°' },
     };
-    const asFiniteCoordinate = (value: number | string | undefined, fallback: number): number => {
-        const numericValue = Number(value);
-        return Number.isFinite(numericValue) ? numericValue : fallback;
-    };
-
-    const coordinatesFromLocation = (location: LatLon | undefined): Coordinates | null => {
-        if (!location) {
-            return null;
-        }
-        const lat = asFiniteCoordinate(location.lat, Number.NaN);
-        const lon = asFiniteCoordinate(location.lon, Number.NaN);
-        return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
-            ? { lat, lon }
-            : null;
-    };
-
     const defaultLocation = (): Coordinates => {
         const latestPosition = getMyLatestPos();
         const latestCoordinates = coordinatesFromLocation(latestPosition);
         return latestCoordinates && latestPosition.source !== 'fallback' ? latestCoordinates : { ...GUANGZHOU };
     };
-
-    const isSmallViewport = (): boolean =>
-        typeof window !== 'undefined' && window.matchMedia('(max-width: 520px)').matches;
 
     let selectedLocation: Coordinates = {
         ...defaultLocation(),
@@ -369,7 +360,7 @@
     let timelineLeadText = '正在计算…';
     let moonPhaseLabelText = '月相计算中';
     let moonShadowCenterValue = 24;
-    let summaryTab: SummaryTab = isMobileOrTablet || isSmallViewport() ? 'current' : 'diagram';
+    let summaryTab: SummaryTab = 'diagram';
     let eventDisplayData: Record<SolarEvent, EventDisplay> = { ...EMPTY_EVENT_DISPLAY };
     let displayAstronomyIntervals: AstronomyInterval[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
@@ -705,18 +696,11 @@
     };
 
     const setLocation = (latLon: LatLon, reopenWhenClosed = true) => {
-        const lat = asFiniteCoordinate(latLon.lat, Number.NaN);
-        const lon = asFiniteCoordinate(latLon.lon, Number.NaN);
-        if (
-            !Number.isFinite(lat) ||
-            !Number.isFinite(lon) ||
-            Math.abs(lat) > 90 ||
-            Math.abs(lon) > 180
-        ) {
+        const nextLocation = coordinatesFromLocation(latLon);
+        if (!nextLocation) {
             return;
         }
 
-        const nextLocation = { lat, lon };
         selectedLocation = nextLocation;
         const nextKey = makeRefreshKey(nextLocation, selectedDate, selectedEvent);
         refreshKey = nextKey;
@@ -839,17 +823,6 @@
         border: 1px solid rgba(255, 255, 255, 0.82);
     }
 
-    :global(.plugin__mobile-header) {
-        box-sizing: border-box;
-        min-height: 44px;
-        padding: 10px 16px;
-        color: #f3f6f8 !important;
-        background: #131920 !important;
-        font-size: 16px;
-        font-weight: 700;
-        line-height: 24px;
-    }
-
     .sun-path-panel {
         --panel-bg: rgba(19, 25, 32, 0.98);
         --panel-surface: rgba(255, 255, 255, 0.06);
@@ -880,27 +853,40 @@
         width: 100%;
     }
 
-    .sun-path-panel.mobile_ui {
-        display: block;
+    :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-path) {
         width: 100%;
-        min-height: 100%;
-        height: 100%;
-        max-height: 100%;
+        height: min(575px, 72vh);
+        max-height: min(575px, 72vh);
+        padding: 0;
         margin: 0;
-        padding: 0 12px calc(24px + env(safe-area-inset-bottom, 0px));
-        overflow-x: hidden;
-        overflow-y: auto;
-        overscroll-behavior-y: contain;
-        touch-action: pan-y;
+    }
+
+    .sun-path-panel.mobile_ui {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        height: min(575px, 72vh);
+        max-height: min(575px, 72vh);
+        height: min(575px, 72dvh);
+        max-height: min(575px, 72dvh);
+        margin-top: -4pt;
+        padding: 0;
+        overflow: hidden;
     }
 
     .sun-path-panel.mobile_ui .mobile-scroll-content {
         box-sizing: border-box;
         width: 100%;
-        height: auto;
+        height: 0;
         min-height: 0;
-        padding-bottom: 24px;
-        overflow: visible;
+        flex: 1 1 auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
+        padding: 10px 12px calc(150px + env(safe-area-inset-bottom, 0px));
     }
 
     .sun-path-panel.mobile_ui .panel-intro,
@@ -989,6 +975,45 @@
         font-weight: 700;
         text-align: left;
         cursor: pointer;
+    }
+
+    .sun-path-panel.mobile_ui > .panel-title {
+        flex: 0 0 46px;
+        justify-content: space-between;
+        min-height: 46px;
+        margin: 0;
+        padding: 0 16px 0 18px;
+        border-bottom: 1px solid var(--panel-border);
+        background: var(--panel-bg) !important;
+    }
+
+    .sun-path-panel.mobile_ui > .panel-title > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .panel-close {
+        display: grid;
+        flex: 0 0 36px;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        color: var(--panel-muted);
+        background: transparent;
+        font: inherit;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .panel-close:hover {
+        color: var(--panel-text);
+        background: var(--panel-surface-hover);
     }
 
     .panel-title__arrow {
@@ -1854,7 +1879,7 @@
         }
 
         .sun-path-panel.mobile_ui .control-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
         }
 
         .segmented-control--events {

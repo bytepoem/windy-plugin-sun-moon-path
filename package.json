@@ -1,6 +1,6 @@
 {
     "name": "windy-plugin-sun-path",
-    "version": "0.4.3-beta-2",
+    "version": "0.4.3-beta-3",
     "description": "Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.com",
     "main": "dist/plugin.min.js",
     "type": "module",

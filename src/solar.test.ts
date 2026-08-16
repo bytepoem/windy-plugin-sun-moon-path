@@ -7,6 +7,7 @@ import {
     calculateSolarPath,
     CURRENT_DIRECTION_LENGTH_KM,
     CURRENT_DIRECTION_LENGTH_KM as CURRENT_MOON_DIRECTION_LENGTH_KM,
+    coordinatesFromLocation,
     dateInputToUtcMidnight,
     dateInputToUtcNoon,
     destinationPoint,
@@ -20,6 +21,19 @@ import {
 } from './solar';
 
 describe('solar path geometry', () => {
+    it('accepts both Windy lon and Leaflet lng map click coordinates', () => {
+        expect(coordinatesFromLocation({ lat: '23.05', lon: '113.37' })).toEqual({
+            lat: 23.05,
+            lon: 113.37,
+        });
+        expect(coordinatesFromLocation({ lat: 23.05, lng: 113.37 })).toEqual({
+            lat: 23.05,
+            lon: 113.37,
+        });
+        expect(coordinatesFromLocation({ lat: 0, lng: 0 })).toEqual({ lat: 0, lon: 0 });
+        expect(coordinatesFromLocation({ lat: 91, lon: 0 })).toBeNull();
+    });
+
     it('creates the current solar direction endpoint at 600 km', () => {
         const origin = { lat: 23.1291, lon: 113.2644 };
         const direction = calculateCurrentSolarDirection({

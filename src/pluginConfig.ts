@@ -2,7 +2,7 @@ import type { ExternalPluginConfig } from '@windy/interfaces.d';
 
 const config: ExternalPluginConfig = {
     name: 'windy-plugin-sun-path',
-    version: '0.4.3-beta-2',
+    version: '0.4.3-beta-3',
     icon: '☀️',
     title: 'Sun & Moon Path',
     description: 'Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.',
@@ -10,7 +10,7 @@ const config: ExternalPluginConfig = {
     repository: 'https://github.com/bytepoem/windy-plugin-sun-path',
     desktopUI: 'rhpane',
     desktopWidth: 520,
-    mobileUI: 'fullscreen',
+    mobileUI: 'small',
     addToContextmenu: true,
     listenToSingleclick: true,
     routerPath: '/sun-path/:lat?/:lon?',

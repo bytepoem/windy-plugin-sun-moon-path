@@ -30,6 +30,25 @@ export interface Coordinates {
     lon: number;
 }
 
+export interface LocationLike {
+    lat?: number | string;
+    lon?: number | string;
+    lng?: number | string;
+}
+
+/** Normalize Windy and Leaflet-style location objects into plugin coordinates. */
+export const coordinatesFromLocation = (location: LocationLike | undefined): Coordinates | null => {
+    if (!location) {
+        return null;
+    }
+
+    const lat = Number(location.lat);
+    const lon = Number(location.lon ?? location.lng);
+    return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
+        ? { lat, lon }
+        : null;
+};
+
 export interface SolarSample {
     kind: SolarSampleKind;
     label: string;
