@@ -22,7 +22,6 @@
             <span class="control-label">{text.dateLabel}</span>
             <span class="date-control">
                 <span class="date-control__text">{formatDateControlLabel(selectedDate)}</span>
-                <span class="date-control__icon" aria-hidden="true">▣</span>
                 <input type="date" bind:value={selectedDate} aria-label={text.dateLabel} />
             </span>
         </label>
@@ -35,9 +34,39 @@
                         type="button"
                         class:active={selectedEvent === option.value}
                         aria-pressed={selectedEvent === option.value}
+                        aria-label={text.events[option.value]}
                         on:click={() => (selectedEvent = option.value)}
                     >
-                        {text.events[option.value]}
+                        {#if option.value === 'all'}
+                            <span class="event-button__text">{text.events.all}</span>
+                        {:else}
+                            <span
+                                class:event-button__icon--moon={option.value === 'moonrise' || option.value === 'moonset'}
+                                class:event-button__icon--sun={option.value === 'sunrise' || option.value === 'sunset'}
+                                class="event-button__icon"
+                                aria-hidden="true"
+                            >
+                                {#if option.value === 'sunrise' || option.value === 'sunset'}
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <circle cx="12" cy="12" r="4.2"></circle>
+                                        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"></path>
+                                    </svg>
+                                {:else}
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <path d="M19.6 15.2A8.4 8.4 0 0 1 8.8 4.4A8.6 8.6 0 1 0 19.6 15.2Z"></path>
+                                    </svg>
+                                {/if}
+                            </span>
+                            <span
+                                class:event-button__arrow--down={option.value === 'sunset' || option.value === 'moonset'}
+                                class="event-button__arrow"
+                                aria-hidden="true"
+                            >
+                                <svg viewBox="0 0 16 16" focusable="false">
+                                    <path d="M8 13V3M4.2 6.8 8 3l3.8 3.8"></path>
+                                </svg>
+                            </span>
+                        {/if}
                     </button>
                 {/each}
             </div>
@@ -49,7 +78,8 @@
             aria-label={text.languageToggleLabel}
             on:click={toggleLanguage}
         >
-            中/EN
+            <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中</span>
+            <span class="language-toggle__option" class:active={uiLanguage === 'en'}>EN</span>
         </button>
     </div>
 
@@ -115,24 +145,57 @@
                 <section class="astronomy-panel" aria-label="今日天文时段">
                     <div class="astronomy-panel__heading">
                         <div class="astronomy-panel__lead">
-                            <strong>{timelineLeadText}</strong>
-                            <span>{text.now} {formatLocalClock(currentInstant, timeZone)}</span>
+                            <strong>
+                                <span>{timelineLeadLabel}</span>
+                                {#if timelineLeadTime}
+                                    <span>{timelineLeadTime}</span>
+                                {/if}
+                            </strong>
                         </div>
                         <div class="live-positions" aria-label={text.currentDirectionsLabel}>
-                            <div class="live-position live-position--sun">
-                                <span>{text.sun}</span>
+                            <div class="live-position live-position--sun" aria-label={text.sun}>
+                                <span class="live-position__icon live-position__icon--sun" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <circle cx="12" cy="12" r="4.2"></circle>
+                                        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"></path>
+                                    </svg>
+                                </span>
                                 {#if currentSolarDirection}
                                     <strong>{Math.round(currentSolarDirection.azimuth)}° {compassDirectionLabel(currentSolarDirection.azimuth)}</strong>
-                                    <em>{text.altitude} {currentSolarDirection.altitude.toFixed(1)}°</em>
+                                    <em class="live-position__metric">
+                                        <span>{text.altitude} {currentSolarDirection.altitude.toFixed(1)}°</span>
+                                        <span class="live-position__event-azimuths">
+                                            {#if sunriseAzimuthLabel}
+                                                <span>↑{sunriseAzimuthLabel}</span>
+                                            {/if}
+                                            {#if sunsetAzimuthLabel}
+                                                <span>↓{sunsetAzimuthLabel}</span>
+                                            {/if}
+                                        </span>
+                                    </em>
                                 {:else}
                                     <strong>--</strong>
                                 {/if}
                             </div>
-                            <div class="live-position live-position--moon">
-                                <span>{text.moon}</span>
+                            <div class="live-position live-position--moon" aria-label={text.moon}>
+                                <span class="live-position__icon live-position__icon--moon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <path d="M19.6 15.2A8.4 8.4 0 0 1 8.8 4.4A8.6 8.6 0 1 0 19.6 15.2Z"></path>
+                                    </svg>
+                                </span>
                                 {#if currentMoonInfo}
                                     <strong>{Math.round(currentMoonInfo.azimuth)}° {compassDirectionLabel(currentMoonInfo.azimuth)}</strong>
-                                    <em>{text.altitude} {currentMoonInfo.altitude.toFixed(1)}°</em>
+                                    <em class="live-position__metric">
+                                        <span>{text.altitude} {currentMoonInfo.altitude.toFixed(1)}°</span>
+                                        <span class="live-position__event-azimuths">
+                                            {#if moonriseAzimuthLabel}
+                                                <span>↑{moonriseAzimuthLabel}</span>
+                                            {/if}
+                                            {#if moonsetAzimuthLabel}
+                                                <span>↓{moonsetAzimuthLabel}</span>
+                                            {/if}
+                                        </span>
+                                    </em>
                                 {:else}
                                     <strong>--</strong>
                                 {/if}
@@ -148,7 +211,9 @@
                                     r="18"
                                 ></circle>
                             </svg>
-                            <span class="orbit-badge__caption">{moonPhaseLabelText}</span>
+                            {#if moonIlluminationPercentText}
+                                <span class="orbit-badge__percent">{moonIlluminationPercentText}</span>
+                            {/if}
                         </div>
                     </div>
 
@@ -264,6 +329,7 @@
         compassDirection,
         CURRENT_DIRECTION_COLOR,
         CURRENT_MOON_DIRECTION_COLOR,
+        addDaysToDateInput,
         dateInputForInstant,
         dateInputToUtcMidnight,
         dateInputToUtcNoon,
@@ -345,7 +411,7 @@
             currentDirectionsLabel: '当前太阳和月亮方位',
             sun: '太阳',
             moon: '月亮',
-            altitude: '高度角',
+            altitude: '∠',
             calculating: '正在计算…',
             noNightWindow: '当天没有满足条件的无月黑夜或银河时刻。',
             timelineEnded: '今日天文时段已结束',
@@ -397,7 +463,7 @@
             currentDirectionsLabel: 'Current sun and moon directions',
             sun: 'Sun',
             moon: 'Moon',
-            altitude: 'Alt',
+            altitude: '∠',
             calculating: 'Calculating…',
             noNightWindow: 'No qualifying moonless night or Milky Way window today.',
             timelineEnded: 'Today’s astronomy windows have ended',
@@ -458,8 +524,12 @@
     let currentSolarDirection: SolarDirection | null = null;
     let currentMoonInfo: CurrentMoonInfo | null = null;
     let currentInstant = new Date();
-    let timelineLeadText = '正在计算…';
-    let moonPhaseLabelText = '月相计算中';
+    let timelineLeadLabel = '正在计算…';
+    let timelineLeadTime = '';
+    let sunriseAzimuthLabel = '';
+    let sunsetAzimuthLabel = '';
+    let moonriseAzimuthLabel = '';
+    let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'diagram';
     let displayAstronomyIntervals: AstronomyInterval[] = [];
@@ -829,6 +899,19 @@
         return labels.timeline[item.kind] || item.label;
     };
 
+    const eventAzimuthLabel = (paths: SolarPath[], event: SolarEvent): string => {
+        const path = paths.find(
+            (item): item is Extract<SolarPath, { status: 'ok' }> => item.event === event && item.status === 'ok',
+        );
+        const eventSample = path?.samples.find(sample => sample.kind === 'event');
+        return eventSample ? `${Math.round(eventSample.azimuth)}°` : '';
+    };
+
+    $: sunriseAzimuthLabel = eventAzimuthLabel(solarPaths, 'sunrise');
+    $: sunsetAzimuthLabel = eventAzimuthLabel(solarPaths, 'sunset');
+    $: moonriseAzimuthLabel = eventAzimuthLabel(solarPaths, 'moonrise');
+    $: moonsetAzimuthLabel = eventAzimuthLabel(solarPaths, 'moonset');
+
     const formatInterval = (interval: AstronomyInterval): string =>
         `${formatLocalClock(interval.start, timeZone)} ~ ${formatLocalClock(interval.end, timeZone)}`;
 
@@ -855,36 +938,67 @@
         return hours > 0 ? `${hours}小时${minutes}分钟` : `${minutes}分钟`;
     };
 
-    const moonPhaseNameFor = (phase: number, language: UiLanguage): string => {
-        const index = Math.floor((phase * 8) + 0.5) % 8;
-        return translations[language].phases[index];
+    const formatCompactRemaining = (milliseconds: number): string => {
+        const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        if (uiLanguage === 'en') {
+            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        }
+        return hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
     };
 
-    $: moonPhaseLabelText = astronomyTimeline
-        ? moonPhaseNameFor(astronomyTimeline.moonIllumination.phase, uiLanguage)
-        : currentMoonInfo
-            ? moonPhaseNameFor(currentMoonInfo.phase, uiLanguage)
-            : text.moonPhaseLoading;
+    $: moonIlluminationPercentText = (() => {
+        const fraction = currentMoonInfo?.illuminationFraction ?? astronomyTimeline?.moonIllumination.fraction;
+        return typeof fraction === 'number' && Number.isFinite(fraction)
+            ? `${(fraction * 100).toFixed(1)}%`
+            : '';
+    })();
 
     $: moonShadowCenterValue = (() => {
-        const fraction = astronomyTimeline?.moonIllumination.fraction ?? currentMoonInfo?.illuminationFraction ?? 0;
-        const waxing = astronomyTimeline?.moonIllumination.waxing ?? currentMoonInfo?.waxing ?? true;
+        const fraction = currentMoonInfo?.illuminationFraction ?? astronomyTimeline?.moonIllumination.fraction ?? 0;
+        const waxing = currentMoonInfo?.waxing ?? astronomyTimeline?.moonIllumination.waxing ?? true;
         return 24 + (waxing ? -1 : 1) * fraction * 36;
     })();
 
-    $: timelineLeadText = (() => {
-        if (!astronomyTimeline) {
-            return text.calculating;
-        }
-        const next = astronomyTimeline.items.find(item => item.time && item.time.getTime() > currentInstant.getTime());
-        if (!next?.time) {
-            return text.timelineEnded;
+    const nextWindowParts = (item: { kind: string; label: string; time?: Date | null }): { label: string; time: string } => {
+        if (!item.time) {
+            return { label: uiLanguage === 'en' ? 'Ended' : '已结束', time: '' };
         }
         if (uiLanguage === 'en') {
-            return `${timelineEventLabel(next, text)} ${text.timelineStartSuffix} ${formatRemaining(next.time.getTime() - currentInstant.getTime())}`;
+            return {
+                label: 'Next',
+                time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime()),
+            };
         }
-        return `${text.timelinePrefix}${timelineEventLabel(next, text)}${text.timelineStartSuffix} ${formatRemaining(next.time.getTime() - currentInstant.getTime())}`;
-    })();
+        return {
+            label: '倒计时',
+            time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime()),
+        };
+    };
+
+    $: {
+        if (!astronomyTimeline) {
+            timelineLeadLabel = text.calculating;
+            timelineLeadTime = '';
+        } else {
+            const next = astronomyTimeline.items.find(item => item.time && item.time.getTime() > currentInstant.getTime());
+            const nextDayTimeline = next
+                ? null
+                : calculateAstronomyTimeline({
+                    dateInput: addDaysToDateInput(selectedDate, 1),
+                    timeZone,
+                    location: selectedLocation,
+                    elevationM,
+                });
+            const nextItem = next || nextDayTimeline?.items.find(item => item.time);
+            const parts = nextItem?.time
+                ? nextWindowParts(nextItem)
+                : { label: uiLanguage === 'en' ? 'Ended' : '已结束', time: '' };
+            timelineLeadLabel = parts.label;
+            timelineLeadTime = parts.time;
+        }
+    }
 
     export const onopen = (params?: LatLon) => {
         const nextLocation = params ? coordinatesFromLocation(params) || { ...GUANGZHOU } : defaultLocation();
@@ -966,7 +1080,7 @@
         --timeline-bg: #111a31;
         --timeline-sun: #ff9c38;
         --timeline-moon: #5ca9ff;
-        --summary-panel-height: 164px;
+        --summary-panel-height: 150px;
 
         box-sizing: border-box;
         width: 100%;
@@ -1001,7 +1115,7 @@
     }
 
     .sun-path-panel.mobile_ui {
-        --summary-panel-height: clamp(188px, 22svh, 206px);
+        --summary-panel-height: clamp(144px, 16.5svh, 150px);
 
         display: flex;
         flex-direction: column;
@@ -1139,14 +1253,13 @@
         position: relative;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
         box-sizing: border-box;
         width: 100%;
         min-width: 0;
         height: 38px;
         min-height: 38px;
-        gap: 6px;
-        padding: 0 8px;
+        padding: 0 11px;
         overflow: hidden;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -1161,13 +1274,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-
-    .date-control__icon {
-        flex: 0 0 auto;
-        color: var(--panel-accent);
-        font-size: 14px;
-        line-height: 1;
     }
 
     input[type='date'] {
@@ -1229,10 +1335,67 @@
     }
 
     .segmented-control button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .event-button__text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .event-button__icon,
+    .event-button__arrow {
+        display: inline-grid;
+        flex: 0 0 auto;
+        place-items: center;
+        color: currentColor;
+        line-height: 1;
+    }
+
+    .event-button__icon svg {
+        display: block;
+        width: 16px;
+        height: 16px;
+    }
+
+    .event-button__icon--sun svg {
+        fill: #ffb347;
+        stroke: #ffb347;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .event-button__icon--moon svg {
+        fill: #f5efcf;
+        stroke: #f5efcf;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .event-button__arrow svg {
+        display: block;
+        width: 12px;
+        height: 12px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .event-button__arrow--down {
+        transform: rotate(180deg);
     }
 
     .segmented-control button:hover,
@@ -1243,19 +1406,37 @@
 
     .language-toggle {
         display: grid;
-        place-items: center;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: center;
+        gap: 2px;
         width: 100%;
+        padding: 2px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
-        color: var(--panel-accent);
         background: #0e161f;
         font-size: 12px;
         font-weight: 700;
     }
 
     .language-toggle:hover {
-        color: var(--panel-text);
-        background: rgba(73, 169, 232, 0.22);
+        background: rgba(73, 169, 232, 0.12);
+    }
+
+    .language-toggle__option {
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        min-height: 30px;
+        border-radius: 5px;
+        color: var(--panel-muted);
+        line-height: 1;
+        white-space: nowrap;
+        transition: color 160ms ease, background 160ms ease;
+    }
+
+    .language-toggle__option.active {
+        color: #07131c;
+        background: #67c5ff;
     }
 
     .location-summary,
@@ -1713,17 +1894,17 @@
         height: 100%;
         min-height: 100%;
         overflow-y: auto;
-        padding: 8px 10px 10px;
+        padding: 6px 10px 9px;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
     }
 
     .astronomy-panel__heading {
         display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(112px, 1fr) 64px;
+        grid-template-columns: minmax(110px, 122px) minmax(0, 1fr) minmax(110px, 122px);
         align-items: center;
-        gap: 8px;
-        min-height: 48px;
+        gap: 6px;
+        min-height: 42px;
     }
 
     .astronomy-panel__lead {
@@ -1732,11 +1913,12 @@
     }
 
     .astronomy-panel__lead strong {
-        display: block;
-        margin-top: 2px;
+        display: grid;
+        gap: 1px;
         overflow-wrap: anywhere;
         color: var(--astronomy-text);
-        font-size: 16px;
+        font-size: 13px;
+        line-height: 1.2;
     }
 
     .astronomy-panel__lead strong::first-letter {
@@ -1753,19 +1935,56 @@
 
     .live-positions {
         display: grid;
-        gap: 2px;
+        grid-template-columns: 13px max-content max-content;
+        justify-self: center;
+        align-self: center;
+        column-gap: 2px;
+        row-gap: 3px;
         min-width: 0;
+        align-content: center;
+        justify-content: center;
+        justify-items: start;
     }
 
     .live-position {
-        display: flex;
-        align-items: baseline;
-        gap: 4px;
+        display: contents;
         min-width: 0;
         color: var(--astronomy-muted);
-        font-size: 9px;
-        line-height: 1.18;
+        font-size: 10.8px;
+        line-height: 1.15;
         white-space: nowrap;
+    }
+
+    .live-position__icon {
+        display: inline-grid;
+        align-self: center;
+        flex: 0 0 auto;
+        place-items: center;
+        width: 13px;
+        height: 13px;
+        color: var(--astronomy-muted);
+    }
+
+    .live-position__icon svg {
+        display: block;
+        width: 13px;
+        height: 13px;
+    }
+
+    .live-position__icon--sun svg {
+        fill: #ffb347;
+        stroke: #ffb347;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .live-position__icon--moon svg {
+        fill: #f5efcf;
+        stroke: #f5efcf;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
     .live-position span {
@@ -1788,19 +2007,41 @@
         font-weight: 700;
     }
 
-    .orbit-badge {
-        display: grid;
-        justify-items: center;
-        gap: 2px;
+    .live-position__metric {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 5px;
+    }
+
+    .live-position__event-azimuths {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
         color: var(--astronomy-muted);
-        font-size: 9px;
+        font-size: 0.88em;
+        line-height: 1;
+    }
+
+    .orbit-badge {
+        display: flex;
+        justify-self: stretch;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        width: 100%;
+        min-width: 0;
+        color: var(--astronomy-muted);
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
         text-align: center;
     }
 
     .orbit-moon {
+        flex: 0 0 auto;
         display: block;
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
     }
 
@@ -1813,16 +2054,15 @@
         align-self: center;
     }
 
-    .orbit-moon__shadow {
-        fill: #111727;
+    .orbit-badge__percent {
+        min-width: 0;
+        overflow: visible;
+        color: var(--astronomy-muted);
+        white-space: nowrap;
     }
 
-    .orbit-badge__caption {
-        max-width: 72px;
-        overflow: visible;
-        text-overflow: clip;
-        white-space: normal;
-        line-height: 1.15;
+    .orbit-moon__shadow {
+        fill: #111727;
     }
 
     .timeline-events {
@@ -2072,8 +2312,8 @@
         }
 
         .astronomy-panel__heading {
-            grid-template-columns: minmax(0, 1fr) minmax(104px, 1fr) 62px;
-            gap: 6px;
+            grid-template-columns: minmax(78px, 82px) minmax(0, 1fr) minmax(78px, 82px);
+            gap: 4px;
         }
 
         .astronomy-panel__lead {
@@ -2082,32 +2322,72 @@
         }
 
         .astronomy-panel__lead strong {
-            font-size: 13px;
-            line-height: 1.25;
+            font-size: 11px;
+            line-height: 1.2;
         }
 
         .astronomy-panel__lead > span {
             font-size: 11px;
         }
 
+        .live-positions {
+            grid-template-columns: 12px max-content max-content;
+            justify-self: center;
+            column-gap: 2px;
+            row-gap: 3px;
+        }
+
         .live-position {
+            font-size: 9px;
+            line-height: 1.14;
+        }
+
+        .live-position__metric {
             gap: 3px;
-            font-size: 8.5px;
+        }
+
+        .live-position__event-azimuths {
+            gap: 2px;
+            font-size: 0.82em;
+        }
+
+        .live-position__icon {
+            width: 12px;
+            height: 12px;
+        }
+
+        .live-position__icon svg {
+            width: 12px;
+            height: 12px;
         }
 
         .orbit-moon {
-            width: 34px;
-            height: 34px;
+            width: 32px;
+            height: 32px;
+        }
+
+        .orbit-badge {
+            gap: 3px;
+            font-size: 9px;
         }
 
         .night-window-list {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 5px;
+        }
+
+        .night-window {
+            padding: 5px 7px;
+        }
+
+        .night-window__body {
+            gap: 1px;
         }
     }
 
     @media (max-width: 360px) {
         .sun-path-panel.mobile_ui {
-            --summary-panel-height: 184px;
+            --summary-panel-height: 150px;
         }
 
         .sun-path-panel.mobile_ui .control-grid {
@@ -2122,16 +2402,16 @@
 
     @media (max-height: 740px) {
         .sun-path-panel.mobile_ui {
-            --summary-panel-height: 174px;
+            --summary-panel-height: 146px;
         }
 
         .astronomy-panel {
-            padding-top: 8px;
+            padding-top: 6px;
             padding-bottom: 10px;
         }
 
         .astronomy-panel__heading {
-            min-height: 46px;
+            min-height: 40px;
         }
     }
 
