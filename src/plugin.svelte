@@ -1934,10 +1934,14 @@
     }
 
     .live-positions {
+        --live-icon-size: 13px;
+        --live-row-height: 14px;
+
         display: grid;
-        grid-template-columns: 13px max-content max-content;
+        grid-template-columns: var(--live-icon-size) max-content max-content;
         justify-self: center;
         align-self: center;
+        align-items: center;
         column-gap: 2px;
         row-gap: 3px;
         min-width: 0;
@@ -1951,7 +1955,7 @@
         min-width: 0;
         color: var(--astronomy-muted);
         font-size: 10.8px;
-        line-height: 1.15;
+        line-height: var(--live-row-height);
         white-space: nowrap;
     }
 
@@ -1960,16 +1964,16 @@
         align-self: center;
         flex: 0 0 auto;
         place-items: center;
-        width: 13px;
-        height: 13px;
+        width: var(--live-icon-size);
+        height: var(--live-icon-size);
         color: var(--astronomy-muted);
-        transform: translateY(-0.5px);
+        transform: translateY(-1px);
     }
 
     .live-position__icon svg {
         display: block;
-        width: 13px;
-        height: 13px;
+        width: var(--live-icon-size);
+        height: var(--live-icon-size);
     }
 
     .live-position__icon--sun svg {
@@ -1995,12 +1999,16 @@
 
     .live-position strong,
     .live-position em {
+        display: flex;
+        align-items: center;
         min-width: 0;
+        min-height: var(--live-row-height);
         overflow: visible;
         text-overflow: clip;
         white-space: nowrap;
         font-style: normal;
         font-variant-numeric: tabular-nums;
+        line-height: var(--live-row-height);
     }
 
     .live-position strong {
@@ -2015,13 +2023,26 @@
         gap: 5px;
     }
 
+    .live-position__metric > span {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--live-row-height);
+        line-height: var(--live-row-height);
+    }
+
     .live-position__event-azimuths {
         display: inline-flex;
         align-items: center;
         gap: 3px;
         color: var(--astronomy-muted);
         font-size: 1em;
-        line-height: 1;
+        line-height: var(--live-row-height);
+    }
+
+    .live-position__event-azimuths > span {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--live-row-height);
     }
 
     .orbit-badge {
@@ -2336,7 +2357,9 @@
         }
 
         .live-positions {
-            grid-template-columns: 12px max-content max-content;
+            --live-icon-size: 12px;
+            --live-row-height: 13px;
+
             justify-self: center;
             column-gap: 2px;
             row-gap: 3px;
@@ -2344,7 +2367,6 @@
 
         .live-position {
             font-size: 9px;
-            line-height: 1.14;
         }
 
         .live-position__metric {
@@ -2353,16 +2375,6 @@
 
         .live-position__event-azimuths {
             gap: 2px;
-        }
-
-        .live-position__icon {
-            width: 12px;
-            height: 12px;
-        }
-
-        .live-position__icon svg {
-            width: 12px;
-            height: 12px;
         }
 
         .orbit-moon {
