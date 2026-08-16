@@ -2,7 +2,11 @@
     { title }
 </div>
 
-<section class="plugin__content sun-path-panel">
+<section
+    class="sun-path-panel"
+    class:plugin__content={!isMobileOrTablet}
+    class:mobile_ui={isMobileOrTablet}
+>
     <div class="panel-intro">
         <div class="eyebrow">ASTRONOMY PATH</div>
         <p>日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。</p>
@@ -270,6 +274,7 @@
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { getMyLatestPos } from '@windy/geolocation';
     import { centerMap, map } from '@windy/map';
+    import { isMobileOrTablet } from '@windy/rootScope';
     import { setUrl } from '@windy/location';
     import { singleclick } from '@windy/singleclick';
     import { onDestroy, onMount } from 'svelte';
@@ -369,7 +374,7 @@
     let currentSolarDirection: SolarDirection | null = null;
     let currentMoonInfo: CurrentMoonInfo | null = null;
     let currentInstant = new Date();
-    let summaryTab: SummaryTab = isSmallViewport() ? 'current' : 'diagram';
+    let summaryTab: SummaryTab = isMobileOrTablet || isSmallViewport() ? 'current' : 'diagram';
     let eventDisplayData: Record<SolarEvent, EventDisplay> = { ...EMPTY_EVENT_DISPLAY };
     let displayAstronomyIntervals: AstronomyInterval[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
@@ -705,7 +710,7 @@
     };
 
     const revealMobileSummary = () => {
-        if (isSmallViewport()) {
+        if (isMobileOrTablet || isSmallViewport()) {
             bcast.emit('rqstHalfOpen', name, true, true);
         }
     };
@@ -855,6 +860,10 @@
         line-height: 24px;
     }
 
+    :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-path) {
+        padding: 0;
+    }
+
     .sun-path-panel {
         --panel-bg: rgba(19, 25, 32, 0.98);
         --panel-surface: rgba(255, 255, 255, 0.06);
@@ -879,6 +888,60 @@
         background: var(--panel-bg);
         font-size: 14px;
         line-height: 1.5;
+    }
+
+    .sun-path-panel.mobile_ui {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        height: 150px;
+        max-height: 150px;
+        margin-top: -4pt;
+        padding: 0 8px env(safe-area-inset-bottom, 0px);
+        overflow-y: auto;
+    }
+
+    .sun-path-panel.mobile_ui > .panel-intro,
+    .sun-path-panel.mobile_ui > .control-grid,
+    .sun-path-panel.mobile_ui > .location-summary,
+    .sun-path-panel.mobile_ui > .sun-path-legend,
+    .sun-path-panel.mobile_ui > .panel-note {
+        display: none;
+    }
+
+    .sun-path-panel.mobile_ui > .map-bottom-module {
+        order: -1;
+        margin-top: 0;
+        margin-bottom: 16px;
+    }
+
+    .sun-path-panel.mobile_ui .position-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px;
+        padding: 4px;
+    }
+
+    .sun-path-panel.mobile_ui .position-card {
+        padding: 6px;
+    }
+
+    .sun-path-panel.mobile_ui .position-card__heading {
+        gap: 5px;
+    }
+
+    .sun-path-panel.mobile_ui .position-card__heading strong {
+        font-size: 12px;
+    }
+
+    .sun-path-panel.mobile_ui .position-card__value {
+        margin-top: 8px;
+        font-size: 15px;
+    }
+
+    .sun-path-panel.mobile_ui .position-card__meta,
+    .sun-path-panel.mobile_ui .position-card__events {
+        font-size: 10px;
     }
 
     .panel-title {
