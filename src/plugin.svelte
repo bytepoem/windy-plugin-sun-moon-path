@@ -3,24 +3,14 @@
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
 >
-    <div
-        class="panel-title"
-        class:plugin__title={!isMobileOrTablet}
-        class:plugin__title--chevron-back={!isMobileOrTablet}
-        on:click={() => !isMobileOrTablet && bcast.emit('rqstOpen', 'menu')}
-    >
-        <span>{title}</span>
-        {#if isMobileOrTablet}
-            <button
-                type="button"
-                class="panel-close"
-                aria-label="关闭面板"
-                on:click|stopPropagation={() => bcast.emit('rqstClose', name)}
-            >
-                ×
-            </button>
-        {/if}
-    </div>
+    {#if !isMobileOrTablet}
+        <div
+            class="plugin__title plugin__title--chevron-back panel-title"
+            on:click={() => bcast.emit('rqstOpen', 'menu')}
+        >
+            {title}
+        </div>
+    {/if}
 
     <div class="mobile-scroll-content">
     <div class="panel-intro">
@@ -854,11 +844,14 @@
     }
 
     :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-path) {
-        width: 100%;
-        height: min(575px, 72vh);
-        max-height: min(575px, 72vh);
+        height: min(575px, 72vh) !important;
+        height: min(575px, 72dvh) !important;
+        max-height: min(575px, 72vh) !important;
+        max-height: min(575px, 72dvh) !important;
+        min-height: 0;
         padding: 0;
         margin: 0;
+        overflow: hidden;
     }
 
     .sun-path-panel.mobile_ui {
@@ -867,10 +860,10 @@
         align-items: stretch;
         gap: 0;
         height: min(575px, 72vh);
-        max-height: min(575px, 72vh);
         height: min(575px, 72dvh);
-        max-height: min(575px, 72dvh);
-        margin-top: -4pt;
+        max-height: 100%;
+        min-height: 0;
+        margin: 0;
         padding: 0;
         overflow: hidden;
     }
@@ -975,45 +968,6 @@
         font-weight: 700;
         text-align: left;
         cursor: pointer;
-    }
-
-    .sun-path-panel.mobile_ui > .panel-title {
-        flex: 0 0 46px;
-        justify-content: space-between;
-        min-height: 46px;
-        margin: 0;
-        padding: 0 16px 0 18px;
-        border-bottom: 1px solid var(--panel-border);
-        background: var(--panel-bg) !important;
-    }
-
-    .sun-path-panel.mobile_ui > .panel-title > span {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .panel-close {
-        display: grid;
-        flex: 0 0 36px;
-        place-items: center;
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        border: 0;
-        border-radius: 50%;
-        color: var(--panel-muted);
-        background: transparent;
-        font: inherit;
-        font-size: 28px;
-        line-height: 1;
-        cursor: pointer;
-    }
-
-    .panel-close:hover {
-        color: var(--panel-text);
-        background: var(--panel-surface-hover);
     }
 
     .panel-title__arrow {
@@ -1953,7 +1907,7 @@
         }
 
         .night-window-list {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
