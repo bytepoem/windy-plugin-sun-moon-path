@@ -11,6 +11,7 @@ import {
     dateInputToUtcNoon,
     destinationPoint,
     distanceKm,
+    formatLocalClock,
     LINE_COLORS,
     localDayProgress,
     MOON_LINE_COLORS,
@@ -236,6 +237,49 @@ describe('solar path geometry', () => {
                 milkyWay.end.getTime() <= moonlessNight.end.getTime(),
             )).toBe(true);
         }
+    });
+
+    it('keeps the galactic center visible until it reaches the horizon', () => {
+        const timeline = calculateAstronomyTimeline({
+            dateInput: '2026-08-16',
+            timeZone: 'Asia/Shanghai',
+            location: { lat: 22.9377, lon: 113.3842 },
+        });
+        const milkyWay = timeline.intervals.find(interval =>
+            interval.kind === 'milky-way' && formatLocalClock(interval.start, 'Asia/Shanghai') === '21:11',
+        );
+
+        expect(milkyWay).toBeDefined();
+        if (!milkyWay) {
+            return;
+        }
+
+        const endMinutes = Number(formatLocalClock(milkyWay.end, 'Asia/Shanghai').slice(0, 2)) * 60 +
+            Number(formatLocalClock(milkyWay.end, 'Asia/Shanghai').slice(3));
+        expect(endMinutes).toBeGreaterThanOrEqual(90);
+        expect(endMinutes).toBeLessThan(120);
+    });
+
+    it('matches the reference astronomy window at high latitude', () => {
+        const timeline = calculateAstronomyTimeline({
+            dateInput: '2026-08-16',
+            timeZone: 'Asia/Shanghai',
+            location: { lat: 47.8406, lon: 88.149 },
+        });
+        const findWindow = (kind: 'moonless-night' | 'milky-way') => timeline.intervals.find(interval =>
+            interval.kind === kind && formatLocalClock(interval.start, 'Asia/Shanghai') === '23:22',
+        );
+        const moonlessNight = findWindow('moonless-night');
+        const milkyWay = findWindow('milky-way');
+
+        expect(moonlessNight).toBeDefined();
+        expect(milkyWay).toBeDefined();
+        if (!moonlessNight || !milkyWay) {
+            return;
+        }
+
+        expect(formatLocalClock(moonlessNight.end, 'Asia/Shanghai')).toBe('05:01');
+        expect(formatLocalClock(milkyWay.end, 'Asia/Shanghai')).toBe('01:48');
     });
 
     it('maps local civil time to a fixed 24-hour timeline', () => {

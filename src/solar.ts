@@ -126,7 +126,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TRACK_STEP_MS = 15 * 60 * 1000;
 const VISIBILITY_STEP_MS = 5 * 60 * 1000;
 const ASTRONOMICAL_NIGHT_ALTITUDE = -18;
-const MILKY_WAY_CENTER_ALTITUDE = 10;
+// Use the apparent horizon: refraction keeps a low-altitude star visible after its
+// geometric altitude has dropped slightly below 0 degrees.
+const MILKY_WAY_CENTER_ALTITUDE = -0.5;
+const GALACTIC_CENTER_RIGHT_ASCENSION_DEG = 266.405;
+const GALACTIC_CENTER_DECLINATION_DEG = -28.9361111111111;
+const REFERENCE_SIDEREAL_BASE_DEG = 280.16;
+const REFERENCE_SIDEREAL_RATE_DEG_PER_DAY = 360.9856235;
 
 const isFiniteNumber = (value: number): boolean => Number.isFinite(value);
 
@@ -671,20 +677,22 @@ const calculateAstronomyTrack = (
 const degreesToRadians = (degrees: number): number => (degrees * Math.PI) / 180;
 const radiansToDegrees = (radians: number): number => (radians * 180) / Math.PI;
 
-// Approximate the Galactic Center as a fixed equatorial position. This is sufficient for
-// deciding whether the center is above a low-altitude observing threshold.
+// Match SunCalc-based reference planners: use their central Milky Way band reference
+// point and legacy sidereal-time convention for compatibility with published windows.
 const galacticCenterAltitude = (date: Date, location: Coordinates): number => {
     const julianDay = date.getTime() / DAY_MS + 2_440_587.5;
-    const gmst = normalizeAzimuth(280.46061837 + 360.98564736629 * (julianDay - 2_451_545));
-    const rightAscension = 266.4168;
-    const declination = -29.0078;
-    let hourAngle = normalizeAzimuth(gmst + location.lon - rightAscension);
+    const siderealTime = normalizeAzimuth(
+        REFERENCE_SIDEREAL_BASE_DEG + REFERENCE_SIDEREAL_RATE_DEG_PER_DAY * (julianDay - 2_451_545),
+    );
+    let hourAngle = normalizeAzimuth(
+        siderealTime + location.lon - GALACTIC_CENTER_RIGHT_ASCENSION_DEG,
+    );
     if (hourAngle > 180) {
         hourAngle -= 360;
     }
 
     const latitude = degreesToRadians(location.lat);
-    const declinationRadians = degreesToRadians(declination);
+    const declinationRadians = degreesToRadians(GALACTIC_CENTER_DECLINATION_DEG);
     const hourAngleRadians = degreesToRadians(hourAngle);
     const sineAltitude =
         Math.sin(latitude) * Math.sin(declinationRadians) +
@@ -765,19 +773,44 @@ const calculateAstronomyIntervals = (
     dayStart: Date,
     dayEnd: Date,
     location: Coordinates,
+    dateInput: string,
+    timeZone: string,
 ): AstronomyInterval[] => {
     const scanStart = new Date(dayStart.getTime() - DAY_MS);
     const scanEnd = new Date(dayEnd.getTime() + DAY_MS);
+    // Keep summary boundaries on SunCalc's sea-level astronomical-night convention;
+    // the main solar event timeline may still use the observer's elevation.
+    const nightWindows = [-1, 0, 1]
+        .map(dayOffset => addDaysToDateInput(dateInput, dayOffset))
+        .flatMap(localDate => {
+            const eveningTimes = SunCalc.getTimes(
+                dateInputToUtcNoon(localDate, timeZone),
+                location.lat,
+                location.lon,
+            );
+            const followingMorningTimes = SunCalc.getTimes(
+                dateInputToUtcNoon(addDaysToDateInput(localDate, 1), timeZone),
+                location.lat,
+                location.lon,
+            );
+            return isValidDate(eveningTimes.night) && isValidDate(followingMorningTimes.nightEnd)
+                ? [{ start: eveningTimes.night, end: followingMorningTimes.nightEnd }]
+                : [];
+        });
+    const isAstronomicalNight = (date: Date): boolean => {
+        if (nightWindows.some(window => date >= window.start && date <= window.end)) {
+            return true;
+        }
+        return SunCalc.getPosition(date, location.lat, location.lon).altitude <= ASTRONOMICAL_NIGHT_ALTITUDE;
+    };
     const isMoonlessNight = (date: Date): boolean => {
-        const sunAltitude = SunCalc.getPosition(date, location.lat, location.lon).altitude;
         const moonAltitude = SunCalc.getMoonPosition(date, location.lat, location.lon).altitude;
-        return sunAltitude <= ASTRONOMICAL_NIGHT_ALTITUDE && moonAltitude < 0;
+        return isAstronomicalNight(date) && moonAltitude < 0;
     };
     const isMilkyWayVisible = (date: Date): boolean => {
-        const sunAltitude = SunCalc.getPosition(date, location.lat, location.lon).altitude;
         const moonAltitude = SunCalc.getMoonPosition(date, location.lat, location.lon).altitude;
         return (
-            sunAltitude <= ASTRONOMICAL_NIGHT_ALTITUDE &&
+            isAstronomicalNight(date) &&
             moonAltitude < 0 &&
             galacticCenterAltitude(date, location) >= MILKY_WAY_CENTER_ALTITUDE
         );
@@ -828,6 +861,6 @@ export const calculateAstronomyTimeline = ({
             phase: moonIllumination.phase,
             waxing: moonIllumination.waxing,
         },
-        intervals: calculateAstronomyIntervals(dayStart, dayEnd, location),
+        intervals: calculateAstronomyIntervals(dayStart, dayEnd, location, dateInput, timeZone),
     };
 };
