@@ -11,6 +11,9 @@ import {
     dateInputToUtcNoon,
     destinationPoint,
     distanceKm,
+    LINE_COLORS,
+    localDayProgress,
+    MOON_LINE_COLORS,
     normalizeAzimuth,
     splitPolylineAtDateLine,
 } from './solar';
@@ -223,5 +226,27 @@ describe('solar path geometry', () => {
         expect(timeline.moonIllumination.fraction).toBeLessThanOrEqual(1);
         expect(timeline.moonIllumination.phase).toBeGreaterThanOrEqual(0);
         expect(timeline.moonIllumination.phase).toBeLessThan(1);
+        expect(timeline.intervals.some(interval => interval.kind === 'moonless-night')).toBe(true);
+        expect(timeline.intervals.some(interval => interval.kind === 'milky-way')).toBe(true);
+
+        const moonlessNights = timeline.intervals.filter(interval => interval.kind === 'moonless-night');
+        for (const milkyWay of timeline.intervals.filter(interval => interval.kind === 'milky-way')) {
+            expect(moonlessNights.some(moonlessNight =>
+                milkyWay.start.getTime() >= moonlessNight.start.getTime() &&
+                milkyWay.end.getTime() <= moonlessNight.end.getTime(),
+            )).toBe(true);
+        }
+    });
+
+    it('maps local civil time to a fixed 24-hour timeline', () => {
+        expect(localDayProgress(new Date('2026-08-15T04:00:00.000Z'), '2026-08-15', 'Asia/Shanghai')).toBeCloseTo(0.5, 8);
+        expect(localDayProgress(new Date('2026-08-15T15:59:59.000Z'), '2026-08-15', 'Asia/Shanghai')).toBeCloseTo(0.999988, 5);
+        expect(localDayProgress(new Date('2026-03-08T19:00:00.000Z'), '2026-03-08', 'America/Los_Angeles')).toBeCloseTo(0.5, 8);
+    });
+
+    it('uses different event palettes for sun and moon lines', () => {
+        expect(MOON_LINE_COLORS.before).not.toBe(LINE_COLORS.before);
+        expect(MOON_LINE_COLORS.event).not.toBe(LINE_COLORS.event);
+        expect(MOON_LINE_COLORS.after).not.toBe(LINE_COLORS.after);
     });
 });

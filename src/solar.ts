@@ -13,6 +13,11 @@ export const LINE_COLORS = {
     event: '#f97316',
     after: '#991b1b',
 } as const;
+export const MOON_LINE_COLORS = {
+    before: '#b9a5ff',
+    event: '#5c91ff',
+    after: '#294da8',
+} as const;
 export const CURRENT_DIRECTION_COLOR = '#ffffff';
 export const CURRENT_MOON_DIRECTION_COLOR = '#8ec5ff';
 
@@ -92,6 +97,15 @@ export interface AstronomyTrack {
     points: AstronomyTrackPoint[];
 }
 
+export type AstronomyIntervalKind = 'moonless-night' | 'milky-way';
+
+export interface AstronomyInterval {
+    kind: AstronomyIntervalKind;
+    label: string;
+    start: Date;
+    end: Date;
+}
+
 export interface TimelineMoonIllumination {
     fraction: number;
     phase: number;
@@ -104,11 +118,15 @@ export interface AstronomyTimeline {
     items: AstronomyTimelineItem[];
     tracks: AstronomyTrack[];
     moonIllumination: TimelineMoonIllumination;
+    intervals: AstronomyInterval[];
 }
 
 const SAMPLE_KINDS: SolarSampleKind[] = ['before', 'event', 'after'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRACK_STEP_MS = 15 * 60 * 1000;
+const VISIBILITY_STEP_MS = 5 * 60 * 1000;
+const ASTRONOMICAL_NIGHT_ALTITUDE = -18;
+const MILKY_WAY_CENTER_ALTITUDE = 10;
 
 const isFiniteNumber = (value: number): boolean => Number.isFinite(value);
 
@@ -229,6 +247,61 @@ export const dateInputForInstant = (date: Date, timeZone: string): string => {
     return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day
         .toString()
         .padStart(2, '0')}`;
+};
+
+interface ZonedDateTimeParts {
+    year: number;
+    month: number;
+    day: number;
+    hour: number;
+    minute: number;
+    second: number;
+}
+
+const getZonedDateTimeParts = (date: Date, timeZone: string): ZonedDateTimeParts => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hour12: false,
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    }).formatToParts(date);
+
+    return {
+        year: getDateTimePart(parts, 'year'),
+        month: getDateTimePart(parts, 'month'),
+        day: getDateTimePart(parts, 'day'),
+        hour: getDateTimePart(parts, 'hour'),
+        minute: getDateTimePart(parts, 'minute'),
+        second: getDateTimePart(parts, 'second'),
+    };
+};
+
+/** Return the percentage of a local civil day occupied by an instant. */
+export const localDayProgress = (date: Date, dateInput: string, timeZone: string): number => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        return 0;
+    }
+
+    try {
+        const [selectedYear, selectedMonth, selectedDay] = parseDateInput(dateInput);
+        const local = getZonedDateTimeParts(date, timeZone);
+        const selectedDayIndex = Date.UTC(selectedYear, selectedMonth - 1, selectedDay);
+        const localDayIndex = Date.UTC(local.year, local.month - 1, local.day);
+        const dayOffset = (localDayIndex - selectedDayIndex) / DAY_MS;
+        const elapsed =
+            dayOffset * DAY_MS +
+            local.hour * 60 * 60 * 1000 +
+            local.minute * 60 * 1000 +
+            local.second * 1000;
+        return Math.min(1, Math.max(0, elapsed / DAY_MS));
+    } catch {
+        return 0;
+    }
 };
 
 export const normalizeAzimuth = (azimuth: number): number => {
@@ -595,6 +668,129 @@ const calculateAstronomyTrack = (
     return { body, points };
 };
 
+const degreesToRadians = (degrees: number): number => (degrees * Math.PI) / 180;
+const radiansToDegrees = (radians: number): number => (radians * 180) / Math.PI;
+
+// Approximate the Galactic Center as a fixed equatorial position. This is sufficient for
+// deciding whether the center is above a low-altitude observing threshold.
+const galacticCenterAltitude = (date: Date, location: Coordinates): number => {
+    const julianDay = date.getTime() / DAY_MS + 2_440_587.5;
+    const gmst = normalizeAzimuth(280.46061837 + 360.98564736629 * (julianDay - 2_451_545));
+    const rightAscension = 266.4168;
+    const declination = -29.0078;
+    let hourAngle = normalizeAzimuth(gmst + location.lon - rightAscension);
+    if (hourAngle > 180) {
+        hourAngle -= 360;
+    }
+
+    const latitude = degreesToRadians(location.lat);
+    const declinationRadians = degreesToRadians(declination);
+    const hourAngleRadians = degreesToRadians(hourAngle);
+    const sineAltitude =
+        Math.sin(latitude) * Math.sin(declinationRadians) +
+        Math.cos(latitude) * Math.cos(declinationRadians) * Math.cos(hourAngleRadians);
+    return radiansToDegrees(Math.asin(Math.min(1, Math.max(-1, sineAltitude))));
+};
+
+const refineVisibilityBoundary = (
+    left: Date,
+    right: Date,
+    leftValue: boolean,
+    predicate: (date: Date) => boolean,
+): Date => {
+    let leftTime = left.getTime();
+    let rightTime = right.getTime();
+    for (let iteration = 0; iteration < 20; iteration += 1) {
+        const midpoint = new Date((leftTime + rightTime) / 2);
+        if (predicate(midpoint) === leftValue) {
+            leftTime = midpoint.getTime();
+        } else {
+            rightTime = midpoint.getTime();
+        }
+    }
+    return new Date((leftTime + rightTime) / 2);
+};
+
+const collectVisibilityIntervals = (
+    kind: AstronomyIntervalKind,
+    label: string,
+    dayStart: Date,
+    dayEnd: Date,
+    predicate: (date: Date) => boolean,
+): AstronomyInterval[] => {
+    const intervals: AstronomyInterval[] = [];
+    const firstTime = dayStart;
+    let previousTime = firstTime;
+    let previousValue = predicate(previousTime);
+    let activeStart = previousValue ? new Date(previousTime) : null;
+
+    for (
+        let timestamp = dayStart.getTime() + VISIBILITY_STEP_MS;
+        timestamp < dayEnd.getTime();
+        timestamp += VISIBILITY_STEP_MS
+    ) {
+        const currentTime = new Date(timestamp);
+        const currentValue = predicate(currentTime);
+        if (currentValue !== previousValue) {
+            const boundary = refineVisibilityBoundary(previousTime, currentTime, previousValue, predicate);
+            if (currentValue) {
+                activeStart = boundary;
+            } else if (activeStart) {
+                intervals.push({ kind, label, start: activeStart, end: boundary });
+                activeStart = null;
+            }
+        }
+        previousTime = currentTime;
+        previousValue = currentValue;
+    }
+
+    const finalValue = predicate(dayEnd);
+    if (finalValue !== previousValue) {
+        const boundary = refineVisibilityBoundary(previousTime, dayEnd, previousValue, predicate);
+        if (finalValue) {
+            activeStart = boundary;
+        } else if (activeStart) {
+            intervals.push({ kind, label, start: activeStart, end: boundary });
+            activeStart = null;
+        }
+    }
+    if (activeStart) {
+        intervals.push({ kind, label, start: activeStart, end: new Date(dayEnd) });
+    }
+
+    return intervals.filter(interval => interval.end.getTime() > interval.start.getTime());
+};
+
+const calculateAstronomyIntervals = (
+    dayStart: Date,
+    dayEnd: Date,
+    location: Coordinates,
+): AstronomyInterval[] => {
+    const scanStart = new Date(dayStart.getTime() - DAY_MS);
+    const scanEnd = new Date(dayEnd.getTime() + DAY_MS);
+    const isMoonlessNight = (date: Date): boolean => {
+        const sunAltitude = SunCalc.getPosition(date, location.lat, location.lon).altitude;
+        const moonAltitude = SunCalc.getMoonPosition(date, location.lat, location.lon).altitude;
+        return sunAltitude <= ASTRONOMICAL_NIGHT_ALTITUDE && moonAltitude < 0;
+    };
+    const isMilkyWayVisible = (date: Date): boolean => {
+        const sunAltitude = SunCalc.getPosition(date, location.lat, location.lon).altitude;
+        const moonAltitude = SunCalc.getMoonPosition(date, location.lat, location.lon).altitude;
+        return (
+            sunAltitude <= ASTRONOMICAL_NIGHT_ALTITUDE &&
+            moonAltitude < 0 &&
+            galacticCenterAltitude(date, location) >= MILKY_WAY_CENTER_ALTITUDE
+        );
+    };
+
+    return [
+        ...collectVisibilityIntervals('moonless-night', '无月黑夜', scanStart, scanEnd, isMoonlessNight),
+        ...collectVisibilityIntervals('milky-way', '银河时刻', scanStart, scanEnd, isMilkyWayVisible),
+    ]
+        .filter(interval => interval.end.getTime() > dayStart.getTime() && interval.start.getTime() < dayEnd.getTime())
+        .sort((first, second) => first.start.getTime() - second.start.getTime());
+};
+
 export const calculateAstronomyTimeline = ({
     dateInput,
     timeZone,
@@ -632,5 +828,6 @@ export const calculateAstronomyTimeline = ({
             phase: moonIllumination.phase,
             waxing: moonIllumination.waxing,
         },
+        intervals: calculateAstronomyIntervals(dayStart, dayEnd, location),
     };
 };
