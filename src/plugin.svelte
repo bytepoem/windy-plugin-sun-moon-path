@@ -1143,7 +1143,7 @@
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-y: contain;
         touch-action: pan-y;
-        padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+        padding: 8px 8px 0;
     }
 
     .panel-intro,
@@ -1171,7 +1171,7 @@
     }
 
     .sun-path-panel.mobile_ui .module-about {
-        padding: 10px;
+        padding: 6px 10px 10px;
     }
 
     .panel-title {
@@ -2192,6 +2192,10 @@
 
     .module-about p {
         margin: 6px 0 0;
+    }
+
+    .module-about p:first-child {
+        margin-top: 0;
     }
 
     .sun-path-legend {
