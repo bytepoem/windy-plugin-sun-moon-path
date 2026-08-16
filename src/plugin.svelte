@@ -1100,7 +1100,7 @@
     }
 
     :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-path) {
-        height: auto !important;
+        height: fit-content !important;
         max-height: min(430px, 52vh) !important;
         max-height: min(430px, 52dvh) !important;
         min-height: 0;
@@ -1121,7 +1121,7 @@
         flex-direction: column;
         align-items: stretch;
         gap: 0;
-        height: auto;
+        height: fit-content !important;
         max-height: min(430px, 52vh);
         max-height: min(430px, 52dvh);
         min-height: 0;
@@ -1133,7 +1133,7 @@
     .sun-path-panel.mobile_ui .mobile-scroll-content {
         box-sizing: border-box;
         width: 100%;
-        height: auto;
+        height: fit-content;
         min-height: 0;
         max-height: min(430px, 52vh);
         max-height: min(430px, 52dvh);
@@ -1963,6 +1963,7 @@
         width: 13px;
         height: 13px;
         color: var(--astronomy-muted);
+        transform: translateY(-0.5px);
     }
 
     .live-position__icon svg {
@@ -2019,7 +2020,7 @@
         align-items: center;
         gap: 3px;
         color: var(--astronomy-muted);
-        font-size: 0.88em;
+        font-size: 1em;
         line-height: 1;
     }
 
@@ -2348,7 +2349,6 @@
 
         .live-position__event-azimuths {
             gap: 2px;
-            font-size: 0.82em;
         }
 
         .live-position__icon {
