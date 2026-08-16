@@ -40,14 +40,6 @@
         </fieldset>
     </div>
 
-    <div class="location-summary">
-        <div>
-            <span class="control-label">观察位置</span>
-            <strong>{selectedLocation.lat.toFixed(4)}, {selectedLocation.lon.toFixed(4)}</strong>
-        </div>
-        <span class="location-hint">单击地图重新选择</span>
-    </div>
-
     <div
         class="status-region"
         class:status-region--event-details={selectedEvent !== 'all' && activeSolarPath?.status !== undefined}
@@ -197,10 +189,8 @@
             </section>
         {:else}
             <section class="module-about" aria-label="数据说明">
-                <div class="module-about__title">方向线与时间轴</div>
                 <p>太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。</p>
                 <div class="sun-path-legend sun-path-legend--module" aria-label="地图图例">
-                    <div class="sun-path-legend__title">地图图例</div>
                     <div class="sun-path-legend__items">
                         <span class="legend-item">
                             <span class="legend-dot legend-dot--origin" aria-hidden="true"></span>
@@ -832,7 +822,7 @@
         max-height: 100%;
         overflow-y: auto;
         overscroll-behavior: contain;
-        padding: 12px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+        padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
         color: var(--panel-text);
         background: var(--panel-bg);
         font-size: 14px;
@@ -844,14 +834,18 @@
     }
 
     :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-path) {
-        height: min(575px, 72vh) !important;
-        height: min(575px, 72dvh) !important;
-        max-height: min(575px, 72vh) !important;
-        max-height: min(575px, 72dvh) !important;
+        height: auto !important;
+        max-height: min(430px, 52vh) !important;
+        max-height: min(430px, 52dvh) !important;
         min-height: 0;
         padding: 0;
         margin: 0;
-        overflow: hidden;
+        overflow: visible !important;
+    }
+
+    :global(#plugin-windy-plugin-sun-path.plugin-mobile-bottom-small > .closing-x) {
+        z-index: 1000 !important;
+        pointer-events: auto;
     }
 
     .sun-path-panel.mobile_ui {
@@ -859,9 +853,9 @@
         flex-direction: column;
         align-items: stretch;
         gap: 0;
-        height: min(575px, 72vh);
-        height: min(575px, 72dvh);
-        max-height: 100%;
+        height: auto;
+        max-height: min(430px, 52vh);
+        max-height: min(430px, 52dvh);
         min-height: 0;
         margin: 0;
         padding: 0;
@@ -871,47 +865,40 @@
     .sun-path-panel.mobile_ui .mobile-scroll-content {
         box-sizing: border-box;
         width: 100%;
-        height: 0;
+        height: auto;
         min-height: 0;
-        flex: 1 1 auto;
+        max-height: min(430px, 52vh);
+        max-height: min(430px, 52dvh);
+        flex: 0 1 auto;
         overflow-x: hidden;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-y: contain;
         touch-action: pan-y;
-        padding: 10px 12px calc(150px + env(safe-area-inset-bottom, 0px));
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
     }
 
-    .sun-path-panel.mobile_ui .panel-intro,
-    .sun-path-panel.mobile_ui .location-summary,
-    .sun-path-panel.mobile_ui .panel-note {
+    .panel-intro,
+    .location-summary,
+    .panel-note {
         display: none;
     }
 
-    .sun-path-panel.mobile_ui .control-grid {
-        order: -2;
-        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
-        gap: 6px;
-        margin: 0 0 6px;
-    }
-
-    .sun-path-panel.mobile_ui .control-field > .control-label,
-    .sun-path-panel.mobile_ui .event-selector > .control-label {
+    .control-field > .control-label,
+    .event-selector > .control-label {
         display: none;
     }
 
-    .sun-path-panel.mobile_ui .status-region--event-details {
+    .status-region--event-details {
         display: none;
     }
 
     .sun-path-panel.mobile_ui .map-bottom-module {
-        order: -1;
         margin-top: 0;
-        margin-bottom: 8px;
     }
 
     .sun-path-panel.mobile_ui .summary-tabs button {
-        min-height: 44px;
+        min-height: 36px;
         padding: 0 5px;
     }
 
@@ -1006,8 +993,9 @@
 
     .control-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
-        gap: 8px;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.55fr);
+        gap: 6px;
+        margin: 0 0 6px;
     }
 
     .control-field,
@@ -1030,32 +1018,36 @@
         width: 100%;
         min-width: 0;
         max-width: 100%;
-        min-height: 44px;
-        padding: 8px 10px;
+        min-height: 36px;
+        padding: 0 8px;
         border: 1px solid var(--panel-border);
-        border-radius: 5px;
+        border-radius: 6px;
         color: var(--panel-text);
-        background: rgba(0, 0, 0, 0.22);
+        background: #0e161f;
         font: inherit;
+        font-size: 14px;
         color-scheme: dark;
     }
 
     .segmented-control {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        min-height: 44px;
+        min-height: 36px;
         overflow: hidden;
         border: 1px solid var(--panel-border);
-        border-radius: 5px;
+        border-radius: 6px;
+        background: #0e161f;
     }
 
     .segmented-control button,
     .text-button {
-        min-height: 44px;
+        min-height: 36px;
+        padding: 0 4px;
         border: 0;
         color: var(--panel-muted);
         background: transparent;
         font: inherit;
+        font-size: 14px;
         cursor: pointer;
         transition: color 160ms ease, background 160ms ease;
     }
@@ -1108,7 +1100,7 @@
     }
 
     .status-region {
-        min-height: 32px;
+        min-height: 0;
     }
 
     .status-message {
@@ -1467,7 +1459,7 @@
 
     .map-bottom-module {
         flex: 0 0 auto;
-        margin-top: 18px;
+        margin-top: 0;
         overflow: hidden;
         border: 1px solid var(--panel-border);
         border-radius: 8px;
@@ -1482,13 +1474,14 @@
     }
 
     .summary-tabs button {
-        min-height: 44px;
-        padding: 8px 5px;
+        min-height: 36px;
+        padding: 0 5px;
         border: 0;
         border-bottom: 2px solid transparent;
         color: var(--panel-muted);
         background: transparent;
         font: inherit;
+        font-size: 15px;
         cursor: pointer;
     }
 
@@ -1514,14 +1507,14 @@
         --astronomy-moon: #4e91ed;
         --astronomy-blue-hour: #c4b5fd;
 
-        padding: 8px 8px 10px;
+        padding: 10px 10px 12px;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
     }
 
     .astronomy-panel__heading {
         position: relative;
-        min-height: 44px;
+        min-height: 50px;
     }
 
     .astronomy-panel__lead {
@@ -1535,7 +1528,7 @@
         margin-top: 2px;
         overflow-wrap: anywhere;
         color: var(--astronomy-text);
-        font-size: 14px;
+        font-size: 16px;
     }
 
     .astronomy-panel__lead strong::first-letter {
@@ -1827,9 +1820,7 @@
         }
 
         .map-bottom-module {
-            order: -1;
             margin-top: 0;
-            margin-bottom: 16px;
         }
 
         .sun-path-panel.mobile_ui .control-grid {
