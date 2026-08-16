@@ -890,6 +890,10 @@
         gap: 0;
         height: 380px;
         max-height: 380px;
+        height: min(380px, 68vh);
+        max-height: min(380px, 68vh);
+        height: min(380px, 68dvh);
+        max-height: min(380px, 68dvh);
         margin-top: -4pt;
         padding: 0 8px env(safe-area-inset-bottom, 0px);
         overflow-y: auto;
@@ -1813,7 +1817,6 @@
             display: flex;
             flex-direction: column;
             max-width: none;
-            max-height: min(380px, 68dvh);
             padding-right: 14px;
             padding-left: 14px;
         }
