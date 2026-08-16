@@ -49,7 +49,7 @@
             aria-label={text.languageToggleLabel}
             on:click={toggleLanguage}
         >
-            {uiLanguage === 'zh' ? 'EN' : '中'}
+            中/EN
         </button>
     </div>
 
@@ -1001,7 +1001,7 @@
     }
 
     .sun-path-panel.mobile_ui {
-        --summary-panel-height: clamp(178px, 21svh, 198px);
+        --summary-panel-height: clamp(188px, 22svh, 206px);
 
         display: flex;
         flex-direction: column;
@@ -1114,7 +1114,7 @@
 
     .control-grid {
         display: grid;
-        grid-template-columns: minmax(76px, 0.55fr) minmax(0, 2fr) 42px;
+        grid-template-columns: minmax(76px, 0.52fr) minmax(0, 2fr) 52px;
         align-items: stretch;
         gap: 6px;
         margin: 0 0 6px;
@@ -1143,7 +1143,8 @@
         box-sizing: border-box;
         width: 100%;
         min-width: 0;
-        min-height: 36px;
+        height: 38px;
+        min-height: 38px;
         gap: 6px;
         padding: 0 8px;
         overflow: hidden;
@@ -1151,7 +1152,7 @@
         border-radius: 6px;
         color: var(--panel-text);
         background: #0e161f;
-        font-size: 13px;
+        font-size: 14px;
         cursor: pointer;
     }
 
@@ -1165,7 +1166,7 @@
     .date-control__icon {
         flex: 0 0 auto;
         color: var(--panel-accent);
-        font-size: 13px;
+        font-size: 14px;
         line-height: 1;
     }
 
@@ -1174,7 +1175,7 @@
         width: 100%;
         min-width: 0;
         max-width: 100%;
-        min-height: 36px;
+        min-height: 38px;
         padding: 0 8px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -1202,7 +1203,7 @@
     .segmented-control {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        min-height: 36px;
+        min-height: 38px;
         overflow: hidden;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -1712,17 +1713,17 @@
         height: 100%;
         min-height: 100%;
         overflow-y: auto;
-        padding: 10px 10px 12px;
+        padding: 8px 10px 10px;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
     }
 
     .astronomy-panel__heading {
         display: grid;
-        grid-template-columns: minmax(0, 1.15fr) minmax(94px, 0.95fr) 48px;
+        grid-template-columns: minmax(0, 1.05fr) minmax(112px, 1fr) 64px;
         align-items: center;
         gap: 8px;
-        min-height: 54px;
+        min-height: 48px;
     }
 
     .astronomy-panel__lead {
@@ -1757,13 +1758,14 @@
     }
 
     .live-position {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 2px 5px;
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
         min-width: 0;
         color: var(--astronomy-muted);
         font-size: 9px;
         line-height: 1.18;
+        white-space: nowrap;
     }
 
     .live-position span {
@@ -1774,8 +1776,8 @@
     .live-position strong,
     .live-position em {
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        overflow: visible;
+        text-overflow: clip;
         white-space: nowrap;
         font-style: normal;
         font-variant-numeric: tabular-nums;
@@ -1784,11 +1786,6 @@
     .live-position strong {
         color: var(--astronomy-text);
         font-weight: 700;
-    }
-
-    .live-position em {
-        grid-column: 2;
-        color: var(--astronomy-muted);
     }
 
     .orbit-badge {
@@ -1821,18 +1818,19 @@
     }
 
     .orbit-badge__caption {
-        max-width: 64px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        max-width: 72px;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+        line-height: 1.15;
     }
 
     .timeline-events {
         display: grid;
         grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 0;
-        margin-top: 8px;
-        padding: 7px 0 6px;
+        margin-top: 6px;
+        padding: 6px 0 5px;
         border-top: 1px solid rgba(255, 255, 255, 0.12);
         border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
@@ -1887,12 +1885,12 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 6px;
-        margin-top: 8px;
+        margin-top: 6px;
     }
 
     .night-window {
         min-width: 0;
-        padding: 8px 10px;
+        padding: 6px 8px;
         border: 1px solid rgba(115, 143, 214, 0.32);
         border-radius: 6px;
         background: rgba(11, 18, 43, 0.72);
@@ -1910,20 +1908,22 @@
     }
 
     .night-window__body strong {
-        overflow: hidden;
+        overflow: visible;
         color: var(--astronomy-text);
         font-size: 12px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        text-overflow: clip;
+        white-space: normal;
+        line-height: 1.2;
     }
 
     .night-window__body span {
-        overflow: hidden;
+        overflow: visible;
         color: var(--astronomy-muted);
         font-size: 10px;
         font-variant-numeric: tabular-nums;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        text-overflow: clip;
+        white-space: normal;
+        line-height: 1.25;
     }
 
     .night-window-list__empty {
@@ -2012,7 +2012,7 @@
         }
 
         .sun-path-panel.mobile_ui .control-grid {
-            grid-template-columns: minmax(68px, 0.52fr) minmax(0, 1.55fr) 40px;
+            grid-template-columns: 76px minmax(0, 1fr) 52px;
         }
 
         .segmented-control--events {
@@ -2072,7 +2072,7 @@
         }
 
         .astronomy-panel__heading {
-            grid-template-columns: minmax(0, 1.08fr) minmax(86px, 0.9fr) 42px;
+            grid-template-columns: minmax(0, 1fr) minmax(104px, 1fr) 62px;
             gap: 6px;
         }
 
@@ -2091,14 +2091,13 @@
         }
 
         .live-position {
-            grid-template-columns: auto minmax(0, 1fr);
-            gap: 1px 4px;
-            font-size: 8px;
+            gap: 3px;
+            font-size: 8.5px;
         }
 
         .orbit-moon {
-            width: 36px;
-            height: 36px;
+            width: 34px;
+            height: 34px;
         }
 
         .night-window-list {
@@ -2108,11 +2107,11 @@
 
     @media (max-width: 360px) {
         .sun-path-panel.mobile_ui {
-            --summary-panel-height: 174px;
+            --summary-panel-height: 184px;
         }
 
         .sun-path-panel.mobile_ui .control-grid {
-            grid-template-columns: 64px minmax(0, 1fr) 38px;
+            grid-template-columns: 68px minmax(0, 1fr) 48px;
             gap: 5px;
         }
 
