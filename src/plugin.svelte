@@ -3,10 +3,16 @@
 </div>
 
 <section
-    class="sun-path-panel"
-    class:plugin__content={!isMobileOrTablet}
+    class="sun-path-panel plugin__content"
     class:mobile_ui={isMobileOrTablet}
 >
+    <div
+        class="plugin__title plugin__title--chevron-back panel-title"
+        on:click={() => bcast.emit('rqstOpen', 'menu')}
+    >
+        {title}
+    </div>
+
     <div class="mobile-scroll-content">
     <div class="panel-intro">
         <p>日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。</p>
@@ -194,62 +200,60 @@
             <section class="module-about" aria-label="数据说明">
                 <div class="module-about__title">方向线与时间轴</div>
                 <p>太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。</p>
-                <p>当前太阳方向为白线，当前月亮方向为蓝色虚线；地图底部图例保留用户位置、200 km 和 400 km 点位含义。</p>
+                <div class="sun-path-legend sun-path-legend--module" aria-label="地图图例">
+                    <div class="sun-path-legend__title">地图图例</div>
+                    <div class="sun-path-legend__items">
+                        <span class="legend-item">
+                            <span class="legend-dot legend-dot--origin" aria-hidden="true"></span>
+                            用户位置
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-dot legend-dot--inner" aria-hidden="true"></span>
+                            200 km
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-dot legend-dot--outer" aria-hidden="true"></span>
+                            400 km
+                        </span>
+                    </div>
+                    <div class="sun-path-legend__items sun-path-legend__items--lines">
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--before" aria-hidden="true"></span>
+                            太阳前 30 分钟
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--event" aria-hidden="true"></span>
+                            太阳事件时刻
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--after" aria-hidden="true"></span>
+                            太阳后 30 分钟
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--moon-before" aria-hidden="true"></span>
+                            月亮前 30 分钟
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--moon-event" aria-hidden="true"></span>
+                            月亮事件时刻
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--moon-after" aria-hidden="true"></span>
+                            月亮后 30 分钟
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--current" aria-hidden="true"></span>
+                            当前太阳方位
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-line legend-line--moon" aria-hidden="true"></span>
+                            当前月亮方位
+                        </span>
+                    </div>
+                </div>
             </section>
         {/if}
     </section>
-
-    <div class="sun-path-legend" aria-label="地图图例">
-        <div class="sun-path-legend__title">地图图例</div>
-        <div class="sun-path-legend__items">
-            <span class="legend-item">
-                <span class="legend-dot legend-dot--origin" aria-hidden="true"></span>
-                用户位置
-            </span>
-            <span class="legend-item">
-                <span class="legend-dot legend-dot--inner" aria-hidden="true"></span>
-                200 km
-            </span>
-            <span class="legend-item">
-                <span class="legend-dot legend-dot--outer" aria-hidden="true"></span>
-                400 km
-            </span>
-        </div>
-        <div class="sun-path-legend__items sun-path-legend__items--lines">
-            <span class="legend-item">
-                <span class="legend-line legend-line--before" aria-hidden="true"></span>
-                太阳前 30 分钟
-            </span>
-            <span class="legend-item">
-                <span class="legend-line legend-line--event" aria-hidden="true"></span>
-                太阳事件时刻
-            </span>
-            <span class="legend-item">
-                <span class="legend-line legend-line--after" aria-hidden="true"></span>
-                太阳后 30 分钟
-            </span>
-            <span class="legend-item">
-                <span class="legend-line legend-line--moon-before" aria-hidden="true"></span>
-                月亮前 30 分钟
-            </span>
-            <span class="legend-item">
-                <span class="legend-line legend-line--moon-event" aria-hidden="true"></span>
-                月亮事件时刻
-            </span>
-            <span class="legend-item">
-                <span class="legend-line legend-line--moon-after" aria-hidden="true"></span>
-                月亮后 30 分钟
-            </span>
-            <span class="legend-item">
-                <span class="legend-line legend-line--current" aria-hidden="true"></span>
-                当前太阳方位
-            </span>
-            <span class="legend-item">
-                <span class="legend-line legend-line--moon" aria-hidden="true"></span>
-                当前月亮方位
-            </span>
-        </div>
-    </div>
 
     <p class="panel-note">
         方向线表示天文方位，不代表山体、建筑或云层遮挡条件下的实际可见性。关闭面板后，方向线会保留在地图上；重新打开插件时会接管并更新同一组图层。
@@ -700,12 +704,6 @@
         return `当天没有可用的${nameForEvent}时刻。`;
     };
 
-    const revealMobileSummary = () => {
-        if (isMobileOrTablet || isSmallViewport()) {
-            bcast.emit('rqstHalfOpen', name, true, true);
-        }
-    };
-
     const setLocation = (latLon: LatLon, reopenWhenClosed = true) => {
         const lat = asFiniteCoordinate(latLon.lat, Number.NaN);
         const lon = asFiniteCoordinate(latLon.lon, Number.NaN);
@@ -724,13 +722,13 @@
         refreshKey = nextKey;
 
         if (isMounted) {
-            revealMobileSummary();
-        } else {
-            setUrl(name, nextLocation);
-            void refreshPaths(nextKey);
-            if (reopenWhenClosed) {
-                bcast.emit('rqstOpen', name, nextLocation);
-            }
+            return;
+        }
+
+        setUrl(name, nextLocation);
+        void refreshPaths(nextKey);
+        if (reopenWhenClosed) {
+            bcast.emit('rqstOpen', name, nextLocation);
         }
     };
 
@@ -796,7 +794,6 @@
         claimOverlayOwner(overlayOwner);
         isMounted = true;
         singleclick.on(name, setLocation);
-        revealMobileSummary();
         drawCurrentDirectionLines();
         currentDirectionTimer = setInterval(drawCurrentDirectionLines, 5_000);
     });
@@ -853,10 +850,6 @@
         line-height: 24px;
     }
 
-    :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-path) {
-        padding: 0;
-    }
-
     .sun-path-panel {
         --panel-bg: rgba(19, 25, 32, 0.98);
         --panel-surface: rgba(255, 255, 255, 0.06);
@@ -888,38 +881,30 @@
     }
 
     .sun-path-panel.mobile_ui {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0;
-        height: 380px;
-        max-height: 380px;
-        height: min(380px, 68vh);
-        max-height: min(380px, 68vh);
-        height: min(380px, 68dvh);
-        max-height: min(380px, 68dvh);
-        margin-top: -4pt;
-        padding: 0;
-        overflow: hidden;
+        display: block;
+        width: 100%;
+        min-height: 100%;
+        height: 100%;
+        max-height: 100%;
+        margin: 0;
+        padding: 0 12px calc(24px + env(safe-area-inset-bottom, 0px));
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
     }
 
     .sun-path-panel.mobile_ui .mobile-scroll-content {
         box-sizing: border-box;
         width: 100%;
-        height: 0;
+        height: auto;
         min-height: 0;
-        flex: 1 1 auto;
-        overflow-x: hidden;
-        overflow-y: scroll;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: contain;
-        touch-action: pan-y;
-        padding: 0 8px env(safe-area-inset-bottom, 0px);
+        padding-bottom: 24px;
+        overflow: visible;
     }
 
     .sun-path-panel.mobile_ui .panel-intro,
     .sun-path-panel.mobile_ui .location-summary,
-    .sun-path-panel.mobile_ui .sun-path-legend,
     .sun-path-panel.mobile_ui .panel-note {
         display: none;
     }
@@ -927,8 +912,13 @@
     .sun-path-panel.mobile_ui .control-grid {
         order: -2;
         grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr);
-        gap: 8px;
-        margin: 6px 0;
+        gap: 6px;
+        margin: 0 0 6px;
+    }
+
+    .sun-path-panel.mobile_ui .control-field > .control-label,
+    .sun-path-panel.mobile_ui .event-selector > .control-label {
+        display: none;
     }
 
     .sun-path-panel.mobile_ui .status-region--event-details {
@@ -939,6 +929,15 @@
         order: -1;
         margin-top: 0;
         margin-bottom: 8px;
+    }
+
+    .sun-path-panel.mobile_ui .summary-tabs button {
+        min-height: 44px;
+        padding: 0 5px;
+    }
+
+    .sun-path-panel.mobile_ui .module-about {
+        padding: 10px;
     }
 
     .sun-path-panel.mobile_ui .position-cards {
