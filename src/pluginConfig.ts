@@ -2,7 +2,7 @@ import type { ExternalPluginConfig } from '@windy/interfaces.d';
 
 const config: ExternalPluginConfig = {
     name: 'windy-plugin-sun-path',
-    version: '0.4.3-beta-13',
+    version: '0.4.3',
     icon: '☀️',
     title: 'Sun & Moon Path',
     description: 'Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.',
@@ -14,7 +14,7 @@ const config: ExternalPluginConfig = {
     addToContextmenu: true,
     listenToSingleclick: true,
     routerPath: '/sun-path/:lat?/:lon?',
-    private: true,
+    private: false,
 };
 
 export default config;
