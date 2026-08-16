@@ -1,0 +1,103 @@
+name: Bug report
+description: Report a reproducible problem with Windy Sun & Moon Path
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please include enough detail for the issue to be reproduced.
+
+        感谢反馈问题。请尽量提供可以复现的信息。
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version / 插件版本
+      description: "Example: 0.4.3"
+      placeholder: "0.4.3"
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-url
+    attributes:
+      label: Plugin URL / 插件链接
+      description: Paste the plugin bundle URL if you loaded it manually.
+      placeholder: "https://windy-plugins.com/7316688/windy-plugin-sun-path/0.4.3/plugin.min.js"
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform / 平台
+      options:
+        - Desktop browser
+        - Mobile browser
+        - Windy mobile app
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser or app version / 浏览器或 App 版本
+      placeholder: "Chrome 127, Safari 18, Windy app version..."
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      description: List the exact steps that trigger the problem.
+      placeholder: |
+        1. Open Windy...
+        2. Load the plugin...
+        3. Select...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior / 预期表现
+      placeholder: "What should happen?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior / 实际表现
+      placeholder: "What happened instead?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: location-date
+    attributes:
+      label: Location, date, and event / 位置、日期和事件
+      description: Include latitude/longitude, selected date, timezone if known, and selected event.
+      placeholder: "lat 23.13, lon 113.26, 2026-08-16, Asia/Shanghai, sunset"
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recording / 截图或录屏
+      description: Drag images or videos here if they help explain the problem.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors / 控制台错误
+      description: Paste relevant browser console errors if available.
+      render: text
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist / 检查项
+      options:
+        - label: I have checked the latest README and release notes.
+          required: true
+        - label: I can reproduce this issue with the version listed above.
+          required: true

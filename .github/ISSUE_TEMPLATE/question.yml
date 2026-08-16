@@ -1,0 +1,41 @@
+name: Question
+description: Ask about usage, installation, or expected behavior
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for usage questions, installation questions, and expected-behavior checks.
+
+        使用问题、安装问题、预期行为确认可以用这个模板。
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question / 问题
+      description: What do you want to know?
+      placeholder: "How do I load the plugin in Windy?"
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version / 插件版本
+      placeholder: "0.4.3"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / 背景
+      description: Include what you tried, the plugin URL, location/date/event, or screenshots if relevant.
+      placeholder: "I loaded this URL..., selected sunset..., and saw..."
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist / 检查项
+      options:
+        - label: I have checked the README and release notes.
+          required: true

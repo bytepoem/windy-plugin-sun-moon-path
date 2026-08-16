@@ -1,0 +1,66 @@
+name: Feature request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the user problem first, then the proposed behavior.
+
+        请先说明实际使用场景和问题，再描述你希望插件怎么改。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem / 使用问题
+      description: What are you trying to do, and what is difficult today?
+      placeholder: "When planning a sunrise shot, I need..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution / 期望方案
+      description: Describe the behavior you want in the plugin.
+      placeholder: "Add an option to..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / 功能区域
+      options:
+        - Map direction lines
+        - Sun and moon calculations
+        - Timeline panel
+        - Mobile layout
+        - Language or copy
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or references / 示例或参考
+      description: Add screenshots, links, or examples if useful.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered / 已考虑的替代方式
+      description: Optional. Mention any workaround you use today.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist / 检查项
+      options:
+        - label: This request is about Windy Sun & Moon Path, not Windy.com itself.
+          required: true
+        - label: I have checked the README and existing issues for similar requests.
+          required: true
