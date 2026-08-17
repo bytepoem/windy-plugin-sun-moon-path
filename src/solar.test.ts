@@ -110,7 +110,7 @@ describe('solar path geometry', () => {
         ]);
     });
 
-    it('creates three ordered event samples and two distance points per line', () => {
+    it('creates three ordered event samples and three distance points per line', () => {
         const result = calculateSolarPath({
             date: dateInputToUtcNoon('2026-08-15', 'Asia/Shanghai'),
             location: { lat: 23.05, lon: 113.37 },
@@ -128,6 +128,7 @@ describe('solar path geometry', () => {
         for (const sample of result.samples) {
             expect(distanceKm({ lat: 23.05, lon: 113.37 }, sample.point200)).toBeCloseTo(200, 5);
             expect(distanceKm({ lat: 23.05, lon: 113.37 }, sample.point400)).toBeCloseTo(400, 5);
+            expect(distanceKm({ lat: 23.05, lon: 113.37 }, sample.point600)).toBeCloseTo(600, 5);
             expect(sample.time.getTime()).toBe(
                 result.eventTime.getTime() + sample.offsetMinutes * 60_000,
             );
@@ -194,6 +195,7 @@ describe('solar path geometry', () => {
         for (const sample of moonrise.samples) {
             expect(distanceKm(location, sample.point200)).toBeCloseTo(200, 5);
             expect(distanceKm(location, sample.point400)).toBeCloseTo(400, 5);
+            expect(distanceKm(location, sample.point600)).toBeCloseTo(600, 5);
         }
     });
 

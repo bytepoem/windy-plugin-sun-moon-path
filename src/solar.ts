@@ -5,6 +5,7 @@ export const SAMPLE_OFFSETS_MINUTES = [-30, 0, 30] as const;
 export const LINE_LENGTHS_KM = {
     inner: 200,
     outer: 400,
+    extended: 600,
 } as const;
 export const CURRENT_DIRECTION_LENGTH_KM = 600;
 
@@ -57,6 +58,7 @@ export interface SolarSample {
     azimuth: number;
     point200: Coordinates;
     point400: Coordinates;
+    point600: Coordinates;
 }
 
 export interface SolarDirection {
@@ -646,6 +648,7 @@ export const calculateSolarPath = ({
             azimuth,
             point200: destinationPoint(location, azimuth, LINE_LENGTHS_KM.inner),
             point400: destinationPoint(location, azimuth, LINE_LENGTHS_KM.outer),
+            point600: destinationPoint(location, azimuth, LINE_LENGTHS_KM.extended),
         };
     });
 

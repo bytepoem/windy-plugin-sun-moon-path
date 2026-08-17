@@ -136,12 +136,14 @@
 
     <section class="map-bottom-module" aria-label="Sun Position 风格日月面板">
         <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
-            <button type="button" class:active={summaryTab === 'diagram'} on:click={() => (summaryTab = 'diagram')}>{text.eventTab}</button>
+            <button type="button" class:active={summaryTab === 'events'} on:click={() => (summaryTab = 'events')}>{text.eventTab}</button>
+            <button type="button" class:active={summaryTab === 'guide'} on:click={() => (summaryTab = 'guide')}>{text.guideTab}</button>
+            <button type="button" class:active={summaryTab === 'settings'} on:click={() => (summaryTab = 'settings')}>{text.settingsTab}</button>
             <button type="button" class:active={summaryTab === 'about'} on:click={() => (summaryTab = 'about')}>{text.aboutTab}</button>
         </nav>
 
         <div class="summary-panel-frame">
-            {#if summaryTab === 'diagram'}
+            {#if summaryTab === 'events'}
                 <section class="astronomy-panel" aria-label="今日天文时段">
                     <div class="astronomy-panel__heading">
                         <div class="astronomy-panel__lead">
@@ -245,8 +247,8 @@
                         {/if}
                     </div>
                 </section>
-            {:else}
-                <section class="module-about" aria-label="数据说明">
+            {:else if summaryTab === 'guide'}
+                <section class="module-about module-guide" aria-label={text.guideHeading}>
                     <p>{text.aboutDescription}</p>
                     <div class="sun-path-legend sun-path-legend--module" aria-label="地图图例">
                         <div class="sun-path-legend__items">
@@ -262,6 +264,12 @@
                                 <span class="legend-dot legend-dot--outer" aria-hidden="true"></span>
                                 400 km
                             </span>
+                            {#if showExtendedDistanceMarker}
+                                <span class="legend-item">
+                                    <span class="legend-dot legend-dot--extended" aria-hidden="true"></span>
+                                    600 km
+                                </span>
+                            {/if}
                         </div>
                         <div class="sun-path-legend__items sun-path-legend__items--lines">
                             <span class="legend-item">
@@ -297,6 +305,49 @@
                                 {text.legend.currentMoon}
                             </span>
                         </div>
+                    </div>
+                </section>
+            {:else if summaryTab === 'settings'}
+                <section class="module-about module-settings" aria-label={text.settingsHeading}>
+                    <label class="settings-toggle">
+                        <span class="settings-toggle__copy">
+                            <strong>{text.show600Label}</strong>
+                            <span>{text.show600Description}</span>
+                        </span>
+                        <input
+                            type="checkbox"
+                            checked={showExtendedDistanceMarker}
+                            aria-label={text.show600Label}
+                            on:change={toggleExtendedDistanceMarker}
+                        />
+                        <span class="settings-toggle__control" aria-hidden="true"></span>
+                    </label>
+                </section>
+            {:else}
+                <section class="module-about" aria-label={text.aboutHeading}>
+                    <div class="about-hero">
+                        <div class="about-hero__header">
+                            <div class="about-hero__copy">
+                                <span>{text.aboutHeading}</span>
+                                <strong>{title}</strong>
+                            </div>
+                            <dl class="about-meta">
+                                <div>
+                                    <dt>{text.aboutAuthorLabel}</dt>
+                                    <dd>{pluginAuthor}</dd>
+                                </div>
+                                <div>
+                                    <dt>{text.aboutVersionLabel}</dt>
+                                    <dd>v{pluginVersion}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                        <div class="about-actions" aria-label={text.aboutLinksLabel}>
+                            <a href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutGithubLabel}</a>
+                            <a href={issuesUrl} target="_blank" rel="noreferrer">{text.aboutIssuesLabel}</a>
+                            <a class="about-actions__star" href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutStarLabel}</a>
+                        </div>
+                        <p>{text.aboutStarHint}</p>
                     </div>
                 </section>
             {/if}
@@ -351,7 +402,8 @@
 
     import type { LatLon } from '@windy/interfaces.d';
 
-    const { name, title } = config;
+    const { author: pluginAuthor, name, repository: repositoryUrl, title, version: pluginVersion } = config;
+    const issuesUrl = `${repositoryUrl}/issues`;
     const systemTimeZone = (() => {
         try {
             return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -361,7 +413,7 @@
     })();
     const GUANGZHOU: Coordinates = { lat: 23.05, lon: 113.37 };
     type DirectionEvent = SolarEvent | 'all';
-    type SummaryTab = 'diagram' | 'about';
+    type SummaryTab = 'events' | 'guide' | 'settings' | 'about';
     type UiLanguage = 'zh' | 'en';
     const celestialEvents: SolarEvent[] = ['sunrise', 'sunset', 'moonrise', 'moonset'];
     const eventOptions: { value: DirectionEvent }[] = [
@@ -377,6 +429,8 @@
         languageToggleLabel: string;
         panelIntro: string;
         eventTab: string;
+        guideTab: string;
+        settingsTab: string;
         aboutTab: string;
         retry: string;
         eventTimeSuffix: string;
@@ -392,6 +446,18 @@
         timelineStartSuffix: string;
         moonPhaseLoading: string;
         aboutDescription: string;
+        guideHeading: string;
+        settingsHeading: string;
+        show600Label: string;
+        show600Description: string;
+        aboutHeading: string;
+        aboutAuthorLabel: string;
+        aboutVersionLabel: string;
+        aboutLinksLabel: string;
+        aboutGithubLabel: string;
+        aboutIssuesLabel: string;
+        aboutStarLabel: string;
+        aboutStarHint: string;
         events: Record<DirectionEvent, string>;
         timeline: Record<string, string>;
         intervals: Record<AstronomyInterval['kind'], string>;
@@ -404,7 +470,9 @@
             languageToggleLabel: '切换到英文',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
             eventTab: '事件',
-            aboutTab: '说明',
+            guideTab: '说明',
+            settingsTab: '设置',
+            aboutTab: '关于',
             retry: '重试',
             eventTimeSuffix: '时间',
             now: '现在',
@@ -419,6 +487,18 @@
             timelineStartSuffix: '开始还有',
             moonPhaseLoading: '月相计算中',
             aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
+            guideHeading: '地图说明',
+            settingsHeading: '显示设置',
+            show600Label: '显示 600 km 点',
+            show600Description: '开启后事件方向线会延伸到 600 km，并在该距离增加一个参考点。设置会保存在当前浏览器。',
+            aboutHeading: '关于插件',
+            aboutAuthorLabel: '作者',
+            aboutVersionLabel: '版本',
+            aboutLinksLabel: '项目链接',
+            aboutGithubLabel: 'GitHub 仓库',
+            aboutIssuesLabel: 'Issues',
+            aboutStarLabel: 'Star',
+            aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
             events: {
                 all: '全部',
                 sunrise: '日出',
@@ -456,6 +536,8 @@
             languageToggleLabel: 'Switch to Chinese',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
             eventTab: 'Events',
+            guideTab: 'Guide',
+            settingsTab: 'Settings',
             aboutTab: 'About',
             retry: 'Retry',
             eventTimeSuffix: ' time',
@@ -471,6 +553,18 @@
             timelineStartSuffix: 'starts in',
             moonPhaseLoading: 'Calculating phase',
             aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30 minutes before, at the event, and 30 minutes after.',
+            guideHeading: 'Map guide',
+            settingsHeading: 'Display settings',
+            show600Label: 'Show 600 km point',
+            show600Description: 'When enabled, event direction lines extend to 600 km and add a reference point there. This setting is saved in this browser.',
+            aboutHeading: 'About plugin',
+            aboutAuthorLabel: 'Author',
+            aboutVersionLabel: 'Version',
+            aboutLinksLabel: 'Project links',
+            aboutGithubLabel: 'GitHub repo',
+            aboutIssuesLabel: 'Issues',
+            aboutStarLabel: 'Star',
+            aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
             events: {
                 all: 'All',
                 sunrise: 'Sunrise',
@@ -503,6 +597,7 @@
             phases: ['New', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full', 'Waning gibbous', 'Last quarter', 'Waning crescent'],
         },
     };
+    const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-path:show-600km';
     const defaultLocation = (): Coordinates => {
         const latestPosition = getMyLatestPos();
         const latestCoordinates = coordinatesFromLocation(latestPosition);
@@ -531,7 +626,8 @@
     let moonriseAzimuthLabel = '';
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
-    let summaryTab: SummaryTab = 'diagram';
+    let summaryTab: SummaryTab = 'events';
+    let showExtendedDistanceMarker = false;
     let displayAstronomyIntervals: AstronomyInterval[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
@@ -587,6 +683,37 @@
         uiLanguage = uiLanguage === 'zh' ? 'en' : 'zh';
     };
 
+    const selectedMapPaths = (paths = solarPaths): SolarPath[] =>
+        selectedEvent === 'all' ? paths : paths.filter(path => path.event === selectedEvent);
+
+    const loadExtendedDistancePreference = (): boolean => {
+        try {
+            return localStorage.getItem(SHOW_600_STORAGE_KEY) === 'true';
+        } catch {
+            return false;
+        }
+    };
+
+    const saveExtendedDistancePreference = (value: boolean) => {
+        try {
+            localStorage.setItem(SHOW_600_STORAGE_KEY, String(value));
+        } catch {
+            // Storage can be unavailable in hardened browser modes; the setting still works for this session.
+        }
+    };
+
+    const setShowExtendedDistanceMarker = (value: boolean) => {
+        showExtendedDistanceMarker = value;
+        saveExtendedDistancePreference(value);
+        if (isMounted && solarPaths.length > 0) {
+            drawMapFeatures(selectedMapPaths());
+        }
+    };
+
+    const toggleExtendedDistanceMarker = (event: Event) => {
+        setShowExtendedDistanceMarker((event.currentTarget as HTMLInputElement).checked);
+    };
+
     const isValidTimeZone = (candidate: string): boolean => {
         try {
             new Intl.DateTimeFormat(undefined, { timeZone: candidate }).format();
@@ -619,11 +746,12 @@
         currentMoonDirectionLines = [];
     };
 
-    const markerIcon = (kind: 'origin' | 'inner' | 'outer'): L.DivIcon => {
+    const markerIcon = (kind: 'origin' | 'inner' | 'outer' | 'extended'): L.DivIcon => {
         const sizes = {
-            origin: 18,
-            inner: 12,
-            outer: 12,
+            origin: 16,
+            inner: 10,
+            outer: 10,
+            extended: 10,
         };
         const size = sizes[kind];
 
@@ -726,6 +854,7 @@
                     selectedLocation,
                     sample.point200,
                     sample.point400,
+                    ...(showExtendedDistanceMarker ? [sample.point600] : []),
                 ]);
                 for (const segment of pathSegments) {
                     const line = new L.Polyline(segment.map(toLatLng), {
@@ -750,6 +879,14 @@
                 }).addTo(layerGroup);
                 outerMarker.bindTooltip(`${eventDisplayName(path.event, text)} · ${sample.label} · 400 km`, { direction: 'top', offset: [0, -6] });
                 markers.push(outerMarker);
+
+                if (showExtendedDistanceMarker) {
+                    const extendedMarker = new L.Marker(toLatLng(sample.point600), {
+                        icon: markerIcon('extended'),
+                    }).addTo(layerGroup);
+                    extendedMarker.bindTooltip(`${eventDisplayName(path.event, text)} · ${sample.label} · 600 km`, { direction: 'top', offset: [0, -6] });
+                    markers.push(extendedMarker);
+                }
             }
         }
     };
@@ -830,9 +967,7 @@
 
             solarPaths = nextPaths;
             astronomyTimeline = nextTimeline;
-            const selectedPaths = event === 'all'
-                ? nextPaths
-                : nextPaths.filter(path => path.event === event);
+            const selectedPaths = event === 'all' ? nextPaths : nextPaths.filter(path => path.event === event);
             status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
             drawMapFeatures(selectedPaths);
         } catch (error) {
@@ -1021,6 +1156,7 @@
 
     onMount(() => {
         claimOverlayOwner(overlayOwner);
+        showExtendedDistanceMarker = loadExtendedDistancePreference();
         isMounted = true;
         singleclick.on(name, setLocation);
         drawCurrentDirectionLines();
@@ -1044,28 +1180,36 @@
         display: block;
         box-sizing: border-box;
         border-radius: 50%;
-        box-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32);
     }
 
     :global(.sun-path-marker--origin span) {
-        width: 18px;
-        height: 18px;
-        background: #7553f2;
-        border: 2px solid rgba(255, 255, 255, 0.9);
+        width: 16px;
+        height: 16px;
+        background: rgba(117, 83, 242, 0.62);
+        border: 1px solid rgba(255, 255, 255, 0.72);
     }
 
     :global(.sun-path-marker--inner span) {
-        width: 12px;
-        height: 12px;
-        background: #17aa03;
-        border: 1px solid rgba(255, 255, 255, 0.82);
+        width: 10px;
+        height: 10px;
+        background: rgba(23, 170, 3, 0.58);
+        border: 1px solid rgba(255, 255, 255, 0.58);
+    }
+
+    :global(.sun-path-marker--outer span),
+    :global(.sun-path-marker--extended span) {
+        width: 10px;
+        height: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.58);
     }
 
     :global(.sun-path-marker--outer span) {
-        width: 12px;
-        height: 12px;
-        background: #318bff;
-        border: 1px solid rgba(255, 255, 255, 0.82);
+        background: rgba(49, 139, 255, 0.58);
+    }
+
+    :global(.sun-path-marker--extended span) {
+        background: rgba(250, 204, 21, 0.55);
     }
 
     .sun-path-panel {
@@ -1765,25 +1909,29 @@
     }
 
     .legend-dot {
-        width: 10px;
-        height: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.8);
+        width: 9px;
+        height: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.58);
         border-radius: 50%;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
     }
 
     .legend-dot--origin {
-        width: 12px;
-        height: 12px;
-        background: #7553f2;
+        width: 11px;
+        height: 11px;
+        background: rgba(117, 83, 242, 0.62);
     }
 
     .legend-dot--inner {
-        background: #17aa03;
+        background: rgba(23, 170, 3, 0.58);
     }
 
     .legend-dot--outer {
-        background: #318bff;
+        background: rgba(49, 139, 255, 0.58);
+    }
+
+    .legend-dot--extended {
+        background: rgba(250, 204, 21, 0.55);
     }
 
     .legend-line {
@@ -1845,7 +1993,7 @@
 
     .summary-tabs {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         border-bottom: 1px solid var(--panel-border);
         background: rgba(255, 255, 255, 0.04);
     }
@@ -2199,7 +2347,10 @@
         box-sizing: border-box;
         height: 100%;
         overflow-y: auto;
-        padding: 14px;
+        display: grid;
+        align-content: start;
+        gap: 10px;
+        padding: 12px;
         color: var(--panel-muted);
         background: rgba(0, 0, 0, 0.14);
         font-size: 12px;
@@ -2217,6 +2368,218 @@
 
     .module-about p:first-child {
         margin-top: 0;
+    }
+
+    .module-guide {
+        gap: 8px;
+    }
+
+    .module-guide > p {
+        margin: 0;
+        color: var(--panel-muted);
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .module-settings {
+        gap: 8px;
+    }
+
+    .settings-toggle {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        min-height: 48px;
+        padding: 10px 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        cursor: pointer;
+    }
+
+    .settings-toggle__copy {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .settings-toggle__copy strong {
+        color: var(--panel-text);
+        font-size: 13px;
+        line-height: 1.25;
+    }
+
+    .settings-toggle__copy span {
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .settings-toggle input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .settings-toggle__control {
+        position: relative;
+        width: 42px;
+        height: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        transition: background-color 180ms ease, border-color 180ms ease;
+    }
+
+    .settings-toggle__control::after {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        content: '';
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+        transition: transform 180ms ease;
+    }
+
+    .settings-toggle input:checked + .settings-toggle__control {
+        border-color: rgba(99, 185, 238, 0.8);
+        background: rgba(99, 185, 238, 0.58);
+    }
+
+    .settings-toggle input:checked + .settings-toggle__control::after {
+        transform: translateX(18px);
+    }
+
+    .settings-toggle input:focus-visible + .settings-toggle__control {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .about-hero {
+        display: grid;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(42, 55, 86, 0.92), rgba(18, 28, 48, 0.94));
+        color: var(--panel-text);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .about-hero p {
+        margin: 0;
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .about-hero__header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: start;
+    }
+
+    .about-hero__copy {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .about-hero__copy span {
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.2;
+    }
+
+    .about-hero__copy strong {
+        color: var(--panel-text);
+        font-size: 15px;
+        line-height: 1.2;
+    }
+
+    .about-meta {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        gap: 8px;
+        margin: 0;
+    }
+
+    .about-meta div {
+        display: grid;
+        gap: 1px;
+        text-align: right;
+    }
+
+    .about-meta dt,
+    .about-meta dd {
+        margin: 0;
+    }
+
+    .about-meta dt {
+        color: var(--panel-muted);
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
+    .about-meta dd {
+        color: var(--panel-text);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .about-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .about-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        min-height: 32px;
+        padding: 0 8px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 6px;
+        color: var(--panel-text) !important;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.15;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+    }
+
+    .about-actions a:hover {
+        border-color: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.13);
+    }
+
+    .about-actions a:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .about-actions__star {
+        border-color: rgba(250, 204, 21, 0.64) !important;
+        color: #171717 !important;
+        background: #facc15 !important;
+    }
+
+    .about-actions__star:hover {
+        background: #fde047 !important;
     }
 
     .sun-path-legend {
