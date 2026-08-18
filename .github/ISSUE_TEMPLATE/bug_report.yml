@@ -14,8 +14,8 @@ body:
     id: plugin-version
     attributes:
       label: Plugin version / 插件版本
-      description: "Example: 0.4.3"
-      placeholder: "0.4.3"
+      description: "Example: 0.5.0"
+      placeholder: "0.5.0"
     validations:
       required: true
 
@@ -24,7 +24,7 @@ body:
     attributes:
       label: Plugin URL / 插件链接
       description: Paste the plugin bundle URL if you loaded it manually.
-      placeholder: "https://windy-plugins.com/7316688/windy-plugin-sun-path/0.4.3/plugin.min.js"
+      placeholder: "https://windy-plugins.com/7316688/windy-plugin-sun-moon-path/0.5.0/plugin.min.js"
 
   - type: dropdown
     id: platform

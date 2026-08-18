@@ -597,7 +597,7 @@
             phases: ['New', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full', 'Waning gibbous', 'Last quarter', 'Waning crescent'],
         },
     };
-    const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-path:show-600km';
+    const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
     const defaultLocation = (): Coordinates => {
         const latestPosition = getMyLatestPos();
         const latestCoordinates = coordinatesFromLocation(latestPosition);
@@ -1243,7 +1243,7 @@
         width: 100%;
     }
 
-    :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-path) {
+    :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-moon-path) {
         height: fit-content !important;
         max-height: min(430px, 52vh) !important;
         max-height: min(430px, 52dvh) !important;
@@ -1253,7 +1253,7 @@
         overflow: visible !important;
     }
 
-    :global(#plugin-windy-plugin-sun-path.plugin-mobile-bottom-small > .closing-x) {
+    :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small > .closing-x) {
         z-index: 1000 !important;
         pointer-events: auto;
     }

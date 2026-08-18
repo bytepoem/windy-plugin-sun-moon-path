@@ -1,5 +1,5 @@
 {
-    "name": "windy-plugin-sun-path",
+    "name": "windy-plugin-sun-moon-path",
     "version": "0.5.0",
     "description": "Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.com",
     "main": "dist/plugin.min.js",
@@ -21,13 +21,13 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/bytepoem/windy-plugin-sun-path.git"
+        "url": "git+https://github.com/bytepoem/windy-plugin-sun-moon-path.git"
     },
     "keywords": ["windy", "windy.com", "plugins", "sunrise", "sunset", "moonrise", "moonset"],
     "author": "bytepoem",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/bytepoem/windy-plugin-sun-path/issues"
+        "url": "https://github.com/bytepoem/windy-plugin-sun-moon-path/issues"
     },
     "homepage": "https://docs.windy-plugins.com/",
     "dependencies": {

@@ -34,7 +34,7 @@ relative to a point on the Windy map.
 
 Current loadable plugin bundle:
 
-[https://windy-plugins.com/7316688/windy-plugin-sun-path/0.4.3/plugin.min.js](https://windy-plugins.com/7316688/windy-plugin-sun-path/0.4.3/plugin.min.js)
+[https://windy-plugins.com/7316688/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/7316688/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
 
 ## Development
 
@@ -85,12 +85,13 @@ After the plugin is open:
 3. Check the map direction lines and the event time, azimuth, and compass
    direction in the panel.
 4. Click the map to recalculate directions for another location.
-5. Use the **Event** view for the daily astronomy timeline and the **About**
-   view for the map legend and data notes.
+5. Use the **Events** view for the daily astronomy timeline, the **Guide**
+   view for the map legend and data notes, and the **Settings** view to control
+   the optional 600 km reference point.
 
 Direction lines start at the selected observer location. Each sampled line uses
 the calculated azimuth for that event time and extends through 200 km and
-400 km points.
+400 km points. When enabled in settings, the line also shows a 600 km point.
 
 ## Project Structure
 

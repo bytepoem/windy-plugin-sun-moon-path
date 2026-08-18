@@ -1,19 +1,19 @@
 import type { ExternalPluginConfig } from '@windy/interfaces.d';
 
 const config: ExternalPluginConfig = {
-    name: 'windy-plugin-sun-path',
+    name: 'windy-plugin-sun-moon-path',
     version: '0.5.0',
     icon: '☀️',
     title: 'Sun & Moon Path',
     description: 'Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.',
     author: 'bytepoem',
-    repository: 'https://github.com/bytepoem/windy-plugin-sun-path',
+    repository: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
     desktopUI: 'rhpane',
     desktopWidth: 520,
     mobileUI: 'small',
     addToContextmenu: true,
     listenToSingleclick: true,
-    routerPath: '/sun-path/:lat?/:lon?',
+    routerPath: '/sun-moon-path/:lat?/:lon?',
     private: false,
 };
 

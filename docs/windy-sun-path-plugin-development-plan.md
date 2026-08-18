@@ -87,7 +87,7 @@
 
 - [x] 基于 Windy 官方插件模板初始化工程；
 - [x] 使用 TypeScript + Svelte，保持与官方模板一致；
-- [x] 确定插件名称，例如 `windy-plugin-sun-path`；
+- [x] 确定插件名称，例如 `windy-plugin-sun-moon-path`；
 - [x] 配置 `desktopUI`、`mobileUI`、`addToContextmenu`、`listenToSingleclick`；
 - [x] 配置可携带经纬度的 `routerPath`；
 - [x] 处理 Windy 移动端 fullscreen 面板关闭时的生命周期：关闭面板保留地图图层和单击监听，下次插件实例接管时统一清理。
