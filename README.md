@@ -20,6 +20,11 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 - 支持切换日期、单击地图重新选择位置、从 Windy 右键菜单打开。
 - 对极昼、极夜、当天无月升/月落等情况给出明确状态。
 - 插件界面支持中文和英文。
+- 面板分为 **事件**、**说明**、**设置**、**关于** 四个视图：
+  - **事件**：查看日月事件时间、方向和当天时间轴。
+  - **说明**：查看地图图例、颜色含义和数据说明。
+  - **设置**：控制是否显示 600 km 参考点，设置会保存在当前浏览器。
+  - **关于**：查看仓库、Issues、作者和版本信息，并提供 GitHub Star 入口。
 
 ## 环境要求
 
@@ -28,9 +33,18 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 
 ## 插件链接
 
+当前正式版本：`0.5.0`
+
 当前可加载的插件 bundle：
 
 [https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
+
+项目链接：
+
+- GitHub 仓库：[bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
+- Issues：[提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
+- 正式版发布页：[v0.5.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/v0.5.0)
+- 作者：[bytepoem](https://github.com/bytepoem)
 
 ## 本地开发
 
@@ -79,7 +93,7 @@ npm run build
 2. 选择 **All**、**Sunrise**、**Sunset**、**Moonrise** 或 **Moonset**。
 3. 查看地图上的方向线和面板中的事件时间、方位角、方向名称。
 4. 单击地图上的任意位置，插件会重新计算该观察点的方向线。
-5. 在 **事件** 视图查看当天日月时间轴，在 **说明** 视图查看地图图例和数据说明，在 **设置** 视图控制 600 km 参考点显示。
+5. 在 **事件**、**说明**、**设置**、**关于** 四个视图之间切换，分别查看事件信息、地图说明、600 km 设置和项目链接。
 
 方向线从选中的观察点出发，按照对应事件时刻的方位角延伸，并标出 200 km 和 400 km
 参考点；开启设置后会额外显示 600 km 参考点。

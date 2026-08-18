@@ -23,6 +23,14 @@ relative to a point on the Windy map.
   menu opening.
 - Handles unavailable polar-day, polar-night, and missing moon event cases.
 - Provides English and Chinese UI text.
+- Organizes the panel into four views: **Events**, **Guide**, **Settings**, and
+  **About**:
+  - **Events** shows event times, directions, and the daily astronomy timeline.
+  - **Guide** explains the map legend, colors, and data.
+  - **Settings** controls the optional 600 km reference point and persists the
+    choice in the current browser.
+  - **About** links to the repository and Issues, identifies the author and
+    version, and provides a GitHub Star entry point.
 
 ## Requirements
 
@@ -32,9 +40,18 @@ relative to a point on the Windy map.
 
 ## Plugin URL
 
+Current formal version: `0.5.0`
+
 Current loadable plugin bundle:
 
 [https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
+
+Project links:
+
+- GitHub repository: [bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
+- Issues: [report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
+- Formal release: [v0.5.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/v0.5.0)
+- Author: [bytepoem](https://github.com/bytepoem)
 
 ## Development
 
@@ -85,9 +102,8 @@ After the plugin is open:
 3. Check the map direction lines and the event time, azimuth, and compass
    direction in the panel.
 4. Click the map to recalculate directions for another location.
-5. Use the **Events** view for the daily astronomy timeline, the **Guide**
-   view for the map legend and data notes, and the **Settings** view to control
-   the optional 600 km reference point.
+5. Switch between **Events**, **Guide**, **Settings**, and **About** to view the
+   event information, map guide, 600 km setting, and project links.
 
 Direction lines start at the selected observer location. Each sampled line uses
 the calculated azimuth for that event time and extends through 200 km and
