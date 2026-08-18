@@ -1,8 +1,10 @@
 import type { ExternalPluginConfig } from '@windy/interfaces.d';
 
-const config: ExternalPluginConfig = {
+type PrereleaseExternalPluginConfig = Omit<ExternalPluginConfig, 'version'> & { version: string };
+
+const config: PrereleaseExternalPluginConfig = {
     name: 'windy-plugin-sun-moon-path',
-    version: '0.5.0',
+    version: '0.5.1-beta.1',
     icon: '☀️',
     title: 'Sun & Moon Path',
     description: 'Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.',
@@ -17,4 +19,4 @@ const config: ExternalPluginConfig = {
     private: false,
 };
 
-export default config;
+export default config as ExternalPluginConfig;
