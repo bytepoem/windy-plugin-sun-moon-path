@@ -30,7 +30,7 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 
 当前可加载的插件 bundle：
 
-[https://windy-plugins.com/7316688/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/7316688/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
 
 ## 本地开发
 

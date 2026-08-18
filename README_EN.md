@@ -34,7 +34,7 @@ relative to a point on the Windy map.
 
 Current loadable plugin bundle:
 
-[https://windy-plugins.com/7316688/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/7316688/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
 
 ## Development
 
