@@ -862,6 +862,7 @@
     let currentMoonDirectionLines: L.Polyline[] = [];
     let currentDirectionTimer: ReturnType<typeof setInterval> | null = null;
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
+    let releaseOverlayOwnership: (() => void) | null = null;
     let currentLocationRequestId = 0;
     let mapWasDragged = false;
 
@@ -1589,6 +1590,7 @@
             isMounted = false;
             latestRequestId += 1;
             latestWeatherRequestId += 1;
+            currentLocationRequestId += 1;
             weatherAbortController?.abort();
             weatherAbortController = null;
             if (currentDirectionTimer) {
@@ -1608,7 +1610,7 @@
     };
 
     onMount(() => {
-        claimOverlayOwner(overlayOwner);
+        releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         isMounted = true;
         singleclick.on(name, setLocationFromMapClick);
@@ -1620,12 +1622,9 @@
     });
 
     onDestroy(() => {
-        isMounted = false;
-        latestWeatherRequestId += 1;
-        weatherAbortController?.abort();
-        weatherAbortController = null;
-        // Windy destroys fullscreen UI on close, but the requested map overlay must remain usable.
-        // The next plugin mount claims the owner and performs the actual cleanup.
+        overlayOwner.deactivateForReplacement();
+        releaseOverlayOwnership?.();
+        releaseOverlayOwnership = null;
     });
 </script>
 
