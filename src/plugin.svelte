@@ -490,7 +490,7 @@
 <script lang="ts">
     import bcast from '@windy/broadcast';
     import { getElevation, getPointForecastData, getTimezoneInfo } from '@windy/fetch';
-    import { getMyLatestPos } from '@windy/geolocation';
+    import { getGPSlocation, getMyLatestPos } from '@windy/geolocation';
     import { centerMap, map } from '@windy/map';
     import { isMobileOrTablet } from '@windy/rootScope';
     import { setUrl } from '@windy/location';
@@ -498,6 +498,7 @@
     import { onDestroy, onMount, tick } from 'svelte';
 
     import config from './pluginConfig';
+    import { gpsCoordinatesFromLocation, isMapCenteredOnLocation } from './location';
     import { claimOverlayOwner } from './overlayOwner';
     import WeatherTable from './WeatherTable.svelte';
     import {
@@ -550,7 +551,6 @@
             return 'UTC';
         }
     })();
-    const GUANGZHOU: Coordinates = { lat: 23.05, lon: 113.37 };
     type DirectionEvent = SolarEvent | 'all';
     type SummaryTab = 'events' | 'weather' | 'guide' | 'settings' | 'about';
     type UiLanguage = 'zh' | 'en';
@@ -797,10 +797,20 @@
         },
     };
     const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
+    let lastKnownGpsLocation: Coordinates | null = null;
+    const cachedGpsLocation = (): Coordinates | null => {
+        const gpsLocation = gpsCoordinatesFromLocation(getMyLatestPos());
+        if (gpsLocation) {
+            lastKnownGpsLocation = gpsLocation;
+        }
+        return gpsLocation || lastKnownGpsLocation;
+    };
     const defaultLocation = (): Coordinates => {
-        const latestPosition = getMyLatestPos();
-        const latestCoordinates = coordinatesFromLocation(latestPosition);
-        return latestCoordinates && latestPosition.source !== 'fallback' ? latestCoordinates : { ...GUANGZHOU };
+        const mapCenter = coordinatesFromLocation(map.getCenter());
+        if (!mapCenter) {
+            throw new Error('Windy map center is unavailable');
+        }
+        return cachedGpsLocation() || mapCenter;
     };
 
     let selectedLocation: Coordinates = {
@@ -851,6 +861,9 @@
     let currentDirectionLines: L.Polyline[] = [];
     let currentMoonDirectionLines: L.Polyline[] = [];
     let currentDirectionTimer: ReturnType<typeof setInterval> | null = null;
+    let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
+    let currentLocationRequestId = 0;
+    let mapWasDragged = false;
 
     $: text = translations[uiLanguage];
 
@@ -1390,6 +1403,69 @@
         }
     };
 
+    const setLocationFromMapClick = (latLon: LatLon) => {
+        currentLocationRequestId += 1;
+        setLocation(latLon);
+    };
+
+    const centerOnCurrentGps = async (requestId: number) => {
+        try {
+            const gpsLocation = gpsCoordinatesFromLocation(await getGPSlocation({
+                enableHighAccuracy: true,
+                maximumAge: 60_000,
+                timeout: 10_000,
+                doNotShowFailureMessage: true,
+                getMeFallbackGps: false,
+            }));
+            if (!gpsLocation || requestId !== currentLocationRequestId) {
+                return;
+            }
+
+            lastKnownGpsLocation = gpsLocation;
+            setLocation(gpsLocation, false);
+            centerMap({ lat: gpsLocation.lat, lon: gpsLocation.lon, zoom: 6 });
+        } catch {
+            // Keep the current map center when precise GPS permission is unavailable.
+        }
+    };
+
+    const syncLocationFromMapCenter = () => {
+        const gpsLocation = cachedGpsLocation();
+        const mapCenter = coordinatesFromLocation(map.getCenter());
+        if (!gpsLocation || !mapCenter || !isMapCenteredOnLocation(mapCenter, gpsLocation)) {
+            return;
+        }
+        if (isMapCenteredOnLocation(selectedLocation, gpsLocation, 0.01)) {
+            return;
+        }
+
+        currentLocationRequestId += 1;
+        setLocation(gpsLocation, false);
+    };
+
+    const handleMapDragStart = () => {
+        mapWasDragged = true;
+        currentLocationRequestId += 1;
+    };
+
+    const handleMapMoveEnd = () => {
+        if (mapWasDragged) {
+            mapWasDragged = false;
+            return;
+        }
+
+        syncLocationFromMapCenter();
+        if (locationSyncTimer) {
+            clearTimeout(locationSyncTimer);
+        }
+        locationSyncTimer = setTimeout(syncLocationFromMapCenter, 750);
+    };
+
+    const handleBackToHome = () => {
+        const requestId = ++currentLocationRequestId;
+        void centerOnCurrentGps(requestId);
+    };
+
     const timelineEventLabel = (item: { kind: string; label: string }, labels = text): string => {
         if (item.kind === 'dawn' || item.kind === 'dusk') {
             return labels.timeline.dawn;
@@ -1499,9 +1575,13 @@
     }
 
     export const onopen = (params?: LatLon) => {
-        const nextLocation = params ? coordinatesFromLocation(params) || { ...GUANGZHOU } : defaultLocation();
+        const requestId = ++currentLocationRequestId;
+        const nextLocation = params ? coordinatesFromLocation(params) || defaultLocation() : defaultLocation();
         setLocation(nextLocation, false);
         centerMap({ lat: selectedLocation.lat, lon: selectedLocation.lon, zoom: 6 });
+        if (!params) {
+            void centerOnCurrentGps(requestId);
+        }
     };
 
     const overlayOwner = {
@@ -1515,8 +1595,15 @@
                 clearInterval(currentDirectionTimer);
                 currentDirectionTimer = null;
             }
+            if (locationSyncTimer) {
+                clearTimeout(locationSyncTimer);
+                locationSyncTimer = null;
+            }
             removeMapFeatures();
-            singleclick.off(name, setLocation);
+            singleclick.off(name, setLocationFromMapClick);
+            bcast.off('back2home', handleBackToHome);
+            map.off('dragstart', handleMapDragStart);
+            map.off('moveend', handleMapMoveEnd);
         },
     };
 
@@ -1524,7 +1611,10 @@
         claimOverlayOwner(overlayOwner);
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         isMounted = true;
-        singleclick.on(name, setLocation);
+        singleclick.on(name, setLocationFromMapClick);
+        bcast.on('back2home', handleBackToHome);
+        map.on('dragstart', handleMapDragStart);
+        map.on('moveend', handleMapMoveEnd);
         drawCurrentDirectionLines();
         currentDirectionTimer = setInterval(drawCurrentDirectionLines, 5_000);
     });
