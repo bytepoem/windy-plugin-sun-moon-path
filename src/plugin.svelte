@@ -338,7 +338,7 @@
                                 </div>
                                 <div>
                                     <dt>{text.aboutVersionLabel}</dt>
-                                    <dd>v{pluginVersion}</dd>
+                                    <dd>{pluginVersion}</dd>
                                 </div>
                             </dl>
                         </div>
