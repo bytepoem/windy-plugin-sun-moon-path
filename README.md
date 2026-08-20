@@ -38,17 +38,17 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 
 ## 插件链接
 
-当前正式版本：`0.5.1`
+当前正式版本：`0.6.0`
 
 当前可加载的插件 bundle：
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.1/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.1/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.0/plugin.min.js)
 
 项目链接：
 
 - GitHub 仓库：[bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues：[提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- 正式版发布页：[0.5.1](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.5.1)
+- 正式版发布页：[0.6.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.6.0)
 - 作者：[bytepoem](https://github.com/bytepoem)
 
 ## 本地开发
