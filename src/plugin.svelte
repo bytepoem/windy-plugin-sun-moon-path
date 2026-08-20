@@ -797,6 +797,7 @@
         },
     };
     const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
+    const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
     let lastKnownGpsLocation: Coordinates | null = null;
     const cachedGpsLocation = (): Coordinates | null => {
         const gpsLocation = gpsCoordinatesFromLocation(getMyLatestPos());
@@ -920,8 +921,25 @@
         return labels.events[event] || event;
     };
 
+    const loadLanguagePreference = (): UiLanguage => {
+        try {
+            return localStorage.getItem(UI_LANGUAGE_STORAGE_KEY) === 'en' ? 'en' : 'zh';
+        } catch {
+            return 'zh';
+        }
+    };
+
+    const saveLanguagePreference = (value: UiLanguage) => {
+        try {
+            localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, value);
+        } catch {
+            // Storage can be unavailable in hardened browser modes; the language still works for this session.
+        }
+    };
+
     const toggleLanguage = () => {
         uiLanguage = uiLanguage === 'zh' ? 'en' : 'zh';
+        saveLanguagePreference(uiLanguage);
     };
 
     const handleDesktopNestedWheel = (event: WheelEvent) => {
@@ -1611,6 +1629,7 @@
 
     onMount(() => {
         releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
+        uiLanguage = loadLanguagePreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         isMounted = true;
         singleclick.on(name, setLocationFromMapClick);

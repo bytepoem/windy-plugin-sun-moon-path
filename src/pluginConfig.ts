@@ -4,7 +4,7 @@ type PrereleaseExternalPluginConfig = Omit<ExternalPluginConfig, 'version'> & { 
 
 const config: PrereleaseExternalPluginConfig = {
     name: 'windy-plugin-sun-moon-path',
-    version: '0.6.1-beta.1',
+    version: '0.6.1-beta.2',
     icon: '☀️',
     title: 'Sun & Moon Path',
     description: 'Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.',
