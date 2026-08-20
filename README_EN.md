@@ -32,7 +32,8 @@ relative to a point on the Windy map.
   and are not EC/ICON model fields.
 - Uses the time steps returned by Windy without inventing missing hours. Past
   timestamps remain model output rather than historical observations.
-- Provides English and Chinese UI text.
+- Provides English and Chinese UI text and persists the language choice in the
+  current browser.
 - On desktop, keeps **Weather** permanently visible below the original four tabs
   so the astronomy summary and forecast usually fit in one viewport; vertical
   scrolling remains available for shorter windows. Mobile keeps five tabs:
@@ -53,17 +54,17 @@ relative to a point on the Windy map.
 
 ## Plugin URL
 
-Current formal version: `0.6.0`
+Current formal version: `0.6.1`
 
 Current loadable plugin bundle:
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.0/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.1/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.1/plugin.min.js)
 
 Project links:
 
 - GitHub repository: [bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues: [report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- Formal release: [0.6.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.6.0)
+- Formal release: [0.6.1](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.6.1)
 - Author: [bytepoem](https://github.com/bytepoem)
 
 ## Development
