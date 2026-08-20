@@ -22,11 +22,24 @@ relative to a point on the Windy map.
 - Supports date switching, map single-click location updates, and Windy context
   menu opening.
 - Handles unavailable polar-day, polar-night, and missing moon event cases.
+- Adds a location forecast table spanning the available past 6 hours through the
+  next 5 days, with EC and ICON model switching and EC selected by default.
+- Shows weather, combined/high/medium/low cloud cover, temperature, dew point,
+  humidity, precipitation, wind speed, and wind direction. Cloud coverage is
+  aggregated from the model pressure levels.
+- Draws the above-horizon sun and moon curves on the same time axis and labels
+  rise/set times for the selected location. These curves are calculated locally
+  and are not EC/ICON model fields.
+- Uses the time steps returned by Windy without inventing missing hours. Past
+  timestamps remain model output rather than historical observations.
 - Provides English and Chinese UI text.
-- Organizes the panel into four views: **Events**, **Guide**, **Settings**, and
-  **About**:
+- On desktop, keeps **Weather** permanently visible below the original four tabs
+  so the astronomy summary and forecast usually fit in one viewport; vertical
+  scrolling remains available for shorter windows. Mobile keeps five tabs:
+  **Events**, **Weather**, **Guide**, **Settings**, and **About**:
   - **Events** shows event times, directions, and the daily astronomy timeline.
-  - **Guide** explains the map legend, colors, and data.
+  - **Weather** provides a horizontally scrollable EC or ICON five-day forecast.
+  - **Guide** explains the map legend, weather color scales, wind symbol, and data.
   - **Settings** controls the optional 600 km reference point and persists the
     choice in the current browser.
   - **About** links to the repository and Issues, identifies the author and
@@ -40,17 +53,17 @@ relative to a point on the Windy map.
 
 ## Plugin URL
 
-Current formal version: `0.5.0`
+Current formal version: `0.5.1`
 
 Current loadable plugin bundle:
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.0/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.1/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.5.1/plugin.min.js)
 
 Project links:
 
 - GitHub repository: [bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues: [report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- Formal release: [v0.5.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/v0.5.0)
+- Formal release: [0.5.1](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.5.1)
 - Author: [bytepoem](https://github.com/bytepoem)
 
 ## Development
@@ -102,8 +115,11 @@ After the plugin is open:
 3. Check the map direction lines and the event time, azimuth, and compass
    direction in the panel.
 4. Click the map to recalculate directions for another location.
-5. Switch between **Events**, **Guide**, **Settings**, and **About** to view the
-   event information, map guide, 600 km setting, and project links.
+5. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
+   while using the always-visible forecast below. On mobile, switch between all
+   five tabs.
+6. In the forecast table, select **EC** or **ICON** and scroll from the available past
+   6 hours through the next 5 days.
 
 Direction lines start at the selected observer location. Each sampled line uses
 the calculated azimuth for that event time and extends through 200 km and
@@ -112,11 +128,15 @@ the calculated azimuth for that event time and extends through 200 km and
 ## Project Structure
 
 - `src/plugin.svelte` - Windy plugin UI and map integration.
+- `src/WeatherTable.svelte` - EC/ICON forecast table, scrolling, and current-time marker.
+- `src/WeatherIcon.svelte` - vector weather-condition icons.
+- `src/weather.ts` - forecast transformation, cloud aggregation, and time grouping.
+- `src/celestialCurve.ts` - sun/moon altitude curves and horizon events aligned with forecast columns.
 - `src/solar.ts` - astronomy, azimuth, distance, timeline, and geometry logic.
 - `src/overlayOwner.ts` - map overlay ownership across Windy panel remounts.
 - `src/pluginConfig.ts` - Windy external plugin metadata.
-- `src/*.test.ts` - Vitest coverage for geometry, solar/moon calculations, and
-  overlay ownership.
+- `src/*.test.ts` - Vitest coverage for geometry, solar/moon calculations,
+  weather transformation, and overlay ownership.
 - `docs/` - local development notes and validation checklist.
 
 ## License

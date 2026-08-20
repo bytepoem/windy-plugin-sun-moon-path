@@ -2,6 +2,8 @@
     class="sun-path-panel"
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
+    bind:this={panelElement}
+    on:wheel|capture|nonpassive={handleDesktopNestedWheel}
 >
     {#if !isMobileOrTablet}
         <div
@@ -136,13 +138,22 @@
 
     <section class="map-bottom-module" aria-label="Sun Position 风格日月面板">
         <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
-            <button type="button" class:active={summaryTab === 'events'} on:click={() => (summaryTab = 'events')}>{text.eventTab}</button>
-            <button type="button" class:active={summaryTab === 'guide'} on:click={() => (summaryTab = 'guide')}>{text.guideTab}</button>
-            <button type="button" class:active={summaryTab === 'settings'} on:click={() => (summaryTab = 'settings')}>{text.settingsTab}</button>
-            <button type="button" class:active={summaryTab === 'about'} on:click={() => (summaryTab = 'about')}>{text.aboutTab}</button>
+            <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => (summaryTab = 'events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
+            {#if isMobileOrTablet}
+                <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => (summaryTab = 'weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
+            {/if}
+            <button id="summary-tab-guide" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'guide'} aria-selected={summaryTab === 'guide'} tabindex={summaryTab === 'guide' ? 0 : -1} on:click={() => (summaryTab = 'guide')} on:keydown={event => handleSummaryTabKeydown(event, 'guide')}>{text.guideTab}</button>
+            <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => (summaryTab = 'settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
+            <button id="summary-tab-about" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'about'} aria-selected={summaryTab === 'about'} tabindex={summaryTab === 'about' ? 0 : -1} on:click={() => (summaryTab = 'about')} on:keydown={event => handleSummaryTabKeydown(event, 'about')}>{text.aboutTab}</button>
         </nav>
 
-        <div class="summary-panel-frame">
+        <div
+            id="summary-panel"
+            class="summary-panel-frame"
+            class:summary-panel-frame--tall={isMobileOrTablet && (summaryTab === 'weather' || summaryTab === 'guide')}
+            role="tabpanel"
+            aria-labelledby={`summary-tab-${summaryTab}`}
+        >
             {#if summaryTab === 'events'}
                 <section class="astronomy-panel" aria-label="今日天文时段">
                     <div class="astronomy-panel__heading">
@@ -247,6 +258,20 @@
                         {/if}
                     </div>
                 </section>
+            {:else if summaryTab === 'weather' && isMobileOrTablet}
+                <WeatherTable
+                    points={weatherPoints}
+                    model={weatherModel}
+                    status={weatherStatus}
+                    errorMessage={weatherErrorMessage}
+                    language={uiLanguage}
+                    {timeZone}
+                    currentTimestamp={currentInstant.getTime()}
+                    dataKey={weatherRequestKey}
+                    location={selectedLocation}
+                    on:modelchange={handleWeatherModelChange}
+                    on:retry={retryWeather}
+                />
             {:else if summaryTab === 'guide'}
                 <section class="module-about module-guide" aria-label={text.guideHeading}>
                     <p>{text.aboutDescription}</p>
@@ -306,6 +331,89 @@
                             </span>
                         </div>
                     </div>
+
+                    <div class="weather-legend" aria-label={text.weatherLegend.heading}>
+                        <h3>{text.weatherLegend.heading}</h3>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.cloud}</h4>
+                            <div class="weather-legend__scale weather-legend__scale--cloud">
+                                {#each [25, 50, 75, 100] as value}
+                                    <span class="weather-legend__cloud-sample">
+                                        <span class="weather-legend__cloud-box" style={`--legend-cloud: ${value}%`} aria-hidden="true"></span>
+                                        <small>{value}%</small>
+                                    </span>
+                                {/each}
+                            </div>
+                            <p>{text.weatherLegend.cloudDescription}</p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.temperature}</h4>
+                            <div class="weather-legend__scale weather-legend__scale--temperature">
+                                <span class="weather-legend__swatch tone-freezing">&lt;0</span>
+                                <span class="weather-legend__swatch tone-cool">5</span>
+                                <span class="weather-legend__swatch tone-cold">12</span>
+                                <span class="weather-legend__swatch tone-mild">18</span>
+                                <span class="weather-legend__swatch tone-good">24</span>
+                                <span class="weather-legend__swatch tone-warning">30</span>
+                                <span class="weather-legend__swatch tone-orange">36</span>
+                                <span class="weather-legend__swatch tone-danger">≥38</span>
+                            </div>
+                            <p>{text.weatherLegend.temperatureDescription}</p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.dewPoint}</h4>
+                            <div class="weather-legend__scale">
+                                <span class="weather-legend__swatch tone-good">≤33</span>
+                                <span class="weather-legend__swatch tone-warning">34–35</span>
+                                <span class="weather-legend__swatch tone-danger">≥36</span>
+                            </div>
+                            <p>{text.weatherLegend.dewPointDescription}</p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.humidity}</h4>
+                            <div class="weather-legend__scale">
+                                <span class="weather-legend__swatch tone-good">&lt;60%</span>
+                                <span class="weather-legend__swatch tone-warning">60–74%</span>
+                                <span class="weather-legend__swatch tone-orange">75–84%</span>
+                                <span class="weather-legend__swatch tone-danger">≥85%</span>
+                            </div>
+                            <p>{text.weatherLegend.humidityDescription}</p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.precipitation}</h4>
+                            <div class="weather-legend__scale">
+                                <span class="weather-legend__swatch tone-warning">&gt;0–&lt;1</span>
+                                <span class="weather-legend__swatch tone-orange">1–2.5</span>
+                                <span class="weather-legend__swatch tone-danger">&gt;2.5</span>
+                            </div>
+                            <p>{text.weatherLegend.precipitationDescription}</p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.windSpeed}</h4>
+                            <div class="weather-legend__scale">
+                                <span class="weather-legend__swatch tone-good">≤16</span>
+                                <span class="weather-legend__swatch tone-warning">17–32</span>
+                                <span class="weather-legend__swatch tone-danger">&gt;32</span>
+                            </div>
+                            <p>{text.weatherLegend.windSpeedDescription}</p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.windDirection}</h4>
+                            <div class="weather-legend__direction-row">
+                                <svg class="weather-legend__wind-arrow" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M12 2 18 20 12 16 6 20Z"></path>
+                                </svg>
+                                <p>{text.weatherLegend.windDirectionDescription}</p>
+                            </div>
+                        </section>
+                    </div>
                 </section>
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
@@ -338,7 +446,7 @@
                                 </div>
                                 <div>
                                     <dt>{text.aboutVersionLabel}</dt>
-                                    <dd>v{pluginVersion}</dd>
+                                    <dd>{pluginVersion}</dd>
                                 </div>
                             </dl>
                         </div>
@@ -354,6 +462,25 @@
         </div>
     </section>
 
+    {#if !isMobileOrTablet}
+        <section class="desktop-weather-module" aria-label={uiLanguage === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
+            <WeatherTable
+                points={weatherPoints}
+                model={weatherModel}
+                status={weatherStatus}
+                errorMessage={weatherErrorMessage}
+                language={uiLanguage}
+                {timeZone}
+                currentTimestamp={currentInstant.getTime()}
+                dataKey={weatherRequestKey}
+                location={selectedLocation}
+                allowVerticalScrollChaining={true}
+                on:modelchange={handleWeatherModelChange}
+                on:retry={retryWeather}
+            />
+        </section>
+    {/if}
+
     <p class="panel-note">
         方向线表示天文方位，不代表山体、建筑或云层遮挡条件下的实际可见性。关闭面板后，方向线会保留在地图上；重新打开插件时会接管并更新同一组图层。
     </p>
@@ -362,16 +489,17 @@
 
 <script lang="ts">
     import bcast from '@windy/broadcast';
-    import { getElevation, getTimezoneInfo } from '@windy/fetch';
+    import { getElevation, getPointForecastData, getTimezoneInfo } from '@windy/fetch';
     import { getMyLatestPos } from '@windy/geolocation';
     import { centerMap, map } from '@windy/map';
     import { isMobileOrTablet } from '@windy/rootScope';
     import { setUrl } from '@windy/location';
     import { singleclick } from '@windy/singleclick';
-    import { onDestroy, onMount } from 'svelte';
+    import { onDestroy, onMount, tick } from 'svelte';
 
     import config from './pluginConfig';
     import { claimOverlayOwner } from './overlayOwner';
+    import WeatherTable from './WeatherTable.svelte';
     import {
         calculateAstronomyTimeline,
         calculateCurrentMoonInfo,
@@ -399,6 +527,17 @@
         type SolarPath,
         type SolarSampleKind,
     } from './solar';
+    import {
+        transformWeatherPayload,
+        buildWeatherLocationKey,
+        buildWeatherRequestKey,
+        isWeatherResponseCurrent,
+        shouldLoadWeather,
+        type WeatherForecastPayload,
+        type WeatherLoadStatus,
+        type WeatherModel,
+        type WeatherPoint,
+    } from './weather';
 
     import type { LatLon } from '@windy/interfaces.d';
 
@@ -413,8 +552,10 @@
     })();
     const GUANGZHOU: Coordinates = { lat: 23.05, lon: 113.37 };
     type DirectionEvent = SolarEvent | 'all';
-    type SummaryTab = 'events' | 'guide' | 'settings' | 'about';
+    type SummaryTab = 'events' | 'weather' | 'guide' | 'settings' | 'about';
     type UiLanguage = 'zh' | 'en';
+    const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'guide', 'settings', 'about'];
+    const desktopSummaryTabOrder: SummaryTab[] = ['events', 'guide', 'settings', 'about'];
     const celestialEvents: SolarEvent[] = ['sunrise', 'sunset', 'moonrise', 'moonset'];
     const eventOptions: { value: DirectionEvent }[] = [
         { value: 'all' },
@@ -429,6 +570,7 @@
         languageToggleLabel: string;
         panelIntro: string;
         eventTab: string;
+        weatherTab: string;
         guideTab: string;
         settingsTab: string;
         aboutTab: string;
@@ -458,6 +600,25 @@
         aboutIssuesLabel: string;
         aboutStarLabel: string;
         aboutStarHint: string;
+        weatherLoadError: string;
+        weatherLegend: Record<
+            | 'heading'
+            | 'cloud'
+            | 'cloudDescription'
+            | 'temperature'
+            | 'temperatureDescription'
+            | 'dewPoint'
+            | 'dewPointDescription'
+            | 'humidity'
+            | 'humidityDescription'
+            | 'precipitation'
+            | 'precipitationDescription'
+            | 'windSpeed'
+            | 'windSpeedDescription'
+            | 'windDirection'
+            | 'windDirectionDescription',
+            string
+        >;
         events: Record<DirectionEvent, string>;
         timeline: Record<string, string>;
         intervals: Record<AstronomyInterval['kind'], string>;
@@ -470,6 +631,7 @@
             languageToggleLabel: '切换到英文',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
             eventTab: '事件',
+            weatherTab: '天气',
             guideTab: '说明',
             settingsTab: '设置',
             aboutTab: '关于',
@@ -499,6 +661,24 @@
             aboutIssuesLabel: 'Issues',
             aboutStarLabel: 'Star',
             aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
+            weatherLoadError: '无法取得天气模式数据，请稍后重试。',
+            weatherLegend: {
+                heading: '天气图例',
+                cloud: '云量',
+                cloudDescription: '白色填充越高，云量越多；综合云量表示整体遮挡，高、中、低云表示云层高度。',
+                temperature: '气温',
+                temperatureDescription: '颜色从低温到高温变化，数字单位为 °C。',
+                dewPoint: '露点',
+                dewPointDescription: '绿色不易结露，黄色需要留意，红色容易结露；数字单位为 °C。',
+                humidity: '湿度',
+                humidityDescription: '湿度越高，越需要留意结露。',
+                precipitation: '降水量',
+                precipitationDescription: '黄色小于 1 mm，橙色为 1–2.5 mm，红色超过 2.5 mm。',
+                windSpeed: '风速',
+                windSpeedDescription: '绿色不超过 16 km/h，黄色为 17–32 km/h，红色超过 32 km/h。',
+                windDirection: '风向',
+                windDirectionDescription: '箭头指向风的来向。',
+            },
             events: {
                 all: '全部',
                 sunrise: '日出',
@@ -536,6 +716,7 @@
             languageToggleLabel: 'Switch to Chinese',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
             eventTab: 'Events',
+            weatherTab: 'Weather',
             guideTab: 'Guide',
             settingsTab: 'Settings',
             aboutTab: 'About',
@@ -565,6 +746,24 @@
             aboutIssuesLabel: 'Issues',
             aboutStarLabel: 'Star',
             aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
+            weatherLoadError: 'Unable to load weather model data. Please try again.',
+            weatherLegend: {
+                heading: 'Weather legend',
+                cloud: 'Cloud cover',
+                cloudDescription: 'More white fill means more cloud. Total cover shows overall obstruction; high, medium, and low show cloud-layer height.',
+                temperature: 'Temperature',
+                temperatureDescription: 'Colors progress from colder to hotter. Values are in °C.',
+                dewPoint: 'Dew point',
+                dewPointDescription: 'Green means lower condensation risk, yellow needs attention, and red means condensation is likely. Values are in °C.',
+                humidity: 'Humidity',
+                humidityDescription: 'Higher humidity means a greater need to watch for condensation.',
+                precipitation: 'Precipitation',
+                precipitationDescription: 'Yellow is below 1 mm, orange is 1–2.5 mm, and red is above 2.5 mm.',
+                windSpeed: 'Wind speed',
+                windSpeedDescription: 'Green is up to 16 km/h, yellow is 17–32 km/h, and red is above 32 km/h.',
+                windDirection: 'Wind direction',
+                windDirectionDescription: 'The arrow points toward the direction the wind comes from.',
+            },
             events: {
                 all: 'All',
                 sunrise: 'Sunrise',
@@ -627,12 +826,24 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let weatherModel: WeatherModel = 'ecmwf';
+    let weatherPoints: WeatherPoint[] = [];
+    let weatherStatus: WeatherLoadStatus = 'idle';
+    let weatherErrorMessage = '';
+    let weatherRequestKey = '';
+    let weatherLoadedKey = '';
+    let weatherLoadingKey = '';
+    let locationKey = '';
+    let resolvedContextLocationKey = '';
+    let latestWeatherRequestId = 0;
+    let weatherAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let displayAstronomyIntervals: AstronomyInterval[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
     let isMounted = false;
     let latestRequestId = 0;
+    let panelElement: HTMLElement | null = null;
     let refreshKey = '';
     let mapLayerGroup: L.LayerGroup | null = null;
     let lines: L.Polyline[] = [];
@@ -645,8 +856,24 @@
 
     $: refreshKey = `${selectedDate}|${selectedEvent}|${selectedLocation.lat}|${selectedLocation.lon}`;
 
+    $: locationKey = buildWeatherLocationKey(selectedLocation);
+
+    $: weatherRequestKey = buildWeatherRequestKey(weatherModel, locationKey, currentInstant.getTime());
+
     $: if (isMounted && refreshKey) {
         void refreshPaths(refreshKey);
+    }
+
+    $: if (shouldLoadWeather({
+        isMounted,
+        isWeatherTabActive: !isMobileOrTablet || summaryTab === 'weather',
+        locationKey,
+        resolvedContextLocationKey,
+        requestKey: weatherRequestKey,
+        loadedKey: weatherLoadedKey,
+        loadingKey: weatherLoadingKey,
+    })) {
+        void refreshWeather(weatherRequestKey);
     }
 
     $: activeSolarPath = selectedEvent === 'all'
@@ -681,6 +908,54 @@
 
     const toggleLanguage = () => {
         uiLanguage = uiLanguage === 'zh' ? 'en' : 'zh';
+    };
+
+    const handleDesktopNestedWheel = (event: WheelEvent) => {
+        if (isMobileOrTablet || !panelElement || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+            return;
+        }
+        const target = event.target instanceof Element ? event.target : null;
+        const nestedScroller = target?.closest('.astronomy-panel, .module-about, .weather-table-scroll');
+        if (!(nestedScroller instanceof HTMLElement) || !panelElement.contains(nestedScroller)) {
+            return;
+        }
+
+        const delta = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+            ? event.deltaY * 16
+            : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+                ? event.deltaY * panelElement.clientHeight
+                : event.deltaY;
+        const maximumScrollTop = Math.max(0, nestedScroller.scrollHeight - nestedScroller.clientHeight);
+        const availableDistance = delta < 0
+            ? nestedScroller.scrollTop
+            : maximumScrollTop - nestedScroller.scrollTop;
+        if (Math.abs(delta) <= availableDistance) {
+            return;
+        }
+
+        event.preventDefault();
+        nestedScroller.scrollTop = delta < 0 ? 0 : maximumScrollTop;
+        const remainingDelta = delta < 0
+            ? delta + availableDistance
+            : delta - availableDistance;
+        panelElement.scrollTop += remainingDelta;
+    };
+
+    const handleSummaryTabKeydown = async (event: KeyboardEvent, currentTab: SummaryTab) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+            return;
+        }
+        event.preventDefault();
+        const summaryTabOrder = isMobileOrTablet ? mobileSummaryTabOrder : desktopSummaryTabOrder;
+        const currentIndex = summaryTabOrder.indexOf(currentTab);
+        const nextTab = event.key === 'Home'
+            ? summaryTabOrder[0]
+            : event.key === 'End'
+                ? summaryTabOrder.at(-1)!
+                : summaryTabOrder[(currentIndex + (event.key === 'ArrowLeft' ? -1 : 1) + summaryTabOrder.length) % summaryTabOrder.length];
+        summaryTab = nextTab;
+        await tick();
+        document.getElementById(`summary-tab-${nextTab}`)?.focus();
     };
 
     const selectedMapPaths = (paths = solarPaths): SolarPath[] =>
@@ -921,6 +1196,7 @@
         }
 
         timeZone = candidate;
+        resolvedContextLocationKey = buildWeatherLocationKey(location);
         elevationM = resolvedElevation;
         return { timeZone: candidate, elevationM: resolvedElevation };
     };
@@ -982,6 +1258,88 @@
         }
     };
 
+    const refreshWeather = async (key: string) => {
+        weatherAbortController?.abort();
+        const abortController = new AbortController();
+        weatherAbortController = abortController;
+        const requestId = ++latestWeatherRequestId;
+        const requestModel = weatherModel;
+        const requestLocation = { ...selectedLocation };
+        const requestedAt = Date.now();
+
+        weatherLoadingKey = key;
+        weatherStatus = 'loading';
+        weatherErrorMessage = '';
+        weatherPoints = [];
+
+        try {
+            const result = await getPointForecastData(
+                requestModel,
+                {
+                    lat: requestLocation.lat,
+                    lon: requestLocation.lon,
+                    days: 5,
+                    step: 1,
+                    source: 'detail',
+                },
+                {
+                    header: true,
+                    meteogram: true,
+                    sounding: true,
+                },
+                { abortSignal: abortController.signal },
+            );
+
+            if (!isWeatherResponseCurrent({
+                aborted: abortController.signal.aborted,
+                requestId,
+                latestRequestId: latestWeatherRequestId,
+                requestKey: key,
+                currentRequestKey: weatherRequestKey,
+            })) {
+                return;
+            }
+
+            const nextPoints = transformWeatherPayload(
+                result.data as WeatherForecastPayload,
+                requestedAt,
+            );
+            weatherPoints = nextPoints;
+            weatherStatus = nextPoints.length > 0 ? 'ready' : 'empty';
+            weatherLoadedKey = key;
+        } catch (error) {
+            if (!isWeatherResponseCurrent({
+                aborted: abortController.signal.aborted,
+                requestId,
+                latestRequestId: latestWeatherRequestId,
+                requestKey: key,
+                currentRequestKey: weatherRequestKey,
+            })) {
+                return;
+            }
+            weatherStatus = 'error';
+            weatherErrorMessage = error instanceof Error && error.message
+                ? `${text.weatherLoadError} ${error.message}`
+                : text.weatherLoadError;
+            weatherLoadedKey = key;
+        } finally {
+            if (requestId === latestWeatherRequestId) {
+                weatherLoadingKey = '';
+            }
+        }
+    };
+
+    const handleWeatherModelChange = (event: CustomEvent<WeatherModel>) => {
+        weatherModel = event.detail;
+        weatherLoadedKey = '';
+    };
+
+    const retryWeather = () => {
+        weatherLoadedKey = '';
+        weatherLoadingKey = '';
+        void refreshWeather(weatherRequestKey);
+    };
+
     const unavailableMessage = (
         event: SolarEvent,
         reason: 'always-up' | 'always-down' | 'not-available',
@@ -1013,6 +1371,11 @@
         }
 
         selectedLocation = nextLocation;
+        resolvedContextLocationKey = '';
+        weatherLoadedKey = '';
+        weatherAbortController?.abort();
+        weatherPoints = [];
+        weatherStatus = 'idle';
         const nextKey = makeRefreshKey(nextLocation, selectedDate, selectedEvent);
         refreshKey = nextKey;
 
@@ -1145,6 +1508,9 @@
         deactivateForReplacement: () => {
             isMounted = false;
             latestRequestId += 1;
+            latestWeatherRequestId += 1;
+            weatherAbortController?.abort();
+            weatherAbortController = null;
             if (currentDirectionTimer) {
                 clearInterval(currentDirectionTimer);
                 currentDirectionTimer = null;
@@ -1165,6 +1531,9 @@
 
     onDestroy(() => {
         isMounted = false;
+        latestWeatherRequestId += 1;
+        weatherAbortController?.abort();
+        weatherAbortController = null;
         // Windy destroys fullscreen UI on close, but the requested map overlay must remain usable.
         // The next plugin mount claims the owner and performs the actual cleanup.
     });
@@ -1224,7 +1593,17 @@
         --timeline-bg: #111a31;
         --timeline-sun: #ff9c38;
         --timeline-moon: #5ca9ff;
+        --weather-tone-good: #60e37c;
+        --weather-tone-warning: #ffe082;
+        --weather-tone-orange: #ff8248;
+        --weather-tone-danger: #ff5a5f;
+        --weather-tone-cold: #405cf2;
+        --weather-tone-cool: #9092ba;
+        --weather-tone-mild: #aff5c0;
+        --weather-tone-freezing: #f7f7f7;
         --summary-panel-height: 150px;
+        --weather-panel-height: 330px;
+        --desktop-weather-panel-height: 550px;
 
         box-sizing: border-box;
         width: 100%;
@@ -1260,6 +1639,7 @@
 
     .sun-path-panel.mobile_ui {
         --summary-panel-height: clamp(144px, 16.5svh, 150px);
+        --weather-panel-height: min(310px, 38dvh);
 
         display: flex;
         flex-direction: column;
@@ -1311,7 +1691,8 @@
 
     .sun-path-panel.mobile_ui .summary-tabs button {
         min-height: 36px;
-        padding: 0 5px;
+        padding: 0 3px;
+        font-size: 13px;
     }
 
     .sun-path-panel.mobile_ui .module-about {
@@ -2030,6 +2411,21 @@
         background: #1d263d;
     }
 
+    .summary-panel-frame--tall {
+        height: var(--weather-panel-height);
+    }
+
+    .desktop-weather-module {
+        flex: 0 0 auto;
+        height: var(--desktop-weather-panel-height);
+        min-height: 260px;
+        margin-top: 6px;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: #1d263d;
+    }
+
     .astronomy-panel {
         --astronomy-bg: #1d263d;
         --astronomy-muted: #a8b1c1;
@@ -2045,6 +2441,11 @@
         padding: 6px 10px 9px;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
+    }
+
+    .sun-path-panel:not(.mobile_ui) .astronomy-panel,
+    .sun-path-panel:not(.mobile_ui) .module-about {
+        overscroll-behavior-y: auto;
     }
 
     .astronomy-panel__heading {
@@ -2372,6 +2773,7 @@
 
     .module-guide {
         gap: 8px;
+        padding: 10px 12px 14px;
     }
 
     .module-guide > p {
@@ -2379,6 +2781,167 @@
         color: var(--panel-muted);
         font-size: 12px;
         line-height: 1.45;
+    }
+
+    .weather-legend {
+        display: grid;
+        gap: 0;
+        border-top: 1px solid var(--panel-border);
+        color: var(--panel-muted);
+    }
+
+    .weather-legend h3,
+    .weather-legend h4,
+    .weather-legend p {
+        margin: 0;
+    }
+
+    .weather-legend h3 {
+        padding: 10px 0 4px;
+        color: var(--panel-text);
+        font-size: 13px;
+        line-height: 1.2;
+    }
+
+    .weather-legend__section {
+        display: grid;
+        gap: 6px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .weather-legend__section:last-child {
+        border-bottom: 0;
+    }
+
+    .weather-legend__section h4 {
+        color: var(--panel-text);
+        font-size: 11px;
+        line-height: 1.2;
+    }
+
+    .weather-legend__section p {
+        color: var(--panel-muted);
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
+    .weather-legend__scale {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .weather-legend__swatch {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        min-width: 48px;
+        height: 30px;
+        padding: 0 6px;
+        color: #101624;
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+
+    .weather-legend__scale--temperature {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 3px;
+    }
+
+    .weather-legend__scale--temperature .weather-legend__swatch {
+        min-width: 0;
+        padding: 0 2px;
+    }
+
+    .weather-legend__scale--cloud {
+        align-items: end;
+        gap: 12px;
+    }
+
+    .weather-legend__cloud-sample {
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+    }
+
+    .weather-legend__cloud-sample small {
+        color: var(--panel-muted);
+        font-size: 9px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .weather-legend__cloud-box {
+        position: relative;
+        display: block;
+        width: 34px;
+        height: 34px;
+        overflow: hidden;
+        background: #454545;
+    }
+
+    .weather-legend__cloud-box::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: var(--legend-cloud);
+        background: #f7f7f7;
+        content: '';
+    }
+
+    .weather-legend .tone-good {
+        background: var(--weather-tone-good);
+    }
+
+    .weather-legend .tone-warning {
+        background: var(--weather-tone-warning);
+    }
+
+    .weather-legend .tone-orange {
+        background: var(--weather-tone-orange);
+    }
+
+    .weather-legend .tone-danger {
+        background: var(--weather-tone-danger);
+    }
+
+    .weather-legend .tone-cold {
+        color: #07164e;
+        background: var(--weather-tone-cold);
+    }
+
+    .weather-legend .tone-cool {
+        background: var(--weather-tone-cool);
+    }
+
+    .weather-legend .tone-mild {
+        background: var(--weather-tone-mild);
+    }
+
+    .weather-legend .tone-freezing {
+        background: var(--weather-tone-freezing);
+    }
+
+    .weather-legend__direction-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        column-gap: 12px;
+    }
+
+    .weather-legend__wind-arrow {
+        width: 28px;
+        height: 28px;
+    }
+
+    .weather-legend__wind-arrow path {
+        fill: #eef4fb;
+        stroke: rgba(0, 0, 0, 0.28);
+        stroke-width: 0.8;
     }
 
     .module-settings {
@@ -2640,6 +3203,10 @@
             margin-top: 0;
         }
 
+        .summary-tabs {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
         .sun-path-panel.mobile_ui .control-grid {
             grid-template-columns: 76px minmax(0, 1fr) 52px;
         }
@@ -2767,6 +3334,7 @@
     @media (max-width: 360px) {
         .sun-path-panel.mobile_ui {
             --summary-panel-height: 150px;
+            --weather-panel-height: min(300px, 40dvh);
         }
 
         .sun-path-panel.mobile_ui .control-grid {
@@ -2782,6 +3350,7 @@
     @media (max-height: 740px) {
         .sun-path-panel.mobile_ui {
             --summary-panel-height: 146px;
+            --weather-panel-height: min(286px, 40dvh);
         }
 
         .astronomy-panel {
