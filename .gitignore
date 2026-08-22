@@ -10,6 +10,7 @@ package-lock.json
 *.log
 dist/*
 .playwright-cli/
+.playwright-mcp/
 prototypes/
 windy-regression-*.png
 windy-regression-*.jpeg
