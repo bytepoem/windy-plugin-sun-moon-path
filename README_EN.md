@@ -21,6 +21,12 @@ relative to a point on the Windy map.
   moonset.
 - Supports date switching, map single-click location updates, and Windy context
   menu opening.
+- Searches domestic places and addresses in the Chinese UI with the user's own Amap Web Service API Key
+  and lets the user choose an observer location from autocomplete results.
+- Sorts results by straight-line distance from the observer and displays city,
+  district, direct distance, and elevation.
+- Converts Amap GCJ-02 coordinates to the WGS84 coordinates used by Windy before
+  moving the map.
 - Handles unavailable polar-day, polar-night, and missing moon event cases.
 - Adds a location forecast table spanning the available past 6 hours through the
   next 5 days, with EC and ICON model switching and EC selected by default.
@@ -41,8 +47,8 @@ relative to a point on the Windy map.
   - **Events** shows event times, directions, and the daily astronomy timeline.
   - **Weather** provides a horizontally scrollable EC or ICON five-day forecast.
   - **Guide** explains the map legend, weather color scales, wind symbol, and data.
-  - **Settings** controls the optional 600 km reference point and persists the
-    choice in the current browser.
+  - **Settings** controls line opacity and the optional 600 km reference point in
+    the current browser. Switch to the Chinese UI to configure an Amap Web Service API Key.
   - **About** links to the repository and Issues, identifies the author and
     version, and provides a GitHub Star entry point.
 
@@ -111,16 +117,25 @@ The build output is written to `dist/` and includes `plugin.js`,
 
 After the plugin is open:
 
-1. Select a date.
-2. Choose **All**, **Sunrise**, **Sunset**, **Moonrise**, or **Moonset**.
-3. Check the map direction lines and the event time, azimuth, and compass
+1. To use domestic address search, switch to the Chinese UI, then save an Amap
+   **Web Service API Key** under **Settings**.
+2. In the Chinese UI, enter a domestic place or address at the top of the panel and
+   choose a distance-sorted autocomplete result. Each row includes its city, district,
+   direct distance, and elevation before moving the observer location. Address search
+   is hidden in the English UI.
+3. Select a date.
+4. Choose **All**, **Sunrise**, **Sunset**, **Moonrise**, or **Moonset**.
+5. Check the map direction lines and the event time, azimuth, and compass
    direction in the panel.
-4. Click the map to recalculate directions for another location.
-5. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
+6. You can also click the map to recalculate directions for another location.
+7. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
    while using the always-visible forecast below. On mobile, switch between all
    five tabs.
-6. In the forecast table, select **EC** or **ICON** and scroll from the available past
+8. In the forecast table, select **EC** or **ICON** and scroll from the available past
    6 hours through the next 5 days.
+
+The Amap API Key is stored only in the current browser's local storage. Domestic GCJ-02
+results are converted to WGS84 so the selected observer location does not shift on Windy.
 
 Direction lines start at the selected observer location. Each sampled line uses
 the calculated azimuth for that event time and extends through 200 km and
@@ -129,6 +144,8 @@ the calculated azimuth for that event time and extends through 200 km and
 ## Project Structure
 
 - `src/plugin.svelte` - Windy plugin UI and map integration.
+- `src/LocationSearch.svelte` - Amap autocomplete, result list, and keyboard interaction.
+- `src/amap.ts` - Amap Web Service requests, result parsing, and GCJ-02/WGS84 conversion.
 - `src/WeatherTable.svelte` - EC/ICON forecast table, scrolling, and current-time marker.
 - `src/WeatherIcon.svelte` - vector weather-condition icons.
 - `src/weather.ts` - forecast transformation, cloud aggregation, and time grouping.

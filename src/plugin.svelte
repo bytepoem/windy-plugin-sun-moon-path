@@ -3,7 +3,7 @@
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
     bind:this={panelElement}
-    on:wheel|capture|nonpassive={handleDesktopNestedWheel}
+    on:wheel|capture|nonpassive={handleNestedWheel}
 >
     {#if !isMobileOrTablet}
         <div
@@ -18,6 +18,15 @@
     <div class="panel-intro">
         <p>{text.panelIntro}</p>
     </div>
+
+    {#if uiLanguage === 'zh'}
+        <LocationSearch
+            apiKey={amapApiKey}
+            language={uiLanguage}
+            location={selectedLocation}
+            on:select={handleAmapLocationSelect}
+        />
+    {/if}
 
     <div class="control-grid">
         <label class="control-field">
@@ -332,6 +341,26 @@
                         </div>
                     </div>
 
+                    <section class="settings-guide" aria-labelledby="settings-guide-heading">
+                        <h3 id="settings-guide-heading">{text.settingsGuideHeading}</h3>
+                        <dl>
+                            {#if uiLanguage === 'zh'}
+                                <div>
+                                    <dt>{text.amapApiKeyLabel}</dt>
+                                    <dd>{text.amapApiKeyDescription}</dd>
+                                </div>
+                            {/if}
+                            <div>
+                                <dt>{text.lineOpacityLabel}</dt>
+                                <dd>{text.lineOpacityDescription}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.show600Label}</dt>
+                                <dd>{text.show600Description}</dd>
+                            </div>
+                        </dl>
+                    </section>
+
                     <div class="weather-legend" aria-label={text.weatherLegend.heading}>
                         <h3>{text.weatherLegend.heading}</h3>
 
@@ -417,6 +446,41 @@
                 </section>
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
+                    {#if uiLanguage === 'zh'}
+                        <form class="settings-api-key" on:submit={saveAmapApiKey}>
+                            <div class="settings-api-key__header">
+                                <label for="amap-api-key">{text.amapApiKeyLabel}</label>
+                                <span class="settings-api-key__header-actions">
+                                    <a href={AMAP_API_KEY_APPLICATION_URL} target="_blank" rel="noreferrer">
+                                        {text.amapApiKeyApply}
+                                    </a>
+                                    {#if amapKeySaved}
+                                        <span role="status">{text.amapApiKeySaved}</span>
+                                    {/if}
+                                </span>
+                            </div>
+                            <div class="settings-api-key__control">
+                                <input
+                                    id="amap-api-key"
+                                    type="password"
+                                    bind:value={amapApiKeyDraft}
+                                    placeholder={text.amapApiKeyPlaceholder}
+                                    autocomplete="off"
+                                    aria-describedby="amap-api-key-description"
+                                    on:input={() => (amapKeySaved = false)}
+                                />
+                                <button type="submit" disabled={!amapApiKeyDraft.trim()}>{text.amapApiKeySave}</button>
+                                {#if amapApiKey}
+                                    <button type="button" class="settings-api-key__clear" on:click={clearAmapApiKey}>
+                                        {text.amapApiKeyClear}
+                                    </button>
+                                {/if}
+                            </div>
+                            <span id="amap-api-key-description" class="settings-api-key__description">
+                                {text.amapApiKeyDescription}
+                            </span>
+                        </form>
+                    {/if}
                     <div class="settings-range">
                         <div class="settings-range__header">
                             <label for="direction-line-opacity">{text.lineOpacityLabel}</label>
@@ -519,6 +583,7 @@
     import config from './pluginConfig';
     import { gpsCoordinatesFromLocation, isMapCenteredOnLocation } from './location';
     import { claimOverlayOwner } from './overlayOwner';
+    import LocationSearch from './LocationSearch.svelte';
     import WeatherTable from './WeatherTable.svelte';
     import {
         calculateAstronomyTimeline,
@@ -558,6 +623,7 @@
         type WeatherModel,
         type WeatherPoint,
     } from './weather';
+    import type { AmapLocationResult } from './amap';
 
     import type { LatLon } from '@windy/interfaces.d';
 
@@ -608,11 +674,19 @@
         moonPhaseLoading: string;
         aboutDescription: string;
         guideHeading: string;
+        settingsGuideHeading: string;
         settingsHeading: string;
         lineOpacityLabel: string;
         lineOpacityDescription: string;
         show600Label: string;
         show600Description: string;
+        amapApiKeyLabel: string;
+        amapApiKeyPlaceholder: string;
+        amapApiKeyDescription: string;
+        amapApiKeyApply: string;
+        amapApiKeySave: string;
+        amapApiKeyClear: string;
+        amapApiKeySaved: string;
         aboutHeading: string;
         aboutAuthorLabel: string;
         aboutVersionLabel: string;
@@ -671,11 +745,19 @@
             moonPhaseLoading: '月相计算中',
             aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
             guideHeading: '地图说明',
-            settingsHeading: '显示设置',
+            settingsGuideHeading: '设置说明',
+            settingsHeading: '插件设置',
             lineOpacityLabel: '方位线透明度',
             lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
             show600Label: '显示 600 km 点',
             show600Description: '开启后事件方向线会延伸到 600 km，并在该距离增加一个参考点。设置会保存在当前浏览器。',
+            amapApiKeyLabel: '高德 Web 服务 API Key',
+            amapApiKeyPlaceholder: '请输入 API Key',
+            amapApiKeyDescription: '用于国内地点搜索，搜索结果会转换为 Windy 使用的坐标。仅保存在当前浏览器。',
+            amapApiKeyApply: '申请高德 API Key',
+            amapApiKeySave: '保存',
+            amapApiKeyClear: '清除',
+            amapApiKeySaved: '已保存',
             aboutHeading: '关于插件',
             aboutAuthorLabel: '作者',
             aboutVersionLabel: '版本',
@@ -758,11 +840,19 @@
             moonPhaseLoading: 'Calculating phase',
             aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30 minutes before, at the event, and 30 minutes after.',
             guideHeading: 'Map guide',
-            settingsHeading: 'Display settings',
+            settingsGuideHeading: 'Settings guide',
+            settingsHeading: 'Plugin settings',
             lineOpacityLabel: 'Direction line opacity',
             lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
             show600Label: 'Show 600 km point',
             show600Description: 'When enabled, event direction lines extend to 600 km and add a reference point there. This setting is saved in this browser.',
+            amapApiKeyLabel: 'Amap Web Service API Key',
+            amapApiKeyPlaceholder: 'Enter API Key',
+            amapApiKeyDescription: 'Used for domestic place search. Search results are converted to Windy coordinates. Saved only in this browser.',
+            amapApiKeyApply: 'Apply for an Amap API Key',
+            amapApiKeySave: 'Save',
+            amapApiKeyClear: 'Clear',
+            amapApiKeySaved: 'Saved',
             aboutHeading: 'About plugin',
             aboutAuthorLabel: 'Author',
             aboutVersionLabel: 'Version',
@@ -824,6 +914,8 @@
     const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
     const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
     const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
+    const AMAP_API_KEY_STORAGE_KEY = 'windy-plugin-sun-moon-path:amap-api-key';
+    const AMAP_API_KEY_APPLICATION_URL = 'https://lbs.amap.com/api/webservice/create-project-and-key';
     const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
     let lastKnownGpsLocation: Coordinates | null = null;
     const cachedGpsLocation = (): Coordinates | null => {
@@ -877,6 +969,9 @@
     let weatherAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
+    let amapApiKey = '';
+    let amapApiKeyDraft = '';
+    let amapKeySaved = false;
     let displayAstronomyIntervals: AstronomyInterval[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
@@ -894,6 +989,7 @@
     let releaseOverlayOwnership: (() => void) | null = null;
     let currentLocationRequestId = 0;
     let mapWasDragged = false;
+    let addressSelectedLocation: Coordinates | null = null;
 
     $: text = translations[uiLanguage];
 
@@ -970,20 +1066,26 @@
         saveLanguagePreference(uiLanguage);
     };
 
-    const handleDesktopNestedWheel = (event: WheelEvent) => {
-        if (isMobileOrTablet || !panelElement || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+    const handleNestedWheel = (event: WheelEvent) => {
+        if (!panelElement || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+            return;
+        }
+        const outerScroller = isMobileOrTablet
+            ? panelElement.querySelector<HTMLElement>('.mobile-scroll-content')
+            : panelElement;
+        if (!outerScroller) {
             return;
         }
         const target = event.target instanceof Element ? event.target : null;
         const nestedScroller = target?.closest('.astronomy-panel, .module-about, .weather-table-scroll');
-        if (!(nestedScroller instanceof HTMLElement) || !panelElement.contains(nestedScroller)) {
+        if (!(nestedScroller instanceof HTMLElement) || !outerScroller.contains(nestedScroller)) {
             return;
         }
 
         const delta = event.deltaMode === WheelEvent.DOM_DELTA_LINE
             ? event.deltaY * 16
             : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-                ? event.deltaY * panelElement.clientHeight
+                ? event.deltaY * outerScroller.clientHeight
                 : event.deltaY;
         const maximumScrollTop = Math.max(0, nestedScroller.scrollHeight - nestedScroller.clientHeight);
         const availableDistance = delta < 0
@@ -998,7 +1100,7 @@
         const remainingDelta = delta < 0
             ? delta + availableDistance
             : delta - availableDistance;
-        panelElement.scrollTop += remainingDelta;
+        outerScroller.scrollTop += remainingDelta;
     };
 
     const handleSummaryTabKeydown = async (event: KeyboardEvent, currentTab: SummaryTab) => {
@@ -1091,6 +1193,41 @@
         directionLineOpacityPercent = nextValue;
         saveDirectionLineOpacityPreference(nextValue);
         applyDirectionLineOpacity();
+    };
+
+    const loadAmapApiKey = (): string => {
+        try {
+            return localStorage.getItem(AMAP_API_KEY_STORAGE_KEY)?.trim() || '';
+        } catch {
+            return '';
+        }
+    };
+
+    const saveAmapApiKey = (event: SubmitEvent) => {
+        event.preventDefault();
+        const nextKey = amapApiKeyDraft.trim();
+        if (!nextKey) {
+            return;
+        }
+        try {
+            localStorage.setItem(AMAP_API_KEY_STORAGE_KEY, nextKey);
+            amapKeySaved = true;
+        } catch {
+            amapKeySaved = false;
+        }
+        amapApiKey = nextKey;
+        amapApiKeyDraft = nextKey;
+    };
+
+    const clearAmapApiKey = () => {
+        amapApiKey = '';
+        amapApiKeyDraft = '';
+        amapKeySaved = false;
+        try {
+            localStorage.removeItem(AMAP_API_KEY_STORAGE_KEY);
+        } catch {
+            // The in-memory key is cleared even when browser storage is unavailable.
+        }
     };
 
     const isValidTimeZone = (candidate: string): boolean => {
@@ -1496,7 +1633,19 @@
 
     const setLocationFromMapClick = (latLon: LatLon) => {
         currentLocationRequestId += 1;
+        addressSelectedLocation = null;
         setLocation(latLon);
+    };
+
+    const handleAmapLocationSelect = (event: CustomEvent<AmapLocationResult>) => {
+        currentLocationRequestId += 1;
+        if (locationSyncTimer) {
+            clearTimeout(locationSyncTimer);
+            locationSyncTimer = null;
+        }
+        addressSelectedLocation = { ...event.detail.wgs84 };
+        setLocation(event.detail.wgs84, false);
+        centerMap({ lat: event.detail.wgs84.lat, lon: event.detail.wgs84.lon, zoom: 12 });
     };
 
     const centerOnCurrentGps = async (requestId: number) => {
@@ -1513,6 +1662,7 @@
             }
 
             lastKnownGpsLocation = gpsLocation;
+            addressSelectedLocation = null;
             setLocation(gpsLocation, false);
             centerMap({ lat: gpsLocation.lat, lon: gpsLocation.lon, zoom: 6 });
         } catch {
@@ -1537,12 +1687,21 @@
     const handleMapDragStart = () => {
         mapWasDragged = true;
         currentLocationRequestId += 1;
+        addressSelectedLocation = null;
     };
 
     const handleMapMoveEnd = () => {
         if (mapWasDragged) {
             mapWasDragged = false;
             return;
+        }
+
+        if (addressSelectedLocation) {
+            const mapCenter = coordinatesFromLocation(map.getCenter());
+            if (mapCenter && isMapCenteredOnLocation(mapCenter, addressSelectedLocation, 0.05)) {
+                return;
+            }
+            addressSelectedLocation = null;
         }
 
         syncLocationFromMapCenter();
@@ -1554,6 +1713,7 @@
 
     const handleBackToHome = () => {
         const requestId = ++currentLocationRequestId;
+        addressSelectedLocation = null;
         void centerOnCurrentGps(requestId);
     };
 
@@ -1667,6 +1827,7 @@
 
     export const onopen = (params?: LatLon) => {
         const requestId = ++currentLocationRequestId;
+        addressSelectedLocation = null;
         const nextLocation = params ? coordinatesFromLocation(params) || defaultLocation() : defaultLocation();
         setLocation(nextLocation, false);
         centerMap({ lat: selectedLocation.lat, lon: selectedLocation.lon, zoom: 6 });
@@ -1704,6 +1865,8 @@
         uiLanguage = loadLanguagePreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
+        amapApiKey = loadAmapApiKey();
+        amapApiKeyDraft = amapApiKey;
         isMounted = true;
         singleclick.on(name, setLocationFromMapClick);
         bcast.on('back2home', handleBackToHome);
@@ -2964,6 +3127,50 @@
         line-height: 1.45;
     }
 
+    .settings-guide {
+        display: grid;
+        gap: 0;
+        border-top: 1px solid var(--panel-border);
+    }
+
+    .settings-guide h3,
+    .settings-guide dl,
+    .settings-guide dt,
+    .settings-guide dd {
+        margin: 0;
+    }
+
+    .settings-guide h3 {
+        padding: 10px 0 4px;
+        color: var(--panel-text);
+        font-size: 13px;
+        line-height: 1.2;
+    }
+
+    .settings-guide dl > div {
+        display: grid;
+        gap: 4px;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-guide dl > div:last-child {
+        border-bottom: 0;
+    }
+
+    .settings-guide dt {
+        color: var(--panel-text);
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .settings-guide dd {
+        color: var(--panel-muted);
+        font-size: 10px;
+        line-height: 1.45;
+    }
+
     .weather-legend {
         display: grid;
         gap: 0;
@@ -3127,6 +3334,122 @@
 
     .module-settings {
         gap: 8px;
+    }
+
+    .settings-api-key {
+        display: grid;
+        gap: 6px;
+        padding: 10px 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .settings-api-key__header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        color: var(--panel-text);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .settings-api-key__header-actions {
+        display: inline-flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 2px 8px;
+        align-items: baseline;
+        text-align: right;
+    }
+
+    .settings-api-key__header-actions a {
+        color: var(--panel-accent);
+        font-size: 11px;
+        font-weight: 700;
+        text-underline-offset: 2px;
+    }
+
+    .settings-api-key__header-actions a:hover {
+        color: var(--panel-text);
+    }
+
+    .settings-api-key__header-actions a:focus-visible {
+        border-radius: 3px;
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .settings-api-key__header-actions [role='status'] {
+        color: #8bd6a3;
+        font-size: 11px;
+    }
+
+    .settings-api-key__control {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 6px;
+    }
+
+    .settings-api-key__control input {
+        min-width: 0;
+        height: 38px;
+        padding: 0 10px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        outline: 0;
+        background: rgba(8, 15, 27, 0.68);
+        color: var(--panel-text);
+        font: inherit;
+        font-size: 13px;
+    }
+
+    .settings-api-key__control input:focus {
+        border-color: var(--panel-accent);
+        box-shadow: 0 0 0 2px rgba(99, 185, 238, 0.18);
+    }
+
+    .settings-api-key__control button {
+        min-width: 54px;
+        min-height: 38px;
+        padding: 0 10px;
+        border: 1px solid rgba(99, 185, 238, 0.45);
+        border-radius: 6px;
+        background: rgba(99, 185, 238, 0.18);
+        color: var(--panel-accent);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .settings-api-key__control button:hover:not(:disabled) {
+        background: rgba(99, 185, 238, 0.28);
+    }
+
+    .settings-api-key__control button:focus-visible,
+    .settings-api-key__control input:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .settings-api-key__control button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+
+    .settings-api-key__control .settings-api-key__clear {
+        border-color: var(--panel-border);
+        background: transparent;
+        color: var(--panel-muted);
+    }
+
+    .settings-api-key__description {
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.35;
     }
 
     .settings-range {
