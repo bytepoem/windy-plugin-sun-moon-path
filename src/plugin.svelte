@@ -417,6 +417,25 @@
                 </section>
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
+                    <div class="settings-range">
+                        <div class="settings-range__header">
+                            <label for="direction-line-opacity">{text.lineOpacityLabel}</label>
+                            <output for="direction-line-opacity">{directionLineOpacityPercent}%</output>
+                        </div>
+                        <input
+                            id="direction-line-opacity"
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={directionLineOpacityPercent}
+                            aria-describedby="direction-line-opacity-description"
+                            on:input={changeDirectionLineOpacity}
+                        />
+                        <span id="direction-line-opacity-description" class="settings-range__description">
+                            {text.lineOpacityDescription}
+                        </span>
+                    </div>
                     <label class="settings-toggle">
                         <span class="settings-toggle__copy">
                             <strong>{text.show600Label}</strong>
@@ -590,6 +609,8 @@
         aboutDescription: string;
         guideHeading: string;
         settingsHeading: string;
+        lineOpacityLabel: string;
+        lineOpacityDescription: string;
         show600Label: string;
         show600Description: string;
         aboutHeading: string;
@@ -651,6 +672,8 @@
             aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
             guideHeading: '地图说明',
             settingsHeading: '显示设置',
+            lineOpacityLabel: '方位线透明度',
+            lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
             show600Label: '显示 600 km 点',
             show600Description: '开启后事件方向线会延伸到 600 km，并在该距离增加一个参考点。设置会保存在当前浏览器。',
             aboutHeading: '关于插件',
@@ -736,6 +759,8 @@
             aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30 minutes before, at the event, and 30 minutes after.',
             guideHeading: 'Map guide',
             settingsHeading: 'Display settings',
+            lineOpacityLabel: 'Direction line opacity',
+            lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
             show600Label: 'Show 600 km point',
             show600Description: 'When enabled, event direction lines extend to 600 km and add a reference point there. This setting is saved in this browser.',
             aboutHeading: 'About plugin',
@@ -798,6 +823,8 @@
     };
     const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
     const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
+    const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
+    const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
     let lastKnownGpsLocation: Coordinates | null = null;
     const cachedGpsLocation = (): Coordinates | null => {
         const gpsLocation = gpsCoordinatesFromLocation(getMyLatestPos());
@@ -849,6 +876,7 @@
     let latestWeatherRequestId = 0;
     let weatherAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
+    let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
     let displayAstronomyIntervals: AstronomyInterval[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
@@ -1021,6 +1049,50 @@
         setShowExtendedDistanceMarker((event.currentTarget as HTMLInputElement).checked);
     };
 
+    const normalizeDirectionLineOpacityPercent = (value: number): number =>
+        Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
+
+    const loadDirectionLineOpacityPreference = (): number => {
+        try {
+            const storedValue = localStorage.getItem(DIRECTION_LINE_OPACITY_STORAGE_KEY);
+            return storedValue === null
+                ? DEFAULT_DIRECTION_LINE_OPACITY_PERCENT
+                : normalizeDirectionLineOpacityPercent(Number(storedValue));
+        } catch {
+            return DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
+        }
+    };
+
+    const saveDirectionLineOpacityPreference = (value: number) => {
+        try {
+            localStorage.setItem(DIRECTION_LINE_OPACITY_STORAGE_KEY, String(value));
+        } catch {
+            // Storage can be unavailable in hardened browser modes; the setting still works for this session.
+        }
+    };
+
+    const scaledDirectionLineOpacity = (baseOpacity: number): number =>
+        baseOpacity * directionLineOpacityPercent / 100;
+
+    const applyDirectionLineOpacity = () => {
+        for (const line of lines) {
+            const baseOpacity = line.options.dashArray ? 0.82 : 0.95;
+            line.setStyle({ opacity: scaledDirectionLineOpacity(baseOpacity) });
+        }
+        for (const line of [...currentDirectionLines, ...currentMoonDirectionLines]) {
+            line.setStyle({ opacity: scaledDirectionLineOpacity(0.95) });
+        }
+    };
+
+    const changeDirectionLineOpacity = (event: Event) => {
+        const nextValue = normalizeDirectionLineOpacityPercent(
+            Number((event.currentTarget as HTMLInputElement).value),
+        );
+        directionLineOpacityPercent = nextValue;
+        saveDirectionLineOpacityPreference(nextValue);
+        applyDirectionLineOpacity();
+    };
+
     const isValidTimeZone = (candidate: string): boolean => {
         try {
             new Intl.DateTimeFormat(undefined, { timeZone: candidate }).format();
@@ -1091,7 +1163,7 @@
                 new L.Polyline(segment.map(toLatLng), {
                     color,
                     weight: 2,
-                    opacity: 0.95,
+                    opacity: scaledDirectionLineOpacity(0.95),
                     lineCap: 'round',
                     lineJoin: 'round',
                     ...options,
@@ -1167,7 +1239,7 @@
                     const line = new L.Polyline(segment.map(toLatLng), {
                         color: lineColorForEvent(path.event, sample.kind),
                         weight: 3,
-                        opacity: isMoonEvent ? 0.82 : 0.95,
+                        opacity: scaledDirectionLineOpacity(isMoonEvent ? 0.82 : 0.95),
                         lineCap: 'round',
                         lineJoin: 'round',
                         ...(isMoonEvent ? { dashArray: '9 6' } : {}),
@@ -1631,6 +1703,7 @@
         releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
         uiLanguage = loadLanguagePreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
+        directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         isMounted = true;
         singleclick.on(name, setLocationFromMapClick);
         bcast.on('back2home', handleBackToHome);
@@ -3056,11 +3129,105 @@
         gap: 8px;
     }
 
+    .settings-range {
+        display: grid;
+        gap: 4px;
+        padding: 8px 12px 9px;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .settings-range__header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        color: var(--panel-text);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .settings-range__header output {
+        min-width: 4ch;
+        color: var(--panel-accent);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+
+    .settings-range input[type='range'] {
+        appearance: none;
+        width: 100%;
+        height: 32px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        accent-color: var(--panel-accent);
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .settings-range input[type='range']::-webkit-slider-runnable-track {
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+    }
+
+    .settings-range input[type='range']::-webkit-slider-thumb {
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        margin-top: -6px;
+        border: 2px solid rgba(255, 255, 255, 0.92);
+        border-radius: 50%;
+        background: var(--panel-accent);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    }
+
+    .settings-range input[type='range']::-moz-range-track {
+        height: 6px;
+        border: 0;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+    }
+
+    .settings-range input[type='range']::-moz-range-progress {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--panel-accent);
+    }
+
+    .settings-range input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.92);
+        border-radius: 50%;
+        background: var(--panel-accent);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    }
+
+    .settings-range input[type='range']:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .settings-range__description {
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
     .settings-toggle {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 12px;
         align-items: center;
+        height: max-content;
         min-height: 48px;
         padding: 10px 12px;
         border: 1px solid var(--panel-border);
