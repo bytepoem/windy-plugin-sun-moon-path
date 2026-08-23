@@ -4,29 +4,49 @@
 
     import {
         suggestAmapLocations,
-        type AmapLocationResult,
     } from './amap';
+    import { disposeBaiduSdk, suggestBaiduLocations } from './baidu';
     import { loadElevationsWithConcurrency } from './locationSearch';
+    import {
+        LOCATION_PROVIDERS,
+        locationSearchFailureMessage,
+        type LocationProvider,
+        type LocationProviderApiKeys,
+        type LocationSearchSelection,
+    } from './locationProvider';
+    import { suggestTencentLocations } from './tencent';
     import type { Coordinates } from './solar';
 
-    const AMAP_API_KEY_APPLICATION_URL = 'https://lbs.amap.com/api/webservice/create-project-and-key';
-
-    export let apiKey = '';
-    export let language: 'zh' | 'en' = 'zh';
-    export let location: Coordinates;
-
-    type DisplayResult = AmapLocationResult & {
-        elevationM: number | null | undefined;
+    const API_KEY_APPLICATION_URLS: Record<LocationProvider, string> = {
+        amap: 'https://lbs.amap.com/api/webservice/create-project-and-key',
+        baidu: 'https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/quickstart/prepare',
+        tencent: 'https://lbs.qq.com/webApi/javascriptGL/glGuide/glBasic',
     };
 
-    const dispatch = createEventDispatcher<{ select: AmapLocationResult }>();
+    export let apiKeys: LocationProviderApiKeys;
+    export let language: 'zh' | 'en' = 'zh';
+    export let location: Coordinates;
+    export let provider: LocationProvider = 'amap';
+
+    type DisplayResult = LocationSearchSelection;
+
+    const dispatch = createEventDispatcher<{
+        select: LocationSearchSelection;
+        providerchange: LocationProvider;
+    }>();
     const labels = {
         zh: {
             label: '地址搜索',
+            providerLabel: '搜索提供商',
+            providers: {
+                amap: '高德',
+                baidu: '百度',
+                tencent: '腾讯',
+            },
             placeholder: '搜索地点或地址',
-            missingKey: '请先配置高德 Web 服务 API Key',
-            missingKeyPrompt: '地址搜索需要高德 Web 服务 API Key，请先申请并在设置中保存。',
-            applyForKey: '申请高德 API Key',
+            missingKey: '请先配置 {provider} API Key',
+            missingKeyPrompt: '使用 {provider} 搜索需要对应的 API Key，请先申请并在设置中保存。',
+            applyForKey: '申请 {provider} API Key',
             search: '搜索',
             loading: '正在搜索…',
             noResults: '没有找到可定位的地址，请换个关键词。',
@@ -37,10 +57,16 @@
         },
         en: {
             label: 'Location search',
+            providerLabel: 'Search provider',
+            providers: {
+                amap: 'Amap',
+                baidu: 'Baidu',
+                tencent: 'Tencent',
+            },
             placeholder: 'Search for a place or address',
-            missingKey: 'Configure an Amap Web Service API Key first',
-            missingKeyPrompt: 'Location search requires an Amap Web Service API Key. Apply for one, then save it in Settings.',
-            applyForKey: 'Apply for an Amap API Key',
+            missingKey: 'Configure a {provider} API Key first',
+            missingKeyPrompt: '{provider} search requires its API Key. Apply for one, then save it in Settings.',
+            applyForKey: 'Apply for a {provider} API Key',
             search: 'Search',
             loading: 'Searching…',
             noResults: 'No locatable address found. Try another keyword.',
@@ -54,6 +80,7 @@
     let query = '';
     let results: DisplayResult[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
+    let errorMessage = '';
     let activeIndex = -1;
     let requestId = 0;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -61,14 +88,27 @@
     let rootElement: HTMLElement | null = null;
     let text = labels.zh;
     let searchContextKey = '';
+    let apiKey = '';
+    let missingKeyText = '';
+    let missingKeyPromptText = '';
+    let applyForKeyText = '';
+    let providerMenuOpen = false;
+    let providerMenuIndex = 0;
+    let providerButtonElement: HTMLButtonElement | null = null;
+    let providerMenuElement: HTMLElement | null = null;
 
     $: text = labels[language];
+    $: apiKey = apiKeys[provider] || '';
+    $: missingKeyText = text.missingKey.replace('{provider}', text.providers[provider]);
+    $: missingKeyPromptText = text.missingKeyPrompt.replace('{provider}', text.providers[provider]);
+    $: applyForKeyText = text.applyForKey.replace('{provider}', text.providers[provider]);
     $: {
-        const nextSearchContextKey = `${apiKey}|${location.lat}|${location.lon}`;
+        const nextSearchContextKey = `${provider}|${apiKey}|${location.lat}|${location.lon}`;
         if (searchContextKey && searchContextKey !== nextSearchContextKey) {
             cancelPendingSearch();
             results = [];
             status = 'idle';
+            errorMessage = '';
             activeIndex = -1;
         }
         searchContextKey = nextSearchContextKey;
@@ -104,6 +144,7 @@
             cancelPendingSearch();
             results = [];
             status = 'idle';
+            errorMessage = '';
             activeIndex = -1;
             return;
         }
@@ -111,10 +152,20 @@
         abortController?.abort();
         abortController = new AbortController();
         const ownRequestId = ++requestId;
+        const ownProvider = provider;
+        const ownProviderName = text.providers[ownProvider];
+        const fallbackErrorMessage = text.error;
+        const ownLanguage = language;
         status = 'loading';
+        errorMessage = '';
         activeIndex = -1;
         try {
-            const nextResults = await suggestAmapLocations({
+            const search = {
+                amap: suggestAmapLocations,
+                baidu: suggestBaiduLocations,
+                tencent: suggestTencentLocations,
+            }[ownProvider];
+            const nextResults = await search({
                 apiKey,
                 keyword,
                 origin: location,
@@ -125,6 +176,7 @@
             }
             results = nextResults.map(result => ({ ...result, elevationM: undefined }));
             status = nextResults.length ? 'ready' : 'empty';
+            errorMessage = '';
             if (nextResults.length) {
                 void loadResultElevations(results, ownRequestId);
             }
@@ -134,14 +186,16 @@
             }
             results = [];
             status = 'error';
+            errorMessage = locationSearchFailureMessage(
+                error,
+                ownProviderName,
+                fallbackErrorMessage,
+                ownLanguage,
+            );
         }
     };
 
-    const handleInput = () => {
-        cancelPendingSearch();
-        results = [];
-        status = 'idle';
-        activeIndex = -1;
+    const scheduleSearch = () => {
         if (!apiKey || !query.trim()) {
             return;
         }
@@ -151,8 +205,94 @@
         }, 300);
     };
 
+    const handleInput = () => {
+        cancelPendingSearch();
+        results = [];
+        status = 'idle';
+        errorMessage = '';
+        activeIndex = -1;
+        if (!apiKey || !query.trim()) {
+            return;
+        }
+        scheduleSearch();
+    };
+
+    const selectProvider = (nextProvider: LocationProvider) => {
+        if (nextProvider === provider) {
+            return;
+        }
+        cancelPendingSearch();
+        results = [];
+        status = 'idle';
+        errorMessage = '';
+        activeIndex = -1;
+        provider = nextProvider;
+        dispatch('providerchange', nextProvider);
+        void tick().then(scheduleSearch);
+    };
+
+    const focusProviderOption = async () => {
+        await tick();
+        providerMenuElement
+            ?.querySelectorAll<HTMLButtonElement>('[role="option"]')[providerMenuIndex]
+            ?.focus();
+    };
+
+    const openProviderMenu = (index = LOCATION_PROVIDERS.indexOf(provider)) => {
+        providerMenuIndex = Math.max(0, index);
+        providerMenuOpen = true;
+        void focusProviderOption();
+    };
+
+    const closeProviderMenu = (restoreFocus = false) => {
+        providerMenuOpen = false;
+        if (restoreFocus) {
+            void tick().then(() => providerButtonElement?.focus());
+        }
+    };
+
+    const chooseProvider = (nextProvider: LocationProvider) => {
+        selectProvider(nextProvider);
+        closeProviderMenu(true);
+    };
+
+    const handleProviderButtonKeydown = (event: KeyboardEvent) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const selectedIndex = LOCATION_PROVIDERS.indexOf(provider);
+            openProviderMenu(event.key === 'ArrowDown'
+                ? selectedIndex
+                : (selectedIndex - 1 + LOCATION_PROVIDERS.length) % LOCATION_PROVIDERS.length);
+        } else if (event.key === 'Escape' && providerMenuOpen) {
+            event.preventDefault();
+            closeProviderMenu();
+        }
+    };
+
+    const handleProviderOptionKeydown = (event: KeyboardEvent, index: number) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeProviderMenu(true);
+            return;
+        }
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+            return;
+        }
+        event.preventDefault();
+        if (event.key === 'Home') {
+            providerMenuIndex = 0;
+        } else if (event.key === 'End') {
+            providerMenuIndex = LOCATION_PROVIDERS.length - 1;
+        } else {
+            const direction = event.key === 'ArrowDown' ? 1 : -1;
+            providerMenuIndex = (index + direction + LOCATION_PROVIDERS.length) % LOCATION_PROVIDERS.length;
+        }
+        void focusProviderOption();
+    };
+
     const handleSubmit = (event: SubmitEvent) => {
         event.preventDefault();
+        rootElement?.querySelector<HTMLInputElement>('#location-search-input')?.focus();
         cancelPendingSearch();
         void runSearch();
     };
@@ -162,6 +302,7 @@
         query = result.name;
         results = [];
         status = 'idle';
+        errorMessage = '';
         activeIndex = -1;
         dispatch('select', result);
     };
@@ -181,7 +322,7 @@
             }
             void tick().then(() => {
                 rootElement
-                    ?.querySelector<HTMLElement>(`#amap-location-result-${activeIndex}`)
+                    ?.querySelector<HTMLElement>(`#location-search-result-${activeIndex}`)
                     ?.scrollIntoView({ block: 'nearest' });
             });
         } else if (event.key === 'Enter' && activeIndex >= 0) {
@@ -191,16 +332,26 @@
             cancelPendingSearch();
             results = [];
             status = 'idle';
+            errorMessage = '';
             activeIndex = -1;
         }
     };
 
     const handleFocusOut = (event: FocusEvent) => {
         if (!rootElement?.contains(event.relatedTarget as Node | null)) {
+            providerMenuOpen = false;
             cancelPendingSearch();
             results = [];
             status = 'idle';
+            errorMessage = '';
             activeIndex = -1;
+        }
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (providerMenuOpen && !target?.closest('.location-search__provider-picker')) {
+            providerMenuOpen = false;
         }
     };
 
@@ -229,30 +380,87 @@
     const metricLabel = (label: string, parts: { value: string; unit: string }): string =>
         `${label} ${parts.value} ${parts.unit}`;
 
-    onDestroy(cancelPendingSearch);
+    onDestroy(() => {
+        cancelPendingSearch();
+        disposeBaiduSdk();
+    });
 </script>
 
-<section class="location-search" bind:this={rootElement} on:focusout={handleFocusOut} aria-label={text.label}>
+<section
+    class="location-search"
+    bind:this={rootElement}
+    on:focusin={handleFocusIn}
+    on:focusout={handleFocusOut}
+    aria-label={text.label}
+>
     <form class="location-search__form" on:submit={handleSubmit}>
-        <label class="location-search__label" for="amap-location-search">{text.label}</label>
+        <label class="location-search__label" for="location-search-input">{text.label}</label>
         <div class="location-search__control">
+            <div class="location-search__provider-picker">
+                <button
+                    type="button"
+                    class="location-search__provider-button"
+                    bind:this={providerButtonElement}
+                    aria-label={`${text.providerLabel}: ${text.providers[provider]}`}
+                    aria-haspopup="listbox"
+                    aria-expanded={providerMenuOpen}
+                    aria-controls="location-provider-menu"
+                    on:click={() => providerMenuOpen ? closeProviderMenu() : openProviderMenu()}
+                    on:keydown={handleProviderButtonKeydown}
+                >
+                    <span>{text.providers[provider]}</span>
+                    <span class="location-search__provider-chevron" aria-hidden="true"></span>
+                </button>
+                {#if providerMenuOpen}
+                    <div
+                        id="location-provider-menu"
+                        class="location-search__provider-menu"
+                        bind:this={providerMenuElement}
+                        role="listbox"
+                        aria-label={text.providerLabel}
+                    >
+                        {#each LOCATION_PROVIDERS as providerOption, index}
+                            <button
+                                type="button"
+                                role="option"
+                                aria-selected={provider === providerOption}
+                                tabindex={index === providerMenuIndex ? 0 : -1}
+                                class:active={provider === providerOption}
+                                on:click={() => chooseProvider(providerOption)}
+                                on:keydown={event => handleProviderOptionKeydown(event, index)}
+                            >
+                                <span>{text.providers[providerOption]}</span>
+                                <span class="location-search__provider-check" aria-hidden="true">
+                                    {provider === providerOption ? '✓' : ''}
+                                </span>
+                            </button>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
             <input
-                id="amap-location-search"
+                id="location-search-input"
                 type="search"
                 bind:value={query}
-                placeholder={apiKey ? text.placeholder : text.missingKey}
+                placeholder={apiKey ? text.placeholder : missingKeyText}
                 disabled={!apiKey}
                 autocomplete="off"
                 role="combobox"
                 aria-autocomplete="list"
-                aria-controls="amap-location-results"
+                aria-controls="location-search-results"
                 aria-expanded={status === 'ready'}
-                aria-activedescendant={activeIndex >= 0 ? `amap-location-result-${activeIndex}` : undefined}
-                aria-describedby="amap-location-status"
+                aria-activedescendant={activeIndex >= 0 ? `location-search-result-${activeIndex}` : undefined}
+                aria-describedby="location-search-status"
                 on:input={handleInput}
                 on:keydown={handleKeydown}
             />
-            <button type="submit" disabled={!apiKey || !query.trim() || status === 'loading'}>{text.search}</button>
+            <button
+                type="submit"
+                class="location-search__submit"
+                disabled={!apiKey || !query.trim() || status === 'loading'}
+            >
+                {text.search}
+            </button>
         </div>
     </form>
 
@@ -261,10 +469,10 @@
             class="location-search__results"
             aria-label={text.suggestions}
         >
-            <div id="amap-location-results" role="listbox" aria-label={text.suggestions}>
+            <div id="location-search-results" role="listbox" aria-label={text.suggestions}>
                 {#each results as result, index (result.id)}
                     <button
-                        id={`amap-location-result-${index}`}
+                        id={`location-search-result-${index}`}
                         type="button"
                         role="option"
                         tabindex="-1"
@@ -308,12 +516,12 @@
         </div>
     {/if}
 
-    <div id="amap-location-status" class="location-search__status" aria-live="polite">
+    <div id="location-search-status" class="location-search__status" aria-live="polite">
         {#if !apiKey}
             <span class="location-search__missing-key">
-                <span>{text.missingKeyPrompt}</span>
-                <a href={AMAP_API_KEY_APPLICATION_URL} target="_blank" rel="noreferrer">
-                    {text.applyForKey}
+                <span>{missingKeyPromptText}</span>
+                <a href={API_KEY_APPLICATION_URLS[provider]} target="_blank" rel="noreferrer">
+                    {applyForKeyText}
                 </a>
             </span>
         {:else if status === 'loading'}
@@ -321,7 +529,7 @@
         {:else if status === 'empty'}
             {text.noResults}
         {:else if status === 'error'}
-            <span role="alert">{text.error}</span>
+            <span role="alert">{errorMessage || text.error}</span>
         {/if}
     </div>
 </section>
@@ -343,9 +551,10 @@
     }
 
     .location-search__control {
+        position: relative;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        min-height: 42px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        min-height: 46px;
         border: 1px solid var(--panel-border);
         border-radius: 7px;
         background: rgba(8, 15, 27, 0.68);
@@ -357,9 +566,107 @@
         box-shadow: 0 0 0 2px rgba(99, 185, 238, 0.18);
     }
 
+    .location-search__provider-picker {
+        position: relative;
+        min-width: 88px;
+    }
+
+    .location-search__provider-button {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-width: 88px;
+        min-height: 44px;
+        padding: 0 11px;
+        border: 0;
+        border-right: 1px solid var(--panel-border);
+        border-radius: 6px 0 0 6px;
+        background: rgba(99, 185, 238, 0.12);
+        color: var(--panel-text);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        touch-action: manipulation;
+        transition: background-color 160ms ease;
+    }
+
+    .location-search__provider-button:hover,
+    .location-search__provider-button[aria-expanded='true'] {
+        background: rgba(99, 185, 238, 0.22);
+    }
+
+    .location-search__provider-button:focus-visible {
+        position: relative;
+        z-index: 5;
+        outline: 2px solid var(--panel-accent);
+        outline-offset: -3px;
+    }
+
+    .location-search__provider-chevron {
+        width: 7px;
+        height: 7px;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: translateY(-2px) rotate(45deg);
+    }
+
+    .location-search__provider-menu {
+        position: absolute;
+        z-index: 6;
+        top: calc(100% + 4px);
+        left: 0;
+        display: grid;
+        width: max(100%, 112px);
+        padding: 4px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 7px;
+        background: #172237;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+    }
+
+    .location-search__provider-menu button {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 16px;
+        gap: 8px;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--panel-muted);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .location-search__provider-menu button:hover,
+    .location-search__provider-menu button.active {
+        background: rgba(99, 185, 238, 0.18);
+        color: var(--panel-text);
+    }
+
+    .location-search__provider-menu button:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: -2px;
+    }
+
+    .location-search__provider-check {
+        color: var(--panel-accent);
+        font-weight: 700;
+        text-align: center;
+    }
+
     .location-search__control input {
         min-width: 0;
-        height: 40px;
+        height: 44px;
         padding: 0 11px;
         border: 0;
         outline: 0;
@@ -379,9 +686,9 @@
         opacity: 0.72;
     }
 
-    .location-search__control button {
+    .location-search__submit {
         min-width: 60px;
-        min-height: 40px;
+        min-height: 44px;
         padding: 0 12px;
         border: 0;
         border-left: 1px solid var(--panel-border);
@@ -394,16 +701,16 @@
         cursor: pointer;
     }
 
-    .location-search__control button:hover:not(:disabled) {
+    .location-search__submit:hover:not(:disabled) {
         background: rgba(99, 185, 238, 0.25);
     }
 
-    .location-search__control button:focus-visible {
+    .location-search__submit:focus-visible {
         outline: 2px solid var(--panel-accent);
         outline-offset: -3px;
     }
 
-    .location-search__control button:disabled {
+    .location-search__submit:disabled {
         cursor: not-allowed;
         opacity: 0.45;
     }
@@ -562,7 +869,8 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .location-search__control {
+        .location-search__control,
+        .location-search__provider-button {
             transition: none;
         }
     }

@@ -21,10 +21,12 @@
 
     {#if uiLanguage === 'zh'}
         <LocationSearch
-            apiKey={amapApiKey}
+            apiKeys={locationApiKeys}
             language={uiLanguage}
             location={selectedLocation}
-            on:select={handleAmapLocationSelect}
+            provider={locationSearchProvider}
+            on:providerchange={handleLocationProviderChange}
+            on:select={handleLocationSearchSelect}
         />
     {/if}
 
@@ -165,13 +167,27 @@
             {#if summaryTab === 'events'}
                 <section class="astronomy-panel" aria-label="今日天文时段">
                     <div class="astronomy-panel__heading">
-                        <div class="astronomy-panel__lead">
-                            <strong>
-                                <span>{timelineLeadLabel}</span>
-                                {#if timelineLeadTime}
-                                    <span>{timelineLeadTime}</span>
-                                {/if}
+                        <div class="astronomy-location">
+                            <strong
+                                class:scrolling={locationNameOverflows}
+                                title={locationDisplayName || text.locationResolvingLabel}
+                                aria-label={locationDisplayName || text.locationResolvingLabel}
+                                use:observeLocationNameOverflow={locationDisplayName || text.locationResolvingLabel}
+                            >
+                                <span class="astronomy-location__name-track">
+                                    <span class="astronomy-location__name-value">
+                                        {locationDisplayName || text.locationResolvingLabel}
+                                    </span>
+                                    {#if locationNameOverflows}
+                                        <span class="astronomy-location__name-value" aria-hidden="true">
+                                            {locationDisplayName || text.locationResolvingLabel}
+                                        </span>
+                                    {/if}
+                                </span>
                             </strong>
+                            <span class="astronomy-location__metrics">
+                                <span>{text.elevationLabel} {locationElevationText}</span>
+                            </span>
                         </div>
                         <div class="live-positions" aria-label={text.currentDirectionsLabel}>
                             <div class="live-position live-position--sun" aria-label={text.sun}>
@@ -239,6 +255,10 @@
                     </div>
 
                     <div class="timeline-events" aria-label="今日天文事件">
+                        <div class="timeline-event timeline-event--countdown">
+                            <span class="timeline-event__label">{timelineLeadLabel}</span>
+                            <strong>{timelineLeadTime || '--'}</strong>
+                        </div>
                         {#each astronomyTimeline?.items || [] as item}
                             <div
                                 class:item-moon={item.body === 'moon'}
@@ -364,8 +384,8 @@
                         <dl>
                             {#if uiLanguage === 'zh'}
                                 <div>
-                                    <dt>{text.amapApiKeyLabel}</dt>
-                                    <dd>{text.amapApiKeyDescription}</dd>
+                                    <dt>{text.locationApiKeyLabel}</dt>
+                                    <dd>{text.locationApiKeyDescription}</dd>
                                 </div>
                             {/if}
                             <div>
@@ -508,39 +528,64 @@
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
                     {#if uiLanguage === 'zh'}
-                        <form class="settings-api-key" on:submit={saveAmapApiKey}>
-                            <div class="settings-api-key__header">
-                                <label for="amap-api-key">{text.amapApiKeyLabel}</label>
-                                <span class="settings-api-key__header-actions">
-                                    <a href={AMAP_API_KEY_APPLICATION_URL} target="_blank" rel="noreferrer">
-                                        {text.amapApiKeyApply}
-                                    </a>
-                                    {#if amapKeySaved}
-                                        <span role="status">{text.amapApiKeySaved}</span>
-                                    {/if}
-                                </span>
-                            </div>
-                            <div class="settings-api-key__control">
-                                <input
-                                    id="amap-api-key"
-                                    type="password"
-                                    bind:value={amapApiKeyDraft}
-                                    placeholder={text.amapApiKeyPlaceholder}
-                                    autocomplete="off"
-                                    aria-describedby="amap-api-key-description"
-                                    on:input={() => (amapKeySaved = false)}
-                                />
-                                <button type="submit" disabled={!amapApiKeyDraft.trim()}>{text.amapApiKeySave}</button>
-                                {#if amapApiKey}
-                                    <button type="button" class="settings-api-key__clear" on:click={clearAmapApiKey}>
-                                        {text.amapApiKeyClear}
-                                    </button>
-                                {/if}
-                            </div>
-                            <span id="amap-api-key-description" class="settings-api-key__description">
-                                {text.amapApiKeyDescription}
-                            </span>
-                        </form>
+                        <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
+                            {#each LOCATION_PROVIDERS as providerOption}
+                                <form
+                                    class="settings-api-key"
+                                    on:submit={event => saveLocationApiKey(event, providerOption)}
+                                >
+                                    <div class="settings-api-key__header">
+                                        <label for={`${providerOption}-api-key`}>
+                                            {text.locationProviderLabels[providerOption]}
+                                        </label>
+                                        <span class="settings-api-key__header-actions">
+                                            <a
+                                                href={LOCATION_PROVIDER_APPLICATION_URLS[providerOption]}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                {text.locationProviderApplyLabels[providerOption]}
+                                            </a>
+                                            {#if savedApiKeyProvider === providerOption}
+                                                <span role="status">{text.locationApiKeySaved}</span>
+                                            {/if}
+                                        </span>
+                                    </div>
+                                    <div class="settings-api-key__control">
+                                        <input
+                                            id={`${providerOption}-api-key`}
+                                            type="password"
+                                            value={locationApiKeyDrafts[providerOption]}
+                                            placeholder={text.locationApiKeyPlaceholder}
+                                            autocomplete="off"
+                                            aria-describedby={`${providerOption}-api-key-description`}
+                                            on:input={event => updateLocationApiKeyDraft(event, providerOption)}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!locationApiKeyDrafts[providerOption].trim()}
+                                        >
+                                            {text.locationApiKeySave}
+                                        </button>
+                                        {#if locationApiKeys[providerOption]}
+                                            <button
+                                                type="button"
+                                                class="settings-api-key__clear"
+                                                on:click={() => clearLocationApiKey(providerOption)}
+                                            >
+                                                {text.locationApiKeyClear}
+                                            </button>
+                                        {/if}
+                                    </div>
+                                    <span
+                                        id={`${providerOption}-api-key-description`}
+                                        class="settings-api-key__description"
+                                    >
+                                        {text.locationProviderDescriptions[providerOption]}
+                                    </span>
+                                </form>
+                            {/each}
+                        </div>
                     {/if}
                     <div class="settings-range">
                         <div class="settings-range__header">
@@ -639,6 +684,7 @@
     import { getElevation, getPointForecastData, getTimezoneInfo } from '@windy/fetch';
     import { getGPSlocation, getMyLatestPos } from '@windy/geolocation';
     import { centerMap, map } from '@windy/map';
+    import * as reverseName from '@windy/reverseName';
     import { isMobileOrTablet } from '@windy/rootScope';
     import { setUrl } from '@windy/location';
     import { singleclick } from '@windy/singleclick';
@@ -646,7 +692,11 @@
 
     import config from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
-    import { gpsCoordinatesFromLocation, isMapCenteredOnLocation } from './location';
+    import {
+        gpsCoordinatesFromLocation,
+        isMapCenteredOnLocation,
+        shouldRefreshSameLocationImmediately,
+    } from './location';
     import {
         buildOpenMeteoRequestKey,
         fetchOpenMeteoAtmosphere,
@@ -701,7 +751,14 @@
         type WeatherModel,
         type WeatherPoint,
     } from './weather';
-    import type { AmapLocationResult } from './amap';
+    import {
+        applyLocationApiKey,
+        LOCATION_PROVIDERS,
+        type LocationProvider,
+        type LocationProviderApiKeys,
+        type LocationSearchResult,
+        type LocationSearchSelection,
+    } from './locationProvider';
 
     import type { LatLon } from '@windy/interfaces.d';
 
@@ -746,6 +803,8 @@
         sun: string;
         moon: string;
         altitude: string;
+        locationResolvingLabel: string;
+        elevationLabel: string;
         calculating: string;
         noInterval: string;
         intervalUnavailable: string;
@@ -763,13 +822,15 @@
         lineOpacityDescription: string;
         show600Label: string;
         show600Description: string;
-        amapApiKeyLabel: string;
-        amapApiKeyPlaceholder: string;
-        amapApiKeyDescription: string;
-        amapApiKeyApply: string;
-        amapApiKeySave: string;
-        amapApiKeyClear: string;
-        amapApiKeySaved: string;
+        locationApiKeyLabel: string;
+        locationApiKeyPlaceholder: string;
+        locationApiKeyDescription: string;
+        locationApiKeySave: string;
+        locationApiKeyClear: string;
+        locationApiKeySaved: string;
+        locationProviderLabels: Record<LocationProvider, string>;
+        locationProviderDescriptions: Record<LocationProvider, string>;
+        locationProviderApplyLabels: Record<LocationProvider, string>;
         aboutHeading: string;
         aboutAuthorLabel: string;
         aboutVersionLabel: string;
@@ -827,6 +888,8 @@
             sun: '太阳',
             moon: '月亮',
             altitude: '∠',
+            locationResolvingLabel: '地点解析中…',
+            elevationLabel: '海拔',
             calculating: '正在计算…',
             noInterval: '当天无可用时段',
             intervalUnavailable: '暂不可用',
@@ -844,13 +907,27 @@
             lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
             show600Label: '显示 600 km 点',
             show600Description: '开启后事件方向线会延伸到 600 km，并在该距离增加一个参考点。设置会保存在当前浏览器。',
-            amapApiKeyLabel: '高德 Web 服务 API Key',
-            amapApiKeyPlaceholder: '请输入 API Key',
-            amapApiKeyDescription: '用于国内地点搜索，搜索结果会转换为 Windy 使用的坐标。仅保存在当前浏览器。',
-            amapApiKeyApply: '申请高德 API Key',
-            amapApiKeySave: '保存',
-            amapApiKeyClear: '清除',
-            amapApiKeySaved: '已保存',
+            locationApiKeyLabel: '国内地址搜索 API Key',
+            locationApiKeyPlaceholder: '请输入 API Key',
+            locationApiKeyDescription: '可配置高德、百度和腾讯，并在搜索框中切换。各 Key 仅保存在当前浏览器。',
+            locationApiKeySave: '保存',
+            locationApiKeyClear: '清除',
+            locationApiKeySaved: '已保存',
+            locationProviderLabels: {
+                amap: '高德 Web 服务 API Key',
+                baidu: '百度 JavaScript API Key',
+                tencent: '腾讯 WebService API Key',
+            },
+            locationProviderDescriptions: {
+                amap: '用于高德输入提示，GCJ-02 结果会转换为 Windy 使用的坐标。',
+                baidu: '用于百度 JSAPI 4.0 地点检索，BD-09 结果会转换为 Windy 使用的坐标。',
+                tencent: '用于腾讯关键词输入提示，GCJ-02 结果会转换为 Windy 使用的坐标。',
+            },
+            locationProviderApplyLabels: {
+                amap: '申请高德 Key',
+                baidu: '申请百度 Key',
+                tencent: '申请腾讯 Key',
+            },
             aboutHeading: '关于插件',
             aboutAuthorLabel: '作者',
             aboutVersionLabel: '版本',
@@ -932,6 +1009,8 @@
             sun: 'Sun',
             moon: 'Moon',
             altitude: '∠',
+            locationResolvingLabel: 'Resolving place…',
+            elevationLabel: 'Elevation',
             calculating: 'Calculating…',
             noInterval: 'No window today',
             intervalUnavailable: 'Unavailable',
@@ -949,13 +1028,27 @@
             lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
             show600Label: 'Show 600 km point',
             show600Description: 'When enabled, event direction lines extend to 600 km and add a reference point there. This setting is saved in this browser.',
-            amapApiKeyLabel: 'Amap Web Service API Key',
-            amapApiKeyPlaceholder: 'Enter API Key',
-            amapApiKeyDescription: 'Used for domestic place search. Search results are converted to Windy coordinates. Saved only in this browser.',
-            amapApiKeyApply: 'Apply for an Amap API Key',
-            amapApiKeySave: 'Save',
-            amapApiKeyClear: 'Clear',
-            amapApiKeySaved: 'Saved',
+            locationApiKeyLabel: 'Domestic location search API keys',
+            locationApiKeyPlaceholder: 'Enter API Key',
+            locationApiKeyDescription: 'Configure Amap, Baidu, and Tencent, then switch providers in search. Keys stay in this browser.',
+            locationApiKeySave: 'Save',
+            locationApiKeyClear: 'Clear',
+            locationApiKeySaved: 'Saved',
+            locationProviderLabels: {
+                amap: 'Amap Web Service API Key',
+                baidu: 'Baidu JavaScript API Key',
+                tencent: 'Tencent WebService API Key',
+            },
+            locationProviderDescriptions: {
+                amap: 'Uses Amap input tips and converts GCJ-02 results to Windy coordinates.',
+                baidu: 'Uses Baidu JSAPI 4.0 local search and converts BD-09 results to Windy coordinates.',
+                tencent: 'Uses Tencent keyword suggestions and converts GCJ-02 results to Windy coordinates.',
+            },
+            locationProviderApplyLabels: {
+                amap: 'Apply for Amap Key',
+                baidu: 'Apply for Baidu Key',
+                tencent: 'Apply for Tencent Key',
+            },
             aboutHeading: 'About plugin',
             aboutAuthorLabel: 'Author',
             aboutVersionLabel: 'Version',
@@ -1024,8 +1117,17 @@
     const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
     const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
     const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
-    const AMAP_API_KEY_STORAGE_KEY = 'windy-plugin-sun-moon-path:amap-api-key';
-    const AMAP_API_KEY_APPLICATION_URL = 'https://lbs.amap.com/api/webservice/create-project-and-key';
+    const LOCATION_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:location-provider';
+    const LOCATION_PROVIDER_API_KEY_STORAGE_KEYS: Record<LocationProvider, string> = {
+        amap: 'windy-plugin-sun-moon-path:amap-api-key',
+        baidu: 'windy-plugin-sun-moon-path:baidu-api-key',
+        tencent: 'windy-plugin-sun-moon-path:tencent-api-key',
+    };
+    const LOCATION_PROVIDER_APPLICATION_URLS: Record<LocationProvider, string> = {
+        amap: 'https://lbs.amap.com/api/webservice/create-project-and-key',
+        baidu: 'https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/quickstart/prepare',
+        tencent: 'https://lbs.qq.com/webApi/javascriptGL/glGuide/glBasic',
+    };
     const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
     let lastKnownGpsLocation: Coordinates | null = null;
     const cachedGpsLocation = (): Coordinates | null => {
@@ -1060,6 +1162,9 @@
     let currentInstant = new Date();
     let timelineLeadLabel = '正在计算…';
     let timelineLeadTime = '';
+    let locationDisplayName = '';
+    let locationNameOverflows = false;
+    let locationElevationText = '--';
     let sunriseAzimuthLabel = '';
     let sunsetAzimuthLabel = '';
     let moonriseAzimuthLabel = '';
@@ -1076,6 +1181,7 @@
     let weatherLoadingKey = '';
     let locationKey = '';
     let resolvedContextLocationKey = '';
+    let elevationLocationKey = '';
     let latestWeatherRequestId = 0;
     let weatherAbortController: AbortController | null = null;
     let atmospherePoints: OpenMeteoAtmospherePoint[] = [];
@@ -1097,9 +1203,10 @@
     let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
-    let amapApiKey = '';
-    let amapApiKeyDraft = '';
-    let amapKeySaved = false;
+    let locationSearchProvider: LocationProvider = 'amap';
+    let locationApiKeys: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
+    let locationApiKeyDrafts: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
+    let savedApiKeyProvider: LocationProvider | null = null;
     let displayAstronomyIntervalSlots: {
         kind: AstronomyInterval['kind'];
         interval: AstronomyInterval | null;
@@ -1119,14 +1226,19 @@
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
     let releaseOverlayOwnership: (() => void) | null = null;
     let currentLocationRequestId = 0;
+    let locationNameRequestId = 0;
     let mapWasDragged = false;
-    let addressSelectedLocation: Coordinates | null = null;
+    let addressSelectedLocation: Pick<LocationSearchResult, 'wgs84'> | null = null;
 
     $: text = translations[uiLanguage];
 
     $: refreshKey = `${selectedDate}|${selectedEvent}|${selectedLocation.lat}|${selectedLocation.lon}`;
 
     $: locationKey = buildWeatherLocationKey(selectedLocation);
+
+    $: locationElevationText = elevationLocationKey === locationKey
+        ? `${Math.round(elevationM)} m`
+        : '--';
 
     $: weatherRequestKey = buildWeatherRequestKey(weatherModel, locationKey, currentInstant.getTime());
 
@@ -1360,36 +1472,75 @@
         applyDirectionLineOpacity();
     };
 
-    const loadAmapApiKey = (): string => {
+    const loadLocationSearchProvider = (): LocationProvider => {
         try {
-            return localStorage.getItem(AMAP_API_KEY_STORAGE_KEY)?.trim() || '';
+            const value = localStorage.getItem(LOCATION_PROVIDER_STORAGE_KEY);
+            return LOCATION_PROVIDERS.includes(value as LocationProvider) ? value as LocationProvider : 'amap';
         } catch {
-            return '';
+            return 'amap';
         }
     };
 
-    const saveAmapApiKey = (event: SubmitEvent) => {
+    const loadLocationApiKeys = (): LocationProviderApiKeys => {
+        try {
+            return Object.fromEntries(LOCATION_PROVIDERS.map(providerOption => [
+                providerOption,
+                localStorage.getItem(LOCATION_PROVIDER_API_KEY_STORAGE_KEYS[providerOption])?.trim() || '',
+            ])) as LocationProviderApiKeys;
+        } catch {
+            return { amap: '', baidu: '', tencent: '' };
+        }
+    };
+
+    const setLocationSearchProvider = (providerOption: LocationProvider) => {
+        locationSearchProvider = providerOption;
+        try {
+            localStorage.setItem(LOCATION_PROVIDER_STORAGE_KEY, providerOption);
+        } catch {
+            // The provider still changes for this plugin session when storage is unavailable.
+        }
+    };
+
+    const handleLocationProviderChange = (event: CustomEvent<LocationProvider>) => {
+        setLocationSearchProvider(event.detail);
+    };
+
+    const updateLocationApiKeyDraft = (event: Event, providerOption: LocationProvider) => {
+        locationApiKeyDrafts = {
+            ...locationApiKeyDrafts,
+            [providerOption]: (event.currentTarget as HTMLInputElement).value,
+        };
+        if (savedApiKeyProvider === providerOption) {
+            savedApiKeyProvider = null;
+        }
+    };
+
+    const saveLocationApiKey = (event: SubmitEvent, providerOption: LocationProvider) => {
         event.preventDefault();
-        const nextKey = amapApiKeyDraft.trim();
+        const nextKey = locationApiKeyDrafts[providerOption].trim();
         if (!nextKey) {
             return;
         }
         try {
-            localStorage.setItem(AMAP_API_KEY_STORAGE_KEY, nextKey);
-            amapKeySaved = true;
+            localStorage.setItem(LOCATION_PROVIDER_API_KEY_STORAGE_KEYS[providerOption], nextKey);
+            savedApiKeyProvider = providerOption;
         } catch {
-            amapKeySaved = false;
+            savedApiKeyProvider = null;
         }
-        amapApiKey = nextKey;
-        amapApiKeyDraft = nextKey;
+        const nextState = applyLocationApiKey(locationApiKeys, providerOption, nextKey);
+        locationApiKeys = nextState.apiKeys;
+        locationApiKeyDrafts = { ...locationApiKeyDrafts, [providerOption]: nextKey };
+        setLocationSearchProvider(nextState.provider);
     };
 
-    const clearAmapApiKey = () => {
-        amapApiKey = '';
-        amapApiKeyDraft = '';
-        amapKeySaved = false;
+    const clearLocationApiKey = (providerOption: LocationProvider) => {
+        locationApiKeys = { ...locationApiKeys, [providerOption]: '' };
+        locationApiKeyDrafts = { ...locationApiKeyDrafts, [providerOption]: '' };
+        if (savedApiKeyProvider === providerOption) {
+            savedApiKeyProvider = null;
+        }
         try {
-            localStorage.removeItem(AMAP_API_KEY_STORAGE_KEY);
+            localStorage.removeItem(LOCATION_PROVIDER_API_KEY_STORAGE_KEYS[providerOption]);
         } catch {
             // The in-memory key is cleared even when browser storage is unavailable.
         }
@@ -1578,9 +1729,15 @@
         requestId: number,
     ): Promise<{ timeZone: string; elevationM: number } | null> => {
         const datetime = dateInputToUtcNoon(dateInput, 'UTC').toISOString();
+        const contextLocationKey = buildWeatherLocationKey(location);
+        const knownElevation = elevationLocationKey === contextLocationKey && Number.isFinite(elevationM)
+            ? elevationM
+            : null;
         const [timezoneResult, elevationResult] = await Promise.allSettled([
             getTimezoneInfo(location, datetime),
-            getElevation(location.lat, location.lon),
+            knownElevation === null
+                ? getElevation(location.lat, location.lon)
+                : Promise.resolve({ data: knownElevation }),
         ]);
 
         if (requestId !== latestRequestId) {
@@ -1602,7 +1759,8 @@
         }
 
         timeZone = candidate;
-        resolvedContextLocationKey = buildWeatherLocationKey(location);
+        resolvedContextLocationKey = contextLocationKey;
+        elevationLocationKey = contextLocationKey;
         elevationM = resolvedElevation;
         return { timeZone: candidate, elevationM: resolvedElevation };
     };
@@ -1887,13 +2045,46 @@
         return `当天没有可用的${nameForEvent}时刻。`;
     };
 
-    const setLocation = (latLon: LatLon, reopenWhenClosed = true) => {
+    const coordinateLocationLabel = (location: Coordinates): string =>
+        `${location.lat.toFixed(3)}, ${location.lon.toFixed(3)}`;
+
+    const resolveLocationDisplayName = async (location: Coordinates, requestId: number) => {
+        let nextName = '';
+        try {
+            nextName = (await reverseName.get(location)).name.trim();
+        } catch {
+            // Coordinates remain an accurate fallback when reverse lookup is unavailable.
+        }
+        if (requestId !== locationNameRequestId || !isMapCenteredOnLocation(selectedLocation, location, 0.01)) {
+            return;
+        }
+        locationDisplayName = nextName || coordinateLocationLabel(location);
+    };
+
+    const setLocation = (
+        latLon: LatLon,
+        reopenWhenClosed = true,
+        displayName = '',
+        knownElevationM?: number | null,
+    ) => {
         const nextLocation = coordinatesFromLocation(latLon);
         if (!nextLocation) {
             return;
         }
 
         selectedLocation = nextLocation;
+        const nextLocationKey = buildWeatherLocationKey(nextLocation);
+        const nameRequestId = ++locationNameRequestId;
+        locationDisplayName = displayName.trim();
+        if (!locationDisplayName) {
+            void resolveLocationDisplayName(nextLocation, nameRequestId);
+        }
+        if (Number.isFinite(knownElevationM)) {
+            elevationM = Math.max(0, knownElevationM as number);
+            elevationLocationKey = nextLocationKey;
+        } else {
+            elevationLocationKey = '';
+        }
         resolvedContextLocationKey = '';
         weatherLoadedKey = '';
         weatherAbortController?.abort();
@@ -1914,9 +2105,13 @@
         lightPollutionStatus = 'idle';
         lightPollutionErrorKind = 'none';
         const nextKey = makeRefreshKey(nextLocation, selectedDate, selectedEvent);
+        const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted, refreshKey, nextKey);
         refreshKey = nextKey;
 
         if (isMounted) {
+            if (needsImmediateRefresh) {
+                void refreshPaths(nextKey);
+            }
             return;
         }
 
@@ -1933,14 +2128,16 @@
         setLocation(latLon);
     };
 
-    const handleAmapLocationSelect = (event: CustomEvent<AmapLocationResult>) => {
+    const handleLocationSearchSelect = (event: CustomEvent<LocationSearchSelection>) => {
         currentLocationRequestId += 1;
         if (locationSyncTimer) {
             clearTimeout(locationSyncTimer);
             locationSyncTimer = null;
         }
-        addressSelectedLocation = { ...event.detail.wgs84 };
-        setLocation(event.detail.wgs84, false);
+        addressSelectedLocation = {
+            wgs84: { ...event.detail.wgs84 },
+        };
+        setLocation(event.detail.wgs84, false, event.detail.name, event.detail.elevationM);
         centerMap({ lat: event.detail.wgs84.lat, lon: event.detail.wgs84.lon, zoom: 12 });
     };
 
@@ -1983,7 +2180,6 @@
     const handleMapDragStart = () => {
         mapWasDragged = true;
         currentLocationRequestId += 1;
-        addressSelectedLocation = null;
     };
 
     const handleMapMoveEnd = () => {
@@ -1994,7 +2190,7 @@
 
         if (addressSelectedLocation) {
             const mapCenter = coordinatesFromLocation(map.getCenter());
-            if (mapCenter && isMapCenteredOnLocation(mapCenter, addressSelectedLocation, 0.05)) {
+            if (mapCenter && isMapCenteredOnLocation(mapCenter, addressSelectedLocation.wgs84, 0.05)) {
                 return;
             }
             addressSelectedLocation = null;
@@ -2018,6 +2214,26 @@
             return labels.timeline.dawn;
         }
         return labels.timeline[item.kind] || item.label;
+    };
+
+    const observeLocationNameOverflow = (node: HTMLElement, _label: string) => {
+        const value = node.querySelector<HTMLElement>('.astronomy-location__name-value');
+        const update = () => {
+            locationNameOverflows = Boolean(value && value.scrollWidth > node.clientWidth + 1);
+        };
+        const scheduleUpdate = () => {
+            void tick().then(update);
+        };
+        const observer = new ResizeObserver(update);
+        observer.observe(node);
+        if (value) {
+            observer.observe(value);
+        }
+        scheduleUpdate();
+        return {
+            update: scheduleUpdate,
+            destroy: () => observer.disconnect(),
+        };
     };
 
     const eventAzimuthLabel = (paths: SolarPath[], event: SolarEvent): string => {
@@ -2137,6 +2353,7 @@
             latestAtmosphereRequestId += 1;
             latestLightPollutionRequestId += 1;
             currentLocationRequestId += 1;
+            locationNameRequestId += 1;
             weatherAbortController?.abort();
             weatherAbortController = null;
             atmosphereAbortController?.abort();
@@ -2164,8 +2381,9 @@
         uiLanguage = loadLanguagePreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
-        amapApiKey = loadAmapApiKey();
-        amapApiKeyDraft = amapApiKey;
+        locationSearchProvider = loadLocationSearchProvider();
+        locationApiKeys = loadLocationApiKeys();
+        locationApiKeyDrafts = { ...locationApiKeys };
         isMounted = true;
         singleclick.on(name, setLocationFromMapClick);
         bcast.on('back2home', handleBackToHome);
@@ -3093,30 +3311,64 @@
         min-height: 42px;
     }
 
-    .astronomy-panel__lead {
+    .astronomy-location {
         min-width: 0;
         text-align: left;
     }
 
-    .astronomy-panel__lead strong {
-        display: grid;
-        gap: 1px;
-        overflow-wrap: anywhere;
+    .astronomy-location > strong {
+        display: block;
+        overflow: hidden;
         color: var(--astronomy-text);
         font-size: 13px;
         line-height: 1.2;
+        white-space: nowrap;
     }
 
-    .astronomy-panel__lead strong::first-letter {
-        color: var(--astronomy-text);
+    .astronomy-location__name-track {
+        display: flex;
+        gap: 24px;
+        width: 100%;
+        min-width: 0;
     }
 
-    .astronomy-panel__lead > span {
-        display: block;
-        margin-top: 2px;
+    .astronomy-location__name-value {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .astronomy-location > strong.scrolling .astronomy-location__name-track {
+        width: max-content;
+        animation: location-name-scroll 10s linear 1.2s infinite;
+        will-change: transform;
+    }
+
+    .astronomy-location > strong.scrolling .astronomy-location__name-value {
+        flex: none;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    @keyframes location-name-scroll {
+        from {
+            transform: translateX(0);
+        }
+        to {
+            transform: translateX(calc(-50% - 12px));
+        }
+    }
+
+    .astronomy-location__metrics {
+        display: grid;
+        gap: 1px;
+        margin-top: 3px;
         color: var(--astronomy-muted);
-        font-size: 12px;
+        font-size: 10px;
         font-variant-numeric: tabular-nums;
+        line-height: 1.2;
     }
 
     .live-positions {
@@ -3275,7 +3527,7 @@
 
     .timeline-events {
         display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         gap: 0;
         margin-top: 6px;
         padding: 6px 0 5px;
@@ -3323,6 +3575,11 @@
 
     .timeline-event.item-moon strong {
         color: #91bfff;
+    }
+
+    .timeline-event.timeline-event--countdown .timeline-event__label,
+    .timeline-event.timeline-event--countdown strong {
+        color: var(--astronomy-text);
     }
 
     .timeline-event--missing {
@@ -3651,6 +3908,11 @@
         gap: 8px;
     }
 
+    .settings-api-keys {
+        display: grid;
+        gap: 8px;
+    }
+
     .settings-api-key {
         display: grid;
         gap: 6px;
@@ -3710,7 +3972,7 @@
 
     .settings-api-key__control input {
         min-width: 0;
-        height: 38px;
+        height: 44px;
         padding: 0 10px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -3728,7 +3990,7 @@
 
     .settings-api-key__control button {
         min-width: 54px;
-        min-height: 38px;
+        min-height: 44px;
         padding: 0 10px;
         border: 1px solid rgba(99, 185, 238, 0.45);
         border-radius: 6px;
@@ -4158,7 +4420,7 @@
         }
 
         .timeline-events {
-            grid-template-columns: repeat(6, minmax(0, 1fr));
+            grid-template-columns: repeat(7, minmax(0, 1fr));
             margin-top: 6px;
         }
 
@@ -4185,18 +4447,18 @@
             gap: 4px;
         }
 
-        .astronomy-panel__lead {
+        .astronomy-location {
             padding-right: 0;
             padding-left: 0;
         }
 
-        .astronomy-panel__lead strong {
+        .astronomy-location > strong {
             font-size: 11px;
             line-height: 1.2;
         }
 
-        .astronomy-panel__lead > span {
-            font-size: 11px;
+        .astronomy-location__metrics {
+            font-size: 9px;
         }
 
         .live-positions {
@@ -4276,6 +4538,23 @@
         .segmented-control button,
         .text-button {
             transition: none;
+        }
+
+        .astronomy-location > strong.scrolling .astronomy-location__name-track {
+            width: 100%;
+            min-width: 0;
+            animation: none;
+        }
+
+        .astronomy-location > strong.scrolling .astronomy-location__name-value:first-child {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .astronomy-location > strong.scrolling .astronomy-location__name-value[aria-hidden='true'] {
+            display: none;
         }
     }
 </style>

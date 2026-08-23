@@ -14,3 +14,9 @@ export const isMapCenteredOnLocation = (
     location: Coordinates,
     toleranceKm = CURRENT_LOCATION_CENTER_TOLERANCE_KM,
 ): boolean => distanceKm(mapCenter, location) <= toleranceKm;
+
+export const shouldRefreshSameLocationImmediately = (
+    isMounted: boolean,
+    currentRefreshKey: string,
+    nextRefreshKey: string,
+): boolean => isMounted && currentRefreshKey === nextRefreshKey;

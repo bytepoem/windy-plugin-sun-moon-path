@@ -1,4 +1,5 @@
 import { distanceKm as calculateDistanceKm, type Coordinates } from './solar';
+import type { LocationSearchResult } from './locationProvider';
 
 const AMAP_INPUT_TIPS_URL = 'https://restapi.amap.com/v3/assistant/inputtips';
 const EARTH_RADIUS = 6378245;
@@ -24,17 +25,7 @@ type AmapResponse = {
     tips?: unknown;
 };
 
-export type AmapLocationResult = {
-    id: string;
-    name: string;
-    district: string;
-    address: string;
-    province: string;
-    city: string;
-    area: string;
-    distanceKm: number | null;
-    wgs84: Coordinates;
-};
+export type AmapLocationResult = LocationSearchResult;
 
 export type AmapSearchOptions = {
     apiKey: string;
