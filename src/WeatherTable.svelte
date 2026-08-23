@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher, tick } from 'svelte';
 
+    import CelestialIcon from './CelestialIcon.svelte';
     import { buildCelestialCurves, type CelestialCurveSegment } from './celestialCurve';
     import WeatherIcon from './WeatherIcon.svelte';
     import {
@@ -23,6 +24,8 @@
     export let model: WeatherModel = 'ecmwf';
     export let status: WeatherLoadStatus = 'idle';
     export let errorMessage = '';
+    export let atmosphereStatus: WeatherLoadStatus = 'idle';
+    export let atmosphereErrorMessage = '';
     export let language: 'zh' | 'en' = 'zh';
     export let timeZone = 'UTC';
     export let currentTimestamp = Date.now();
@@ -33,6 +36,7 @@
     const dispatch = createEventDispatcher<{
         modelchange: WeatherModel;
         retry: void;
+        atmosphereretry: void;
     }>();
 
     const LABEL_WIDTH = 64;
@@ -50,6 +54,8 @@
         'precipMm',
         'windKmh',
         'windDirectionDeg',
+        'visibilityKm',
+        'aod550',
     ];
 
     const translations = {
@@ -69,6 +75,8 @@
             celestialCurve: '太阳和月亮升起降落曲线',
             pointCount: '个时次',
             hourStep: '小时间隔',
+            openMeteoUpdating: 'Open-Meteo 更新中',
+            openMeteoRetry: 'Open-Meteo · 重试',
             metrics: {
                 totalCloudPercent: ['云量', '%'],
                 highCloudPercent: ['高云', '%'],
@@ -77,6 +85,8 @@
                 temperatureC: ['气温', '°C'],
                 dewPointC: ['露点', '°C'],
                 humidityPercent: ['湿度', '%'],
+                aod550: ['AOD', 'OM · 550nm'],
+                visibilityKm: ['能见度', 'OM · km'],
                 precipMm: ['降水', 'mm'],
                 windKmh: ['风速', 'km/h'],
                 windDirectionDeg: ['风向', ''],
@@ -98,6 +108,8 @@
             celestialCurve: 'Sun and moon rise and set curves',
             pointCount: 'steps',
             hourStep: 'hour interval',
+            openMeteoUpdating: 'Updating Open-Meteo',
+            openMeteoRetry: 'Open-Meteo · Retry',
             metrics: {
                 totalCloudPercent: ['Clouds', '%'],
                 highCloudPercent: ['High', '%'],
@@ -106,6 +118,8 @@
                 temperatureC: ['Temp.', '°C'],
                 dewPointC: ['Dew point', '°C'],
                 humidityPercent: ['Humidity', '%'],
+                aod550: ['AOD', 'OM · 550nm'],
+                visibilityKm: ['Visibility', 'OM · km'],
                 precipMm: ['Precip.', 'mm'],
                 windKmh: ['Wind', 'km/h'],
                 windDirectionDeg: ['Direction', ''],
@@ -173,7 +187,27 @@
         if (metric === 'precipMm') {
             return value.toFixed(1);
         }
+        if (metric === 'aod550') {
+            return value.toFixed(2);
+        }
+        if (metric === 'visibilityKm') {
+            return value.toFixed(1);
+        }
         return String(Math.round(value));
+    };
+
+    const metricAriaLabel = (metric: WeatherMetric): string => {
+        if (metric === 'aod550') {
+            return language === 'zh'
+                ? 'AOD 550 纳米，Open-Meteo，数据源 CAMS'
+                : 'AOD at 550 nanometres, Open-Meteo, sourced from CAMS';
+        }
+        if (metric === 'visibilityKm') {
+            return language === 'zh'
+                ? '能见度，单位千米，Open-Meteo'
+                : 'Visibility in kilometres, Open-Meteo';
+        }
+        return `${text.metrics[metric][0]}${text.metrics[metric][1] ? ` ${text.metrics[metric][1]}` : ''}`;
     };
 
     const cloudBarStyle = (metric: WeatherMetric, value: number | null): string =>
@@ -230,8 +264,20 @@
         </div>
         <div class="weather-meta" aria-live="polite">
             <strong>{text.rangeLabel}</strong>
-            {#if points.length > 0}
-                <span>{points.length} {text.pointCount}{stepRange ? ` · ${stepRange} ${text.hourStep}` : ''}</span>
+            {#if atmosphereStatus === 'error'}
+                <button
+                    type="button"
+                    class="weather-source-retry"
+                    title={atmosphereErrorMessage}
+                    aria-label={`${atmosphereErrorMessage} ${text.openMeteoRetry}`}
+                    on:click={() => dispatch('atmosphereretry')}
+                >{text.openMeteoRetry}</button>
+            {:else if points.length > 0}
+                <span>
+                    {points.length} {text.pointCount}{stepRange ? ` · ${stepRange} ${text.hourStep}` : ''}{atmosphereStatus === 'loading' ? ` · ${text.openMeteoUpdating}` : ''}
+                </span>
+            {:else if atmosphereStatus === 'loading'}
+                <span>{text.openMeteoUpdating}</span>
             {/if}
         </div>
         {#if status === 'loading' && points.length > 0}
@@ -252,6 +298,7 @@
     {:else if status === 'empty' || points.length === 0}
         <div class="weather-state" aria-live="polite">{text.empty}</div>
     {:else}
+        <div class="weather-table-frame">
         <!-- svelte-ignore a11y-no-noninteractive-tabindex a11y-no-noninteractive-element-interactions -->
         <div
             class="weather-table-scroll"
@@ -306,7 +353,11 @@
 
                 {#each metricRows as metric}
                     <div class="weather-row" role="row">
-                        <div class="weather-cell weather-label weather-metric-label" role="rowheader">
+                        <div
+                            class="weather-cell weather-label weather-metric-label"
+                            role="rowheader"
+                            aria-label={metricAriaLabel(metric)}
+                        >
                             <span>{text.metrics[metric][0]}</span>
                             {#if text.metrics[metric][1]}
                                 <small>{text.metrics[metric][1]}</small>
@@ -351,8 +402,8 @@
 
                 <div class="weather-row" role="row">
                     <div class="weather-cell weather-label weather-celestial-label" role="rowheader">
-                        <span><i class="weather-celestial-dot weather-celestial-dot--sun" aria-hidden="true"></i>{text.sun}</span>
-                        <span><i class="weather-celestial-dot weather-celestial-dot--moon" aria-hidden="true"></i>{text.moon}</span>
+                        <span><CelestialIcon body="sun" size={12} />{text.sun}</span>
+                        <span><CelestialIcon body="moon" size={12} />{text.moon}</span>
                     </div>
                     <div
                         class="weather-celestial-chart"
@@ -377,6 +428,7 @@
                                 {#each curve.events as event}
                                     {@const eventX = celestialX(event.position)}
                                     {@const labelY = curve.body === 'sun' ? 60 : 45}
+                                    {@const alignRight = event.position > points.length - 2}
                                     <line
                                         class:weather-celestial-event--sun={curve.body === 'sun'}
                                         class:weather-celestial-event--moon={curve.body === 'moon'}
@@ -386,13 +438,19 @@
                                         x2={eventX}
                                         y2={CELESTIAL_HORIZON_Y}
                                     ></line>
+                                    <CelestialIcon
+                                        body={curve.body}
+                                        size={9}
+                                        x={eventX + (alignRight ? -42 : 3)}
+                                        y={labelY - 8}
+                                    />
                                     <text
                                         class:weather-celestial-event--sun={curve.body === 'sun'}
                                         class:weather-celestial-event--moon={curve.body === 'moon'}
                                         class="weather-celestial-event-label"
-                                        x={eventX + (event.position > points.length - 2 ? -3 : 3)}
+                                        x={eventX + (alignRight ? -3 : 15)}
                                         y={labelY}
-                                        text-anchor={event.position > points.length - 2 ? 'end' : 'start'}
+                                        text-anchor={alignRight ? 'end' : 'start'}
                                     >{event.kind === 'rise' ? '↑' : '↓'}{formatCelestialEventTime(event.timestamp)}</text>
                                 {/each}
                             {/each}
@@ -408,6 +466,8 @@
                     ></div>
                 {/if}
             </div>
+        </div>
+            <div class="weather-table-right-edge" aria-hidden="true"></div>
         </div>
     {/if}
 </section>
@@ -467,6 +527,7 @@
     }
 
     .weather-model-control button:focus-visible,
+    .weather-source-retry:focus-visible,
     .weather-state button:focus-visible,
     .weather-table-scroll:focus-visible {
         outline: 2px solid #8ed0ff;
@@ -494,6 +555,21 @@
     .weather-updating {
         color: #aeb9c9;
         font-size: 10px;
+    }
+
+    .weather-source-retry {
+        overflow: hidden;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        color: #ffd38a;
+        background: transparent;
+        font: inherit;
+        font-size: 10px;
+        text-align: left;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
     }
 
     .weather-updating {
@@ -536,9 +612,15 @@
         animation: weather-spin 800ms linear infinite;
     }
 
-    .weather-table-scroll {
+    .weather-table-frame {
+        position: relative;
         flex: 1 1 auto;
         min-height: 0;
+    }
+
+    .weather-table-scroll {
+        width: 100%;
+        height: 100%;
         overflow: auto;
         overscroll-behavior: contain;
         scrollbar-color: #64748b #111827;
@@ -549,6 +631,25 @@
     .weather-table-scroll--chain-y {
         overscroll-behavior-x: contain;
         overscroll-behavior-y: auto;
+    }
+
+    .weather-table-scroll::before {
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 4;
+        display: block;
+        width: calc(100% + 2px);
+        height: 60px;
+        margin-bottom: -60px;
+        transform: translateY(-2px);
+        background: linear-gradient(to bottom, #343b4d 0 28px, #273249 28px 60px);
+        pointer-events: none;
+        content: '';
+    }
+
+    .weather-table-right-edge {
+        display: none;
     }
 
     .weather-grid {
@@ -756,20 +857,6 @@
         white-space: nowrap;
     }
 
-    .weather-celestial-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-    }
-
-    .weather-celestial-dot--sun {
-        background: #ffb000;
-    }
-
-    .weather-celestial-dot--moon {
-        background: #f7f8fb;
-    }
-
     .weather-celestial-chart {
         overflow: hidden;
         border-bottom: 1px solid rgba(255, 255, 255, 0.14);
@@ -843,6 +930,27 @@
     }
 
     @media (max-width: 520px) {
+        .weather-table-right-edge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 11;
+            display: block;
+            width: 2px;
+            height: 58px;
+            background: linear-gradient(to bottom, #343b4d 0 26px, #273249 26px 58px);
+            pointer-events: none;
+        }
+
+        .weather-table-scroll {
+            scrollbar-width: none;
+        }
+
+        .weather-table-scroll::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
         .weather-toolbar {
             grid-template-columns: auto minmax(0, 1fr);
             gap: 8px;

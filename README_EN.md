@@ -31,8 +31,12 @@ relative to a point on the Windy map.
 - Adds a location forecast table spanning the available past 6 hours through the
   next 5 days, with EC, GFS, and ICON model switching and EC selected by default.
 - Shows weather, combined/high/medium/low cloud cover, temperature, dew point,
-  humidity, precipitation, wind speed, and wind direction. Cloud coverage is
-  aggregated from the model pressure levels.
+  humidity, AOD at 550 nm, visibility, precipitation, wind speed, and wind direction.
+  Cloud coverage is aggregated from the model pressure levels.
+- AOD and visibility require no API key and are provided by Open-Meteo. AOD is
+  sourced from CAMS, and neither field changes with the EC, GFS, or ICON selection.
+  Open-Meteo's global AOD data is typically native 3-hourly at about 45 km, with
+  hourly data at about 11 km available over Europe.
 - Draws the above-horizon sun and moon curves on the same time axis and labels
   rise/set times for the selected location. These curves are calculated locally
   and are not EC/ICON/GFS model fields.
@@ -134,6 +138,9 @@ After the plugin is open:
 8. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
    6 hours through the next 5 days.
 
+Rows marked **OM** are provided by [Open-Meteo](https://open-meteo.com/). The AOD
+field is sourced from the [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/).
+
 The Amap API Key is stored only in the current browser's local storage. Domestic GCJ-02
 results are converted to WGS84 so the selected observer location does not shift on Windy.
 
@@ -149,6 +156,7 @@ the calculated azimuth for that event time and extends through 200 km and
 - `src/WeatherTable.svelte` - EC/ICON/GFS forecast table, scrolling, and current-time marker.
 - `src/WeatherIcon.svelte` - vector weather-condition icons.
 - `src/weather.ts` - forecast transformation, cloud aggregation, and time grouping.
+- `src/openMeteo.ts` - Open-Meteo AOD/visibility requests, parsing, and timeline merging.
 - `src/celestialCurve.ts` - sun/moon altitude curves and horizon events aligned with forecast columns.
 - `src/solar.ts` - astronomy, azimuth, distance, timeline, and geometry logic.
 - `src/overlayOwner.ts` - map overlay ownership across Windy panel remounts.

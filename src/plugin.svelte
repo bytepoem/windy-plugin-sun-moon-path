@@ -288,6 +288,8 @@
                     model={weatherModel}
                     status={weatherStatus}
                     errorMessage={weatherErrorMessage}
+                    {atmosphereStatus}
+                    {atmosphereErrorMessage}
                     language={uiLanguage}
                     {timeZone}
                     currentTimestamp={currentInstant.getTime()}
@@ -295,6 +297,7 @@
                     location={selectedLocation}
                     on:modelchange={handleWeatherModelChange}
                     on:retry={retryWeather}
+                    on:atmosphereretry={retryAtmosphere}
                 />
             {:else if summaryTab === 'guide'}
                 <section class="module-about module-guide" aria-label={text.guideHeading}>
@@ -457,6 +460,49 @@
                                 <p>{text.weatherLegend.windDirectionDescription}</p>
                             </div>
                         </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.visibility}</h4>
+                            <div class="weather-legend__scale">
+                                <span class="weather-legend__swatch tone-danger">0.8</span>
+                                <span class="weather-legend__swatch tone-orange">1.5</span>
+                                <span class="weather-legend__swatch tone-warning">3.5</span>
+                                <span class="weather-legend__swatch tone-mild">7</span>
+                                <span class="weather-legend__swatch tone-good">12</span>
+                            </div>
+                            <p>{text.weatherLegend.visibilityDescription}</p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.aerosolAod}</h4>
+                            <div class="weather-legend__scale">
+                                <span class="weather-legend__swatch tone-good">0.05</span>
+                                <span class="weather-legend__swatch tone-warning">0.15</span>
+                                <span class="weather-legend__swatch tone-orange">0.30</span>
+                                <span class="weather-legend__swatch tone-danger">0.50</span>
+                            </div>
+                            <p>{text.weatherLegend.aerosolAodDescription}</p>
+                            <p class="weather-legend__sources">
+                                <a href={OPEN_METEO_URL} target="_blank" rel="noreferrer">Open-Meteo</a>
+                                <span aria-hidden="true"> · </span>
+                                <a href={CAMS_URL} target="_blank" rel="noreferrer">CAMS</a>
+                            </p>
+                        </section>
+
+                        <section class="weather-legend__section">
+                            <h4>{text.weatherLegend.celestialEvents}</h4>
+                            <div class="weather-legend__celestial-row">
+                                <span class="weather-legend__celestial-sample">
+                                    <CelestialIcon body="moon" size={15} label={text.moon} />
+                                    <span>↑ 05:30</span>
+                                </span>
+                                <span class="weather-legend__celestial-sample">
+                                    <CelestialIcon body="sun" size={15} label={text.sun} />
+                                    <span>↓ 18:45</span>
+                                </span>
+                            </div>
+                            <p>{text.weatherLegend.celestialEventsDescription}</p>
+                        </section>
                     </div>
                 </section>
             {:else if summaryTab === 'settings'}
@@ -567,6 +613,8 @@
                 model={weatherModel}
                 status={weatherStatus}
                 errorMessage={weatherErrorMessage}
+                {atmosphereStatus}
+                {atmosphereErrorMessage}
                 language={uiLanguage}
                 {timeZone}
                 currentTimestamp={currentInstant.getTime()}
@@ -575,6 +623,7 @@
                 allowVerticalScrollChaining={true}
                 on:modelchange={handleWeatherModelChange}
                 on:retry={retryWeather}
+                on:atmosphereretry={retryAtmosphere}
             />
         </section>
     {/if}
@@ -596,7 +645,14 @@
     import { onDestroy, onMount, tick } from 'svelte';
 
     import config from './pluginConfig';
+    import CelestialIcon from './CelestialIcon.svelte';
     import { gpsCoordinatesFromLocation, isMapCenteredOnLocation } from './location';
+    import {
+        buildOpenMeteoRequestKey,
+        fetchOpenMeteoAtmosphere,
+        mergeOpenMeteoAtmosphere,
+        type OpenMeteoAtmospherePoint,
+    } from './openMeteo';
     import { claimOverlayOwner } from './overlayOwner';
     import LightPollutionSummary from './LightPollutionSummary.svelte';
     import LocationSearch from './LocationSearch.svelte';
@@ -651,6 +707,8 @@
 
     const { author: pluginAuthor, name, repository: repositoryUrl, title, version: pluginVersion } = config;
     const issuesUrl = `${repositoryUrl}/issues`;
+    const OPEN_METEO_URL = 'https://open-meteo.com/';
+    const CAMS_URL = 'https://atmosphere.copernicus.eu/';
     const systemTimeZone = (() => {
         try {
             return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -721,6 +779,7 @@
         aboutStarLabel: string;
         aboutStarHint: string;
         weatherLoadError: string;
+        atmosphereLoadError: string;
         weatherLegend: Record<
             | 'heading'
             | 'cloud'
@@ -736,7 +795,13 @@
             | 'windSpeed'
             | 'windSpeedDescription'
             | 'windDirection'
-            | 'windDirectionDescription',
+            | 'windDirectionDescription'
+            | 'visibility'
+            | 'visibilityDescription'
+            | 'aerosolAod'
+            | 'aerosolAodDescription'
+            | 'celestialEvents'
+            | 'celestialEventsDescription',
             string
         >;
         events: Record<DirectionEvent, string>;
@@ -795,6 +860,7 @@
             aboutStarLabel: 'Star',
             aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
             weatherLoadError: '无法取得天气模式数据，请稍后重试。',
+            atmosphereLoadError: '无法取得 Open-Meteo 的 AOD 和能见度数据。',
             weatherLegend: {
                 heading: '天气图例',
                 cloud: '云量',
@@ -811,6 +877,12 @@
                 windSpeedDescription: '绿色不超过 16 km/h，黄色为 17–32 km/h，红色超过 32 km/h。',
                 windDirection: '风向',
                 windDirectionDescription: '箭头指向风的来向。',
+                visibility: '能见度',
+                visibilityDescription: '示例数字的单位为千米。数值越大，远处空气通常越通透。',
+                aerosolAod: '气溶胶 AOD',
+                aerosolAodDescription: 'AOD 为 550 nm 全大气柱气溶胶光学厚度；从左到右依次为很低、较低、偏高、较高。数值越低，气溶胶对光的衰减通常越弱，但不能直接换算为能见度。两项由 Open-Meteo 提供，其中 AOD 使用 CAMS 数据，不随 EC、GFS 或 ICON 切换。',
+                celestialEvents: '日月升落时间',
+                celestialEventsDescription: '太阳和月亮图标用于区分天体；↑ 表示升起，↓ 表示落下，时间为观察点当地时间。',
             },
             events: {
                 all: '全部',
@@ -893,6 +965,7 @@
             aboutStarLabel: 'Star',
             aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
             weatherLoadError: 'Unable to load weather model data. Please try again.',
+            atmosphereLoadError: 'Unable to load AOD and visibility data from Open-Meteo.',
             weatherLegend: {
                 heading: 'Weather legend',
                 cloud: 'Cloud cover',
@@ -909,6 +982,12 @@
                 windSpeedDescription: 'Green is up to 16 km/h, yellow is 17–32 km/h, and red is above 32 km/h.',
                 windDirection: 'Wind direction',
                 windDirectionDescription: 'The arrow points toward the direction the wind comes from.',
+                visibility: 'Visibility',
+                visibilityDescription: 'Sample values are in kilometres. Higher values usually mean clearer air over longer distances.',
+                aerosolAod: 'Aerosol AOD',
+                aerosolAodDescription: 'AOD is total-column aerosol optical depth at 550 nm. From left to right, the samples mean very low, low, elevated, and high. Lower values usually mean less light attenuation by aerosols, but AOD cannot be converted directly into visibility. Open-Meteo provides both fields, with AOD sourced from CAMS independently of the EC, GFS, or ICON selection.',
+                celestialEvents: 'Sun and moon rise/set times',
+                celestialEventsDescription: 'Sun and moon icons identify the celestial body; ↑ means rise and ↓ means set. Times use the observer location\'s local time.',
             },
             events: {
                 all: 'All',
@@ -988,6 +1067,7 @@
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
     let weatherModel: WeatherModel = 'ecmwf';
+    let baseWeatherPoints: WeatherPoint[] = [];
     let weatherPoints: WeatherPoint[] = [];
     let weatherStatus: WeatherLoadStatus = 'idle';
     let weatherErrorMessage = '';
@@ -998,6 +1078,14 @@
     let resolvedContextLocationKey = '';
     let latestWeatherRequestId = 0;
     let weatherAbortController: AbortController | null = null;
+    let atmospherePoints: OpenMeteoAtmospherePoint[] = [];
+    let atmosphereStatus: WeatherLoadStatus = 'idle';
+    let atmosphereErrorMessage = '';
+    let atmosphereRequestKey = '';
+    let atmosphereLoadedKey = '';
+    let atmosphereLoadingKey = '';
+    let latestAtmosphereRequestId = 0;
+    let atmosphereAbortController: AbortController | null = null;
     let lightPollutionPoint: LightPollutionPoint | null = null;
     let lightPollutionStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
     let lightPollutionErrorMessage = '';
@@ -1042,6 +1130,10 @@
 
     $: weatherRequestKey = buildWeatherRequestKey(weatherModel, locationKey, currentInstant.getTime());
 
+    $: atmosphereRequestKey = buildOpenMeteoRequestKey(locationKey, currentInstant.getTime());
+
+    $: weatherPoints = mergeOpenMeteoAtmosphere(baseWeatherPoints, atmospherePoints);
+
     $: lightPollutionRequestKey = locationKey;
 
     $: lightPollutionErrorMessage = lightPollutionErrorKind === 'out-of-bounds'
@@ -1064,6 +1156,18 @@
         loadingKey: weatherLoadingKey,
     })) {
         void refreshWeather(weatherRequestKey);
+    }
+
+    $: if (shouldLoadWeather({
+        isMounted,
+        isWeatherTabActive: !isMobileOrTablet || summaryTab === 'weather',
+        locationKey,
+        resolvedContextLocationKey,
+        requestKey: atmosphereRequestKey,
+        loadedKey: atmosphereLoadedKey,
+        loadingKey: atmosphereLoadingKey,
+    })) {
+        void refreshAtmosphere(atmosphereRequestKey);
     }
 
     $: if (
@@ -1573,7 +1677,7 @@
         weatherLoadingKey = key;
         weatherStatus = 'loading';
         weatherErrorMessage = '';
-        weatherPoints = [];
+        baseWeatherPoints = [];
 
         try {
             const result = await getPointForecastData(
@@ -1607,7 +1711,7 @@
                 result.data as WeatherForecastPayload,
                 requestedAt,
             );
-            weatherPoints = nextPoints;
+            baseWeatherPoints = nextPoints;
             weatherStatus = nextPoints.length > 0 ? 'ready' : 'empty';
             weatherLoadedKey = key;
         } catch (error) {
@@ -1628,6 +1732,59 @@
         } finally {
             if (requestId === latestWeatherRequestId) {
                 weatherLoadingKey = '';
+            }
+        }
+    };
+
+    const refreshAtmosphere = async (key: string) => {
+        atmosphereAbortController?.abort();
+        const abortController = new AbortController();
+        atmosphereAbortController = abortController;
+        const requestId = ++latestAtmosphereRequestId;
+        const requestLocation = { ...selectedLocation };
+
+        atmosphereLoadingKey = key;
+        atmosphereStatus = 'loading';
+        atmosphereErrorMessage = '';
+        atmospherePoints = [];
+
+        try {
+            const nextPoints = await fetchOpenMeteoAtmosphere({
+                location: requestLocation,
+                signal: abortController.signal,
+            });
+            if (!isWeatherResponseCurrent({
+                aborted: abortController.signal.aborted,
+                requestId,
+                latestRequestId: latestAtmosphereRequestId,
+                requestKey: key,
+                currentRequestKey: atmosphereRequestKey,
+            })) {
+                return;
+            }
+
+            atmospherePoints = nextPoints;
+            atmosphereStatus = nextPoints.length > 0 ? 'ready' : 'error';
+            atmosphereErrorMessage = nextPoints.length > 0 ? '' : text.atmosphereLoadError;
+            atmosphereLoadedKey = key;
+        } catch {
+            if (!isWeatherResponseCurrent({
+                aborted: abortController.signal.aborted,
+                requestId,
+                latestRequestId: latestAtmosphereRequestId,
+                requestKey: key,
+                currentRequestKey: atmosphereRequestKey,
+            })) {
+                return;
+            }
+
+            atmospherePoints = [];
+            atmosphereStatus = 'error';
+            atmosphereErrorMessage = text.atmosphereLoadError;
+            atmosphereLoadedKey = key;
+        } finally {
+            if (requestId === latestAtmosphereRequestId) {
+                atmosphereLoadingKey = '';
             }
         }
     };
@@ -1700,6 +1857,12 @@
         void refreshWeather(weatherRequestKey);
     };
 
+    const retryAtmosphere = () => {
+        atmosphereLoadedKey = '';
+        atmosphereLoadingKey = '';
+        void refreshAtmosphere(atmosphereRequestKey);
+    };
+
     const unavailableMessage = (
         event: SolarEvent,
         reason: 'always-up' | 'always-down' | 'not-available',
@@ -1734,8 +1897,15 @@
         resolvedContextLocationKey = '';
         weatherLoadedKey = '';
         weatherAbortController?.abort();
-        weatherPoints = [];
+        baseWeatherPoints = [];
         weatherStatus = 'idle';
+        latestAtmosphereRequestId += 1;
+        atmosphereAbortController?.abort();
+        atmosphereLoadedKey = '';
+        atmosphereLoadingKey = '';
+        atmospherePoints = [];
+        atmosphereStatus = 'idle';
+        atmosphereErrorMessage = '';
         latestLightPollutionRequestId += 1;
         lightPollutionAbortController?.abort();
         lightPollutionLoadedKey = '';
@@ -1964,10 +2134,13 @@
             isMounted = false;
             latestRequestId += 1;
             latestWeatherRequestId += 1;
+            latestAtmosphereRequestId += 1;
             latestLightPollutionRequestId += 1;
             currentLocationRequestId += 1;
             weatherAbortController?.abort();
             weatherAbortController = null;
+            atmosphereAbortController?.abort();
+            atmosphereAbortController = null;
             lightPollutionAbortController?.abort();
             lightPollutionAbortController = null;
             if (currentDirectionTimer) {
@@ -2072,7 +2245,7 @@
         --weather-tone-mild: #aff5c0;
         --weather-tone-freezing: #f7f7f7;
         --summary-panel-height: 256px;
-        --desktop-weather-panel-height: 550px;
+        --desktop-weather-panel-height: 592px;
 
         box-sizing: border-box;
         width: 100%;
@@ -3325,6 +3498,35 @@
         color: var(--panel-muted);
         font-size: 10px;
         line-height: 1.4;
+    }
+
+    .weather-legend__sources {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .weather-legend__sources a {
+        color: #8ed0ff;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .weather-legend__celestial-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 28px;
+    }
+
+    .weather-legend__celestial-sample {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--panel-text);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        white-space: nowrap;
     }
 
     .weather-legend__scale {

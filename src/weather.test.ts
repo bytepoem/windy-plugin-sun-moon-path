@@ -70,6 +70,8 @@ describe('weather forecast transformation', () => {
                 precipMm: 0,
                 windKmh: 18,
                 windDirectionDeg: 350,
+                aod550: null,
+                visibilityKm: null,
                 lowCloudPercent: 30,
                 mediumCloudPercent: 50,
                 highCloudPercent: 70,
@@ -171,6 +173,15 @@ describe('weather forecast transformation', () => {
         expect(weatherMetricTone('windKmh', 16.2)).toBe('good');
         expect(weatherMetricTone('windKmh', 16.3)).toBe('warning');
         expect(weatherMetricTone('windKmh', 32.5)).toBe('danger');
+        expect(weatherMetricTone('visibilityKm', 0.8)).toBe('danger');
+        expect(weatherMetricTone('visibilityKm', 1.5)).toBe('orange');
+        expect(weatherMetricTone('visibilityKm', 3.5)).toBe('warning');
+        expect(weatherMetricTone('visibilityKm', 7)).toBe('mild');
+        expect(weatherMetricTone('visibilityKm', 12)).toBe('good');
+        expect(weatherMetricTone('aod550', 0.05)).toBe('good');
+        expect(weatherMetricTone('aod550', 0.15)).toBe('warning');
+        expect(weatherMetricTone('aod550', 0.3)).toBe('orange');
+        expect(weatherMetricTone('aod550', 0.5)).toBe('danger');
     });
 
     it('keys weather requests by model, location, and clock hour', () => {

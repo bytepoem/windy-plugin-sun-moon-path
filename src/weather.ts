@@ -12,7 +12,9 @@ export type WeatherMetric =
     | 'humidityPercent'
     | 'precipMm'
     | 'windKmh'
-    | 'windDirectionDeg';
+    | 'windDirectionDeg'
+    | 'aod550'
+    | 'visibilityKm';
 
 export type WeatherTone =
     | 'cloud'
@@ -64,6 +66,8 @@ export interface WeatherPoint {
     precipMm: number | null;
     windKmh: number | null;
     windDirectionDeg: number | null;
+    aod550: number | null;
+    visibilityKm: number | null;
 }
 
 export interface WeatherDateGroup {
@@ -262,6 +266,8 @@ export const transformWeatherPayload = (
                 precipMm: precipAmount === null ? null : roundTo(Math.max(0, precipAmount), 1),
                 windKmh: wind === null ? null : Math.round(Math.max(0, wind) * 3.6),
                 windDirectionDeg: normalizeDirection(finiteNumber(payload.data.windDir[dataIndex])),
+                aod550: null,
+                visibilityKm: null,
             };
         })
         .filter((point): point is WeatherPoint => point !== null)
@@ -381,6 +387,26 @@ export const weatherMetricTone = (metric: WeatherMetric, value: number | null): 
     }
     if (metric === 'windKmh') {
         return value > 32.4 ? 'danger' : value > 16.2 ? 'warning' : 'good';
+    }
+    if (metric === 'visibilityKm') {
+        return value < 1
+            ? 'danger'
+            : value < 3
+                ? 'orange'
+                : value < 5
+                    ? 'warning'
+                    : value < 10
+                        ? 'mild'
+                        : 'good';
+    }
+    if (metric === 'aod550') {
+        return value <= 0.1
+            ? 'good'
+            : value <= 0.2
+                ? 'warning'
+                : value <= 0.4
+                    ? 'orange'
+                    : 'danger';
     }
     return 'neutral';
 };

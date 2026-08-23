@@ -23,7 +23,8 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 - 自动将高德返回的 GCJ-02 坐标转换为 Windy 使用的 WGS84 坐标后定位。
 - 对极昼、极夜、当天无月升/月落等情况给出明确状态。
 - 提供当前位置从过去 6 小时到未来 5 天的天气模式表格，支持 EC、GFS 和 ICON 切换，默认使用 EC。
-- 天气表格包含天气、综合云量、高中低云、气温、露点、湿度、降水、风速和风向；云量由模式压力层数据聚合得到。
+- 天气表格包含天气、综合云量、高中低云、气温、露点、湿度、AOD 550 nm、能见度、降水、风速和风向；云量由模式压力层数据聚合得到。
+- AOD 和能见度无需 API Key，由 Open-Meteo 提供；其中 AOD 数据源为 CAMS，且两项数据不随 EC、GFS 或 ICON 切换。Open-Meteo 的全球 AOD 原生时间分辨率通常为 3 小时、空间分辨率约 45 km，欧洲区域可达到约 11 km 和逐小时。
 - 天气表格底部按同一时间轴绘制当前定位的太阳、月亮地平线以上曲线，并标注升起和降落时间；曲线来自本地天文计算，不属于 EC/ICON/GFS 模式字段。
 - 天气时间步长以 Windy 实际返回结果为准，不补造缺失小时；过去时段是模式结果，不是历史观测。
 - 插件界面支持中文和英文，语言选择会保存在当前浏览器。
@@ -106,6 +107,8 @@ npm run build
 7. 桌面端在 **事件**、**说明**、**设置**、**关于** 四个视图之间切换，并直接使用下方常驻天气表格；移动端在五个标签之间切换。
 8. 在天气表格中选择 **EC**、**GFS** 或 **ICON**，横向滑动查看过去 6 小时到未来 5 天的模式预报。
 
+AOD 和能见度行标记为 **OM**，表示数据由 [Open-Meteo](https://open-meteo.com/) 提供；AOD 的底层数据来自 [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/)。
+
 高德 API Key 只保存在当前浏览器的本地存储中。国内搜索结果会由 GCJ-02 转换为 WGS84，避免观察点在 Windy 地图上发生偏移。
 
 方向线从选中的观察点出发，按照对应事件时刻的方位角延伸，并标出 200 km 和 400 km
@@ -119,6 +122,7 @@ npm run build
 - `src/WeatherTable.svelte` - EC/ICON/GFS 天气表格、滚动和当前时间标记。
 - `src/WeatherIcon.svelte` - 天气状态矢量图标。
 - `src/weather.ts` - 天气时间序列转换、云层聚合和时间分组。
+- `src/openMeteo.ts` - Open-Meteo AOD、能见度请求、解析和时间轴合并。
 - `src/celestialCurve.ts` - 与天气列对齐的日月高度曲线和地平线事件计算。
 - `src/solar.ts` - 日月计算、方位角、距离、时间轴和几何计算逻辑。
 - `src/overlayOwner.ts` - 处理 Windy 面板重新挂载时的地图覆盖物归属。
