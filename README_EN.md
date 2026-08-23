@@ -21,13 +21,15 @@ relative to a point on the Windy map.
   moonset.
 - Supports date switching, map single-click location updates, and Windy context
   menu opening.
-- Searches domestic places and addresses in the Chinese UI with the user's own Amap Web Service API Key
-  and lets the user choose an observer location from autocomplete results.
+- Searches domestic places and addresses in the Chinese UI with the user's own Amap,
+  Baidu, or Tencent Maps API Key and switches providers from the search control.
 - Sorts results by straight-line distance from the observer and displays city,
   district, direct distance, and elevation.
-- Converts Amap GCJ-02 coordinates to the WGS84 coordinates used by Windy before
-  moving the map.
+- Converts Amap/Tencent GCJ-02 or Baidu BD-09 coordinates to the WGS84 coordinates
+  used by Windy before moving the map.
 - Handles unavailable polar-day, polar-night, and missing moon event cases.
+- Shows SQM, estimated equivalent Bortle level, and ideal-condition observing
+  references from the David Lorenz 2025 light-pollution atlas.
 - Adds a location forecast table spanning the available past 6 hours through the
   next 5 days, with EC, GFS, and ICON model switching and EC selected by default.
 - Shows weather, combined/high/medium/low cloud cover, temperature, dew point,
@@ -52,7 +54,8 @@ relative to a point on the Windy map.
   - **Weather** provides a horizontally scrollable EC, GFS, or ICON five-day forecast.
   - **Guide** explains the map legend, weather color scales, wind symbol, and data.
   - **Settings** controls line opacity and the optional 600 km reference point in
-    the current browser. Switch to the Chinese UI to configure an Amap Web Service API Key.
+    the current browser. Switch to the Chinese UI to configure Amap, Baidu, or
+    Tencent Maps API Keys.
   - **About** links to the repository and Issues, identifies the author and
     version, and provides a GitHub Star entry point.
 
@@ -121,12 +124,12 @@ The build output is written to `dist/` and includes `plugin.js`,
 
 After the plugin is open:
 
-1. To use domestic address search, switch to the Chinese UI, then save an Amap
-   **Web Service API Key** under **Settings**.
-2. In the Chinese UI, enter a domestic place or address at the top of the panel and
-   choose a distance-sorted autocomplete result. Each row includes its city, district,
-   direct distance, and elevation before moving the observer location. Address search
-   is hidden in the English UI.
+1. To use domestic address search, switch to the Chinese UI, then save an Amap,
+   Baidu, or Tencent Maps API Key under **Settings**.
+2. In the Chinese UI, select a configured provider, enter a domestic place or address,
+   and choose a distance-sorted autocomplete result. Each row includes its city,
+   district, direct distance, and elevation before moving the observer location.
+   Address search is hidden in the English UI.
 3. Select a date.
 4. Choose **All**, **Sunrise**, **Sunset**, **Moonrise**, or **Moonset**.
 5. Check the map direction lines and the event time, azimuth, and compass
@@ -141,8 +144,8 @@ After the plugin is open:
 Rows marked **OM** are provided by [Open-Meteo](https://open-meteo.com/). The AOD
 field is sourced from the [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/).
 
-The Amap API Key is stored only in the current browser's local storage. Domestic GCJ-02
-results are converted to WGS84 so the selected observer location does not shift on Windy.
+Map API Keys are stored only in the current browser's local storage. Domestic GCJ-02
+or BD-09 results are converted to WGS84 so the selected observer location does not shift on Windy.
 
 Direction lines start at the selected observer location. Each sampled line uses
 the calculated azimuth for that event time and extends through 200 km and
@@ -150,13 +153,18 @@ the calculated azimuth for that event time and extends through 200 km and
 
 ## Project Structure
 
-- `src/plugin.svelte` - Windy plugin UI and map integration.
-- `src/LocationSearch.svelte` - Amap autocomplete, result list, and keyboard interaction.
+- `src/plugin.svelte` - Windy plugin UI, state orchestration, and lifecycle integration.
+- `src/mapOverlayController.ts` - map direction lines, distance markers, live directions, and cleanup.
+- `src/observationPlanner.ts` - location-context caching, astronomy planning, and observing-window evidence.
+- `src/LocationSearch.svelte` - multi-provider autocomplete, result list, and keyboard interaction.
 - `src/amap.ts` - Amap Web Service requests, result parsing, and GCJ-02/WGS84 conversion.
+- `src/baidu.ts` - Baidu JSAPI place search and BD-09/WGS84 conversion.
+- `src/tencent.ts` - Tencent place suggestions and GCJ-02/WGS84 conversion.
 - `src/WeatherTable.svelte` - EC/ICON/GFS forecast table, scrolling, and current-time marker.
 - `src/WeatherIcon.svelte` - vector weather-condition icons.
 - `src/weather.ts` - forecast transformation, cloud aggregation, and time grouping.
 - `src/openMeteo.ts` - Open-Meteo AOD/visibility requests, parsing, and timeline merging.
+- `src/lightPollution.ts` - atlas tile loading, SQM conversion, and estimated observing conditions.
 - `src/celestialCurve.ts` - sun/moon altitude curves and horizon events aligned with forecast columns.
 - `src/solar.ts` - astronomy, azimuth, distance, timeline, and geometry logic.
 - `src/overlayOwner.ts` - map overlay ownership across Windy panel remounts.

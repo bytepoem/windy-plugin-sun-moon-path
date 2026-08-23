@@ -694,6 +694,7 @@
         color: #eaf0f8;
         background: #343b4d;
         font-size: 10.8px;
+        white-space: nowrap;
     }
 
     .weather-label--date {

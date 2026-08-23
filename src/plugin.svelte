@@ -48,7 +48,7 @@
                         class:active={selectedEvent === option.value}
                         aria-pressed={selectedEvent === option.value}
                         aria-label={text.events[option.value]}
-                        on:click={() => (selectedEvent = option.value)}
+                        on:click={() => selectEvent(option.value)}
                     >
                         {#if option.value === 'all'}
                             <span class="event-button__text">{text.events.all}</span>
@@ -106,7 +106,7 @@
         {:else if status === 'error'}
             <div class="status-message status-message--error" role="alert">
                 <span>{errorMessage}</span>
-                <button type="button" class="text-button" on:click={() => void refreshPaths(refreshKey)}>
+                <button type="button" class="text-button" on:click={() => void refreshPaths(astronomyKey)}>
                     {text.retry}
                 </button>
             </div>
@@ -198,17 +198,14 @@
                                     </svg>
                                 </span>
                                 {#if currentSolarDirection}
-                                    <strong>{Math.round(currentSolarDirection.azimuth)}° {compassDirectionLabel(currentSolarDirection.azimuth, uiLanguage)}</strong>
+                                    <strong>
+                                        <span class="live-position__azimuth">{Math.round(currentSolarDirection.azimuth)}°</span>
+                                        <span class="live-position__compass">{compassDirectionLabel(currentSolarDirection.azimuth, uiLanguage)}</span>
+                                    </strong>
                                     <em class="live-position__metric">
-                                        <span>{text.altitude} {currentSolarDirection.altitude.toFixed(1)}°</span>
-                                        <span class="live-position__event-azimuths">
-                                            {#if sunriseAzimuthLabel}
-                                                <span>↑{sunriseAzimuthLabel}</span>
-                                            {/if}
-                                            {#if sunsetAzimuthLabel}
-                                                <span>↓{sunsetAzimuthLabel}</span>
-                                            {/if}
-                                        </span>
+                                        <span class="live-position__altitude">{text.altitude} {currentSolarDirection.altitude.toFixed(1)}°</span>
+                                        <span class="live-position__event-azimuth">{sunriseAzimuthLabel ? `↑${sunriseAzimuthLabel}` : ''}</span>
+                                        <span class="live-position__event-azimuth">{sunsetAzimuthLabel ? `↓${sunsetAzimuthLabel}` : ''}</span>
                                     </em>
                                 {:else}
                                     <strong>--</strong>
@@ -221,17 +218,14 @@
                                     </svg>
                                 </span>
                                 {#if currentMoonInfo}
-                                    <strong>{Math.round(currentMoonInfo.azimuth)}° {compassDirectionLabel(currentMoonInfo.azimuth, uiLanguage)}</strong>
+                                    <strong>
+                                        <span class="live-position__azimuth">{Math.round(currentMoonInfo.azimuth)}°</span>
+                                        <span class="live-position__compass">{compassDirectionLabel(currentMoonInfo.azimuth, uiLanguage)}</span>
+                                    </strong>
                                     <em class="live-position__metric">
-                                        <span>{text.altitude} {currentMoonInfo.altitude.toFixed(1)}°</span>
-                                        <span class="live-position__event-azimuths">
-                                            {#if moonriseAzimuthLabel}
-                                                <span>↑{moonriseAzimuthLabel}</span>
-                                            {/if}
-                                            {#if moonsetAzimuthLabel}
-                                                <span>↓{moonsetAzimuthLabel}</span>
-                                            {/if}
-                                        </span>
+                                        <span class="live-position__altitude">{text.altitude} {currentMoonInfo.altitude.toFixed(1)}°</span>
+                                        <span class="live-position__event-azimuth">{moonriseAzimuthLabel ? `↑${moonriseAzimuthLabel}` : ''}</span>
+                                        <span class="live-position__event-azimuth">{moonsetAzimuthLabel ? `↓${moonsetAzimuthLabel}` : ''}</span>
                                     </em>
                                 {:else}
                                     <strong>--</strong>
@@ -282,7 +276,7 @@
                     />
 
                     <div class="night-window-list" aria-label="夜间观测时段">
-                        {#each displayAstronomyIntervalSlots as slot}
+                        {#each observationWindows as slot}
                             <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
                                 <div class="night-window__body">
                                     <strong>{text.intervals[slot.kind]}</strong>
@@ -703,6 +697,15 @@
         type OpenMeteoAtmospherePoint,
     } from './openMeteo';
     import { claimOverlayOwner } from './overlayOwner';
+    import { createMapOverlayController } from './mapOverlayController';
+    import {
+        buildObservationWindows,
+        createObservationPlanner,
+        ObservationPlannerError,
+        selectObservationPaths,
+        type ObservationEvent,
+        type ObservationWindow,
+    } from './observationPlanner';
     import LightPollutionSummary from './LightPollutionSummary.svelte';
     import LocationSearch from './LocationSearch.svelte';
     import WeatherTable from './WeatherTable.svelte';
@@ -716,19 +719,14 @@
         calculateAstronomyTimeline,
         calculateCurrentMoonInfo,
         calculateCurrentSolarDirection,
-        calculateSolarPath,
         compassDirection,
-        CURRENT_DIRECTION_COLOR,
-        CURRENT_MOON_DIRECTION_COLOR,
         addDaysToDateInput,
         dateInputForInstant,
-        dateInputToUtcMidnight,
         dateInputToUtcNoon,
         formatLocalClock,
         formatLocalDateTime,
         LINE_COLORS,
         MOON_LINE_COLORS,
-        splitPolylineAtDateLine,
         coordinatesFromLocation,
         type AstronomyInterval,
         type AstronomyTimeline,
@@ -772,12 +770,11 @@
             return 'UTC';
         }
     })();
-    type DirectionEvent = SolarEvent | 'all';
+    type DirectionEvent = ObservationEvent;
     type SummaryTab = 'events' | 'weather' | 'guide' | 'settings' | 'about';
     type UiLanguage = 'zh' | 'en';
     const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'guide', 'settings', 'about'];
     const desktopSummaryTabOrder: SummaryTab[] = ['events', 'guide', 'settings', 'about'];
-    const celestialEvents: SolarEvent[] = ['sunrise', 'sunset', 'moonrise', 'moonset'];
     const eventOptions: { value: DirectionEvent }[] = [
         { value: 'all' },
         { value: 'sunrise' },
@@ -840,6 +837,9 @@
         aboutStarHint: string;
         weatherLoadError: string;
         atmosphereLoadError: string;
+        timeZoneLoadError: string;
+        timeZoneInvalidError: string;
+        astronomyLoadError: string;
         weatherLegend: Record<
             | 'heading'
             | 'cloud'
@@ -937,6 +937,9 @@
             aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
             weatherLoadError: '无法取得天气模式数据，请稍后重试。',
             atmosphereLoadError: '无法取得 Open-Meteo 的 AOD 和能见度数据。',
+            timeZoneLoadError: '无法取得观察点时区，请稍后重试。',
+            timeZoneInvalidError: 'Windy 返回的观察点时区无效，请稍后重试。',
+            astronomyLoadError: '日月方位计算失败，请稍后重试。',
             weatherLegend: {
                 heading: '天气图例',
                 cloud: '云量',
@@ -1058,6 +1061,9 @@
             aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
             weatherLoadError: 'Unable to load weather model data. Please try again.',
             atmosphereLoadError: 'Unable to load AOD and visibility data from Open-Meteo.',
+            timeZoneLoadError: 'Unable to load the observer time zone. Please try again.',
+            timeZoneInvalidError: 'Windy returned an invalid observer time zone. Please try again.',
+            astronomyLoadError: 'Unable to calculate sun and moon directions. Please try again.',
             weatherLegend: {
                 heading: 'Weather legend',
                 cloud: 'Cloud cover',
@@ -1143,6 +1149,11 @@
         }
         return cachedGpsLocation() || mapCenter;
     };
+    const observationPlanner = createObservationPlanner({
+        getTimeZone: async (location, datetime) => (await getTimezoneInfo(location, datetime)).data.TZname,
+        getElevation: async location => (await getElevation(location.lat, location.lon)).data,
+    });
+    const mapOverlayController = createMapOverlayController(map);
 
     let selectedLocation: Coordinates = {
         ...defaultLocation(),
@@ -1206,21 +1217,13 @@
     let locationApiKeys: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
     let locationApiKeyDrafts: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
     let savedApiKeyProvider: LocationProvider | null = null;
-    let displayAstronomyIntervalSlots: {
-        kind: AstronomyInterval['kind'];
-        interval: AstronomyInterval | null;
-    }[] = [];
+    let observationWindows: ObservationWindow[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
     let isMounted = false;
     let latestRequestId = 0;
     let panelElement: HTMLElement | null = null;
-    let refreshKey = '';
-    let mapLayerGroup: L.LayerGroup | null = null;
-    let lines: L.Polyline[] = [];
-    let markers: L.Marker[] = [];
-    let currentDirectionLines: L.Polyline[] = [];
-    let currentMoonDirectionLines: L.Polyline[] = [];
+    let astronomyKey = '';
     let currentDirectionTimer: ReturnType<typeof setInterval> | null = null;
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
     let releaseOverlayOwnership: (() => void) | null = null;
@@ -1231,7 +1234,7 @@
 
     $: text = translations[uiLanguage];
 
-    $: refreshKey = `${selectedDate}|${selectedEvent}|${selectedLocation.lat}|${selectedLocation.lon}`;
+    $: astronomyKey = makeAstronomyKey(selectedLocation, selectedDate);
 
     $: locationKey = buildWeatherLocationKey(selectedLocation);
 
@@ -1253,8 +1256,8 @@
             ? text.lightPollutionLoadError
             : '';
 
-    $: if (isMounted && refreshKey) {
-        void refreshPaths(refreshKey);
+    $: if (isMounted && astronomyKey) {
+        void refreshPaths(astronomyKey);
     }
 
     $: if (shouldLoadWeather({
@@ -1298,19 +1301,12 @@
         const selectedDayReference = dateInputForInstant(currentInstant, timeZone) === selectedDate
             ? currentInstant.getTime()
             : dateInputToUtcNoon(selectedDate, timeZone).getTime();
-        const preferredInterval = (kind: AstronomyInterval['kind']): AstronomyInterval | null => {
-            const candidates = (astronomyTimeline?.intervals || []).filter(interval => interval.kind === kind);
-            if (candidates.length === 0) {
-                return null;
-            }
-            return candidates.find(interval =>
-                interval.start.getTime() <= selectedDayReference && interval.end.getTime() >= selectedDayReference,
-            ) || candidates.find(interval => interval.start.getTime() >= selectedDayReference) || candidates.at(-1) || null;
-        };
-        displayAstronomyIntervalSlots = (['moonless-night', 'milky-way'] as const).map(kind => ({
-            kind,
-            interval: preferredInterval(kind),
-        }));
+        observationWindows = buildObservationWindows({
+            timeline: astronomyTimeline,
+            weatherPoints,
+            lightPollution: lightPollutionPoint,
+            referenceTime: selectedDayReference,
+        });
     }
 
     $: if (isMounted) {
@@ -1397,7 +1393,17 @@
     };
 
     const selectedMapPaths = (paths = solarPaths): SolarPath[] =>
-        selectedEvent === 'all' ? paths : paths.filter(path => path.event === selectedEvent);
+        selectObservationPaths(paths, selectedEvent);
+
+    const selectEvent = (event: DirectionEvent) => {
+        selectedEvent = event;
+        if (solarPaths.length === 0) {
+            return;
+        }
+        const paths = selectedMapPaths();
+        status = paths.some(path => path.status === 'ok') ? 'ready' : 'empty';
+        renderMapFeatures(paths);
+    };
 
     const loadExtendedDistancePreference = (): boolean => {
         try {
@@ -1419,7 +1425,7 @@
         showExtendedDistanceMarker = value;
         saveExtendedDistancePreference(value);
         if (isMounted && solarPaths.length > 0) {
-            drawMapFeatures(selectedMapPaths());
+            renderMapFeatures(selectedMapPaths());
         }
     };
 
@@ -1449,26 +1455,13 @@
         }
     };
 
-    const scaledDirectionLineOpacity = (baseOpacity: number): number =>
-        baseOpacity * directionLineOpacityPercent / 100;
-
-    const applyDirectionLineOpacity = () => {
-        for (const line of lines) {
-            const baseOpacity = line.options.dashArray ? 0.82 : 0.95;
-            line.setStyle({ opacity: scaledDirectionLineOpacity(baseOpacity) });
-        }
-        for (const line of [...currentDirectionLines, ...currentMoonDirectionLines]) {
-            line.setStyle({ opacity: scaledDirectionLineOpacity(0.95) });
-        }
-    };
-
     const changeDirectionLineOpacity = (event: Event) => {
         const nextValue = normalizeDirectionLineOpacityPercent(
             Number((event.currentTarget as HTMLInputElement).value),
         );
         directionLineOpacityPercent = nextValue;
         saveDirectionLineOpacityPreference(nextValue);
-        applyDirectionLineOpacity();
+        mapOverlayController.setOpacity(nextValue);
     };
 
     const loadLocationSearchProvider = (): LocationProvider => {
@@ -1545,17 +1538,8 @@
         }
     };
 
-    const isValidTimeZone = (candidate: string): boolean => {
-        try {
-            new Intl.DateTimeFormat(undefined, { timeZone: candidate }).format();
-            return true;
-        } catch {
-            return false;
-        }
-    };
-
-    const makeRefreshKey = (location: Coordinates, dateInput: string, event: DirectionEvent): string =>
-        `${dateInput}|${event}|${location.lat}|${location.lon}`;
+    const makeAstronomyKey = (location: Coordinates, dateInput: string): string =>
+        `${dateInput}|${location.lat}|${location.lon}`;
 
     const lineColorForEvent = (event: DirectionEvent, kind: SolarSampleKind): string =>
         event === 'moonrise' || event === 'moonset' ? MOON_LINE_COLORS[kind] : LINE_COLORS[kind];
@@ -1568,61 +1552,20 @@
         return labels[Math.round(((azimuth % 360) + 360) % 360 / 45) % labels.length];
     };
 
-    const removeMapFeatures = () => {
-        mapLayerGroup?.remove();
-        mapLayerGroup = null;
-        lines = [];
-        markers = [];
-        currentDirectionLines = [];
-        currentMoonDirectionLines = [];
-    };
-
-    const markerIcon = (kind: 'origin' | 'inner' | 'outer' | 'extended'): L.DivIcon => {
-        const sizes = {
-            origin: 16,
-            inner: 10,
-            outer: 10,
-            extended: 10,
-        };
-        const size = sizes[kind];
-
-        return new L.DivIcon({
-            className: `sun-path-marker sun-path-marker--${kind}`,
-            html: '<span></span>',
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
+    const renderMapFeatures = (paths: SolarPath[]) => {
+        mapOverlayController.render({
+            location: selectedLocation,
+            paths,
+            currentSun: currentSolarDirection,
+            currentMoon: currentMoonInfo,
+            showExtendedDistanceMarker,
+            opacityPercent: directionLineOpacityPercent,
+            originLabel: text.legend.origin,
+            eventNames: text.events,
         });
     };
 
-    const toLatLng = (location: Coordinates): [number, number] => [location.lat, location.lon];
-
-    const removeCurrentDirectionLines = () => {
-        for (const line of [...currentDirectionLines, ...currentMoonDirectionLines]) {
-            line.remove();
-        }
-        currentDirectionLines = [];
-        currentMoonDirectionLines = [];
-    };
-
-    const drawDirectionLine = (
-        direction: { endpoint: Coordinates },
-        color: string,
-        layerGroup: L.LayerGroup,
-        options: L.PolylineOptions = {},
-    ): L.Polyline[] =>
-        splitPolylineAtDateLine([selectedLocation, direction.endpoint]).map(
-            segment =>
-                new L.Polyline(segment.map(toLatLng), {
-                    color,
-                    weight: 2,
-                    opacity: scaledDirectionLineOpacity(0.95),
-                    lineCap: 'round',
-                    lineJoin: 'round',
-                    ...options,
-                }).addTo(layerGroup),
-        );
-
-    const drawCurrentDirectionLines = () => {
+    const updateCurrentDirections = () => {
         currentInstant = new Date();
         try {
             currentSolarDirection = calculateCurrentSolarDirection({
@@ -1637,188 +1580,57 @@
             currentSolarDirection = null;
             currentMoonInfo = null;
         }
-
-        if (!mapLayerGroup) {
-            return;
-        }
-
-        removeCurrentDirectionLines();
-        const layerGroup = mapLayerGroup;
-        if (currentSolarDirection) {
-            currentDirectionLines = drawDirectionLine(currentSolarDirection, CURRENT_DIRECTION_COLOR, layerGroup);
-        }
-        if (currentMoonInfo) {
-            currentMoonDirectionLines = drawDirectionLine(
-                currentMoonInfo,
-                CURRENT_MOON_DIRECTION_COLOR,
-                layerGroup,
-                { dashArray: '7 6' },
-            );
-        }
-    };
-
-    const drawMapFeatures = (paths: SolarPath[]) => {
-        removeMapFeatures();
-
-        const availablePaths = paths.filter(
-            (path): path is Extract<SolarPath, { status: 'ok' }> => path.status === 'ok',
-        );
-        if (availablePaths.length === 0) {
-            drawCurrentDirectionLines();
-            return;
-        }
-
-        mapLayerGroup = new L.LayerGroup().addTo(map);
-        const layerGroup = mapLayerGroup;
-
-        const originMarker = new L.Marker(toLatLng(selectedLocation), {
-            icon: markerIcon('origin'),
-        }).addTo(layerGroup);
-        originMarker.bindTooltip('用户位置', { direction: 'top', offset: [0, -8] });
-        markers.push(originMarker);
-        drawCurrentDirectionLines();
-
-        for (const path of availablePaths) {
-            const isMoonEvent = path.event === 'moonrise' || path.event === 'moonset';
-            for (const sample of path.samples) {
-                const pathSegments = splitPolylineAtDateLine([
-                    selectedLocation,
-                    sample.point200,
-                    sample.point400,
-                    ...(showExtendedDistanceMarker ? [sample.point600] : []),
-                ]);
-                for (const segment of pathSegments) {
-                    const line = new L.Polyline(segment.map(toLatLng), {
-                        color: lineColorForEvent(path.event, sample.kind),
-                        weight: 3,
-                        opacity: scaledDirectionLineOpacity(isMoonEvent ? 0.82 : 0.95),
-                        lineCap: 'round',
-                        lineJoin: 'round',
-                        ...(isMoonEvent ? { dashArray: '9 6' } : {}),
-                    }).addTo(layerGroup);
-                    lines.push(line);
-                }
-
-                const innerMarker = new L.Marker(toLatLng(sample.point200), {
-                    icon: markerIcon('inner'),
-                }).addTo(layerGroup);
-                innerMarker.bindTooltip(`${eventDisplayName(path.event, text)} · ${sample.label} · 200 km`, { direction: 'top', offset: [0, -6] });
-                markers.push(innerMarker);
-
-                const outerMarker = new L.Marker(toLatLng(sample.point400), {
-                    icon: markerIcon('outer'),
-                }).addTo(layerGroup);
-                outerMarker.bindTooltip(`${eventDisplayName(path.event, text)} · ${sample.label} · 400 km`, { direction: 'top', offset: [0, -6] });
-                markers.push(outerMarker);
-
-                if (showExtendedDistanceMarker) {
-                    const extendedMarker = new L.Marker(toLatLng(sample.point600), {
-                        icon: markerIcon('extended'),
-                    }).addTo(layerGroup);
-                    extendedMarker.bindTooltip(`${eventDisplayName(path.event, text)} · ${sample.label} · 600 km`, { direction: 'top', offset: [0, -6] });
-                    markers.push(extendedMarker);
-                }
-            }
-        }
-    };
-
-    const loadLocationContext = async (
-        location: Coordinates,
-        dateInput: string,
-        requestId: number,
-    ): Promise<{ timeZone: string; elevationM: number } | null> => {
-        const datetime = dateInputToUtcNoon(dateInput, 'UTC').toISOString();
-        const contextLocationKey = buildWeatherLocationKey(location);
-        const knownElevation = elevationLocationKey === contextLocationKey && Number.isFinite(elevationM)
-            ? elevationM
-            : null;
-        const [timezoneResult, elevationResult] = await Promise.allSettled([
-            getTimezoneInfo(location, datetime),
-            knownElevation === null
-                ? getElevation(location.lat, location.lon)
-                : Promise.resolve({ data: knownElevation }),
-        ]);
-
-        if (requestId !== latestRequestId) {
-            return null;
-        }
-
-        if (timezoneResult.status !== 'fulfilled') {
-            throw new Error('无法取得观察点时区，请稍后重试。');
-        }
-
-        const candidate = timezoneResult.value.data.TZname;
-        if (!candidate || !isValidTimeZone(candidate)) {
-            throw new Error('Windy 返回的观察点时区无效，请稍后重试。');
-        }
-
-        let resolvedElevation = 0;
-        if (elevationResult.status === 'fulfilled' && Number.isFinite(elevationResult.value.data)) {
-            resolvedElevation = Math.max(0, elevationResult.value.data);
-        }
-
-        timeZone = candidate;
-        resolvedContextLocationKey = contextLocationKey;
-        elevationLocationKey = contextLocationKey;
-        elevationM = resolvedElevation;
-        return { timeZone: candidate, elevationM: resolvedElevation };
+        mapOverlayController.updateCurrent({
+            location: selectedLocation,
+            currentSun: currentSolarDirection,
+            currentMoon: currentMoonInfo,
+            opacityPercent: directionLineOpacityPercent,
+        });
     };
 
     const refreshPaths = async (key: string) => {
         const requestId = ++latestRequestId;
         const location = { ...selectedLocation };
         const dateInput = selectedDate;
-        const event = selectedEvent;
+        const contextLocationKey = buildWeatherLocationKey(location);
+        const knownElevation = elevationLocationKey === contextLocationKey && Number.isFinite(elevationM)
+            ? elevationM
+            : null;
 
         status = 'loading';
         errorMessage = '';
+        solarPaths = [];
         astronomyTimeline = null;
-        removeMapFeatures();
+        mapOverlayController.destroy();
 
         try {
-            const context = await loadLocationContext(location, dateInput, requestId);
-            if (!context || key !== refreshKey) {
+            const plan = await observationPlanner.plan({ location, dateInput, knownElevationM: knownElevation });
+            if (requestId !== latestRequestId || key !== astronomyKey) {
                 return;
             }
 
-            const nextPaths = celestialEvents.map(eventName => {
-                const eventDate = eventName === 'moonrise' || eventName === 'moonset'
-                    ? dateInputToUtcMidnight(dateInput, context.timeZone)
-                    : dateInputToUtcNoon(dateInput, context.timeZone);
-                return calculateSolarPath({
-                    date: eventDate,
-                    dateInput,
-                    timeZone: context.timeZone,
-                    location,
-                    event: eventName,
-                    elevationM: context.elevationM,
-                });
-            });
-            const nextTimeline = calculateAstronomyTimeline({
-                dateInput,
-                timeZone: context.timeZone,
-                location,
-                elevationM: context.elevationM,
-            });
-
-            if (requestId !== latestRequestId || key !== refreshKey) {
-                return;
-            }
-
-            solarPaths = nextPaths;
-            astronomyTimeline = nextTimeline;
-            const selectedPaths = event === 'all' ? nextPaths : nextPaths.filter(path => path.event === event);
+            timeZone = plan.timeZone;
+            resolvedContextLocationKey = contextLocationKey;
+            elevationLocationKey = contextLocationKey;
+            elevationM = plan.elevationM;
+            solarPaths = plan.paths;
+            astronomyTimeline = plan.timeline;
+            const selectedPaths = selectObservationPaths(plan.paths, selectedEvent);
             status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
-            drawMapFeatures(selectedPaths);
+            renderMapFeatures(selectedPaths);
         } catch (error) {
-            if (requestId !== latestRequestId || key !== refreshKey) {
+            if (requestId !== latestRequestId || key !== astronomyKey) {
                 return;
             }
 
             status = 'error';
             solarPaths = [];
             astronomyTimeline = null;
-            errorMessage = error instanceof Error ? error.message : '日月方位计算失败，请稍后重试。';
+            errorMessage = error instanceof ObservationPlannerError
+                ? error.code === 'TIME_ZONE_UNAVAILABLE'
+                    ? text.timeZoneLoadError
+                    : text.timeZoneInvalidError
+                : text.astronomyLoadError;
         }
     };
 
@@ -2103,9 +1915,9 @@
         lightPollutionPoint = null;
         lightPollutionStatus = 'idle';
         lightPollutionErrorKind = 'none';
-        const nextKey = makeRefreshKey(nextLocation, selectedDate, selectedEvent);
-        const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted, refreshKey, nextKey);
-        refreshKey = nextKey;
+        const nextKey = makeAstronomyKey(nextLocation, selectedDate);
+        const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted, astronomyKey, nextKey);
+        astronomyKey = nextKey;
 
         if (isMounted) {
             if (needsImmediateRefresh) {
@@ -2367,7 +2179,7 @@
                 clearTimeout(locationSyncTimer);
                 locationSyncTimer = null;
             }
-            removeMapFeatures();
+            mapOverlayController.destroy();
             singleclick.off(name, setLocationFromMapClick);
             bcast.off('back2home', handleBackToHome);
             map.off('dragstart', handleMapDragStart);
@@ -2388,8 +2200,8 @@
         bcast.on('back2home', handleBackToHome);
         map.on('dragstart', handleMapDragStart);
         map.on('moveend', handleMapMoveEnd);
-        drawCurrentDirectionLines();
-        currentDirectionTimer = setInterval(drawCurrentDirectionLines, 5_000);
+        updateCurrentDirections();
+        currentDirectionTimer = setInterval(updateCurrentDirections, 5_000);
     });
 
     onDestroy(() => {
@@ -3398,6 +3210,7 @@
 
     .live-position__icon {
         display: inline-grid;
+        justify-self: center;
         align-self: center;
         flex: 0 0 auto;
         place-items: center;
@@ -3449,37 +3262,45 @@
     }
 
     .live-position strong {
+        display: grid;
+        grid-template-columns: 4ch minmax(2em, auto);
+        column-gap: 0.4ch;
         color: var(--astronomy-text);
         font-weight: 700;
     }
 
-    .live-position__metric {
-        display: flex;
+    .live-position strong > span {
+        color: inherit;
+    }
+
+    .live-position__azimuth {
+        justify-self: start;
+        text-align: left;
+    }
+
+    .live-position__compass {
+        text-align: left;
+    }
+
+    .live-position .live-position__metric {
+        display: grid;
+        grid-template-columns: 7.2ch 5ch 5ch;
         align-items: center;
-        justify-content: flex-start;
-        gap: 5px;
+        column-gap: 3px;
     }
 
     .live-position__metric > span {
         display: inline-flex;
         align-items: center;
+        justify-content: flex-start;
         min-height: var(--live-row-height);
         line-height: var(--live-row-height);
     }
 
-    .live-position__event-azimuths {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
+    .live-position__event-azimuth {
         color: var(--astronomy-muted);
         font-size: 1em;
-        line-height: var(--live-row-height);
-    }
-
-    .live-position__event-azimuths > span {
-        display: inline-flex;
-        align-items: center;
-        min-height: var(--live-row-height);
+        text-align: left;
     }
 
     .orbit-badge {
@@ -4474,11 +4295,7 @@
         }
 
         .live-position__metric {
-            gap: 3px;
-        }
-
-        .live-position__event-azimuths {
-            gap: 2px;
+            column-gap: 2px;
         }
 
         .orbit-moon {

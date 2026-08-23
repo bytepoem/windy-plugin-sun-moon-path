@@ -18,10 +18,11 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 - 显示当前太阳和月亮的方位角、高度角、月相和月亮照明比例。
 - 提供当天的黎明、日出、月升、日落、黄昏、月落时间轴。
 - 支持切换日期、单击地图重新选择位置、从 Windy 右键菜单打开。
-- 支持使用用户自己的高德 Web 服务 API Key 搜索国内地点或地址，并从联想列表中选择观察点。
+- 支持配置用户自己的高德、百度或腾讯地图 API Key，切换搜索提供商并从国内地点联想列表中选择观察点。
 - 地址结果按与当前观察点的直线距离排序，并显示城市、区县、直线距离和海拔。
-- 自动将高德返回的 GCJ-02 坐标转换为 Windy 使用的 WGS84 坐标后定位。
+- 自动将高德/腾讯的 GCJ-02 或百度的 BD-09 坐标转换为 Windy 使用的 WGS84 坐标后定位。
 - 对极昼、极夜、当天无月升/月落等情况给出明确状态。
+- 显示 David Lorenz 2025 光污染图集的 SQM、估算等效 Bortle 等级和理想条件下的观测参考。
 - 提供当前位置从过去 6 小时到未来 5 天的天气模式表格，支持 EC、GFS 和 ICON 切换，默认使用 EC。
 - 天气表格包含天气、综合云量、高中低云、气温、露点、湿度、AOD 550 nm、能见度、降水、风速和风向；云量由模式压力层数据聚合得到。
 - AOD 和能见度无需 API Key，由 Open-Meteo 提供；其中 AOD 数据源为 CAMS，且两项数据不随 EC、GFS 或 ICON 切换。Open-Meteo 的全球 AOD 原生时间分辨率通常为 3 小时、空间分辨率约 45 km，欧洲区域可达到约 11 km 和逐小时。
@@ -32,7 +33,7 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
   - **事件**：查看日月事件时间、方向和当天时间轴。
   - **天气**：横向查看 EC、GFS 或 ICON 模式的五天天气时间序列。
   - **说明**：查看地图图例、天气色阶、风向符号和数据说明。
-  - **设置**：填写高德 Web 服务 API Key，并控制方位线透明度和是否显示 600 km 参考点；设置会保存在当前浏览器。
+  - **设置**：填写高德、百度或腾讯地图 API Key，并控制方位线透明度和是否显示 600 km 参考点；设置会保存在当前浏览器。
   - **关于**：查看仓库、Issues、作者和版本信息，并提供 GitHub Star 入口。
 
 ## 环境要求
@@ -98,8 +99,8 @@ npm run build
 
 插件打开后：
 
-1. 如需地址搜索，在 **设置** 中填写并保存高德开放平台的 **Web 服务 API Key**。
-2. 中文界面下，在面板顶部输入国内地点或地址，从按直线距离排序的联想列表中选择结果；列表同时显示城市、区县、直线距离和海拔，地图会定位到该观察点。英文界面不显示地址搜索。
+1. 如需地址搜索，在 **设置** 中填写并保存高德、百度或腾讯地图对应的 API Key。
+2. 中文界面下，在面板顶部选择已配置的搜索提供商并输入国内地点或地址，从按直线距离排序的联想列表中选择结果；列表同时显示城市、区县、直线距离和海拔，地图会定位到该观察点。英文界面不显示地址搜索。
 3. 选择日期。
 4. 选择 **All**、**Sunrise**、**Sunset**、**Moonrise** 或 **Moonset**。
 5. 查看地图上的方向线和面板中的事件时间、方位角、方向名称。
@@ -109,20 +110,25 @@ npm run build
 
 AOD 和能见度行标记为 **OM**，表示数据由 [Open-Meteo](https://open-meteo.com/) 提供；AOD 的底层数据来自 [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/)。
 
-高德 API Key 只保存在当前浏览器的本地存储中。国内搜索结果会由 GCJ-02 转换为 WGS84，避免观察点在 Windy 地图上发生偏移。
+地图 API Key 只保存在当前浏览器的本地存储中。国内搜索结果会从 GCJ-02 或 BD-09 转换为 WGS84，避免观察点在 Windy 地图上发生偏移。
 
 方向线从选中的观察点出发，按照对应事件时刻的方位角延伸，并标出 200 km 和 400 km
 参考点；开启设置后会额外显示 600 km 参考点。
 
 ## 项目结构
 
-- `src/plugin.svelte` - Windy 插件界面和地图集成。
-- `src/LocationSearch.svelte` - 高德地点联想、搜索结果列表和键盘交互。
+- `src/plugin.svelte` - Windy 插件界面、状态编排和生命周期集成。
+- `src/mapOverlayController.ts` - 地图方向线、参考点、实时方向和图层销毁。
+- `src/observationPlanner.ts` - 地点上下文缓存、天文事件规划和观测窗口证据聚合。
+- `src/LocationSearch.svelte` - 多地图地点联想、搜索结果列表和键盘交互。
 - `src/amap.ts` - 高德 Web 服务调用、结果解析和 GCJ-02/WGS84 坐标转换。
+- `src/baidu.ts` - 百度 JSAPI 地点搜索和 BD-09/WGS84 坐标转换。
+- `src/tencent.ts` - 腾讯地点联想和 GCJ-02/WGS84 坐标转换。
 - `src/WeatherTable.svelte` - EC/ICON/GFS 天气表格、滚动和当前时间标记。
 - `src/WeatherIcon.svelte` - 天气状态矢量图标。
 - `src/weather.ts` - 天气时间序列转换、云层聚合和时间分组。
 - `src/openMeteo.ts` - Open-Meteo AOD、能见度请求、解析和时间轴合并。
+- `src/lightPollution.ts` - 光污染图集瓦片读取、SQM 和估算观测条件。
 - `src/celestialCurve.ts` - 与天气列对齐的日月高度曲线和地平线事件计算。
 - `src/solar.ts` - 日月计算、方位角、距离、时间轴和几何计算逻辑。
 - `src/overlayOwner.ts` - 处理 Windy 面板重新挂载时的地图覆盖物归属。

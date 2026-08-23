@@ -305,12 +305,8 @@ export const buildWeatherDateGroups = (
         groups.push({
             key: parts.key,
             label: language === 'zh'
-                ? `${Number(parts.month)}月${Number(parts.day)}日`
-                : new Intl.DateTimeFormat('en-US', {
-                    timeZone,
-                    month: 'short',
-                    day: 'numeric',
-                }).format(point.timestamp),
+                ? `${Number(parts.month)}.${Number(parts.day)}`
+                : `${Number(parts.month)}/${Number(parts.day)}`,
             startIndex: index,
             length: 1,
         });

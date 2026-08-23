@@ -25,7 +25,7 @@ describe('location selection', () => {
     });
 
     it('refreshes immediately when a mounted plugin selects the same location context again', () => {
-        expect(shouldRefreshSameLocationImmediately(true, '2026-08-23|all|24.919|112.659', '2026-08-23|all|24.919|112.659')).toBe(true);
+        expect(shouldRefreshSameLocationImmediately(true, '2026-08-23|24.919|112.659', '2026-08-23|24.919|112.659')).toBe(true);
         expect(shouldRefreshSameLocationImmediately(true, 'old-location', 'new-location')).toBe(false);
         expect(shouldRefreshSameLocationImmediately(false, 'same-location', 'same-location')).toBe(false);
     });

@@ -559,7 +559,8 @@
         position: relative;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
-        min-height: 46px;
+        height: 38px;
+        min-height: 38px;
         border: 1px solid var(--panel-border);
         border-radius: 7px;
         background: rgba(8, 15, 27, 0.68);
@@ -583,7 +584,8 @@
         justify-content: space-between;
         width: 100%;
         min-width: 88px;
-        min-height: 44px;
+        height: 36px;
+        min-height: 36px;
         padding: 0 11px;
         border: 0;
         border-right: 1px solid var(--panel-border);
@@ -671,7 +673,7 @@
 
     .location-search__control input {
         min-width: 0;
-        height: 44px;
+        height: 36px;
         padding: 0 11px;
         border: 0;
         outline: 0;
@@ -693,7 +695,8 @@
 
     .location-search__submit {
         min-width: 60px;
-        min-height: 44px;
+        height: 36px;
+        min-height: 36px;
         padding: 0 12px;
         border: 0;
         border-left: 1px solid var(--panel-border);
