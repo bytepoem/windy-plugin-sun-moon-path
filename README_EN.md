@@ -29,13 +29,13 @@ relative to a point on the Windy map.
   moving the map.
 - Handles unavailable polar-day, polar-night, and missing moon event cases.
 - Adds a location forecast table spanning the available past 6 hours through the
-  next 5 days, with EC and ICON model switching and EC selected by default.
+  next 5 days, with EC, GFS, and ICON model switching and EC selected by default.
 - Shows weather, combined/high/medium/low cloud cover, temperature, dew point,
   humidity, precipitation, wind speed, and wind direction. Cloud coverage is
   aggregated from the model pressure levels.
 - Draws the above-horizon sun and moon curves on the same time axis and labels
   rise/set times for the selected location. These curves are calculated locally
-  and are not EC/ICON model fields.
+  and are not EC/ICON/GFS model fields.
 - Uses the time steps returned by Windy without inventing missing hours. Past
   timestamps remain model output rather than historical observations.
 - Provides English and Chinese UI text and persists the language choice in the
@@ -45,7 +45,7 @@ relative to a point on the Windy map.
   scrolling remains available for shorter windows. Mobile keeps five tabs:
   **Events**, **Weather**, **Guide**, **Settings**, and **About**:
   - **Events** shows event times, directions, and the daily astronomy timeline.
-  - **Weather** provides a horizontally scrollable EC or ICON five-day forecast.
+  - **Weather** provides a horizontally scrollable EC, GFS, or ICON five-day forecast.
   - **Guide** explains the map legend, weather color scales, wind symbol, and data.
   - **Settings** controls line opacity and the optional 600 km reference point in
     the current browser. Switch to the Chinese UI to configure an Amap Web Service API Key.
@@ -131,7 +131,7 @@ After the plugin is open:
 7. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
    while using the always-visible forecast below. On mobile, switch between all
    five tabs.
-8. In the forecast table, select **EC** or **ICON** and scroll from the available past
+8. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
    6 hours through the next 5 days.
 
 The Amap API Key is stored only in the current browser's local storage. Domestic GCJ-02
@@ -146,7 +146,7 @@ the calculated azimuth for that event time and extends through 200 km and
 - `src/plugin.svelte` - Windy plugin UI and map integration.
 - `src/LocationSearch.svelte` - Amap autocomplete, result list, and keyboard interaction.
 - `src/amap.ts` - Amap Web Service requests, result parsing, and GCJ-02/WGS84 conversion.
-- `src/WeatherTable.svelte` - EC/ICON forecast table, scrolling, and current-time marker.
+- `src/WeatherTable.svelte` - EC/ICON/GFS forecast table, scrolling, and current-time marker.
 - `src/WeatherIcon.svelte` - vector weather-condition icons.
 - `src/weather.ts` - forecast transformation, cloud aggregation, and time grouping.
 - `src/celestialCurve.ts` - sun/moon altitude curves and horizon events aligned with forecast columns.

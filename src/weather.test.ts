@@ -181,6 +181,9 @@ describe('weather forecast transformation', () => {
             buildWeatherRequestKey('icon', locationKey, now),
         );
         expect(buildWeatherRequestKey('ecmwf', locationKey, now)).not.toBe(
+            buildWeatherRequestKey('gfs', locationKey, now),
+        );
+        expect(buildWeatherRequestKey('ecmwf', locationKey, now)).not.toBe(
             buildWeatherRequestKey('ecmwf', locationKey, now + HOUR),
         );
         expect(buildWeatherRequestKey('ecmwf', locationKey, now)).not.toBe(
@@ -220,6 +223,7 @@ describe('weather forecast transformation', () => {
         expect(isWeatherResponseCurrent({ ...current, aborted: true })).toBe(false);
         expect(isWeatherResponseCurrent({ ...current, requestId: 3 })).toBe(false);
         expect(isWeatherResponseCurrent({ ...current, currentRequestKey: 'icon|23.05|113.37|10' })).toBe(false);
+        expect(isWeatherResponseCurrent({ ...current, currentRequestKey: 'gfs|23.05|113.37|10' })).toBe(false);
         expect(isWeatherResponseCurrent({ ...current, currentRequestKey: 'ecmwf|31.23|121.47|10' })).toBe(false);
         expect(isWeatherResponseCurrent({ ...current, currentRequestKey: 'ecmwf|23.05|113.37|11' })).toBe(false);
     });

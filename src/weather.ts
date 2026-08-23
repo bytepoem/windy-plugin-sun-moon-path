@@ -1,4 +1,4 @@
-export type WeatherModel = 'ecmwf' | 'icon';
+export type WeatherModel = 'ecmwf' | 'gfs' | 'icon';
 
 export type WeatherLoadStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 

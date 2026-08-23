@@ -213,6 +213,14 @@
             </button>
             <button
                 type="button"
+                class:active={model === 'gfs'}
+                aria-pressed={model === 'gfs'}
+                on:click={() => selectModel('gfs')}
+            >
+                GFS
+            </button>
+            <button
+                type="button"
                 class:active={model === 'icon'}
                 aria-pressed={model === 'icon'}
                 on:click={() => selectModel('icon')}
@@ -428,7 +436,7 @@
 
     .weather-model-control {
         display: grid;
-        grid-template-columns: repeat(2, minmax(44px, 1fr));
+        grid-template-columns: repeat(3, minmax(44px, 1fr));
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.22);
         border-radius: 6px;
@@ -843,7 +851,7 @@
         }
 
         .weather-model-control {
-            grid-template-columns: repeat(2, 44px);
+            grid-template-columns: repeat(3, 44px);
         }
 
         .weather-updating {
