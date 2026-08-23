@@ -516,7 +516,12 @@
         </div>
     {/if}
 
-    <div id="location-search-status" class="location-search__status" aria-live="polite">
+    <div
+        id="location-search-status"
+        class="location-search__status"
+        class:location-search__status--visible={!apiKey || status === 'loading' || status === 'empty' || status === 'error'}
+        aria-live="polite"
+    >
         {#if !apiKey}
             <span class="location-search__missing-key">
                 <span>{missingKeyPromptText}</span>
@@ -829,11 +834,15 @@
     }
 
     .location-search__status {
-        min-height: 16px;
-        padding-top: 2px;
+        min-height: 6px;
         color: var(--panel-muted);
         font-size: 11px;
         line-height: 1.3;
+    }
+
+    .location-search__status--visible {
+        min-height: 16px;
+        padding-top: 2px;
     }
 
     .location-search__status [role='alert'] {

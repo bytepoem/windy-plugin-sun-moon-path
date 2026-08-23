@@ -665,7 +665,6 @@
                 currentTimestamp={currentInstant.getTime()}
                 dataKey={weatherRequestKey}
                 location={selectedLocation}
-                allowVerticalScrollChaining={true}
                 on:modelchange={handleWeatherModelChange}
                 on:retry={retryWeather}
                 on:atmosphereretry={retryAtmosphere}
@@ -3293,7 +3292,7 @@
         height: 100%;
         min-height: 100%;
         overflow-y: auto;
-        padding: 6px 10px 0;
+        padding: 4px 10px 0;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
     }
@@ -3308,7 +3307,7 @@
         grid-template-columns: minmax(110px, 122px) minmax(0, 1fr) minmax(110px, 122px);
         align-items: center;
         gap: 6px;
-        min-height: 42px;
+        min-height: 40px;
     }
 
     .astronomy-location {
@@ -3529,7 +3528,7 @@
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
         gap: 0;
-        margin-top: 6px;
+        margin-top: 4px;
         padding: 6px 0 5px;
         border-top: 1px solid rgba(255, 255, 255, 0.12);
         border-bottom: 1px solid rgba(255, 255, 255, 0.12);
@@ -4421,7 +4420,7 @@
 
         .timeline-events {
             grid-template-columns: repeat(7, minmax(0, 1fr));
-            margin-top: 6px;
+            margin-top: 4px;
         }
 
         .timeline-event {
@@ -4519,12 +4518,12 @@
 
     @media (max-height: 740px) {
         .astronomy-panel {
-            padding-top: 6px;
+            padding-top: 4px;
             padding-bottom: 0;
         }
 
         .astronomy-panel__heading {
-            min-height: 40px;
+            min-height: 38px;
         }
     }
 

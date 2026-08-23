@@ -31,7 +31,6 @@
     export let currentTimestamp = Date.now();
     export let dataKey = '';
     export let location: Coordinates;
-    export let allowVerticalScrollChaining = false;
 
     const dispatch = createEventDispatcher<{
         modelchange: WeatherModel;
@@ -302,7 +301,6 @@
         <!-- svelte-ignore a11y-no-noninteractive-tabindex a11y-no-noninteractive-element-interactions -->
         <div
             class="weather-table-scroll"
-            class:weather-table-scroll--chain-y={allowVerticalScrollChaining}
             bind:this={tableScroller}
             role="region"
             aria-label={language === 'zh' ? '逐时天气数据表' : 'Hourly weather data table'}
@@ -616,21 +614,17 @@
         position: relative;
         flex: 1 1 auto;
         min-height: 0;
+        overflow: hidden;
     }
 
     .weather-table-scroll {
         width: 100%;
         height: 100%;
         overflow: auto;
-        overscroll-behavior: contain;
+        overscroll-behavior: none;
         scrollbar-color: #64748b #111827;
         touch-action: pan-x pan-y;
         -webkit-overflow-scrolling: touch;
-    }
-
-    .weather-table-scroll--chain-y {
-        overscroll-behavior-x: contain;
-        overscroll-behavior-y: auto;
     }
 
     .weather-table-scroll::before {
