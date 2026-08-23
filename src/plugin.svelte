@@ -159,7 +159,6 @@
         <div
             id="summary-panel"
             class="summary-panel-frame"
-            class:summary-panel-frame--tall={isMobileOrTablet && (summaryTab === 'weather' || summaryTab === 'guide')}
             role="tabpanel"
             aria-labelledby={`summary-tab-${summaryTab}`}
         >
@@ -253,18 +252,34 @@
                         {/each}
                     </div>
 
+                    <LightPollutionSummary
+                        point={lightPollutionPoint}
+                        status={lightPollutionStatus}
+                        errorMessage={lightPollutionErrorMessage}
+                        canRetry={lightPollutionErrorKind === 'network'}
+                        language={uiLanguage}
+                        on:retry={retryLightPollution}
+                    />
+
                     <div class="night-window-list" aria-label="夜间观测时段">
-                        {#each displayAstronomyIntervals as interval}
-                            <article class:night-window--milky-way={interval.kind === 'milky-way'} class="night-window">
+                        {#each displayAstronomyIntervalSlots as slot}
+                            <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
                                 <div class="night-window__body">
-                                    <strong>{intervalDisplayLabel(interval, text)}</strong>
-                                    <span>{formatInterval(interval)} · {formatIntervalDuration(interval, uiLanguage)}</span>
+                                    <strong>{text.intervals[slot.kind]}</strong>
+                                    {#if slot.interval}
+                                        <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval, uiLanguage)}</span>
+                                    {:else}
+                                        <span>
+                                            {status === 'error'
+                                                ? text.intervalUnavailable
+                                                : status === 'ready' || status === 'empty'
+                                                    ? text.noInterval
+                                                    : text.calculating}
+                                        </span>
+                                    {/if}
                                 </div>
                             </article>
                         {/each}
-                        {#if astronomyTimeline && displayAstronomyIntervals.length === 0}
-                            <p class="night-window-list__empty">{text.noNightWindow}</p>
-                        {/if}
                     </div>
                 </section>
             {:else if summaryTab === 'weather' && isMobileOrTablet}
@@ -583,8 +598,15 @@
     import config from './pluginConfig';
     import { gpsCoordinatesFromLocation, isMapCenteredOnLocation } from './location';
     import { claimOverlayOwner } from './overlayOwner';
+    import LightPollutionSummary from './LightPollutionSummary.svelte';
     import LocationSearch from './LocationSearch.svelte';
     import WeatherTable from './WeatherTable.svelte';
+    import {
+        fetchLightPollutionPoint,
+        isLightPollutionResponseCurrent,
+        LightPollutionOutOfBoundsError,
+        type LightPollutionPoint,
+    } from './lightPollution';
     import {
         calculateAstronomyTimeline,
         calculateCurrentMoonInfo,
@@ -667,11 +689,14 @@
         moon: string;
         altitude: string;
         calculating: string;
-        noNightWindow: string;
+        noInterval: string;
+        intervalUnavailable: string;
         timelineEnded: string;
         timelinePrefix: string;
         timelineStartSuffix: string;
         moonPhaseLoading: string;
+        lightPollutionLoadError: string;
+        lightPollutionOutOfBounds: string;
         aboutDescription: string;
         guideHeading: string;
         settingsGuideHeading: string;
@@ -738,11 +763,14 @@
             moon: '月亮',
             altitude: '∠',
             calculating: '正在计算…',
-            noNightWindow: '当天没有满足条件的无月黑夜或银河时刻。',
+            noInterval: '当天无可用时段',
+            intervalUnavailable: '暂不可用',
             timelineEnded: '今日天文时段已结束',
             timelinePrefix: '距离',
             timelineStartSuffix: '开始还有',
             moonPhaseLoading: '月相计算中',
+            lightPollutionLoadError: '无法取得光污染数据，请稍后重试。',
+            lightPollutionOutOfBounds: '该地点超出光污染数据范围（南纬 65° 至北纬 75°）。',
             aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
             guideHeading: '地图说明',
             settingsGuideHeading: '设置说明',
@@ -800,7 +828,7 @@
             },
             intervals: {
                 'moonless-night': '无月黑夜',
-                'milky-way': '银河时刻',
+                'milky-way': '银河时段',
             },
             legend: {
                 origin: '用户位置',
@@ -833,11 +861,14 @@
             moon: 'Moon',
             altitude: '∠',
             calculating: 'Calculating…',
-            noNightWindow: 'No qualifying moonless night or Milky Way window today.',
+            noInterval: 'No window today',
+            intervalUnavailable: 'Unavailable',
             timelineEnded: 'Today’s astronomy windows have ended',
             timelinePrefix: '',
             timelineStartSuffix: 'starts in',
             moonPhaseLoading: 'Calculating phase',
+            lightPollutionLoadError: 'Unable to load light pollution data. Please try again.',
+            lightPollutionOutOfBounds: 'This location is outside atlas coverage (65°S to 75°N).',
             aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30 minutes before, at the event, and 30 minutes after.',
             guideHeading: 'Map guide',
             settingsGuideHeading: 'Settings guide',
@@ -967,12 +998,24 @@
     let resolvedContextLocationKey = '';
     let latestWeatherRequestId = 0;
     let weatherAbortController: AbortController | null = null;
+    let lightPollutionPoint: LightPollutionPoint | null = null;
+    let lightPollutionStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+    let lightPollutionErrorMessage = '';
+    let lightPollutionErrorKind: 'none' | 'network' | 'out-of-bounds' = 'none';
+    let lightPollutionRequestKey = '';
+    let lightPollutionLoadedKey = '';
+    let lightPollutionLoadingKey = '';
+    let latestLightPollutionRequestId = 0;
+    let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
     let amapApiKey = '';
     let amapApiKeyDraft = '';
     let amapKeySaved = false;
-    let displayAstronomyIntervals: AstronomyInterval[] = [];
+    let displayAstronomyIntervalSlots: {
+        kind: AstronomyInterval['kind'];
+        interval: AstronomyInterval | null;
+    }[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
     let isMounted = false;
@@ -999,6 +1042,14 @@
 
     $: weatherRequestKey = buildWeatherRequestKey(weatherModel, locationKey, currentInstant.getTime());
 
+    $: lightPollutionRequestKey = locationKey;
+
+    $: lightPollutionErrorMessage = lightPollutionErrorKind === 'out-of-bounds'
+        ? text.lightPollutionOutOfBounds
+        : lightPollutionErrorKind === 'network'
+            ? text.lightPollutionLoadError
+            : '';
+
     $: if (isMounted && refreshKey) {
         void refreshPaths(refreshKey);
     }
@@ -1013,6 +1064,15 @@
         loadingKey: weatherLoadingKey,
     })) {
         void refreshWeather(weatherRequestKey);
+    }
+
+    $: if (
+        isMounted
+        && lightPollutionRequestKey
+        && lightPollutionRequestKey !== lightPollutionLoadedKey
+        && lightPollutionRequestKey !== lightPollutionLoadingKey
+    ) {
+        void refreshLightPollution(lightPollutionRequestKey);
     }
 
     $: activeSolarPath = selectedEvent === 'all'
@@ -1032,9 +1092,10 @@
                 interval.start.getTime() <= selectedDayReference && interval.end.getTime() >= selectedDayReference,
             ) || candidates.find(interval => interval.start.getTime() >= selectedDayReference) || candidates.at(-1) || null;
         };
-        displayAstronomyIntervals = (['moonless-night', 'milky-way'] as const)
-            .map(preferredInterval)
-            .filter((interval): interval is AstronomyInterval => interval !== null);
+        displayAstronomyIntervalSlots = (['moonless-night', 'milky-way'] as const).map(kind => ({
+            kind,
+            interval: preferredInterval(kind),
+        }));
     }
 
     $: if (isMounted) {
@@ -1450,6 +1511,7 @@
 
         status = 'loading';
         errorMessage = '';
+        astronomyTimeline = null;
         removeMapFeatures();
 
         try {
@@ -1570,6 +1632,63 @@
         }
     };
 
+    const refreshLightPollution = async (key: string) => {
+        lightPollutionAbortController?.abort();
+        const abortController = new AbortController();
+        lightPollutionAbortController = abortController;
+        const requestId = ++latestLightPollutionRequestId;
+        const requestLocation = { ...selectedLocation };
+
+        lightPollutionLoadingKey = key;
+        lightPollutionStatus = 'loading';
+        lightPollutionErrorKind = 'none';
+        lightPollutionPoint = null;
+
+        try {
+            const nextPoint = await fetchLightPollutionPoint(requestLocation, abortController.signal);
+            if (!isLightPollutionResponseCurrent({
+                aborted: abortController.signal.aborted,
+                requestId,
+                latestRequestId: latestLightPollutionRequestId,
+                requestKey: key,
+                currentRequestKey: lightPollutionRequestKey,
+            })) {
+                return;
+            }
+
+            lightPollutionPoint = nextPoint;
+            lightPollutionStatus = 'ready';
+            lightPollutionLoadedKey = key;
+        } catch (error) {
+            if (!isLightPollutionResponseCurrent({
+                aborted: abortController.signal.aborted,
+                requestId,
+                latestRequestId: latestLightPollutionRequestId,
+                requestKey: key,
+                currentRequestKey: lightPollutionRequestKey,
+            })) {
+                return;
+            }
+
+            lightPollutionPoint = null;
+            lightPollutionStatus = 'error';
+            lightPollutionErrorKind = error instanceof LightPollutionOutOfBoundsError
+                ? 'out-of-bounds'
+                : 'network';
+            lightPollutionLoadedKey = key;
+        } finally {
+            if (requestId === latestLightPollutionRequestId) {
+                lightPollutionLoadingKey = '';
+            }
+        }
+    };
+
+    const retryLightPollution = () => {
+        lightPollutionLoadedKey = '';
+        lightPollutionLoadingKey = '';
+        void refreshLightPollution(lightPollutionRequestKey);
+    };
+
     const handleWeatherModelChange = (event: CustomEvent<WeatherModel>) => {
         weatherModel = event.detail;
         weatherLoadedKey = '';
@@ -1617,6 +1736,13 @@
         weatherAbortController?.abort();
         weatherPoints = [];
         weatherStatus = 'idle';
+        latestLightPollutionRequestId += 1;
+        lightPollutionAbortController?.abort();
+        lightPollutionLoadedKey = '';
+        lightPollutionLoadingKey = '';
+        lightPollutionPoint = null;
+        lightPollutionStatus = 'idle';
+        lightPollutionErrorKind = 'none';
         const nextKey = makeRefreshKey(nextLocation, selectedDate, selectedEvent);
         refreshKey = nextKey;
 
@@ -1740,9 +1866,6 @@
     const formatInterval = (interval: AstronomyInterval): string =>
         `${formatLocalClock(interval.start, timeZone)} ~ ${formatLocalClock(interval.end, timeZone)}`;
 
-    const intervalDisplayLabel = (interval: AstronomyInterval, labels = text): string =>
-        labels.intervals[interval.kind] || interval.label;
-
     const formatIntervalDuration = (interval: AstronomyInterval, language = uiLanguage): string =>
         formatRemaining(interval.end.getTime() - interval.start.getTime(), language);
 
@@ -1841,9 +1964,12 @@
             isMounted = false;
             latestRequestId += 1;
             latestWeatherRequestId += 1;
+            latestLightPollutionRequestId += 1;
             currentLocationRequestId += 1;
             weatherAbortController?.abort();
             weatherAbortController = null;
+            lightPollutionAbortController?.abort();
+            lightPollutionAbortController = null;
             if (currentDirectionTimer) {
                 clearInterval(currentDirectionTimer);
                 currentDirectionTimer = null;
@@ -1945,8 +2071,7 @@
         --weather-tone-cool: #9092ba;
         --weather-tone-mild: #aff5c0;
         --weather-tone-freezing: #f7f7f7;
-        --summary-panel-height: 150px;
-        --weather-panel-height: 330px;
+        --summary-panel-height: 256px;
         --desktop-weather-panel-height: 550px;
 
         box-sizing: border-box;
@@ -1982,8 +2107,7 @@
     }
 
     .sun-path-panel.mobile_ui {
-        --summary-panel-height: clamp(144px, 16.5svh, 150px);
-        --weather-panel-height: min(310px, 38dvh);
+        --summary-panel-height: 250px;
 
         display: flex;
         flex-direction: column;
@@ -2755,10 +2879,6 @@
         background: #1d263d;
     }
 
-    .summary-panel-frame--tall {
-        height: var(--weather-panel-height);
-    }
-
     .desktop-weather-module {
         flex: 0 0 auto;
         height: var(--desktop-weather-panel-height);
@@ -2782,7 +2902,7 @@
         height: 100%;
         min-height: 100%;
         overflow-y: auto;
-        padding: 6px 10px 9px;
+        padding: 6px 10px 0;
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
     }
@@ -3079,13 +3199,6 @@
         text-overflow: clip;
         white-space: normal;
         line-height: 1.25;
-    }
-
-    .night-window-list__empty {
-        grid-column: 1 / -1;
-        margin: 0;
-        color: var(--astronomy-muted);
-        font-size: 12px;
     }
 
     .module-about {
@@ -3930,11 +4043,6 @@
     }
 
     @media (max-width: 360px) {
-        .sun-path-panel.mobile_ui {
-            --summary-panel-height: 150px;
-            --weather-panel-height: min(300px, 40dvh);
-        }
-
         .sun-path-panel.mobile_ui .control-grid {
             grid-template-columns: 68px minmax(0, 1fr) 48px;
             gap: 5px;
@@ -3946,18 +4054,19 @@
     }
 
     @media (max-height: 740px) {
-        .sun-path-panel.mobile_ui {
-            --summary-panel-height: 146px;
-            --weather-panel-height: min(286px, 40dvh);
-        }
-
         .astronomy-panel {
             padding-top: 6px;
-            padding-bottom: 10px;
+            padding-bottom: 0;
         }
 
         .astronomy-panel__heading {
             min-height: 40px;
+        }
+    }
+
+    @media (orientation: landscape) {
+        .sun-path-panel.mobile_ui {
+            --summary-panel-height: 256px;
         }
     }
 
