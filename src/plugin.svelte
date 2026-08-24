@@ -1,7 +1,9 @@
 <section
+    id="sun-moon-path-panel"
     class="sun-path-panel"
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
+    class:mobile_fullscreen={isMobileFullscreen}
     bind:this={panelElement}
     on:wheel|capture|nonpassive={handleNestedWheel}
 >
@@ -12,6 +14,30 @@
         >
             {title}
         </div>
+    {/if}
+
+    {#if isMobileOrTablet}
+        <button
+            type="button"
+            class="mobile-window-toggle"
+            aria-controls="sun-moon-path-panel"
+            aria-expanded={isMobileFullscreen}
+            aria-label={isMobileFullscreen ? text.restorePanelLabel : text.expandPanelLabel}
+            title={isMobileFullscreen ? text.restorePanelLabel : text.expandPanelLabel}
+            on:click={toggleMobileFullscreen}
+        >
+            <span class="mobile-window-toggle__icon" aria-hidden="true">
+                {#if isMobileFullscreen}
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"></path>
+                    </svg>
+                {:else}
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                    </svg>
+                {/if}
+            </span>
+        </button>
     {/if}
 
     <div class="mobile-scroll-content">
@@ -147,10 +173,14 @@
         {/if}
     </div>
 
-    <section class="map-bottom-module" aria-label="Sun Position 风格日月面板">
+    <section
+        class="map-bottom-module"
+        class:map-bottom-module--mobile-weather={isMobileOrTablet && !isMobileFullscreen && summaryTab === 'weather'}
+        aria-label="Sun Position 风格日月面板"
+    >
         <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
             <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => (summaryTab = 'events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
-            {#if isMobileOrTablet}
+            {#if isMobileOrTablet && !isMobileFullscreen}
                 <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => (summaryTab = 'weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
             {/if}
             <button id="summary-tab-guide" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'guide'} aria-selected={summaryTab === 'guide'} tabindex={summaryTab === 'guide' ? 0 : -1} on:click={() => (summaryTab = 'guide')} on:keydown={event => handleSummaryTabKeydown(event, 'guide')}>{text.guideTab}</button>
@@ -296,7 +326,7 @@
                         {/each}
                     </div>
                 </section>
-            {:else if summaryTab === 'weather' && isMobileOrTablet}
+            {:else if summaryTab === 'weather' && isMobileOrTablet && !isMobileFullscreen}
                 <WeatherTable
                     points={weatherPoints}
                     model={weatherModel}
@@ -485,6 +515,9 @@
                                 <span class="weather-legend__swatch tone-good">12</span>
                             </div>
                             <p>{text.weatherLegend.visibilityDescription}</p>
+                            <p class="weather-legend__sources">
+                                <a href={OPEN_METEO_URL} target="_blank" rel="noreferrer">Open-Meteo</a>
+                            </p>
                         </section>
 
                         <section class="weather-legend__section">
@@ -645,7 +678,7 @@
         </div>
     </section>
 
-    {#if !isMobileOrTablet}
+    {#if !isMobileOrTablet || isMobileFullscreen}
         <section class="desktop-weather-module" aria-label={uiLanguage === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
             <WeatherTable
                 points={weatherPoints}
@@ -790,6 +823,8 @@
         dateLabel: string;
         eventSelectorLabel: string;
         languageToggleLabel: string;
+        expandPanelLabel: string;
+        restorePanelLabel: string;
         panelIntro: string;
         eventTab: string;
         weatherTab: string;
@@ -878,6 +913,8 @@
             dateLabel: '观测日期',
             eventSelectorLabel: '选择日月事件',
             languageToggleLabel: '切换到英文',
+            expandPanelLabel: '全屏显示',
+            restorePanelLabel: '恢复小窗口',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
             eventTab: '事件',
             weatherTab: '天气',
@@ -1002,6 +1039,8 @@
             dateLabel: 'Date',
             eventSelectorLabel: 'Choose event',
             languageToggleLabel: 'Switch to Chinese',
+            expandPanelLabel: 'Show fullscreen',
+            restorePanelLabel: 'Restore compact window',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
             eventTab: 'Events',
             weatherTab: 'Weather',
@@ -1227,6 +1266,9 @@
     let isMounted = false;
     let latestRequestId = 0;
     let panelElement: HTMLElement | null = null;
+    let mobilePluginRoot: HTMLElement | null = null;
+    let mobileBottomWrapper: HTMLElement | null = null;
+    let isMobileFullscreen = false;
     let astronomyKey = '';
     let currentDirectionTimer: ReturnType<typeof setInterval> | null = null;
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1267,7 +1309,7 @@
 
     $: if (shouldLoadWeather({
         isMounted,
-        isWeatherTabActive: !isMobileOrTablet || summaryTab === 'weather',
+        isWeatherTabActive: !isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather',
         locationKey,
         resolvedContextLocationKey,
         requestKey: weatherRequestKey,
@@ -1279,7 +1321,7 @@
 
     $: if (shouldLoadWeather({
         isMounted,
-        isWeatherTabActive: !isMobileOrTablet || summaryTab === 'weather',
+        isWeatherTabActive: !isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather',
         locationKey,
         resolvedContextLocationKey,
         requestKey: atmosphereRequestKey,
@@ -1343,6 +1385,28 @@
         saveLanguagePreference(uiLanguage);
     };
 
+    const setMobileFullscreen = (value: boolean) => {
+        if (!isMobileOrTablet) {
+            return;
+        }
+        if (value && summaryTab === 'weather') {
+            summaryTab = 'events';
+        }
+        mobilePluginRoot = mobilePluginRoot
+            || panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path')
+            || null;
+        mobileBottomWrapper = mobileBottomWrapper
+            || mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper')
+            || null;
+        isMobileFullscreen = value;
+        mobilePluginRoot?.classList.toggle('sun-path-mobile-fullscreen', value);
+        mobileBottomWrapper?.classList.toggle('sun-path-mobile-fullscreen-wrapper', value);
+    };
+
+    const toggleMobileFullscreen = () => {
+        setMobileFullscreen(!isMobileFullscreen);
+    };
+
     const handleNestedWheel = (event: WheelEvent) => {
         if (!panelElement || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
             return;
@@ -1385,7 +1449,9 @@
             return;
         }
         event.preventDefault();
-        const summaryTabOrder = isMobileOrTablet ? mobileSummaryTabOrder : desktopSummaryTabOrder;
+        const summaryTabOrder = isMobileOrTablet && !isMobileFullscreen
+            ? mobileSummaryTabOrder
+            : desktopSummaryTabOrder;
         const currentIndex = summaryTabOrder.indexOf(currentTab);
         const nextTab = event.key === 'Home'
             ? summaryTabOrder[0]
@@ -2175,6 +2241,11 @@
     const overlayOwner = {
         deactivateForReplacement: () => {
             isMounted = false;
+            isMobileFullscreen = false;
+            mobilePluginRoot?.classList.remove('sun-path-mobile-fullscreen');
+            mobileBottomWrapper?.classList.remove('sun-path-mobile-fullscreen-wrapper');
+            mobilePluginRoot = null;
+            mobileBottomWrapper = null;
             latestRequestId += 1;
             latestWeatherRequestId += 1;
             latestAtmosphereRequestId += 1;
@@ -2206,6 +2277,10 @@
 
     onMount(() => {
         releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
+        mobilePluginRoot = isMobileOrTablet
+            ? panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path') || null
+            : null;
+        mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
         uiLanguage = loadLanguagePreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
@@ -2326,8 +2401,36 @@
     }
 
     :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small > .closing-x) {
-        z-index: 1000 !important;
+        top: -54px !important;
+        right: 0 !important;
+        bottom: auto !important;
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-start;
+        box-sizing: border-box;
+        width: 44px;
+        height: 44px;
+        padding: 0 0 0 8px;
+        border-radius: 0;
+        background: transparent;
+        color: transparent;
+        font-size: 0;
+        line-height: 1;
+        z-index: 1002 !important;
         pointer-events: auto;
+    }
+
+    :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small > .closing-x::before) {
+        display: grid;
+        width: 25px;
+        height: 25px;
+        margin-bottom: -10px;
+        place-items: center;
+        border-radius: 50%;
+        color: #fff;
+        background: #9d0300;
+        font-size: 25px;
+        line-height: 25px;
     }
 
     .sun-path-panel.mobile_ui {
@@ -2343,7 +2446,54 @@
         min-height: 0;
         margin: 0;
         padding: 0;
-        overflow: hidden;
+        overflow: visible;
+    }
+
+    .mobile-window-toggle {
+        position: absolute;
+        top: -44px;
+        right: 54px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-end;
+        box-sizing: border-box;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 0;
+        color: var(--panel-text);
+        background: transparent;
+        cursor: pointer;
+        touch-action: manipulation;
+        z-index: 1001;
+    }
+
+    .mobile-window-toggle__icon {
+        box-sizing: border-box;
+        display: grid;
+        width: 25px;
+        height: 25px;
+        margin-bottom: -10px;
+        place-items: center;
+        border: 1px solid var(--panel-border);
+        border-radius: 50%;
+        background: var(--panel-bg);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32);
+    }
+
+    .mobile-window-toggle svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .mobile-window-toggle:hover .mobile-window-toggle__icon,
+    .mobile-window-toggle:active .mobile-window-toggle__icon {
+        background: var(--panel-surface-hover);
     }
 
     .sun-path-panel.mobile_ui .mobile-scroll-content {
@@ -2360,6 +2510,68 @@
         overscroll-behavior-y: contain;
         touch-action: pan-y;
         padding: 8px 8px 0;
+    }
+
+    :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen) {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: none !important;
+        z-index: 1000 !important;
+    }
+
+    :global(#bottom-wrapper.sun-path-mobile-fullscreen-wrapper) {
+        z-index: 1000 !important;
+    }
+
+    :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen > .closing-x) {
+        top: calc(env(safe-area-inset-top, 0px) - 10px) !important;
+        right: 0 !important;
+        align-items: center;
+    }
+
+    :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen > .closing-x::before) {
+        margin-bottom: 0;
+    }
+
+    .sun-path-panel.mobile_ui.mobile_fullscreen {
+        width: 100%;
+        height: 100% !important;
+        max-height: none;
+    }
+
+    .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-toggle {
+        top: env(safe-area-inset-top, 0px);
+        right: 54px;
+        align-items: center;
+    }
+
+    .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-toggle__icon {
+        margin-bottom: 0;
+    }
+
+    .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-scroll-content {
+        height: 100%;
+        max-height: none;
+        flex: 1 1 auto;
+        padding-top: calc(52px + env(safe-area-inset-top, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .sun-path-panel.mobile_ui .map-bottom-module--mobile-weather,
+    .sun-path-panel.mobile_ui.mobile_fullscreen .desktop-weather-module {
+        width: calc(100% + 16px);
+        margin-right: -8px;
+        margin-left: -8px;
+        border-right: 0;
+        border-left: 0;
+        border-radius: 0;
     }
 
     .panel-intro,
