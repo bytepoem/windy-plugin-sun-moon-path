@@ -686,8 +686,12 @@
     import config from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
     import {
+        DETAILED_REVERSE_NAME_ZOOM,
+        detailedLocationLabel,
         gpsCoordinatesFromLocation,
+        isHomeButtonTarget,
         isMapCenteredOnLocation,
+        scheduleReopenAfterHome,
         shouldRefreshSameLocationImmediately,
     } from './location';
     import {
@@ -1230,6 +1234,7 @@
     let currentLocationRequestId = 0;
     let locationNameRequestId = 0;
     let mapWasDragged = false;
+    let reopenAfterHome = false;
     let addressSelectedLocation: Pick<LocationSearchResult, 'wgs84'> | null = null;
 
     $: text = translations[uiLanguage];
@@ -1862,7 +1867,7 @@
     const resolveLocationDisplayName = async (location: Coordinates, requestId: number) => {
         let nextName = '';
         try {
-            nextName = (await reverseName.get(location)).name.trim();
+            nextName = detailedLocationLabel(await reverseName.get(location, DETAILED_REVERSE_NAME_ZOOM));
         } catch {
             // Coordinates remain an accurate fallback when reverse lookup is unavailable.
         }
@@ -2014,10 +2019,21 @@
         locationSyncTimer = setTimeout(syncLocationFromMapCenter, 750);
     };
 
-    const handleBackToHome = () => {
-        const requestId = ++currentLocationRequestId;
+    const requestReopenAfterHome = () => {
+        if (reopenAfterHome) {
+            return;
+        }
+        reopenAfterHome = true;
+        currentLocationRequestId += 1;
         addressSelectedLocation = null;
-        void centerOnCurrentGps(requestId);
+    };
+
+    const handleBackToHome = () => requestReopenAfterHome();
+
+    const handleHomeButtonClick = (event: MouseEvent) => {
+        if (isHomeButtonTarget(event.target)) {
+            requestReopenAfterHome();
+        }
     };
 
     const timelineEventLabel = (item: { kind: string; label: string }, labels = text): string => {
@@ -2184,6 +2200,7 @@
             bcast.off('back2home', handleBackToHome);
             map.off('dragstart', handleMapDragStart);
             map.off('moveend', handleMapMoveEnd);
+            document.removeEventListener('click', handleHomeButtonClick, true);
         },
     };
 
@@ -2200,14 +2217,19 @@
         bcast.on('back2home', handleBackToHome);
         map.on('dragstart', handleMapDragStart);
         map.on('moveend', handleMapMoveEnd);
+        document.addEventListener('click', handleHomeButtonClick, true);
         updateCurrentDirections();
         currentDirectionTimer = setInterval(updateCurrentDirections, 5_000);
     });
 
     onDestroy(() => {
+        const shouldReopenAfterHome = reopenAfterHome;
         overlayOwner.deactivateForReplacement();
         releaseOverlayOwnership?.();
         releaseOverlayOwnership = null;
+        if (shouldReopenAfterHome) {
+            scheduleReopenAfterHome(() => bcast.emit('rqstOpen', name));
+        }
     });
 </script>
 

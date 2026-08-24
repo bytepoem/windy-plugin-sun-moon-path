@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    detailedLocationLabel,
     gpsCoordinatesFromLocation,
+    isHomeButtonTarget,
     isMapCenteredOnLocation,
+    scheduleReopenAfterHome,
     shouldRefreshSameLocationImmediately,
 } from './location';
 
@@ -28,5 +31,59 @@ describe('location selection', () => {
         expect(shouldRefreshSameLocationImmediately(true, '2026-08-23|24.919|112.659', '2026-08-23|24.919|112.659')).toBe(true);
         expect(shouldRefreshSameLocationImmediately(true, 'old-location', 'new-location')).toBe(false);
         expect(shouldRefreshSameLocationImmediately(false, 'same-location', 'same-location')).toBe(false);
+    });
+
+    it('reopens the plugin only after Windy finishes closing panes for Home', () => {
+        const actions: string[] = [];
+        const scheduledReopens: (() => void)[] = [];
+
+        scheduleReopenAfterHome(
+            () => actions.push('reopen-plugin'),
+            callback => {
+                scheduledReopens.push(callback);
+            },
+        );
+        actions.push('host-close-plugins');
+
+        expect(actions).toEqual(['host-close-plugins']);
+        expect(scheduledReopens).toHaveLength(1);
+
+        scheduledReopens[0]?.();
+
+        expect(actions).toEqual(['host-close-plugins', 'reopen-plugin']);
+    });
+
+    it('combines the detailed reverse-geocoded name with its region', () => {
+        expect(detailedLocationLabel({
+            name: '北亭村, 小谷围街道',
+            region: '广州市',
+        })).toBe('北亭村, 小谷围街道 · 广州市');
+        expect(detailedLocationLabel({
+            name: '广州市',
+            region: '广州市',
+        })).toBe('广州市');
+        expect(detailedLocationLabel({
+            name: '',
+            region: '',
+        })).toBe('');
+    });
+
+    it('recognizes clicks originating from Windy Home and its child elements', () => {
+        const desktopHomeChild = {
+            closest: (selector: string) => selector === '[data-ref="back2home"]' ? { dataset: { ref: 'back2home' } } : null,
+        };
+        const mobileHomeChild = {
+            closest: (selector: string) => selector === '.mobile-ui__icon[data-ignore="hp"][data-icon="]"]'
+                ? { className: 'mobile-ui__icon' }
+                : null,
+        };
+        const otherTarget = {
+            closest: () => null,
+        };
+
+        expect(isHomeButtonTarget(desktopHomeChild)).toBe(true);
+        expect(isHomeButtonTarget(mobileHomeChild)).toBe(true);
+        expect(isHomeButtonTarget(otherTarget)).toBe(false);
+        expect(isHomeButtonTarget(null)).toBe(false);
     });
 });
