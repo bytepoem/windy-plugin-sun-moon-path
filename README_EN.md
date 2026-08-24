@@ -48,8 +48,10 @@ relative to a point on the Windy map.
   current browser.
 - On desktop, keeps **Weather** permanently visible below the original four tabs
   so the astronomy summary and forecast usually fit in one viewport; vertical
-  scrolling remains available for shorter windows. Mobile keeps five tabs:
-  **Events**, **Weather**, **Guide**, **Settings**, and **About**:
+  scrolling remains available for shorter windows. Mobile switches between a
+  compact window and fullscreen: compact mode keeps five tabs, **Events**,
+  **Weather**, **Guide**, **Settings**, and **About**, while fullscreen places the
+  weather table below the events module:
   - **Events** shows event times, directions, and the daily astronomy timeline.
   - **Weather** provides a horizontally scrollable EC, GFS, or ICON five-day forecast.
   - **Guide** explains the map legend, weather color scales, wind symbol, and data.
@@ -67,17 +69,17 @@ relative to a point on the Windy map.
 
 ## Plugin URL
 
-Current formal version: `0.6.1`
+Current formal version: `0.7.0`
 
 Current loadable plugin bundle:
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.1/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.1/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js)
 
 Project links:
 
 - GitHub repository: [bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues: [report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- Formal release: [0.6.1](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.6.1)
+- Formal release: [0.7.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.7.0)
 - Author: [bytepoem](https://github.com/bytepoem)
 
 ## Development

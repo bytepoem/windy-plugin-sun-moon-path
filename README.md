@@ -29,7 +29,7 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 - 天气表格底部按同一时间轴绘制当前定位的太阳、月亮地平线以上曲线，并标注升起和降落时间；曲线来自本地天文计算，不属于 EC/ICON/GFS 模式字段。
 - 天气时间步长以 Windy 实际返回结果为准，不补造缺失小时；过去时段是模式结果，不是历史观测。
 - 插件界面支持中文和英文，语言选择会保存在当前浏览器。
-- 桌面端将 **天气** 表格常驻在原有四个标签下方，尽量在一屏内同时展示天文摘要和天气；窗口高度不足时仍可纵向滚动。移动端保留 **事件**、**天气**、**说明**、**设置**、**关于** 五个标签：
+- 桌面端将 **天气** 表格常驻在原有四个标签下方，尽量在一屏内同时展示天文摘要和天气；窗口高度不足时仍可纵向滚动。移动端支持小窗口与全屏切换：小窗口保留 **事件**、**天气**、**说明**、**设置**、**关于** 五个标签，全屏时将天气表格放在事件模块下方：
   - **事件**：查看日月事件时间、方向和当天时间轴。
   - **天气**：横向查看 EC、GFS 或 ICON 模式的五天天气时间序列。
   - **说明**：查看地图图例、天气色阶、风向符号和数据说明。
@@ -43,17 +43,17 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 
 ## 插件链接
 
-当前正式版本：`0.6.1`
+当前正式版本：`0.7.0`
 
 当前可加载的插件 bundle：
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.1/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.6.1/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js)
 
 项目链接：
 
 - GitHub 仓库：[bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues：[提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- 正式版发布页：[0.6.1](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.6.1)
+- 正式版发布页：[0.7.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.7.0)
 - 作者：[bytepoem](https://github.com/bytepoem)
 
 ## 本地开发
