@@ -175,7 +175,6 @@
 
     <section
         class="map-bottom-module"
-        class:map-bottom-module--mobile-weather={isMobileOrTablet && !isMobileFullscreen && summaryTab === 'weather'}
         aria-label="Sun Position 风格日月面板"
     >
         <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
@@ -2562,16 +2561,6 @@
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {
         grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .sun-path-panel.mobile_ui .map-bottom-module--mobile-weather,
-    .sun-path-panel.mobile_ui.mobile_fullscreen .desktop-weather-module {
-        width: calc(100% + 16px);
-        margin-right: -8px;
-        margin-left: -8px;
-        border-right: 0;
-        border-left: 0;
-        border-radius: 0;
     }
 
     .panel-intro,
