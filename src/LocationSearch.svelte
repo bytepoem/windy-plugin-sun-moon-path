@@ -559,8 +559,8 @@
         position: relative;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
-        height: 38px;
-        min-height: 38px;
+        height: 44px;
+        min-height: 44px;
         border: 1px solid var(--panel-border);
         border-radius: 7px;
         background: rgba(8, 15, 27, 0.68);
@@ -574,19 +574,19 @@
 
     .location-search__provider-picker {
         position: relative;
-        min-width: 88px;
+        min-width: 64px;
     }
 
     .location-search__provider-button {
         display: flex;
-        gap: 8px;
+        gap: 5px;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
         width: 100%;
-        min-width: 88px;
-        height: 36px;
-        min-height: 36px;
-        padding: 0 11px;
+        min-width: 64px;
+        height: 42px;
+        min-height: 42px;
+        padding: 0 7px;
         border: 0;
         border-right: 1px solid var(--panel-border);
         border-radius: 6px 0 0 6px;
@@ -613,6 +613,7 @@
     }
 
     .location-search__provider-chevron {
+        flex: 0 0 auto;
         width: 7px;
         height: 7px;
         border-right: 1.5px solid currentColor;
@@ -626,7 +627,8 @@
         top: calc(100% + 4px);
         left: 0;
         display: grid;
-        width: max(100%, 112px);
+        box-sizing: border-box;
+        width: 100%;
         padding: 4px;
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -636,12 +638,11 @@
     }
 
     .location-search__provider-menu button {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 16px;
-        gap: 8px;
+        position: relative;
+        display: flex;
         align-items: center;
         min-height: 44px;
-        padding: 0 10px;
+        padding: 0 16px 0 6px;
         border: 0;
         border-radius: 5px;
         background: transparent;
@@ -652,6 +653,12 @@
         text-align: left;
         cursor: pointer;
         touch-action: manipulation;
+    }
+
+    .location-search__provider-menu button > span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .location-search__provider-menu button:hover,
@@ -666,6 +673,9 @@
     }
 
     .location-search__provider-check {
+        position: absolute;
+        right: 4px;
+        width: 10px;
         color: var(--panel-accent);
         font-weight: 700;
         text-align: center;
@@ -673,8 +683,8 @@
 
     .location-search__control input {
         min-width: 0;
-        height: 36px;
-        padding: 0 11px;
+        height: 42px;
+        padding: 0 9px;
         border: 0;
         outline: 0;
         background: transparent;
@@ -694,10 +704,10 @@
     }
 
     .location-search__submit {
-        min-width: 60px;
-        height: 36px;
-        min-height: 36px;
-        padding: 0 12px;
+        min-width: 56px;
+        height: 42px;
+        min-height: 42px;
+        padding: 0 9px;
         border: 0;
         border-left: 1px solid var(--panel-border);
         border-radius: 0 6px 6px 0;
@@ -888,6 +898,21 @@
     }
 
     @media (max-width: 600px) {
+        .location-search__provider-picker,
+        .location-search__provider-button {
+            min-width: 58px;
+        }
+
+        .location-search__provider-button {
+            gap: 4px;
+            padding: 0 6px;
+        }
+
+        .location-search__submit {
+            min-width: 50px;
+            padding: 0 6px;
+        }
+
         .location-search__results [role='listbox'] {
             max-height: min(300px, calc(30dvh - 20px - env(safe-area-inset-bottom, 0px)));
         }

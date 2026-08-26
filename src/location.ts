@@ -10,6 +10,7 @@ export type ReverseLocationNameLike = {
 };
 
 const CURRENT_LOCATION_CENTER_TOLERANCE_KM = 1;
+const COORDINATE_LOCATION_LABEL_PATTERN = /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/;
 export const DETAILED_REVERSE_NAME_ZOOM = 12;
 
 export const gpsCoordinatesFromLocation = (location: GeolocationLike | undefined): Coordinates | null =>
@@ -33,6 +34,14 @@ export const detailedLocationLabel = ({ name = '', region = '' }: ReverseLocatio
     return [detailedName, regionName]
         .filter((part, index, parts) => part && parts.indexOf(part) === index)
         .join(' · ');
+};
+
+export const compactLocationLabel = (label: string): string => {
+    const normalizedLabel = label.trim();
+    if (!normalizedLabel || COORDINATE_LOCATION_LABEL_PATTERN.test(normalizedLabel)) {
+        return normalizedLabel;
+    }
+    return normalizedLabel.split(/\s*[,，]\s*|\s+·\s+/u)[0]?.trim() || normalizedLabel;
 };
 
 export const isHomeButtonTarget = (target: unknown): boolean => {

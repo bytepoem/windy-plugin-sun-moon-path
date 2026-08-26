@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    compactLocationLabel,
     detailedLocationLabel,
     gpsCoordinatesFromLocation,
     isHomeButtonTarget,
@@ -66,6 +67,14 @@ describe('location selection', () => {
             name: '',
             region: '',
         })).toBe('');
+    });
+
+    it('keeps only the first locality for the compact event heading', () => {
+        expect(compactLocationLabel('北亭村, 小谷围街道 · 广州市')).toBe('北亭村');
+        expect(compactLocationLabel('北亭村， 小谷围街道 · 广州市')).toBe('北亭村');
+        expect(compactLocationLabel('英德市')).toBe('英德市');
+        expect(compactLocationLabel('阿拉善·左旗')).toBe('阿拉善·左旗');
+        expect(compactLocationLabel('23.052, 113.370')).toBe('23.052, 113.370');
     });
 
     it('recognizes clicks originating from Windy Home and its child elements', () => {

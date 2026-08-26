@@ -45,18 +45,26 @@
         <p>{text.panelIntro}</p>
     </div>
 
+    <div class="primary-controls">
     {#if uiLanguage === 'zh'}
-        <LocationSearch
-            apiKeys={locationApiKeys}
-            language={uiLanguage}
-            location={selectedLocation}
-            provider={locationSearchProvider}
-            on:providerchange={handleLocationProviderChange}
-            on:select={handleLocationSearchSelect}
-        />
+        <div
+            class="location-tools"
+            on:focusin={handleLocationToolsFocusIn}
+        >
+            <LocationSearch
+                apiKeys={locationApiKeys}
+                language={uiLanguage}
+                location={selectedLocation}
+                provider={locationSearchProvider}
+                on:providerchange={handleLocationProviderChange}
+                on:select={handleLocationSearchSelect}
+            />
+        </div>
     {/if}
 
-    <div class="control-grid">
+    <div
+        class="control-grid control-grid--favorites"
+    >
         <label class="control-field">
             <span class="control-label">{text.dateLabel}</span>
             <span class="date-control">
@@ -113,6 +121,24 @@
 
         <button
             type="button"
+            class="favorite-locations-trigger favorite-locations-trigger--inline"
+            aria-label={text.favoriteLocationsCountLabel(favoriteCount)}
+            aria-haspopup="dialog"
+            aria-controls={favoritesOpen ? 'favorite-locations-panel' : undefined}
+            aria-expanded={favoritesOpen}
+            title={text.favoriteLocationsLabel}
+            on:click={toggleFavoriteLocations}
+        >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M7 4h10v16l-5-3-5 3Z"></path>
+            </svg>
+            {#if favoriteCount > 0}
+                <span class="favorite-locations-trigger__count">{favoriteCount}</span>
+            {/if}
+        </button>
+
+        <button
+            type="button"
             class="language-toggle"
             aria-label={text.languageToggleLabel}
             on:click={toggleLanguage}
@@ -120,6 +146,22 @@
             <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中</span>
             <span class="language-toggle__option" class:active={uiLanguage === 'en'}>EN</span>
         </button>
+    </div>
+
+    <FavoriteLocations
+        bind:this={favoriteLocationsComponent}
+        bind:open={favoritesOpen}
+        bind:count={favoriteCount}
+        bind:currentSaved={currentLocationSaved}
+        bind:currentActionDisabled={currentFavoriteActionDisabled}
+        language={uiLanguage}
+        location={selectedLocation}
+        locationName={locationDisplayName}
+        locationNameResolved={locationNameResolved}
+        distanceOrigin={favoriteDistanceOrigin}
+        returnFocus={favoriteReturnFocus}
+        on:select={handleFavoriteLocationSelect}
+    />
     </div>
 
     <div
@@ -197,26 +239,61 @@
                 <section class="astronomy-panel" aria-label="今日天文时段">
                     <div class="astronomy-panel__heading">
                         <div class="astronomy-location">
-                            <strong
+                            <button
+                                type="button"
+                                class="astronomy-location__button"
                                 class:scrolling={locationNameOverflows}
                                 title={locationDisplayName || text.locationResolvingLabel}
-                                aria-label={locationDisplayName || text.locationResolvingLabel}
-                                use:observeLocationNameOverflow={locationDisplayName || text.locationResolvingLabel}
+                                aria-label={text.locationFavoritesLabel(
+                                    locationDisplayName || text.locationResolvingLabel,
+                                )}
+                                aria-haspopup="dialog"
+                                aria-controls={favoritesOpen ? 'favorite-locations-panel' : undefined}
+                                aria-expanded={favoritesOpen}
+                                use:observeLocationNameOverflow={eventLocationDisplayName || text.locationResolvingLabel}
+                                on:click={openFavoriteLocations}
                             >
-                                <span class="astronomy-location__name-track">
-                                    <span class="astronomy-location__name-value">
-                                        {locationDisplayName || text.locationResolvingLabel}
-                                    </span>
-                                    {#if locationNameOverflows}
-                                        <span class="astronomy-location__name-value" aria-hidden="true">
-                                            {locationDisplayName || text.locationResolvingLabel}
+                                <span class="astronomy-location__copy">
+                                    <span class="astronomy-location__name-line">
+                                        <span class="astronomy-location__name-viewport">
+                                            <span class="astronomy-location__name-track">
+                                                <span class="astronomy-location__name-value">
+                                                    {eventLocationDisplayName || text.locationResolvingLabel}
+                                                </span>
+                                                {#if locationNameOverflows}
+                                                    <span class="astronomy-location__name-value" aria-hidden="true">
+                                                        {eventLocationDisplayName || text.locationResolvingLabel}
+                                                    </span>
+                                                {/if}
+                                            </span>
                                         </span>
-                                    {/if}
+                                        <svg class="astronomy-location__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                            <path d="m6 3 5 5-5 5"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="astronomy-location__metrics">
+                                        {text.elevationLabel} {locationElevationText}
+                                    </span>
                                 </span>
-                            </strong>
-                            <span class="astronomy-location__metrics">
-                                <span>{text.elevationLabel} {locationElevationText}</span>
-                            </span>
+                            </button>
+                            <button
+                                type="button"
+                                class="astronomy-location__favorite"
+                                class:saved={currentLocationSaved}
+                                aria-label={currentLocationSaved
+                                    ? text.removeCurrentLocationFavoriteLabel
+                                    : text.saveCurrentLocationFavoriteLabel}
+                                aria-pressed={currentLocationSaved}
+                                title={currentLocationSaved
+                                    ? text.removeCurrentLocationFavoriteLabel
+                                    : text.saveCurrentLocationFavoriteLabel}
+                                disabled={currentFavoriteActionDisabled}
+                                on:click={toggleCurrentLocationFavorite}
+                            >
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="m12 3.8 2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8Z"></path>
+                                </svg>
+                            </button>
                         </div>
                         <div class="live-positions" aria-label={text.currentDirectionsLabel}>
                             <div class="live-position live-position--sun" aria-label={text.sun}>
@@ -717,7 +794,9 @@
 
     import config from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
+    import FavoriteLocations from './FavoriteLocations.svelte';
     import {
+        compactLocationLabel,
         DETAILED_REVERSE_NAME_ZOOM,
         detailedLocationLabel,
         gpsCoordinatesFromLocation,
@@ -825,6 +904,11 @@
         expandPanelLabel: string;
         restorePanelLabel: string;
         panelIntro: string;
+        favoriteLocationsLabel: string;
+        locationFavoritesLabel: (location: string) => string;
+        favoriteLocationsCountLabel: (count: number) => string;
+        saveCurrentLocationFavoriteLabel: string;
+        removeCurrentLocationFavoriteLabel: string;
         eventTab: string;
         weatherTab: string;
         guideTab: string;
@@ -915,6 +999,11 @@
             expandPanelLabel: '全屏显示',
             restorePanelLabel: '恢复小窗口',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
+            favoriteLocationsLabel: '收藏地点',
+            locationFavoritesLabel: location => `${location}，打开收藏地点`,
+            favoriteLocationsCountLabel: count => `打开收藏地点，共 ${count} 个`,
+            saveCurrentLocationFavoriteLabel: '收藏当前地点',
+            removeCurrentLocationFavoriteLabel: '取消收藏当前地点',
             eventTab: '事件',
             weatherTab: '天气',
             guideTab: '说明',
@@ -1041,6 +1130,11 @@
             expandPanelLabel: 'Show fullscreen',
             restorePanelLabel: 'Restore compact window',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
+            favoriteLocationsLabel: 'Favorite locations',
+            locationFavoritesLabel: location => `${location}. Open favorite locations`,
+            favoriteLocationsCountLabel: count => `Open ${count} favorite locations`,
+            saveCurrentLocationFavoriteLabel: 'Save current location',
+            removeCurrentLocationFavoriteLabel: 'Remove current location from favorites',
             eventTab: 'Events',
             weatherTab: 'Weather',
             guideTab: 'Guide',
@@ -1200,6 +1294,7 @@
     let selectedLocation: Coordinates = {
         ...defaultLocation(),
     };
+    let favoriteDistanceOrigin: Coordinates | null = cachedGpsLocation();
     let selectedDate = dateInputForInstant(new Date(), systemTimeZone);
     let selectedEvent: DirectionEvent = 'sunset';
     let uiLanguage: UiLanguage = 'zh';
@@ -1215,7 +1310,15 @@
     let timelineLeadLabel = '正在计算…';
     let timelineLeadTime = '';
     let locationDisplayName = '';
+    let eventLocationDisplayName = '';
+    let locationNameResolved = false;
     let locationNameOverflows = false;
+    let favoritesOpen = false;
+    let favoriteCount = 0;
+    let currentLocationSaved = false;
+    let currentFavoriteActionDisabled = true;
+    let favoriteLocationsComponent: FavoriteLocations | null = null;
+    let favoriteReturnFocus: HTMLElement | null = null;
     let locationElevationText = '--';
     let sunriseAzimuthLabel = '';
     let sunsetAzimuthLabel = '';
@@ -1273,12 +1376,15 @@
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
     let releaseOverlayOwnership: (() => void) | null = null;
     let currentLocationRequestId = 0;
+    let favoriteDistanceRequestId = 0;
     let locationNameRequestId = 0;
     let mapWasDragged = false;
     let reopenAfterHome = false;
     let addressSelectedLocation: Pick<LocationSearchResult, 'wgs84'> | null = null;
 
     $: text = translations[uiLanguage];
+
+    $: eventLocationDisplayName = compactLocationLabel(locationDisplayName);
 
     $: astronomyKey = makeAstronomyKey(selectedLocation, selectedDate);
 
@@ -1380,6 +1486,8 @@
     };
 
     const toggleLanguage = () => {
+        favoritesOpen = false;
+        favoriteReturnFocus = null;
         uiLanguage = uiLanguage === 'zh' ? 'en' : 'zh';
         saveLanguagePreference(uiLanguage);
     };
@@ -1606,6 +1714,63 @@
         } catch {
             // The in-memory key is cleared even when browser storage is unavailable.
         }
+    };
+
+    const refreshFavoriteDistanceOrigin = async () => {
+        const cachedLocation = cachedGpsLocation();
+        if (cachedLocation) {
+            favoriteDistanceOrigin = cachedLocation;
+            return;
+        }
+        const requestId = ++favoriteDistanceRequestId;
+        try {
+            const gpsLocation = await requestPreciseGpsLocation();
+            if (!gpsLocation || requestId !== favoriteDistanceRequestId) {
+                return;
+            }
+            lastKnownGpsLocation = gpsLocation;
+            favoriteDistanceOrigin = gpsLocation;
+        } catch {
+            // Distances stay unavailable when precise device location cannot be obtained.
+        }
+    };
+
+    const openFavoriteLocations = (event: MouseEvent) => {
+        favoriteReturnFocus = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+        favoritesOpen = true;
+        void refreshFavoriteDistanceOrigin();
+    };
+
+    const toggleFavoriteLocations = (event: MouseEvent) => {
+        favoriteReturnFocus = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+        const nextOpen = !favoritesOpen;
+        favoritesOpen = nextOpen;
+        if (nextOpen) {
+            void refreshFavoriteDistanceOrigin();
+        }
+    };
+
+    const toggleCurrentLocationFavorite = () => {
+        void favoriteLocationsComponent?.toggleCurrentFavorite();
+    };
+
+    const handleLocationToolsFocusIn = (event: FocusEvent) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target?.closest('.location-search')) {
+            favoritesOpen = false;
+        }
+    };
+
+    const handleFavoriteOutsidePointerDown = (event: PointerEvent) => {
+        if (!favoritesOpen || !(event.target instanceof Node)) {
+            return;
+        }
+        if (event.target instanceof Element && event.target.closest(
+            '#favorite-locations-panel, .favorite-locations-trigger, .astronomy-location__button, .astronomy-location__favorite',
+        )) {
+            return;
+        }
+        favoritesOpen = false;
     };
 
     const makeAstronomyKey = (location: Coordinates, dateInput: string): string =>
@@ -1940,6 +2105,7 @@
             return;
         }
         locationDisplayName = nextName || coordinateLocationLabel(location);
+        locationNameResolved = true;
     };
 
     const setLocation = (
@@ -1957,6 +2123,7 @@
         const nextLocationKey = buildWeatherLocationKey(nextLocation);
         const nameRequestId = ++locationNameRequestId;
         locationDisplayName = displayName.trim();
+        locationNameResolved = Boolean(locationDisplayName);
         if (!locationDisplayName) {
             void resolveLocationDisplayName(nextLocation, nameRequestId);
         }
@@ -2006,36 +2173,50 @@
     const setLocationFromMapClick = (latLon: LatLon) => {
         currentLocationRequestId += 1;
         addressSelectedLocation = null;
+        favoritesOpen = false;
         setLocation(latLon);
     };
 
-    const handleLocationSearchSelect = (event: CustomEvent<LocationSearchSelection>) => {
+    const selectLocationSearchResult = (selection: LocationSearchSelection) => {
         currentLocationRequestId += 1;
         if (locationSyncTimer) {
             clearTimeout(locationSyncTimer);
             locationSyncTimer = null;
         }
         addressSelectedLocation = {
-            wgs84: { ...event.detail.wgs84 },
+            wgs84: { ...selection.wgs84 },
         };
-        setLocation(event.detail.wgs84, false, event.detail.name, event.detail.elevationM);
-        centerMap({ lat: event.detail.wgs84.lat, lon: event.detail.wgs84.lon, zoom: 12 });
+        favoritesOpen = false;
+        setLocation(selection.wgs84, false, selection.name, selection.elevationM);
+        centerMap({ lat: selection.wgs84.lat, lon: selection.wgs84.lon, zoom: 12 });
     };
+
+    const handleLocationSearchSelect = (event: CustomEvent<LocationSearchSelection>) => {
+        selectLocationSearchResult(event.detail);
+    };
+
+    const handleFavoriteLocationSelect = (event: CustomEvent<LocationSearchSelection>) => {
+        selectLocationSearchResult(event.detail);
+    };
+
+    const requestPreciseGpsLocation = async (): Promise<Coordinates | null> =>
+        gpsCoordinatesFromLocation(await getGPSlocation({
+            enableHighAccuracy: true,
+            maximumAge: 60_000,
+            timeout: 10_000,
+            doNotShowFailureMessage: true,
+            getMeFallbackGps: false,
+        }));
 
     const centerOnCurrentGps = async (requestId: number) => {
         try {
-            const gpsLocation = gpsCoordinatesFromLocation(await getGPSlocation({
-                enableHighAccuracy: true,
-                maximumAge: 60_000,
-                timeout: 10_000,
-                doNotShowFailureMessage: true,
-                getMeFallbackGps: false,
-            }));
+            const gpsLocation = await requestPreciseGpsLocation();
             if (!gpsLocation || requestId !== currentLocationRequestId) {
                 return;
             }
 
             lastKnownGpsLocation = gpsLocation;
+            favoriteDistanceOrigin = gpsLocation;
             addressSelectedLocation = null;
             setLocation(gpsLocation, false);
             centerMap({ lat: gpsLocation.lat, lon: gpsLocation.lon, zoom: 6 });
@@ -2046,6 +2227,9 @@
 
     const syncLocationFromMapCenter = () => {
         const gpsLocation = cachedGpsLocation();
+        if (gpsLocation) {
+            favoriteDistanceOrigin = gpsLocation;
+        }
         const mapCenter = coordinatesFromLocation(map.getCenter());
         if (!gpsLocation || !mapCenter || !isMapCenteredOnLocation(mapCenter, gpsLocation)) {
             return;
@@ -2229,6 +2413,7 @@
     export const onopen = (params?: LatLon) => {
         const requestId = ++currentLocationRequestId;
         addressSelectedLocation = null;
+        favoriteDistanceOrigin = cachedGpsLocation();
         const nextLocation = params ? coordinatesFromLocation(params) || defaultLocation() : defaultLocation();
         setLocation(nextLocation, false);
         centerMap({ lat: selectedLocation.lat, lon: selectedLocation.lon, zoom: 6 });
@@ -2241,15 +2426,18 @@
         deactivateForReplacement: () => {
             isMounted = false;
             isMobileFullscreen = false;
+            favoritesOpen = false;
             mobilePluginRoot?.classList.remove('sun-path-mobile-fullscreen');
             mobileBottomWrapper?.classList.remove('sun-path-mobile-fullscreen-wrapper');
             mobilePluginRoot = null;
             mobileBottomWrapper = null;
+            favoriteReturnFocus = null;
             latestRequestId += 1;
             latestWeatherRequestId += 1;
             latestAtmosphereRequestId += 1;
             latestLightPollutionRequestId += 1;
             currentLocationRequestId += 1;
+            favoriteDistanceRequestId += 1;
             locationNameRequestId += 1;
             weatherAbortController?.abort();
             weatherAbortController = null;
@@ -2271,6 +2459,7 @@
             map.off('dragstart', handleMapDragStart);
             map.off('moveend', handleMapMoveEnd);
             document.removeEventListener('click', handleHomeButtonClick, true);
+            document.removeEventListener('pointerdown', handleFavoriteOutsidePointerDown);
         },
     };
 
@@ -2292,6 +2481,7 @@
         map.on('dragstart', handleMapDragStart);
         map.on('moveend', handleMapMoveEnd);
         document.addEventListener('click', handleHomeButtonClick, true);
+        document.addEventListener('pointerdown', handleFavoriteOutsidePointerDown);
         updateCurrentDirections();
         currentDirectionTimer = setInterval(updateCurrentDirections, 5_000);
     });
@@ -2637,6 +2827,75 @@
         color: var(--panel-muted);
     }
 
+    .primary-controls {
+        position: relative;
+        z-index: 20;
+    }
+
+    .location-tools {
+        position: relative;
+        z-index: 21;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+        align-items: start;
+    }
+
+    .favorite-locations-trigger {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 1px solid var(--panel-border);
+        border-radius: 7px;
+        background: rgba(8, 15, 27, 0.68);
+        color: var(--panel-muted);
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .favorite-locations-trigger:hover,
+    .favorite-locations-trigger[aria-expanded='true'] {
+        border-color: var(--panel-accent);
+        background: rgba(99, 185, 238, 0.16);
+        color: var(--panel-accent);
+    }
+
+    .favorite-locations-trigger svg {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .favorite-locations-trigger__count {
+        color: currentColor;
+        font-size: 9px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+
+    .favorite-locations-trigger--inline {
+        flex-direction: row;
+        gap: 4px;
+        width: 100%;
+        height: 38px;
+        border-radius: 6px;
+    }
+
+    .favorite-locations-trigger--inline .favorite-locations-trigger__count {
+        font-size: 10px;
+    }
+
     .eyebrow {
         color: var(--panel-accent);
         font-size: 11px;
@@ -2645,11 +2904,25 @@
     }
 
     .control-grid {
+        position: relative;
+        z-index: 19;
         display: grid;
         grid-template-columns: minmax(76px, 0.52fr) minmax(0, 2fr) 52px;
         align-items: stretch;
         gap: 6px;
         margin: 0 0 6px;
+    }
+
+    .control-grid--favorites {
+        z-index: 20;
+        grid-template-columns: 62px minmax(0, 1fr) 54px 52px;
+    }
+
+    .control-grid--favorites .date-control {
+        justify-content: center;
+        padding-right: 8px;
+        padding-left: 8px;
+        font-size: 13px;
     }
 
     .control-field,
@@ -3339,51 +3612,159 @@
 
     .astronomy-panel__heading {
         display: grid;
-        grid-template-columns: minmax(110px, 122px) minmax(0, 1fr) minmax(110px, 122px);
+        grid-template-columns: minmax(132px, 1fr) max-content minmax(132px, 1fr);
         align-items: center;
         gap: 6px;
         min-height: 40px;
     }
 
     .astronomy-location {
+        display: flex;
+        column-gap: 2px;
+        align-items: center;
         min-width: 0;
         text-align: left;
     }
 
-    .astronomy-location > strong {
-        display: block;
+    .astronomy-location__button {
+        display: grid;
+        flex: 0 1 auto;
+        align-items: center;
+        width: max-content;
+        max-width: calc(100% - 30px);
+        min-height: 40px;
+        padding: 2px 0;
         overflow: hidden;
+        border: 0;
+        border-radius: 4px;
         color: var(--astronomy-text);
+        background: transparent;
+        font: inherit;
         font-size: 13px;
         line-height: 1.2;
+        text-align: left;
         white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .astronomy-location__button:hover,
+    .astronomy-location__button[aria-expanded='true'] {
+        color: var(--panel-accent);
+    }
+
+    .astronomy-location__favorite {
+        display: grid;
+        flex: 0 0 28px;
+        align-self: center;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--astronomy-muted);
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .astronomy-location__favorite:hover,
+    .astronomy-location__favorite:focus-visible {
+        background: rgba(99, 185, 238, 0.14);
+        color: var(--panel-accent);
+    }
+
+    .astronomy-location__favorite:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: -2px;
+    }
+
+    .astronomy-location__favorite.saved {
+        color: #ffd166;
+    }
+
+    .astronomy-location__favorite:disabled {
+        cursor: wait;
+        opacity: 0.5;
+    }
+
+    .astronomy-location__favorite svg {
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .astronomy-location__favorite.saved svg {
+        fill: currentColor;
+    }
+
+    .astronomy-location__copy {
+        display: grid;
+        flex: 0 1 auto;
+        gap: 1px;
+        align-content: center;
+        width: max-content;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .astronomy-location__name-line {
+        display: flex;
+        gap: 3px;
+        align-items: center;
+        width: max-content;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .astronomy-location__name-viewport {
+        flex: 0 1 auto;
+        width: max-content;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .astronomy-location__name-track {
         display: flex;
         gap: 24px;
-        width: 100%;
+        width: max-content;
+        max-width: 100%;
         min-width: 0;
     }
 
     .astronomy-location__name-value {
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
-    .astronomy-location > strong.scrolling .astronomy-location__name-track {
+    .astronomy-location__button.scrolling .astronomy-location__name-track {
         width: max-content;
         animation: location-name-scroll 10s linear 1.2s infinite;
         will-change: transform;
     }
 
-    .astronomy-location > strong.scrolling .astronomy-location__name-value {
+    .astronomy-location__button.scrolling .astronomy-location__name-value {
         flex: none;
         overflow: visible;
         text-overflow: clip;
+    }
+
+    .astronomy-location__chevron {
+        width: 11px;
+        height: 11px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
     @keyframes location-name-scroll {
@@ -3396,17 +3777,19 @@
     }
 
     .astronomy-location__metrics {
-        display: grid;
-        gap: 1px;
-        margin-top: 3px;
+        display: block;
+        min-width: 0;
+        overflow: hidden;
         color: var(--astronomy-muted);
         font-size: 10px;
         font-variant-numeric: tabular-nums;
         line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .live-positions {
-        --live-icon-size: 13px;
+        --live-icon-size: 12px;
         --live-row-height: 14px;
 
         display: grid;
@@ -3414,7 +3797,7 @@
         justify-self: center;
         align-self: center;
         align-items: center;
-        column-gap: 2px;
+        column-gap: 1px;
         row-gap: 3px;
         min-width: 0;
         align-content: center;
@@ -3426,7 +3809,7 @@
         display: contents;
         min-width: 0;
         color: var(--astronomy-muted);
-        font-size: 10.8px;
+        font-size: 10px;
         line-height: var(--live-row-height);
         white-space: nowrap;
     }
@@ -3486,8 +3869,8 @@
 
     .live-position strong {
         display: grid;
-        grid-template-columns: 4ch minmax(2em, auto);
-        column-gap: 0.4ch;
+        grid-template-columns: 3.8ch minmax(2em, auto);
+        column-gap: 0.2ch;
         color: var(--astronomy-text);
         font-weight: 700;
     }
@@ -3507,9 +3890,9 @@
 
     .live-position .live-position__metric {
         display: grid;
-        grid-template-columns: 7.2ch 5ch 5ch;
+        grid-template-columns: 6.2ch 4.2ch 4.2ch;
         align-items: center;
-        column-gap: 3px;
+        column-gap: 1px;
     }
 
     .live-position__metric > span {
@@ -4429,6 +4812,10 @@
             grid-template-columns: 76px minmax(0, 1fr) 52px;
         }
 
+        .sun-path-panel.mobile_ui .control-grid--favorites {
+            grid-template-columns: 62px minmax(0, 1fr) 52px 52px;
+        }
+
         .segmented-control--events {
             grid-template-columns: repeat(5, minmax(0, 1fr));
         }
@@ -4486,7 +4873,7 @@
         }
 
         .astronomy-panel__heading {
-            grid-template-columns: minmax(78px, 82px) minmax(0, 1fr) minmax(78px, 82px);
+            grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
             gap: 4px;
         }
 
@@ -4495,9 +4882,14 @@
             padding-left: 0;
         }
 
-        .astronomy-location > strong {
+        .astronomy-location__button {
+            min-height: 40px;
             font-size: 11px;
             line-height: 1.2;
+        }
+
+        .astronomy-location__favorite {
+            height: 28px;
         }
 
         .astronomy-location__metrics {
@@ -4509,7 +4901,7 @@
             --live-row-height: 13px;
 
             justify-self: center;
-            column-gap: 2px;
+            column-gap: 1px;
             row-gap: 3px;
         }
 
@@ -4518,7 +4910,8 @@
         }
 
         .live-position__metric {
-            column-gap: 2px;
+            grid-template-columns: 6ch 4.1ch 4.1ch;
+            column-gap: 1px;
         }
 
         .orbit-moon {
@@ -4551,8 +4944,61 @@
             gap: 5px;
         }
 
+        .control-grid--favorites,
+        .sun-path-panel.mobile_ui .control-grid--favorites {
+            grid-template-columns: 50px minmax(0, 1fr) 42px 44px;
+            gap: 4px;
+        }
+
+        .control-grid--favorites .segmented-control button {
+            gap: 0;
+            padding-right: 0;
+            padding-left: 0;
+            font-size: 11px;
+        }
+
+        .control-grid--favorites .event-button__icon svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .control-grid--favorites .event-button__arrow svg {
+            width: 9px;
+            height: 9px;
+        }
+
         .segmented-control button {
             font-size: 11px;
+        }
+
+        .astronomy-panel__heading {
+            grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+            gap: 3px;
+        }
+
+        .live-position .live-position__metric {
+            display: flex;
+        }
+
+        .live-positions {
+            column-gap: 1px;
+        }
+
+        .live-position {
+            font-size: 8px;
+        }
+
+        .live-position strong {
+            display: block;
+            min-width: 0;
+        }
+
+        .live-position__compass {
+            display: none;
+        }
+
+        .live-position__event-azimuth {
+            display: none;
         }
     }
 
@@ -4579,20 +5025,20 @@
             transition: none;
         }
 
-        .astronomy-location > strong.scrolling .astronomy-location__name-track {
+        .astronomy-location__button.scrolling .astronomy-location__name-track {
             width: 100%;
             min-width: 0;
             animation: none;
         }
 
-        .astronomy-location > strong.scrolling .astronomy-location__name-value:first-child {
+        .astronomy-location__button.scrolling .astronomy-location__name-value:first-child {
             flex: 1 1 auto;
             min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .astronomy-location > strong.scrolling .astronomy-location__name-value[aria-hidden='true'] {
+        .astronomy-location__button.scrolling .astronomy-location__name-value[aria-hidden='true'] {
             display: none;
         }
     }
