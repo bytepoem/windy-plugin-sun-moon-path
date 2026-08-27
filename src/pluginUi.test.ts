@@ -51,7 +51,10 @@ describe('plugin astronomy loading presentation', () => {
         const timelineLeadEnd = pluginSource.indexOf('\n    }\n\n    export const onopen', timelineLeadStart);
         const timelineLeadSource = pluginSource.slice(timelineLeadStart, timelineLeadEnd);
 
-        expect(timelineLeadSource).toContain('dateInputForInstant(currentInstant, timeZone) !== selectedDate');
+        expect(pluginSource).toContain(
+            '$: selectedDateIsToday = dateInputForInstant(currentInstant, timeZone) === selectedDate;',
+        );
+        expect(timelineLeadSource).toContain('else if (!selectedDateIsToday)');
         expect(timelineLeadSource).toContain('timelineLeadLabel = text.dateLabel;');
         expect(timelineLeadSource).toContain('timelineLeadTime = formatDateControlLabel(selectedDate);');
         expect(timelineLeadSource).toContain('label: text.timelineEnded');
@@ -72,5 +75,33 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('on:click={openDatePicker}');
         expect(pluginSource).toContain('const openDatePicker = (event: MouseEvent) => {');
         expect(pluginSource).toContain('input.showPicker();');
+    });
+
+    it('localizes accessibility labels and names astronomy regions for the selected date', () => {
+        const literalAriaLabels = Array.from(
+            pluginSource.matchAll(/aria-label="([^"]+)"/g),
+            match => match[1],
+        );
+
+        expect(literalAriaLabels.filter(label => /\p{Script=Han}/u.test(label))).toEqual([]);
+        expect(pluginSource).not.toContain(
+            'aria-label={`${eventDisplayName(selectedEvent, text)}方向线数据`}',
+        );
+        expect(pluginSource).toContain('aria-label={text.sunMoonPanelLabel}');
+        expect(pluginSource).toContain('aria-label={text.summaryViewsLabel}');
+        expect(pluginSource).toContain(
+            'aria-label={text.astronomyPanelLabel(accessibleSelectedDateLabel, selectedDateIsToday)}',
+        );
+        expect(pluginSource).toContain(
+            'aria-label={text.astronomyEventsLabel(accessibleSelectedDateLabel, selectedDateIsToday)}',
+        );
+        expect(pluginSource).toContain('aria-label={text.currentMoonPhaseLabel}');
+        expect(pluginSource).toContain('aria-label={text.nightObservationWindowsLabel}');
+        expect(pluginSource).toContain('aria-label={text.mapLegendLabel}');
+        expect(pluginSource).toContain(
+            'aria-label={text.eventDirectionLinesLabel(eventDisplayName(selectedEvent, text))}',
+        );
+        expect(pluginSource).toContain("summaryViewsLabel: 'Sun and moon information views'");
+        expect(pluginSource).toContain("currentMoonPhaseLabel: 'Current moon phase'");
     });
 });

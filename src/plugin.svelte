@@ -225,7 +225,10 @@
                 </div>
             </div>
 
-            <div class="sample-list" aria-label={`${eventDisplayName(selectedEvent, text)}方向线数据`}>
+            <div
+                class="sample-list"
+                aria-label={text.eventDirectionLinesLabel(eventDisplayName(selectedEvent, text))}
+            >
                 {#each activeSolarPath.samples as sample}
                     <div class="sample-row">
                         <span
@@ -247,9 +250,9 @@
     <section
         class="map-bottom-module"
         class:map-bottom-module--mobile-collapsed={isMobileCollapsed}
-        aria-label="Sun Position 风格日月面板"
+        aria-label={text.sunMoonPanelLabel}
     >
-        <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
+        <nav class="summary-tabs" role="tablist" aria-label={text.summaryViewsLabel}>
             <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => (summaryTab = 'events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
             {#if isMobileOrTablet && !isMobileFullscreen}
                 <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => (summaryTab = 'weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
@@ -273,7 +276,7 @@
                 <section
                     class="astronomy-panel"
                     class:astronomy-panel--loading={status === 'loading'}
-                    aria-label="今日天文时段"
+                    aria-label={text.astronomyPanelLabel(accessibleSelectedDateLabel, selectedDateIsToday)}
                     aria-busy={status === 'loading'}
                 >
                     <div class="astronomy-panel__heading">
@@ -391,7 +394,7 @@
                             </div>
                         </div>
                         <div class="orbit-badge orbit-badge--moon">
-                            <svg class="orbit-moon" viewBox="0 0 48 48" aria-label="当前月相" role="img">
+                            <svg class="orbit-moon" viewBox="0 0 48 48" aria-label={text.currentMoonPhaseLabel} role="img">
                                 <circle cx="24" cy="24" r="18" fill="#f5efcf"></circle>
                                 <circle
                                     class="orbit-moon__shadow"
@@ -406,7 +409,10 @@
                         </div>
                     </div>
 
-                    <div class="timeline-events" aria-label="今日天文事件">
+                    <div
+                        class="timeline-events"
+                        aria-label={text.astronomyEventsLabel(accessibleSelectedDateLabel, selectedDateIsToday)}
+                    >
                         {#if status === 'loading'}
                             {#each timelineSkeletonSlots as _}
                                 <div class="timeline-event timeline-event--skeleton" aria-hidden="true">
@@ -443,7 +449,7 @@
                             on:retry={retryLightPollution}
                         />
 
-                        <div class="night-window-list" aria-label="夜间观测时段">
+                        <div class="night-window-list" aria-label={text.nightObservationWindowsLabel}>
                             {#each observationWindows as slot}
                                 <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
                                     <div class="night-window__body">
@@ -488,7 +494,7 @@
             {:else if summaryTab === 'guide'}
                 <section class="module-about module-guide" aria-label={text.guideHeading}>
                     <p>{text.aboutDescription}</p>
-                    <div class="sun-path-legend sun-path-legend--module" aria-label="地图图例">
+                    <div class="sun-path-legend sun-path-legend--module" aria-label={text.mapLegendLabel}>
                         <div class="sun-path-legend__items">
                             <span class="legend-item">
                                 <span class="legend-dot legend-dot--origin" aria-hidden="true"></span>
@@ -987,6 +993,14 @@
         expandPanelLabel: string;
         restorePanelLabel: string;
         panelIntro: string;
+        sunMoonPanelLabel: string;
+        summaryViewsLabel: string;
+        astronomyPanelLabel: (date: string, isToday: boolean) => string;
+        currentMoonPhaseLabel: string;
+        astronomyEventsLabel: (date: string, isToday: boolean) => string;
+        nightObservationWindowsLabel: string;
+        mapLegendLabel: string;
+        eventDirectionLinesLabel: (event: string) => string;
         favoriteLocationsLabel: string;
         locationFavoritesLabel: (location: string) => string;
         favoriteLocationsCountLabel: (count: number) => string;
@@ -1086,6 +1100,14 @@
             expandPanelLabel: '全屏显示',
             restorePanelLabel: '恢复小窗口',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
+            sunMoonPanelLabel: '日月信息面板',
+            summaryViewsLabel: '日月信息视图',
+            astronomyPanelLabel: (date, isToday) => isToday ? '今日天文时段' : `${date}天文时段`,
+            currentMoonPhaseLabel: '当前月相',
+            astronomyEventsLabel: (date, isToday) => isToday ? '今日天文事件' : `${date}天文事件`,
+            nightObservationWindowsLabel: '夜间观测时段',
+            mapLegendLabel: '地图图例',
+            eventDirectionLinesLabel: event => `${event}方向线数据`,
             favoriteLocationsLabel: '收藏地点',
             locationFavoritesLabel: location => `${location}，打开收藏地点`,
             favoriteLocationsCountLabel: count => `打开收藏地点，共 ${count} 个`,
@@ -1221,6 +1243,14 @@
             expandPanelLabel: 'Show fullscreen',
             restorePanelLabel: 'Restore compact window',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
+            sunMoonPanelLabel: 'Sun and moon information panel',
+            summaryViewsLabel: 'Sun and moon information views',
+            astronomyPanelLabel: (date, isToday) => isToday ? 'Today’s astronomy windows' : `Astronomy windows for ${date}`,
+            currentMoonPhaseLabel: 'Current moon phase',
+            astronomyEventsLabel: (date, isToday) => isToday ? 'Today’s astronomy events' : `Astronomy events for ${date}`,
+            nightObservationWindowsLabel: 'Night observing windows',
+            mapLegendLabel: 'Map legend',
+            eventDirectionLinesLabel: event => `${event} direction-line data`,
             favoriteLocationsLabel: 'Favorite locations',
             locationFavoritesLabel: location => `${location}. Open favorite locations`,
             favoriteLocationsCountLabel: count => `Open ${count} favorite locations`,
@@ -1480,6 +1510,10 @@
     let addressSelectedLocation: Pick<LocationSearchResult, 'wgs84'> | null = null;
 
     $: text = translations[uiLanguage];
+
+    $: selectedDateIsToday = dateInputForInstant(currentInstant, timeZone) === selectedDate;
+
+    $: accessibleSelectedDateLabel = formatAccessibleDateLabel(selectedDate, uiLanguage);
 
     $: isMobileCollapsed = isMobileOrTablet && mobilePanelMode === 'collapsed';
 
@@ -2549,6 +2583,19 @@
             : dateInput;
     };
 
+    const formatAccessibleDateLabel = (dateInput: string, language: UiLanguage): string => {
+        const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
+        if (![year, month, day].every(Number.isFinite)) {
+            return dateInput;
+        }
+        return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'UTC',
+        }).format(Date.UTC(year, month - 1, day, 12));
+    };
+
     const openDatePicker = (event: MouseEvent) => {
         const input = event.currentTarget;
         if (!(input instanceof HTMLInputElement)) {
@@ -2612,7 +2659,7 @@
         if (!astronomyTimeline) {
             timelineLeadLabel = text.calculating;
             timelineLeadTime = '';
-        } else if (dateInputForInstant(currentInstant, timeZone) !== selectedDate) {
+        } else if (!selectedDateIsToday) {
             timelineLeadLabel = text.dateLabel;
             timelineLeadTime = formatDateControlLabel(selectedDate);
         } else {
