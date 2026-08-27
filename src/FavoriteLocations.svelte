@@ -27,6 +27,7 @@
     export let distanceOrigin: Coordinates | null = null;
     export let language: 'zh' | 'en' = 'zh';
     export let returnFocus: HTMLElement | null = null;
+    export let openUpward = false;
     export let currentSaved = false;
     export let currentActionDisabled = true;
 
@@ -329,6 +330,7 @@
     <section
         id="favorite-locations-panel"
         class="favorite-locations"
+        class:open-upward={openUpward}
         class:sort-menu-open={sortMenuOpen}
         role="dialog"
         bind:this={panelElement}
@@ -486,6 +488,17 @@
         min-height: 134px;
     }
 
+    .favorite-locations.open-upward {
+        top: auto;
+        bottom: 44px;
+        max-height: min(267px, 50dvh);
+        box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.46);
+    }
+
+    .favorite-locations.open-upward .favorite-locations__list {
+        max-height: min(210px, calc(50dvh - 56px));
+    }
+
     .favorite-locations__heading {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto 40px;
@@ -505,7 +518,7 @@
         position: relative;
         display: flex;
         align-items: center;
-        width: 88px;
+        width: 100px;
         min-width: 0;
     }
 
@@ -855,7 +868,7 @@
         }
 
         .favorite-locations__heading-order {
-            width: 82px;
+            width: 96px;
         }
 
         .favorite-locations__sort-button {

@@ -48,16 +48,19 @@ relative to a point on the Windy map.
   current browser.
 - On desktop, keeps **Weather** permanently visible below the original four tabs
   so the astronomy summary and forecast usually fit in one viewport; vertical
-  scrolling remains available for shorter windows. Mobile switches between a
-  compact window and fullscreen: compact mode keeps five tabs, **Events**,
+  scrolling remains available for shorter windows. Mobile provides direction-line,
+  compact, and fullscreen modes. Direction-line mode keeps domestic location search,
+  date and event controls, the selected place and live directions, and the daily event
+  times; its favorites panel opens upward. Compact mode keeps five tabs, **Events**,
   **Weather**, **Guide**, **Settings**, and **About**, while fullscreen places the
-  weather table below the events module:
+  weather table below the events module. The direction-line or compact choice is
+  saved in the current browser:
   - **Events** shows event times, directions, and the daily astronomy timeline.
   - **Weather** provides a horizontally scrollable EC, GFS, or ICON five-day forecast.
   - **Guide** explains the map legend, weather color scales, wind symbol, and data.
-  - **Settings** controls line opacity and the optional 600 km reference point in
-    the current browser. Switch to the Chinese UI to configure Amap, Baidu, or
-    Tencent Maps API Keys.
+  - **Settings** controls line opacity and the optional 600 km reference point in the
+    current browser. Switch to the Chinese UI to hide domestic location search or
+    configure Amap, Baidu, or Tencent Maps API Keys.
   - **About** links to the repository and Issues, identifies the author and
     version, and provides a GitHub Star entry point.
 
@@ -138,8 +141,11 @@ After the plugin is open:
    direction in the panel.
 6. You can also click the map to recalculate directions for another location.
 7. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
-   while using the always-visible forecast below. On mobile, switch between all
-   five tabs.
+   while using the always-visible forecast below. On mobile, use the panel controls
+   to collapse into direction-line mode, restore the compact window, or enter
+   fullscreen. Direction-line mode keeps search, the primary controls, and two compact
+   astronomy rows; in the Chinese UI, enable **Hide domestic location search** in
+   **Settings** when search is not needed.
 8. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
    6 hours through the next 5 days.
 

@@ -3,7 +3,9 @@
     class="sun-path-panel"
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
+    class:mobile_collapsed={isMobileCollapsed}
     class:mobile_fullscreen={isMobileFullscreen}
+    class:favorites_open={favoritesOpen}
     bind:this={panelElement}
     on:wheel|capture|nonpassive={handleNestedWheel}
 >
@@ -19,14 +21,34 @@
     {#if isMobileOrTablet}
         <button
             type="button"
-            class="mobile-window-toggle"
+            class="mobile-window-control mobile-collapse-toggle"
+            aria-controls="sun-moon-path-panel"
+            aria-expanded={!isMobileCollapsed}
+            aria-label={isMobileCollapsed ? text.expandCompactPanelLabel : text.collapsePanelLabel}
+            title={isMobileCollapsed ? text.expandCompactPanelLabel : text.collapsePanelLabel}
+            on:click={toggleMobileCollapsed}
+        >
+            <span class="mobile-window-control__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    {#if isMobileCollapsed}
+                        <path d="m5 15 7-7 7 7"></path>
+                    {:else}
+                        <path d="m5 9 7 7 7-7"></path>
+                    {/if}
+                </svg>
+            </span>
+        </button>
+
+        <button
+            type="button"
+            class="mobile-window-control mobile-window-toggle"
             aria-controls="sun-moon-path-panel"
             aria-expanded={isMobileFullscreen}
             aria-label={isMobileFullscreen ? text.restorePanelLabel : text.expandPanelLabel}
             title={isMobileFullscreen ? text.restorePanelLabel : text.expandPanelLabel}
             on:click={toggleMobileFullscreen}
         >
-            <span class="mobile-window-toggle__icon" aria-hidden="true">
+            <span class="mobile-window-control__icon" aria-hidden="true">
                 {#if isMobileFullscreen}
                     <svg viewBox="0 0 24 24" focusable="false">
                         <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"></path>
@@ -46,7 +68,7 @@
     </div>
 
     <div class="primary-controls">
-    {#if uiLanguage === 'zh'}
+    {#if uiLanguage === 'zh' && !hideDomesticLocationSearch}
         <div
             class="location-tools"
             on:focusin={handleLocationToolsFocusIn}
@@ -160,12 +182,14 @@
         locationNameResolved={locationNameResolved}
         distanceOrigin={favoriteDistanceOrigin}
         returnFocus={favoriteReturnFocus}
+        openUpward={isMobileCollapsed}
         on:select={handleFavoriteLocationSelect}
     />
     </div>
 
     <div
         class="status-region"
+        class:mobile-collapsed-hidden={isMobileCollapsed}
         class:status-region--event-details={selectedEvent !== 'all' && activeSolarPath?.status !== undefined}
         aria-live="polite"
     >
@@ -217,6 +241,7 @@
 
     <section
         class="map-bottom-module"
+        class:map-bottom-module--mobile-collapsed={isMobileCollapsed}
         aria-label="Sun Position 风格日月面板"
     >
         <nav class="summary-tabs" role="tablist" aria-label="日月信息视图">
@@ -232,8 +257,9 @@
         <div
             id="summary-panel"
             class="summary-panel-frame"
-            role="tabpanel"
-            aria-labelledby={`summary-tab-${summaryTab}`}
+            role={isMobileCollapsed ? 'region' : 'tabpanel'}
+            aria-label={isMobileCollapsed ? text.eventTab : undefined}
+            aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
         >
             {#if summaryTab === 'events'}
                 <section class="astronomy-panel" aria-label="今日天文时段">
@@ -372,35 +398,37 @@
                         {/each}
                     </div>
 
-                    <LightPollutionSummary
-                        point={lightPollutionPoint}
-                        status={lightPollutionStatus}
-                        errorMessage={lightPollutionErrorMessage}
-                        canRetry={lightPollutionErrorKind === 'network'}
-                        language={uiLanguage}
-                        on:retry={retryLightPollution}
-                    />
+                    {#if !isMobileCollapsed}
+                        <LightPollutionSummary
+                            point={lightPollutionPoint}
+                            status={lightPollutionStatus}
+                            errorMessage={lightPollutionErrorMessage}
+                            canRetry={lightPollutionErrorKind === 'network'}
+                            language={uiLanguage}
+                            on:retry={retryLightPollution}
+                        />
 
-                    <div class="night-window-list" aria-label="夜间观测时段">
-                        {#each observationWindows as slot}
-                            <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
-                                <div class="night-window__body">
-                                    <strong>{text.intervals[slot.kind]}</strong>
-                                    {#if slot.interval}
-                                        <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval, uiLanguage)}</span>
-                                    {:else}
-                                        <span>
-                                            {status === 'error'
-                                                ? text.intervalUnavailable
-                                                : status === 'ready' || status === 'empty'
-                                                    ? text.noInterval
-                                                    : text.calculating}
-                                        </span>
-                                    {/if}
-                                </div>
-                            </article>
-                        {/each}
-                    </div>
+                        <div class="night-window-list" aria-label="夜间观测时段">
+                            {#each observationWindows as slot}
+                                <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
+                                    <div class="night-window__body">
+                                        <strong>{text.intervals[slot.kind]}</strong>
+                                        {#if slot.interval}
+                                            <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval, uiLanguage)}</span>
+                                        {:else}
+                                            <span>
+                                                {status === 'error'
+                                                    ? text.intervalUnavailable
+                                                    : status === 'ready' || status === 'empty'
+                                                        ? text.noInterval
+                                                        : text.calculating}
+                                            </span>
+                                        {/if}
+                                    </div>
+                                </article>
+                            {/each}
+                        </div>
+                    {/if}
                 </section>
             {:else if summaryTab === 'weather' && isMobileOrTablet && !isMobileFullscreen}
                 <WeatherTable
@@ -631,6 +659,19 @@
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
                     {#if uiLanguage === 'zh'}
+                        <label class="settings-toggle settings-toggle--location-search">
+                            <span class="settings-toggle__copy">
+                                <strong>{text.hideLocationSearchLabel}</strong>
+                                <span>{text.hideLocationSearchDescription}</span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={hideDomesticLocationSearch}
+                                aria-label={text.hideLocationSearchLabel}
+                                on:change={toggleDomesticLocationSearch}
+                            />
+                            <span class="settings-toggle__control" aria-hidden="true"></span>
+                        </label>
                         <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
                             {#each LOCATION_PROVIDERS as providerOption}
                                 <form
@@ -888,6 +929,8 @@
     type DirectionEvent = ObservationEvent;
     type SummaryTab = 'events' | 'weather' | 'guide' | 'settings' | 'about';
     type UiLanguage = 'zh' | 'en';
+    type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
+    type MobilePanelMode = MobileNonFullscreenPanelMode | 'fullscreen';
     const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'guide', 'settings', 'about'];
     const desktopSummaryTabOrder: SummaryTab[] = ['events', 'guide', 'settings', 'about'];
     const eventOptions: { value: DirectionEvent }[] = [
@@ -901,6 +944,8 @@
         dateLabel: string;
         eventSelectorLabel: string;
         languageToggleLabel: string;
+        collapsePanelLabel: string;
+        expandCompactPanelLabel: string;
         expandPanelLabel: string;
         restorePanelLabel: string;
         panelIntro: string;
@@ -940,6 +985,8 @@
         lineOpacityDescription: string;
         show600Label: string;
         show600Description: string;
+        hideLocationSearchLabel: string;
+        hideLocationSearchDescription: string;
         locationApiKeyLabel: string;
         locationApiKeyPlaceholder: string;
         locationApiKeyDescription: string;
@@ -996,6 +1043,8 @@
             dateLabel: '观测日期',
             eventSelectorLabel: '选择日月事件',
             languageToggleLabel: '切换到英文',
+            collapsePanelLabel: '收起为方位线模式',
+            expandCompactPanelLabel: '展开面板',
             expandPanelLabel: '全屏显示',
             restorePanelLabel: '恢复小窗口',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
@@ -1035,6 +1084,8 @@
             lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
             show600Label: '显示 600 km 点',
             show600Description: '开启后事件方向线会延伸到 600 km，并在该距离增加一个参考点。设置会保存在当前浏览器。',
+            hideLocationSearchLabel: '隐藏国内地址搜索框',
+            hideLocationSearchDescription: '开启后不再显示面板顶部的国内地点搜索框；已保存的地图 API Key 不会清除。设置会保存在当前浏览器。',
             locationApiKeyLabel: '国内地址搜索 API Key',
             locationApiKeyPlaceholder: '请输入 API Key',
             locationApiKeyDescription: '可配置高德、百度和腾讯，并在搜索框中切换。各 Key 仅保存在当前浏览器。',
@@ -1127,6 +1178,8 @@
             dateLabel: 'Date',
             eventSelectorLabel: 'Choose event',
             languageToggleLabel: 'Switch to Chinese',
+            collapsePanelLabel: 'Collapse to direction-line mode',
+            expandCompactPanelLabel: 'Expand panel',
             expandPanelLabel: 'Show fullscreen',
             restorePanelLabel: 'Restore compact window',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
@@ -1166,6 +1219,8 @@
             lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
             show600Label: 'Show 600 km point',
             show600Description: 'When enabled, event direction lines extend to 600 km and add a reference point there. This setting is saved in this browser.',
+            hideLocationSearchLabel: 'Hide domestic location search',
+            hideLocationSearchDescription: 'Hide the domestic location search control without removing saved map API keys. This setting is saved in this browser.',
             locationApiKeyLabel: 'Domestic location search API keys',
             locationApiKeyPlaceholder: 'Enter API Key',
             locationApiKeyDescription: 'Configure Amap, Baidu, and Tencent, then switch providers in search. Keys stay in this browser.',
@@ -1257,6 +1312,8 @@
     };
     const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
     const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
+    const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-mode';
+    const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
     const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
     const LOCATION_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:location-provider';
     const LOCATION_PROVIDER_API_KEY_STORAGE_KEYS: Record<LocationProvider, string> = {
@@ -1357,6 +1414,7 @@
     let latestLightPollutionRequestId = 0;
     let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
+    let hideDomesticLocationSearch = false;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
     let locationSearchProvider: LocationProvider = 'amap';
     let locationApiKeys: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
@@ -1370,7 +1428,8 @@
     let panelElement: HTMLElement | null = null;
     let mobilePluginRoot: HTMLElement | null = null;
     let mobileBottomWrapper: HTMLElement | null = null;
-    let isMobileFullscreen = false;
+    let mobilePanelMode: MobilePanelMode = 'compact';
+    let lastMobileNonFullscreenMode: MobileNonFullscreenPanelMode = 'compact';
     let astronomyKey = '';
     let currentDirectionTimer: ReturnType<typeof setInterval> | null = null;
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1383,6 +1442,14 @@
     let addressSelectedLocation: Pick<LocationSearchResult, 'wgs84'> | null = null;
 
     $: text = translations[uiLanguage];
+
+    $: isMobileCollapsed = isMobileOrTablet && mobilePanelMode === 'collapsed';
+
+    $: isMobileFullscreen = isMobileOrTablet && mobilePanelMode === 'fullscreen';
+
+    $: if (mobilePluginRoot) {
+        mobilePluginRoot.classList.toggle('sun-path-favorites-open', isMobileOrTablet && favoritesOpen);
+    }
 
     $: eventLocationDisplayName = compactLocationLabel(locationDisplayName);
 
@@ -1414,7 +1481,7 @@
 
     $: if (shouldLoadWeather({
         isMounted,
-        isWeatherTabActive: !isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather',
+        isWeatherTabActive: !isMobileCollapsed && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather'),
         locationKey,
         resolvedContextLocationKey,
         requestKey: weatherRequestKey,
@@ -1426,7 +1493,7 @@
 
     $: if (shouldLoadWeather({
         isMounted,
-        isWeatherTabActive: !isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather',
+        isWeatherTabActive: !isMobileCollapsed && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather'),
         locationKey,
         resolvedContextLocationKey,
         requestKey: atmosphereRequestKey,
@@ -1438,6 +1505,7 @@
 
     $: if (
         isMounted
+        && !isMobileCollapsed
         && lightPollutionRequestKey
         && lightPollutionRequestKey !== lightPollutionLoadedKey
         && lightPollutionRequestKey !== lightPollutionLoadingKey
@@ -1485,6 +1553,69 @@
         }
     };
 
+    const loadMobilePanelModePreference = (): MobileNonFullscreenPanelMode => {
+        try {
+            return localStorage.getItem(MOBILE_PANEL_MODE_STORAGE_KEY) === 'collapsed'
+                ? 'collapsed'
+                : 'compact';
+        } catch {
+            return 'compact';
+        }
+    };
+
+    const saveMobilePanelModePreference = (value: MobileNonFullscreenPanelMode) => {
+        try {
+            localStorage.setItem(MOBILE_PANEL_MODE_STORAGE_KEY, value);
+        } catch {
+            // Storage can be unavailable in hardened browser modes; the panel mode still works for this session.
+        }
+    };
+
+    const loadHideLocationSearchPreference = (): boolean => {
+        try {
+            return localStorage.getItem(HIDE_LOCATION_SEARCH_STORAGE_KEY) === 'true';
+        } catch {
+            return false;
+        }
+    };
+
+    const saveHideLocationSearchPreference = (value: boolean) => {
+        try {
+            localStorage.setItem(HIDE_LOCATION_SEARCH_STORAGE_KEY, String(value));
+        } catch {
+            // Storage can be unavailable in hardened browser modes; the setting still works for this session.
+        }
+    };
+
+    const toggleDomesticLocationSearch = (event: Event) => {
+        hideDomesticLocationSearch = (event.currentTarget as HTMLInputElement).checked;
+        saveHideLocationSearchPreference(hideDomesticLocationSearch);
+    };
+
+    const suspendMobileDetailRequests = () => {
+        if (weatherLoadingKey) {
+            latestWeatherRequestId += 1;
+            weatherAbortController?.abort();
+            weatherAbortController = null;
+            weatherLoadingKey = '';
+            weatherStatus = 'idle';
+        }
+        if (atmosphereLoadingKey) {
+            latestAtmosphereRequestId += 1;
+            atmosphereAbortController?.abort();
+            atmosphereAbortController = null;
+            atmosphereLoadingKey = '';
+            atmosphereStatus = 'idle';
+        }
+        if (lightPollutionLoadingKey) {
+            latestLightPollutionRequestId += 1;
+            lightPollutionAbortController?.abort();
+            lightPollutionAbortController = null;
+            lightPollutionLoadingKey = '';
+            lightPollutionStatus = 'idle';
+        }
+    };
+
     const toggleLanguage = () => {
         favoritesOpen = false;
         favoriteReturnFocus = null;
@@ -1492,11 +1623,14 @@
         saveLanguagePreference(uiLanguage);
     };
 
-    const setMobileFullscreen = (value: boolean) => {
+    const setMobilePanelMode = (value: MobilePanelMode) => {
         if (!isMobileOrTablet) {
             return;
         }
-        if (value && summaryTab === 'weather') {
+        if (value === 'collapsed') {
+            summaryTab = 'events';
+        }
+        if (value === 'fullscreen' && summaryTab === 'weather') {
             summaryTab = 'events';
         }
         mobilePluginRoot = mobilePluginRoot
@@ -1505,13 +1639,33 @@
         mobileBottomWrapper = mobileBottomWrapper
             || mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper')
             || null;
-        isMobileFullscreen = value;
-        mobilePluginRoot?.classList.toggle('sun-path-mobile-fullscreen', value);
-        mobileBottomWrapper?.classList.toggle('sun-path-mobile-fullscreen-wrapper', value);
+        if (value === 'fullscreen') {
+            if (mobilePanelMode !== 'fullscreen') {
+                lastMobileNonFullscreenMode = mobilePanelMode;
+            }
+        } else {
+            lastMobileNonFullscreenMode = value;
+            saveMobilePanelModePreference(value);
+        }
+        favoritesOpen = false;
+        favoriteReturnFocus = null;
+        if (value === 'collapsed') {
+            suspendMobileDetailRequests();
+        }
+        mobilePanelMode = value;
+        const fullscreen = value === 'fullscreen';
+        const collapsed = value === 'collapsed';
+        mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', collapsed);
+        mobilePluginRoot?.classList.toggle('sun-path-mobile-fullscreen', fullscreen);
+        mobileBottomWrapper?.classList.toggle('sun-path-mobile-fullscreen-wrapper', fullscreen);
+    };
+
+    const toggleMobileCollapsed = () => {
+        setMobilePanelMode(isMobileCollapsed ? 'compact' : 'collapsed');
     };
 
     const toggleMobileFullscreen = () => {
-        setMobileFullscreen(!isMobileFullscreen);
+        setMobilePanelMode(isMobileFullscreen ? lastMobileNonFullscreenMode : 'fullscreen');
     };
 
     const handleNestedWheel = (event: WheelEvent) => {
@@ -2425,8 +2579,11 @@
     const overlayOwner = {
         deactivateForReplacement: () => {
             isMounted = false;
-            isMobileFullscreen = false;
+            mobilePanelMode = 'compact';
+            lastMobileNonFullscreenMode = 'compact';
             favoritesOpen = false;
+            mobilePluginRoot?.classList.remove('sun-path-favorites-open');
+            mobilePluginRoot?.classList.remove('sun-path-mobile-collapsed');
             mobilePluginRoot?.classList.remove('sun-path-mobile-fullscreen');
             mobileBottomWrapper?.classList.remove('sun-path-mobile-fullscreen-wrapper');
             mobilePluginRoot = null;
@@ -2470,6 +2627,10 @@
             : null;
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
         uiLanguage = loadLanguagePreference();
+        mobilePanelMode = isMobileOrTablet ? loadMobilePanelModePreference() : 'compact';
+        lastMobileNonFullscreenMode = mobilePanelMode;
+        mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
+        hideDomesticLocationSearch = loadHideLocationSearchPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         locationSearchProvider = loadLocationSearchProvider();
@@ -2580,6 +2741,11 @@
     }
 
     :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-moon-path) {
+        --mobile-window-control-size: 44px;
+        --mobile-window-control-gap: 5px;
+        --mobile-window-control-edge: 32px;
+        --mobile-window-icon-size: 25px;
+
         height: fit-content !important;
         max-height: min(430px, 52vh) !important;
         max-height: min(430px, 52dvh) !important;
@@ -2589,17 +2755,25 @@
         overflow: visible !important;
     }
 
+    :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-moon-path.sun-path-mobile-collapsed) {
+        max-height: min(
+            280px,
+            calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+        ) !important;
+    }
+
     :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small > .closing-x) {
-        top: -54px !important;
-        right: 0 !important;
+        top: -44px !important;
+        right: var(--mobile-window-control-edge) !important;
         bottom: auto !important;
         display: flex;
         align-items: flex-end;
         justify-content: flex-start;
         box-sizing: border-box;
-        width: 44px;
-        height: 44px;
-        padding: 0 0 0 8px;
+        width: var(--mobile-window-control-size);
+        height: var(--mobile-window-control-size);
+        margin: 0;
+        padding: 0;
         border-radius: 0;
         background: transparent;
         color: transparent;
@@ -2611,8 +2785,8 @@
 
     :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small > .closing-x::before) {
         display: grid;
-        width: 25px;
-        height: 25px;
+        width: var(--mobile-window-icon-size);
+        height: var(--mobile-window-icon-size);
         margin-bottom: -10px;
         place-items: center;
         border-radius: 50%;
@@ -2638,16 +2812,15 @@
         overflow: visible;
     }
 
-    .mobile-window-toggle {
+    .mobile-window-control {
         position: absolute;
         top: -44px;
-        right: 54px;
         display: flex;
         align-items: flex-end;
-        justify-content: flex-end;
+        justify-content: center;
         box-sizing: border-box;
-        width: 44px;
-        height: 44px;
+        width: var(--mobile-window-control-size);
+        height: var(--mobile-window-control-size);
         padding: 0;
         border: 0;
         color: var(--panel-text);
@@ -2657,11 +2830,35 @@
         z-index: 1001;
     }
 
-    .mobile-window-toggle__icon {
+    .sun-path-panel.mobile_ui.mobile_collapsed.favorites_open .mobile-window-control {
+        z-index: 19;
+    }
+
+    :global(#plugin-windy-plugin-sun-moon-path.sun-path-mobile-collapsed.sun-path-favorites-open > .closing-x) {
+        z-index: 19 !important;
+    }
+
+    .mobile-collapse-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) + var(--mobile-window-control-size) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-size) +
+                var(--mobile-window-control-gap)
+        );
+        justify-content: flex-end;
+    }
+
+    .mobile-window-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) + var(--mobile-window-control-size) +
+                var(--mobile-window-control-gap)
+        );
+    }
+
+    .mobile-window-control__icon {
         box-sizing: border-box;
         display: grid;
-        width: 25px;
-        height: 25px;
+        width: var(--mobile-window-icon-size);
+        height: var(--mobile-window-icon-size);
         margin-bottom: -10px;
         place-items: center;
         border: 1px solid var(--panel-border);
@@ -2670,7 +2867,7 @@
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32);
     }
 
-    .mobile-window-toggle svg {
+    .mobile-window-control svg {
         width: 14px;
         height: 14px;
         fill: none;
@@ -2680,9 +2877,18 @@
         stroke-linejoin: round;
     }
 
-    .mobile-window-toggle:hover .mobile-window-toggle__icon,
-    .mobile-window-toggle:active .mobile-window-toggle__icon {
+    .mobile-window-control:hover .mobile-window-control__icon,
+    .mobile-window-control:active .mobile-window-control__icon {
         background: var(--panel-surface-hover);
+    }
+
+    .mobile-window-control:focus-visible {
+        outline: none;
+    }
+
+    .mobile-window-control:focus-visible .mobile-window-control__icon {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
     }
 
     .sun-path-panel.mobile_ui .mobile-scroll-content {
@@ -2701,6 +2907,25 @@
         padding: 8px 8px 0;
     }
 
+    .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
+        max-height: min(
+            280px,
+            calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+        );
+        overflow: visible;
+    }
+
+    .sun-path-panel.mobile_ui.mobile_collapsed {
+        max-height: min(
+            280px,
+            calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+        );
+    }
+
+    .mobile-collapsed-hidden {
+        display: none !important;
+    }
+
     :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen) {
         position: fixed !important;
         inset: 0 !important;
@@ -2716,8 +2941,8 @@
     }
 
     :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen > .closing-x) {
-        top: calc(env(safe-area-inset-top, 0px) - 10px) !important;
-        right: 0 !important;
+        top: env(safe-area-inset-top, 0px) !important;
+        right: var(--mobile-window-control-edge) !important;
         align-items: center;
     }
 
@@ -2731,13 +2956,12 @@
         max-height: none;
     }
 
-    .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-toggle {
+    .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-control {
         top: env(safe-area-inset-top, 0px);
-        right: 54px;
         align-items: center;
     }
 
-    .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-toggle__icon {
+    .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-control__icon {
         margin-bottom: 0;
     }
 
@@ -2770,6 +2994,20 @@
 
     .sun-path-panel.mobile_ui .map-bottom-module {
         margin-top: 0;
+    }
+
+    .map-bottom-module--mobile-collapsed .summary-tabs {
+        display: none;
+    }
+
+    .map-bottom-module--mobile-collapsed .summary-panel-frame {
+        height: auto;
+    }
+
+    .map-bottom-module--mobile-collapsed .astronomy-panel {
+        height: auto;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .sun-path-panel.mobile_ui .summary-tabs button {
@@ -3719,6 +3957,7 @@
         width: max-content;
         max-width: 100%;
         min-width: 0;
+        color: var(--panel-accent);
     }
 
     .astronomy-location__name-viewport {
@@ -4560,6 +4799,10 @@
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.06);
         cursor: pointer;
+    }
+
+    .settings-toggle--location-search {
+        margin-bottom: 10px;
     }
 
     .settings-toggle__copy {
