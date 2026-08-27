@@ -7,6 +7,7 @@
     import {
         buildWeatherDateGroups,
         findCurrentTimePosition,
+        findWeatherDateSelection,
         formatWeatherHour,
         weatherConditionLabel,
         weatherMetricTone,
@@ -29,6 +30,7 @@
     export let language: 'zh' | 'en' = 'zh';
     export let timeZone = 'UTC';
     export let currentTimestamp = Date.now();
+    export let selectedDate = '';
     export let dataKey = '';
     export let location: Coordinates;
 
@@ -76,6 +78,8 @@
             hourStep: '小时间隔',
             openMeteoUpdating: 'Open-Meteo 更新中',
             openMeteoRetry: 'Open-Meteo · 重试',
+            selectedDateOutsideRange: (date: string) => `所选日期 ${date} 不在当前五天预报范围内，表格仍显示当前预报。`,
+            selectedDateMissing: (date: string) => `所选日期 ${date} 暂无可用预报时次，表格仍显示当前预报。`,
             metrics: {
                 totalCloudPercent: ['云量', '%'],
                 highCloudPercent: ['高云', '%'],
@@ -109,6 +113,8 @@
             hourStep: 'hour interval',
             openMeteoUpdating: 'Updating Open-Meteo',
             openMeteoRetry: 'Open-Meteo · Retry',
+            selectedDateOutsideRange: (date: string) => `Selected date ${date} is outside the current five-day forecast. The table still shows the current forecast.`,
+            selectedDateMissing: (date: string) => `No forecast steps are available for selected date ${date}. The table still shows the current forecast.`,
             metrics: {
                 totalCloudPercent: ['Clouds', '%'],
                 highCloudPercent: ['High', '%'],
@@ -134,6 +140,7 @@
 
     $: text = translations[language];
     $: dateGroups = buildWeatherDateGroups(points, timeZone, language);
+    $: selectedDateSelection = findWeatherDateSelection(points, timeZone, selectedDate);
     $: celestialCurves = buildCelestialCurves(points.map(point => point.timestamp), location);
     $: celestialChartWidth = points.length * COLUMN_WIDTH;
     $: nowPosition = findCurrentTimePosition(points, currentTimestamp);
@@ -145,18 +152,63 @@
     $: stepRange = stepValues.length > 0
         ? `${Math.min(...stepValues)}${Math.min(...stepValues) === Math.max(...stepValues) ? '' : `-${Math.max(...stepValues)}`}`
         : '';
-    $: scrollKey = `${dataKey}|${model}|${points[0]?.timestamp || 0}|${points.at(-1)?.timestamp || 0}|${points.length}`;
+    $: selectedDateLabel = formatSelectedDateLabel(selectedDate);
+    $: selectedDateNotice = selectedDateSelection.coverage === 'before-range'
+        || selectedDateSelection.coverage === 'after-range'
+        ? text.selectedDateOutsideRange(selectedDateLabel)
+        : selectedDateSelection.coverage === 'missing'
+            ? text.selectedDateMissing(selectedDateLabel)
+            : '';
+    $: selectedDateStartIndex = selectedDateSelection.startIndex;
+    $: selectedDateEndIndex = selectedDateStartIndex === null
+        ? null
+        : selectedDateStartIndex + selectedDateSelection.length - 1;
+    $: scrollKey = `${dataKey}|${model}|${selectedDate}|${timeZone}|${points[0]?.timestamp || 0}|${points.at(-1)?.timestamp || 0}|${points.length}`;
     $: if (scrollKey && scrollKey !== positionedKey) {
         positionedKey = scrollKey;
-        void positionCurrentTime();
+        void positionRelevantDate();
     }
 
-    const positionCurrentTime = async () => {
+    const positionRelevantDate = async () => {
         await tick();
-        if (!tableScroller || nowLineLeft === null) {
+        if (!tableScroller) {
             return;
         }
-        tableScroller.scrollLeft = Math.max(0, nowLineLeft - tableScroller.clientWidth / 3);
+        const selectedDateContainsNow = selectedDateStartIndex !== null
+            && selectedDateEndIndex !== null
+            && nowPosition !== null
+            && nowPosition >= selectedDateStartIndex
+            && nowPosition <= selectedDateEndIndex;
+        const targetLeft = selectedDateStartIndex !== null
+            ? selectedDateContainsNow && nowLineLeft !== null
+                ? nowLineLeft
+                : LABEL_WIDTH + (selectedDateStartIndex + 0.5) * COLUMN_WIDTH
+            : nowLineLeft;
+        if (targetLeft !== null) {
+            tableScroller.scrollLeft = Math.max(0, targetLeft - tableScroller.clientWidth / 3);
+        }
+    };
+
+    const isSelectedDateIndex = (
+        index: number,
+        startIndex: number | null,
+        endIndex: number | null,
+    ): boolean => startIndex !== null
+        && endIndex !== null
+        && index >= startIndex
+        && index <= endIndex;
+
+    const formatSelectedDateLabel = (dateInput: string): string => {
+        const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
+        if (![year, month, day].every(Number.isFinite)) {
+            return dateInput;
+        }
+        return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC',
+        }).format(Date.UTC(year, month - 1, day, 12));
     };
 
     const selectModel = (nextModel: WeatherModel) => {
@@ -284,6 +336,10 @@
         {/if}
     </header>
 
+    {#if selectedDateNotice && points.length > 0}
+        <div class="weather-date-notice" role="status">{selectedDateNotice}</div>
+    {/if}
+
     {#if status === 'loading' && points.length === 0}
         <div class="weather-state" aria-live="polite">
             <span class="weather-spinner" aria-hidden="true"></span>
@@ -319,6 +375,7 @@
                     {#each dateGroups as group}
                         <div
                             class="weather-cell weather-date-group"
+                            class:weather-date-group--selected={group.key === selectedDate}
                             role="columnheader"
                             style={`grid-column: ${group.startIndex + 2} / span ${group.length}`}
                         >
@@ -329,8 +386,13 @@
 
                 <div class="weather-row" role="row">
                     <div class="weather-cell weather-label weather-label--time" role="columnheader">{text.time}</div>
-                    {#each points as point}
-                        <div class="weather-cell weather-time" role="columnheader" data-weather-ts={point.timestamp}>
+                    {#each points as point, index}
+                        <div
+                            class="weather-cell weather-time"
+                            class:weather-time--selected={isSelectedDateIndex(index, selectedDateStartIndex, selectedDateEndIndex)}
+                            role="columnheader"
+                            data-weather-ts={point.timestamp}
+                        >
                             {formatWeatherHour(point.timestamp, timeZone)}
                         </div>
                     {/each}
@@ -338,8 +400,12 @@
 
                 <div class="weather-row" role="row">
                     <div class="weather-cell weather-label weather-label--weather" role="rowheader">{text.weather}</div>
-                    {#each points as point}
-                        <div class="weather-cell weather-icon-cell" role="cell">
+                    {#each points as point, index}
+                        <div
+                            class="weather-cell weather-icon-cell"
+                            class:weather-icon-cell--selected={isSelectedDateIndex(index, selectedDateStartIndex, selectedDateEndIndex)}
+                            role="cell"
+                        >
                             <WeatherIcon
                                 code={point.iconCode}
                                 isDay={point.isDay}
@@ -361,11 +427,12 @@
                                 <small>{text.metrics[metric][1]}</small>
                             {/if}
                         </div>
-                        {#each points as point}
+                        {#each points as point, index}
                             {@const value = weatherMetricValue(point, metric)}
                             {@const tone = weatherMetricTone(metric, value)}
                             <div
                                 class="weather-cell weather-value-cell"
+                                class:weather-value-cell--selected={isSelectedDateIndex(index, selectedDateStartIndex, selectedDateEndIndex)}
                                 class:weather-value-cell--cloud={metric.endsWith('CloudPercent')}
                                 class:weather-value-cell--wind={metric === 'windDirectionDeg'}
                                 class:tone-good={tone === 'good'}
@@ -413,6 +480,15 @@
                             aria-label={text.celestialCurve}
                             role="img"
                         >
+                            {#if selectedDateStartIndex !== null && selectedDateSelection.length > 0}
+                                <rect
+                                    class="weather-selected-date-chart"
+                                    x={selectedDateStartIndex * COLUMN_WIDTH}
+                                    y="0"
+                                    width={selectedDateSelection.length * COLUMN_WIDTH}
+                                    height={CELESTIAL_CHART_HEIGHT}
+                                ></rect>
+                            {/if}
                             <line class="weather-celestial-horizon" x1="0" y1={CELESTIAL_HORIZON_Y} x2={celestialChartWidth} y2={CELESTIAL_HORIZON_Y}></line>
                             {#each celestialCurves as curve}
                                 {#each curve.segments as segment}
@@ -574,6 +650,15 @@
         white-space: nowrap;
     }
 
+    .weather-date-notice {
+        padding: 5px 8px;
+        border-bottom: 1px solid rgba(255, 205, 112, 0.28);
+        color: #ffd790;
+        background: rgba(91, 60, 14, 0.42);
+        font-size: 10px;
+        line-height: 1.3;
+    }
+
     .weather-state {
         display: flex;
         flex: 1 1 auto;
@@ -701,6 +786,11 @@
         z-index: 10;
     }
 
+    .weather-date-group--selected {
+        color: #ffffff;
+        background: #245f91;
+    }
+
     .weather-label--time,
     .weather-time {
         position: sticky;
@@ -723,6 +813,16 @@
 
     .weather-icon-cell {
         background: #303746;
+    }
+
+    .weather-time--selected,
+    .weather-icon-cell--selected,
+    .weather-value-cell--selected {
+        box-shadow: inset 0 0 0 999px rgba(55, 150, 218, 0.12);
+    }
+
+    .weather-selected-date-chart {
+        fill: rgba(55, 150, 218, 0.12);
     }
 
     .weather-metric-label,

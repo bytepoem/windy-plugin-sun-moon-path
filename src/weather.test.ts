@@ -8,6 +8,7 @@ import {
     buildWeatherDateGroups,
     combineCloudBands,
     findCurrentTimePosition,
+    findWeatherDateSelection,
     formatWeatherHour,
     isWeatherResponseCurrent,
     shouldLoadWeather,
@@ -150,6 +151,52 @@ describe('weather forecast transformation', () => {
         ]);
         expect(formatWeatherHour(timestamps[1], 'Asia/Shanghai')).toBe('00');
         expect(formatWeatherHour(timestamps[1] + 28 * 60 * 1000, 'Asia/Shanghai')).toBe('00');
+    });
+
+    it('locates the selected observer-local date inside the current forecast', () => {
+        const timestamps = [
+            Date.UTC(2026, 7, 26, 15),
+            Date.UTC(2026, 7, 26, 18),
+            Date.UTC(2026, 7, 27, 0),
+            Date.UTC(2026, 7, 27, 15),
+            Date.UTC(2026, 7, 27, 18),
+        ];
+        const points = transformWeatherPayload(makePayload(timestamps), timestamps[0]);
+
+        expect(findWeatherDateSelection(points, 'Asia/Shanghai', '2026-08-27')).toEqual({
+            coverage: 'covered',
+            startIndex: 1,
+            length: 3,
+        });
+    });
+
+    it('distinguishes dates outside the forecast from a missing date inside its range', () => {
+        const timestamps = [
+            Date.UTC(2026, 7, 26, 16),
+            Date.UTC(2026, 7, 28, 16),
+        ];
+        const points = transformWeatherPayload(makePayload(timestamps), timestamps[0]);
+
+        expect(findWeatherDateSelection(points, 'Asia/Shanghai', '2026-08-26')).toEqual({
+            coverage: 'before-range',
+            startIndex: null,
+            length: 0,
+        });
+        expect(findWeatherDateSelection(points, 'Asia/Shanghai', '2026-08-28')).toEqual({
+            coverage: 'missing',
+            startIndex: null,
+            length: 0,
+        });
+        expect(findWeatherDateSelection(points, 'Asia/Shanghai', '2026-08-30')).toEqual({
+            coverage: 'after-range',
+            startIndex: null,
+            length: 0,
+        });
+        expect(findWeatherDateSelection([], 'Asia/Shanghai', '2026-08-27')).toEqual({
+            coverage: 'empty',
+            startIndex: null,
+            length: 0,
+        });
     });
 
     it('calculates the current marker between unequal forecast intervals', () => {

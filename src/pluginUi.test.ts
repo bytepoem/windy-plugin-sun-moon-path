@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import pluginSource from './plugin.svelte?raw';
+import weatherTableSource from './WeatherTable.svelte?raw';
 
 describe('plugin astronomy loading presentation', () => {
     it('keeps loading feedback inside the stable astronomy panel', () => {
@@ -43,5 +44,33 @@ describe('plugin astronomy loading presentation', () => {
         expect(refreshValuesSource).toContain('calculateCurrentMoonInfo({');
         expect(refreshValuesSource.match(/location: selectedLocation/g)).toHaveLength(2);
         expect(pluginSource).toContain('requestId !== latestRequestId || key !== astronomyKey');
+    });
+
+    it('uses the selected observer date instead of a live countdown for other days', () => {
+        const timelineLeadStart = pluginSource.indexOf('$: {\n        if (!astronomyTimeline)');
+        const timelineLeadEnd = pluginSource.indexOf('\n    }\n\n    export const onopen', timelineLeadStart);
+        const timelineLeadSource = pluginSource.slice(timelineLeadStart, timelineLeadEnd);
+
+        expect(timelineLeadSource).toContain('dateInputForInstant(currentInstant, timeZone) !== selectedDate');
+        expect(timelineLeadSource).toContain('timelineLeadLabel = text.dateLabel;');
+        expect(timelineLeadSource).toContain('timelineLeadTime = formatDateControlLabel(selectedDate);');
+        expect(timelineLeadSource).toContain('label: text.timelineEnded');
+        expect(timelineLeadSource).not.toContain('addDaysToDateInput');
+        expect(timelineLeadSource).not.toContain('calculateAstronomyTimeline');
+    });
+
+    it('passes the selected date into both weather layouts and presents forecast coverage', () => {
+        expect(pluginSource.match(/\n\s+\{selectedDate\}\n/g)).toHaveLength(2);
+        expect(weatherTableSource).toContain("export let selectedDate = '';");
+        expect(weatherTableSource).toContain('findWeatherDateSelection(points, timeZone, selectedDate)');
+        expect(weatherTableSource).toContain('class:weather-date-group--selected={group.key === selectedDate}');
+        expect(weatherTableSource).toContain('class:weather-value-cell--selected={isSelectedDateIndex(index, selectedDateStartIndex, selectedDateEndIndex)}');
+        expect(weatherTableSource).toContain('weather-date-notice');
+    });
+
+    it('opens the native date picker when the compact date control is clicked', () => {
+        expect(pluginSource).toContain('on:click={openDatePicker}');
+        expect(pluginSource).toContain('const openDatePicker = (event: MouseEvent) => {');
+        expect(pluginSource).toContain('input.showPicker();');
     });
 });

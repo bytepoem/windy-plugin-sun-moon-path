@@ -91,7 +91,12 @@
             <span class="control-label">{text.dateLabel}</span>
             <span class="date-control">
                 <span class="date-control__text">{formatDateControlLabel(selectedDate)}</span>
-                <input type="date" bind:value={selectedDate} aria-label={text.dateLabel} />
+                <input
+                    type="date"
+                    bind:value={selectedDate}
+                    aria-label={text.dateLabel}
+                    on:click={openDatePicker}
+                />
             </span>
         </label>
 
@@ -473,6 +478,7 @@
                     language={uiLanguage}
                     {timeZone}
                     currentTimestamp={currentInstant.getTime()}
+                    {selectedDate}
                     dataKey={weatherRequestKey}
                     location={selectedLocation}
                     on:modelchange={handleWeatherModelChange}
@@ -839,6 +845,7 @@
                 language={uiLanguage}
                 {timeZone}
                 currentTimestamp={currentInstant.getTime()}
+                {selectedDate}
                 dataKey={weatherRequestKey}
                 location={selectedLocation}
                 on:modelchange={handleWeatherModelChange}
@@ -904,11 +911,9 @@
         type LightPollutionPoint,
     } from './lightPollution';
     import {
-        calculateAstronomyTimeline,
         calculateCurrentMoonInfo,
         calculateCurrentSolarDirection,
         compassDirection,
-        addDaysToDateInput,
         dateInputForInstant,
         dateInputToUtcNoon,
         formatLocalClock,
@@ -2544,6 +2549,16 @@
             : dateInput;
     };
 
+    const openDatePicker = (event: MouseEvent) => {
+        const input = event.currentTarget;
+        if (!(input instanceof HTMLInputElement)) {
+            return;
+        }
+        // The compact control renders its own date text over a transparent native input.
+        // Open the browser picker explicitly because appearance:none removes Chrome's calendar affordance.
+        input.showPicker();
+    };
+
     const formatRemaining = (milliseconds: number, language = uiLanguage): string => {
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
@@ -2597,20 +2612,14 @@
         if (!astronomyTimeline) {
             timelineLeadLabel = text.calculating;
             timelineLeadTime = '';
+        } else if (dateInputForInstant(currentInstant, timeZone) !== selectedDate) {
+            timelineLeadLabel = text.dateLabel;
+            timelineLeadTime = formatDateControlLabel(selectedDate);
         } else {
             const next = astronomyTimeline.items.find(item => item.time && item.time.getTime() > currentInstant.getTime());
-            const nextDayTimeline = next
-                ? null
-                : calculateAstronomyTimeline({
-                    dateInput: addDaysToDateInput(selectedDate, 1),
-                    timeZone,
-                    location: selectedLocation,
-                    elevationM,
-                });
-            const nextItem = next || nextDayTimeline?.items.find(item => item.time);
-            const parts = nextItem?.time
-                ? nextWindowParts(nextItem, uiLanguage)
-                : { label: uiLanguage === 'en' ? 'Ended' : '已结束', time: '' };
+            const parts = next?.time
+                ? nextWindowParts(next, uiLanguage)
+                : { label: text.timelineEnded, time: '' };
             timelineLeadLabel = parts.label;
             timelineLeadTime = parts.time;
         }

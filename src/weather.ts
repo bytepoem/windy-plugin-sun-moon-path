@@ -77,6 +77,14 @@ export interface WeatherDateGroup {
     length: number;
 }
 
+export type WeatherDateCoverage = 'covered' | 'before-range' | 'after-range' | 'missing' | 'empty';
+
+export interface WeatherDateSelection {
+    coverage: WeatherDateCoverage;
+    startIndex: number | null;
+    length: number;
+}
+
 export interface WeatherLoadDecision {
     isMounted: boolean;
     isWeatherTabActive: boolean;
@@ -312,6 +320,39 @@ export const buildWeatherDateGroups = (
         });
     }
     return groups;
+};
+
+/**
+ * Resolves a plain observation date against forecast timestamps in the observer's time zone.
+ * The result only describes the data already present; it never implies that an out-of-range
+ * astronomy date has corresponding weather coverage.
+ */
+export const findWeatherDateSelection = (
+    points: WeatherPoint[],
+    timeZone: string,
+    selectedDate: string,
+): WeatherDateSelection => {
+    if (points.length === 0) {
+        return { coverage: 'empty', startIndex: null, length: 0 };
+    }
+
+    const dateKeys = points.map(point => dateParts(point.timestamp, timeZone).key);
+    const startIndex = dateKeys.indexOf(selectedDate);
+    if (startIndex >= 0) {
+        return {
+            coverage: 'covered',
+            startIndex,
+            length: dateKeys.lastIndexOf(selectedDate) - startIndex + 1,
+        };
+    }
+
+    if (selectedDate < dateKeys[0]) {
+        return { coverage: 'before-range', startIndex: null, length: 0 };
+    }
+    if (selectedDate > dateKeys.at(-1)!) {
+        return { coverage: 'after-range', startIndex: null, length: 0 };
+    }
+    return { coverage: 'missing', startIndex: null, length: 0 };
 };
 
 export const formatWeatherHour = (timestamp: number, timeZone: string): string =>
