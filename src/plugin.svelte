@@ -195,9 +195,7 @@
         class:status-region--event-details={selectedEvent !== 'all' && activeSolarPath?.status !== undefined}
         aria-live="polite"
     >
-        {#if status === 'loading'}
-            <div class="status-message">正在计算日月方位…</div>
-        {:else if status === 'error'}
+        {#if status === 'error'}
             <div class="status-message status-message--error" role="alert">
                 <span>{errorMessage}</span>
                 <button type="button" class="text-button" on:click={() => void refreshPaths(astronomyKey)}>
@@ -264,7 +262,15 @@
             aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
         >
             {#if summaryTab === 'events'}
-                <section class="astronomy-panel" aria-label="今日天文时段">
+                <span class="visually-hidden" role="status" aria-live="polite">
+                    {status === 'loading' ? text.calculating : ''}
+                </span>
+                <section
+                    class="astronomy-panel"
+                    class:astronomy-panel--loading={status === 'loading'}
+                    aria-label="今日天文时段"
+                    aria-busy={status === 'loading'}
+                >
                     <div class="astronomy-panel__heading">
                         <div class="astronomy-location">
                             <button
@@ -304,7 +310,16 @@
                                         aria-label={`${text.elevationLabel} ${locationElevationText}`}
                                     >
                                         <span class="astronomy-location__elevation-icon" aria-hidden="true">▲</span>
-                                        <span>{locationElevationText}</span>
+                                        {#if status === 'loading' && elevationLocationKey !== locationKey}
+                                            <span class="astronomy-skeleton astronomy-skeleton--elevation" aria-hidden="true"></span>
+                                        {:else}
+                                            <span>{locationElevationText}</span>
+                                        {/if}
+                                        <span
+                                            class="astronomy-refresh-indicator"
+                                            class:active={status === 'loading'}
+                                            aria-hidden="true"
+                                        ></span>
                                     </span>
                                 </span>
                             </button>
@@ -387,21 +402,30 @@
                     </div>
 
                     <div class="timeline-events" aria-label="今日天文事件">
-                        <div class="timeline-event timeline-event--countdown">
-                            <span class="timeline-event__label">{timelineLeadLabel}</span>
-                            <strong>{timelineLeadTime || '--'}</strong>
-                        </div>
-                        {#each astronomyTimeline?.items || [] as item}
-                            <div
-                                class:item-moon={item.body === 'moon'}
-                                class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
-                                class:timeline-event--missing={!item.time}
-                                class="timeline-event"
-                            >
-                                <span class="timeline-event__label">{timelineEventLabel(item, text)}</span>
-                                <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
+                        {#if status === 'loading'}
+                            {#each timelineSkeletonSlots as _}
+                                <div class="timeline-event timeline-event--skeleton" aria-hidden="true">
+                                    <span class="astronomy-skeleton astronomy-skeleton--label"></span>
+                                    <span class="astronomy-skeleton astronomy-skeleton--time"></span>
+                                </div>
+                            {/each}
+                        {:else}
+                            <div class="timeline-event timeline-event--countdown">
+                                <span class="timeline-event__label">{timelineLeadLabel}</span>
+                                <strong>{timelineLeadTime || '--'}</strong>
                             </div>
-                        {/each}
+                            {#each astronomyTimeline?.items || [] as item}
+                                <div
+                                    class:item-moon={item.body === 'moon'}
+                                    class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
+                                    class:timeline-event--missing={!item.time}
+                                    class="timeline-event"
+                                >
+                                    <span class="timeline-event__label">{timelineEventLabel(item, text)}</span>
+                                    <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
+                                </div>
+                            {/each}
+                        {/if}
                     </div>
 
                     {#if !isMobileCollapsed}
@@ -419,7 +443,9 @@
                                 <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
                                     <div class="night-window__body">
                                         <strong>{text.intervals[slot.kind]}</strong>
-                                        {#if slot.interval}
+                                        {#if status === 'loading'}
+                                            <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
+                                        {:else if slot.interval}
                                             <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval, uiLanguage)}</span>
                                         {:else}
                                             <span>
@@ -939,6 +965,7 @@
     type MobilePanelMode = MobileNonFullscreenPanelMode | 'fullscreen';
     const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'guide', 'settings', 'about'];
     const desktopSummaryTabOrder: SummaryTab[] = ['events', 'guide', 'settings', 'about'];
+    const timelineSkeletonSlots = Array.from({ length: 7 }, (_, index) => index);
     const eventOptions: { value: DirectionEvent }[] = [
         { value: 'all' },
         { value: 'sunrise' },
@@ -1960,7 +1987,7 @@
         });
     };
 
-    const updateCurrentDirections = () => {
+    const refreshCurrentDirectionValues = () => {
         currentInstant = new Date();
         try {
             currentSolarDirection = calculateCurrentSolarDirection({
@@ -1975,6 +2002,10 @@
             currentSolarDirection = null;
             currentMoonInfo = null;
         }
+    };
+
+    const updateCurrentDirections = () => {
+        refreshCurrentDirectionValues();
         mapOverlayController.updateCurrent({
             location: selectedLocation,
             currentSun: currentSolarDirection,
@@ -2281,6 +2312,8 @@
         }
 
         selectedLocation = nextLocation;
+        // Current azimuth and altitude are local calculations, so update them before async context loading.
+        refreshCurrentDirectionValues();
         const nextLocationKey = buildWeatherLocationKey(nextLocation);
         const nameRequestId = ++locationNameRequestId;
         locationDisplayName = displayName.trim();
@@ -3428,6 +3461,18 @@
         min-height: 0;
     }
 
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
     .status-message {
         display: flex;
         align-items: center;
@@ -4048,6 +4093,32 @@
         white-space: nowrap;
     }
 
+    .astronomy-refresh-indicator {
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        width: 9px;
+        height: 9px;
+        border: 1.5px solid rgba(168, 177, 193, 0.28);
+        border-top-color: var(--panel-accent);
+        border-radius: 50%;
+        opacity: 0;
+    }
+
+    .astronomy-refresh-indicator.active {
+        animation: astronomy-refresh-spin 800ms linear 180ms infinite;
+    }
+
+    @keyframes astronomy-refresh-spin {
+        from {
+            opacity: 0.78;
+            transform: rotate(0deg);
+        }
+        to {
+            opacity: 0.78;
+            transform: rotate(360deg);
+        }
+    }
+
     .astronomy-location__elevation-icon {
         color: rgba(255, 255, 255, 0.68);
         font-size: 10px;
@@ -4235,6 +4306,57 @@
         font-size: 11px;
         line-height: 1.2;
         text-align: center;
+    }
+
+    .timeline-event--skeleton {
+        display: grid;
+        grid-template-rows: 12px 14px;
+        gap: 3px;
+        align-content: start;
+        justify-items: center;
+    }
+
+    .astronomy-skeleton {
+        display: block;
+        border-radius: 999px;
+        background: rgba(168, 177, 193, 0.32);
+        opacity: 0;
+    }
+
+    .astronomy-panel--loading .astronomy-skeleton {
+        animation: astronomy-skeleton-pulse 1.2s ease-in-out 180ms infinite;
+    }
+
+    .astronomy-skeleton--elevation {
+        width: 30px;
+        height: 8px;
+    }
+
+    .astronomy-skeleton--label {
+        align-self: center;
+        width: 62%;
+        height: 7px;
+    }
+
+    .astronomy-skeleton--time {
+        align-self: end;
+        width: 78%;
+        height: 9px;
+    }
+
+    .astronomy-skeleton--window {
+        width: min(78%, 150px);
+        height: 11px;
+        margin-top: 2px;
+    }
+
+    @keyframes astronomy-skeleton-pulse {
+        0%, 100% {
+            opacity: 0.34;
+        }
+        50% {
+            opacity: 0.68;
+        }
     }
 
     .timeline-event__label {
@@ -5296,6 +5418,11 @@
             transition: none;
         }
 
+        .astronomy-refresh-indicator.active,
+        .astronomy-panel--loading .astronomy-skeleton {
+            animation: astronomy-loading-static 0s linear 180ms forwards;
+        }
+
         .astronomy-location__button.scrolling .astronomy-location__name-track {
             width: 100%;
             min-width: 0;
@@ -5311,6 +5438,12 @@
 
         .astronomy-location__button.scrolling .astronomy-location__name-value[aria-hidden='true'] {
             display: none;
+        }
+    }
+
+    @keyframes astronomy-loading-static {
+        to {
+            opacity: 0.58;
         }
     }
 </style>
