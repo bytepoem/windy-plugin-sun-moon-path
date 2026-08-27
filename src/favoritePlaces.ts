@@ -1,4 +1,9 @@
 import { distanceKm, type Coordinates } from './solar';
+import {
+    favoriteMetricsLocationKey,
+    type FavoriteLocationMetrics,
+    type FavoriteMetricUpdate,
+} from './favoriteMetrics';
 import type { LocationSearchSelection } from './locationProvider';
 
 export const FAVORITE_LOCATION_MATCH_TOLERANCE_KM = 0.001;
@@ -19,10 +24,15 @@ export type LocationFavorite = WindyFavorite & { type: 'fav' };
 export type FavoritePlaceItem = {
     favorite: LocationFavorite;
     distanceKm: number | null;
+    elevationM: number | null;
+    lightPollutionLevel: number | null;
     isCurrent: boolean;
 };
 
-export type FavoriteSortMode = 'distance' | 'recent';
+export type FavoriteSortMode = 'distance' | 'recent' | 'elevation' | 'lightPollution';
+
+export const favoriteLightPollutionLevel = (estimatedBortle: number): number | null =>
+    Number.isFinite(estimatedBortle) ? Math.round(estimatedBortle * 10) / 10 : null;
 
 export type FavoriteMutationApi = {
     getAll: () => Promise<WindyFavorite[]>;
@@ -84,16 +94,52 @@ export const favoritePlaceItems = (
     distanceOrigin: Coordinates | null,
     currentTitle = '',
     sortMode: FavoriteSortMode = 'distance',
+    metricsByLocation: Record<string, FavoriteMetricUpdate> = {},
 ): FavoritePlaceItem[] => {
     const currentFavorite = matchingLocationFavorite(favorites, currentLocation, currentTitle);
     const items = favorites
-    .map(favorite => ({
-        favorite,
-        distanceKm: distanceOrigin ? distanceKm(distanceOrigin, favorite) : null,
-        isCurrent: favorite.id === currentFavorite?.id,
-    }));
+    .map(favorite => {
+        const metrics = metricsByLocation[favoriteMetricsLocationKey(favorite)] || {};
+        return {
+            favorite,
+            distanceKm: distanceOrigin ? distanceKm(distanceOrigin, favorite) : null,
+            elevationM: typeof metrics.elevationM === 'number' && Number.isFinite(metrics.elevationM)
+                ? metrics.elevationM
+                : null,
+            lightPollutionLevel: metrics.lightPollution
+                ? favoriteLightPollutionLevel(metrics.lightPollution.estimatedBortle)
+                : null,
+            isCurrent: favorite.id === currentFavorite?.id,
+        };
+    });
+    const recentOrder = (first: FavoritePlaceItem, second: FavoritePlaceItem): number =>
+        second.favorite.updated - first.favorite.updated;
+    const metricOrder = (
+        firstValue: number | null,
+        secondValue: number | null,
+        direction: 'ascending' | 'descending',
+    ): number => {
+        if (firstValue === null) {
+            return secondValue === null ? 0 : 1;
+        }
+        if (secondValue === null) {
+            return -1;
+        }
+        return direction === 'ascending'
+            ? firstValue - secondValue
+            : secondValue - firstValue;
+    };
     if (sortMode === 'recent') {
-        return items.sort((first, second) => second.favorite.updated - first.favorite.updated);
+        return items.sort(recentOrder);
+    }
+    if (sortMode === 'elevation') {
+        return items.sort((first, second) =>
+            metricOrder(first.elevationM, second.elevationM, 'descending') || recentOrder(first, second));
+    }
+    if (sortMode === 'lightPollution') {
+        return items.sort((first, second) =>
+            metricOrder(first.lightPollutionLevel, second.lightPollutionLevel, 'ascending')
+            || recentOrder(first, second));
     }
     return items.sort((first, second) => {
         const distanceOrder = (first.distanceKm ?? Infinity) - (second.distanceKm ?? Infinity);
@@ -133,6 +179,7 @@ export const favoriteDistanceLabel = (distance: number | null, isCurrent: boolea
 export const favoriteLocationSelection = (
     favorite: LocationFavorite,
     distanceOrigin: Coordinates | null,
+    metrics: FavoriteLocationMetrics = {},
 ): LocationSearchSelection => ({
     id: `favorite:${favorite.id}`,
     name: favorite.title,
@@ -143,7 +190,8 @@ export const favoriteLocationSelection = (
     area: '',
     distanceKm: distanceOrigin ? distanceKm(distanceOrigin, favorite) : null,
     wgs84: { lat: favorite.lat, lon: favorite.lon },
-    elevationM: undefined,
+    elevationM: metrics.elevationM,
+    lightPollution: metrics.lightPollution,
 });
 
 export const setLocationFavoriteState = async ({

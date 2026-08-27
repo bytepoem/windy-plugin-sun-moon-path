@@ -10,6 +10,7 @@ import {
     setLocationFavoriteState,
     type LocationFavorite,
 } from './favoritePlaces';
+import { favoriteMetricsLocationKey, type FavoriteMetricUpdate } from './favoriteMetrics';
 
 const favorite = (
     id: string,
@@ -156,6 +157,101 @@ describe('favorite places', () => {
         expect(items.map(item => item.favorite.id)).toEqual(['newest', 'middle', 'oldest']);
     });
 
+    it('sorts known elevations from high to low and keeps missing values last', () => {
+        const low = favorite('low', '低海拔', 23.1, 113.1, 10);
+        const highOld = favorite('high-old', '高海拔旧收藏', 24.1, 114.1, 20);
+        const highRecent = favorite('high-recent', '高海拔新收藏', 25.1, 115.1, 30);
+        const missing = favorite('missing', '无海拔', 26.1, 116.1, 40);
+        const metrics: Record<string, FavoriteMetricUpdate> = {
+            [favoriteMetricsLocationKey(low)]: { elevationM: 20 },
+            [favoriteMetricsLocationKey(highOld)]: { elevationM: 800 },
+            [favoriteMetricsLocationKey(highRecent)]: { elevationM: 800 },
+            [favoriteMetricsLocationKey(missing)]: { elevationM: null },
+        };
+
+        const items = favoritePlaceItems(
+            [missing, low, highOld, highRecent],
+            { lat: 23.1, lon: 113.1 },
+            null,
+            '低海拔',
+            'elevation',
+            metrics,
+        );
+
+        expect(items.map(item => item.favorite.id)).toEqual(['high-recent', 'high-old', 'low', 'missing']);
+    });
+
+    it('sorts known light-pollution levels from low to high and keeps missing values last', () => {
+        const darkest = favorite('darkest', '暗空', 23.1, 113.1, 10);
+        const middle = favorite('middle', '中等', 24.1, 114.1, 20);
+        const brightest = favorite('brightest', '明亮', 25.1, 115.1, 30);
+        const missing = favorite('missing', '无数据', 26.1, 116.1, 40);
+        const point = (estimatedBortle: number): NonNullable<FavoriteMetricUpdate['lightPollution']> => ({
+            year: 2025,
+            sqm: 20,
+            brightnessRatio: 2,
+            estimatedBortle,
+            observingConditions: {
+                milkyWay: 'hard-to-discern',
+                zodiacalLight: 'faint',
+                andromedaGalaxy: 'visible',
+                triangulumGalaxy: 'not-visible',
+                groundVisibility: 'distant-objects',
+            },
+        });
+        const metrics: Record<string, FavoriteMetricUpdate> = {
+            [favoriteMetricsLocationKey(darkest)]: { lightPollution: point(2.1) },
+            [favoriteMetricsLocationKey(middle)]: { lightPollution: point(5.4) },
+            [favoriteMetricsLocationKey(brightest)]: { lightPollution: point(8.8) },
+            [favoriteMetricsLocationKey(missing)]: { lightPollution: null },
+        };
+
+        const items = favoritePlaceItems(
+            [missing, brightest, middle, darkest],
+            { lat: 23.1, lon: 113.1 },
+            null,
+            '暗空',
+            'lightPollution',
+            metrics,
+        );
+
+        expect(items.map(item => item.favorite.id)).toEqual(['darkest', 'middle', 'brightest', 'missing']);
+    });
+
+    it('uses the displayed one-decimal pollution level before the recent-time tie-breaker', () => {
+        const older = favorite('older', '旧收藏', 23.1, 113.1, 10);
+        const recent = favorite('recent', '新收藏', 24.1, 114.1, 20);
+        const point = (estimatedBortle: number): NonNullable<FavoriteMetricUpdate['lightPollution']> => ({
+            year: 2025,
+            sqm: 21,
+            brightnessRatio: 1,
+            estimatedBortle,
+            observingConditions: {
+                milkyWay: 'broad-structure',
+                zodiacalLight: 'zenith-visible',
+                andromedaGalaxy: 'very-obvious',
+                triangulumGalaxy: 'averted-barely-visible',
+                groundVisibility: 'distant-large-objects',
+            },
+        });
+        const metrics: Record<string, FavoriteMetricUpdate> = {
+            [favoriteMetricsLocationKey(older)]: { lightPollution: point(3.41) },
+            [favoriteMetricsLocationKey(recent)]: { lightPollution: point(3.44) },
+        };
+
+        const items = favoritePlaceItems(
+            [older, recent],
+            { lat: 23.1, lon: 113.1 },
+            null,
+            '旧收藏',
+            'lightPollution',
+            metrics,
+        );
+
+        expect(items.map(item => item.favorite.id)).toEqual(['recent', 'older']);
+        expect(items.map(item => item.lightPollutionLevel)).toEqual([3.4, 3.4]);
+    });
+
     it('formats compact distance labels and builds a normal location selection', () => {
         expect(favoriteDistanceLabel(0.62, false)).toBe('620 m');
         expect(favoriteDistanceLabel(74.4, false)).toBe('74 km');
@@ -165,11 +261,32 @@ describe('favorite places', () => {
         expect(favoriteLocationSelection(
             favorite('saved', '南昆山观景台', 23.63, 114.02),
             { lat: 23.13, lon: 113.26 },
+            {
+                elevationM: 658,
+                lightPollution: {
+                    year: 2025,
+                    sqm: 20.49,
+                    brightnessRatio: 2.5,
+                    estimatedBortle: 5,
+                    observingConditions: {
+                        milkyWay: 'broad-structure',
+                        zodiacalLight: 'zenith-visible',
+                        andromedaGalaxy: 'very-obvious',
+                        triangulumGalaxy: 'averted-barely-visible',
+                        groundVisibility: 'distant-large-objects',
+                    },
+                },
+            },
         )).toMatchObject({
             id: 'favorite:saved',
             name: '南昆山观景台',
             wgs84: { lat: 23.63, lon: 114.02 },
-            elevationM: undefined,
+            elevationM: 658,
+            lightPollution: {
+                year: 2025,
+                sqm: 20.49,
+                estimatedBortle: 5,
+            },
         });
     });
 

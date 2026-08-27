@@ -1,4 +1,5 @@
 import type { Coordinates } from './solar';
+import type { LightPollutionPoint } from './lightPollution';
 
 export const LOCATION_PROVIDERS = ['amap', 'baidu', 'tencent'] as const;
 
@@ -81,6 +82,7 @@ export type LocationSearchResult = {
 
 export type LocationSearchSelection = LocationSearchResult & {
     elevationM: number | null | undefined;
+    lightPollution?: LightPollutionPoint | null;
 };
 
 export type LocationSearchOptions = {

@@ -1,11 +1,20 @@
 <script lang="ts">
     import bcast from '@windy/broadcast';
+    import { getElevation } from '@windy/fetch';
     import * as userFavs from '@windy/userFavs';
     import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
 
     import {
+        createFavoriteMetricsCache,
+        favoriteMetricsLocationKey,
+        loadMissingFavoriteMetrics,
+        type FavoriteLocationMetrics,
+        type FavoriteMetricUpdate,
+    } from './favoriteMetrics';
+    import {
         favoriteDistanceLabel,
         filterFavoritePlaceItems,
+        favoriteLightPollutionLevel,
         favoriteLocationSelection,
         favoritePlaceItems,
         locationFavorites,
@@ -15,6 +24,11 @@
         type FavoriteSortMode,
         type LocationFavorite,
     } from './favoritePlaces';
+    import {
+        LIGHT_POLLUTION_DATA_YEAR,
+        fetchLightPollutionPoint,
+        type LightPollutionPoint,
+    } from './lightPollution';
     import { compactLocationLabel } from './location';
     import type { LocationSearchSelection } from './locationProvider';
     import type { Coordinates } from './solar';
@@ -30,6 +44,8 @@
     export let openUpward = false;
     export let currentSaved = false;
     export let currentActionDisabled = true;
+    export let currentElevationM: number | null = null;
+    export let currentLightPollution: LightPollutionPoint | null = null;
 
     const dispatch = createEventDispatcher<{
         select: LocationSearchSelection;
@@ -38,7 +54,9 @@
         zh: {
             panel: '收藏',
             orderedByDistance: '距离最近',
-            orderedByRecent: '时间最近',
+            orderedByRecent: '最近收藏',
+            orderedByElevation: '海拔最高',
+            orderedByLightPollution: '光污染最低',
             sortLabel: '收藏排序方式',
             close: '关闭收藏地点',
             current: '当前',
@@ -52,11 +70,15 @@
             saved: '已收藏当前地点',
             removed: '已取消收藏当前地点',
             actionError: '收藏操作失败，请稍后重试。',
+            elevation: '海拔',
+            bortle: '光污染',
         },
         en: {
             panel: 'Favorites',
             orderedByDistance: 'Nearest',
             orderedByRecent: 'Most recent',
+            orderedByElevation: 'Highest elevation',
+            orderedByLightPollution: 'Lowest pollution',
             sortLabel: 'Sort favorites',
             close: 'Close favorite locations',
             current: 'Current',
@@ -70,9 +92,33 @@
             saved: 'Current location saved',
             removed: 'Current location removed from favorites',
             actionError: 'Favorite action failed. Try again later.',
+            elevation: 'Elevation',
+            bortle: 'Bortle',
         },
     } as const;
-    const sortModes: FavoriteSortMode[] = ['distance', 'recent'];
+    const sortModes: FavoriteSortMode[] = ['distance', 'recent', 'elevation', 'lightPollution'];
+    const sortModeLabel = (
+        mode: FavoriteSortMode,
+        currentText: typeof labels.zh | typeof labels.en,
+    ): string => {
+        if (mode === 'distance') {
+            return currentText.orderedByDistance;
+        }
+        if (mode === 'recent') {
+            return currentText.orderedByRecent;
+        }
+        return mode === 'elevation'
+            ? currentText.orderedByElevation
+            : currentText.orderedByLightPollution;
+    };
+    const browserStorage = (): Storage | null => {
+        try {
+            return typeof window === 'undefined' ? null : window.localStorage;
+        } catch {
+            return null;
+        }
+    };
+    const favoriteMetricsCache = createFavoriteMetricsCache(browserStorage());
 
     let text = labels.zh;
     let favorites: LocationFavorite[] = [];
@@ -90,6 +136,9 @@
     let actionPending = false;
     let requestId = 0;
     let actionRequestId = 0;
+    let metricRequestId = 0;
+    let metricAbortController: AbortController | null = null;
+    let metricsByLocation: Record<string, FavoriteMetricUpdate> = {};
     let destroyed = false;
     let previousOpen = false;
     let panelElement: HTMLElement | null = null;
@@ -98,12 +147,19 @@
     let sortMenuElement: HTMLElement | null = null;
 
     $: text = labels[language];
-    $: currentSortLabel = sortMode === 'distance' ? text.orderedByDistance : text.orderedByRecent;
+    $: currentSortLabel = sortModeLabel(sortMode, text);
     $: count = favorites.length;
     $: currentTitleValue = locationName.trim()
         || `${location.lat.toFixed(3)}, ${location.lon.toFixed(3)}`;
     $: currentFavorite = matchingLocationFavorite(favorites, location, currentTitleValue);
-    $: items = favoritePlaceItems(favorites, location, distanceOrigin, currentTitleValue, sortMode);
+    $: items = favoritePlaceItems(
+        favorites,
+        location,
+        distanceOrigin,
+        currentTitleValue,
+        sortMode,
+        metricsByLocation,
+    );
     $: filteredItems = filterFavoritePlaceItems(items, favoriteQuery);
     $: currentSaved = Boolean(currentFavorite);
     $: currentActionDisabled = actionPending || status !== 'ready' || !locationNameResolved;
@@ -130,6 +186,7 @@
                 });
             } else {
                 sortMenuOpen = false;
+                cancelMetricLoading();
             }
         }
     }
@@ -137,6 +194,127 @@
     const localizedDistance = (item: FavoritePlaceItem, currentLabel: string): string => {
         const label = favoriteDistanceLabel(item.distanceKm, item.isCurrent);
         return label === 'current' ? currentLabel : label;
+    };
+
+    const metricViewFor = (favorite: LocationFavorite): FavoriteMetricUpdate =>
+        metricsByLocation[favoriteMetricsLocationKey(favorite)] || {};
+
+    const successfulMetrics = (metrics: FavoriteMetricUpdate): FavoriteLocationMetrics => ({
+        ...(typeof metrics.elevationM === 'number' && Number.isFinite(metrics.elevationM)
+            ? { elevationM: metrics.elevationM }
+            : {}),
+        ...(metrics.lightPollution && metrics.lightPollution.year === LIGHT_POLLUTION_DATA_YEAR
+            ? { lightPollution: metrics.lightPollution }
+            : {}),
+    });
+
+    const elevationLabel = (value: number | null | undefined): string => {
+        if (value === undefined) {
+            return '…';
+        }
+        return value === null ? '--' : `${Math.round(value)} m`;
+    };
+
+    const bortleLabel = (point: LightPollutionPoint | null | undefined): string => {
+        if (point === undefined) {
+            return '…';
+        }
+        if (point === null) {
+            return '--';
+        }
+        const rounded = favoriteLightPollutionLevel(point.estimatedBortle);
+        if (rounded === null) {
+            return '--';
+        }
+        return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+    };
+
+    const favoriteButtonLabel = (item: FavoritePlaceItem, metrics: FavoriteMetricUpdate): string => [
+        item.favorite.title,
+        localizedDistance(item, text.current),
+        `${text.elevation} ${elevationLabel(metrics.elevationM)}`,
+        `${text.bortle} ${bortleLabel(metrics.lightPollution)}`,
+    ].join(', ');
+
+    const cancelMetricLoading = () => {
+        metricRequestId += 1;
+        metricAbortController?.abort();
+        metricAbortController = null;
+    };
+
+    const seedMetricViews = (nextFavorites: LocationFavorite[]) => {
+        const nextMetrics: Record<string, FavoriteMetricUpdate> = {};
+        for (const favorite of nextFavorites) {
+            const key = favoriteMetricsLocationKey(favorite);
+            nextMetrics[key] = favoriteMetricsCache.get(favorite);
+        }
+        metricsByLocation = nextMetrics;
+    };
+
+    const cacheCurrentMetrics = (nextFavorites: LocationFavorite[]) => {
+        if (!matchingLocationFavorite(nextFavorites, location, currentTitleValue)) {
+            return;
+        }
+        const metrics: FavoriteLocationMetrics = {
+            ...(typeof currentElevationM === 'number' && Number.isFinite(currentElevationM)
+                ? { elevationM: currentElevationM }
+                : {}),
+            ...(currentLightPollution?.year === LIGHT_POLLUTION_DATA_YEAR
+                ? { lightPollution: currentLightPollution }
+                : {}),
+        };
+        if (metrics.elevationM !== undefined || metrics.lightPollution) {
+            favoriteMetricsCache.set(location, metrics);
+        }
+    };
+
+    const refreshFavoriteMetrics = async (nextFavorites: LocationFavorite[]) => {
+        cancelMetricLoading();
+        if (!open || destroyed || nextFavorites.length === 0) {
+            return;
+        }
+        const ownMetricRequestId = ++metricRequestId;
+        const abortController = new AbortController();
+        metricAbortController = abortController;
+        const targets = Array.from(new Map(nextFavorites.map(favorite => {
+            const id = favoriteMetricsLocationKey(favorite);
+            return [id, { id, wgs84: { lat: favorite.lat, lon: favorite.lon } }];
+        })).values());
+        const targetsById = new Map(targets.map(target => [target.id, target]));
+        const isCurrent = () => open
+            && !destroyed
+            && !abortController.signal.aborted
+            && ownMetricRequestId === metricRequestId;
+
+        await loadMissingFavoriteMetrics({
+            targets,
+            metricsFor: target => favoriteMetricsCache.get(target.wgs84),
+            loadElevation: async target => (
+                await getElevation(target.wgs84.lat, target.wgs84.lon, {
+                    abortSignal: abortController.signal,
+                })
+            ).data,
+            loadLightPollution: target => fetchLightPollutionPoint(target.wgs84, abortController.signal),
+            isCurrent,
+            onUpdate: (id, update) => {
+                const target = targetsById.get(id);
+                if (!target || !isCurrent()) {
+                    return;
+                }
+                const nextView = { ...(metricsByLocation[id] || {}), ...update };
+                metricsByLocation = { ...metricsByLocation, [id]: nextView };
+                const nextSuccessfulMetrics = successfulMetrics(update);
+                if (
+                    nextSuccessfulMetrics.elevationM !== undefined
+                    || nextSuccessfulMetrics.lightPollution
+                ) {
+                    favoriteMetricsCache.set(target.wgs84, nextSuccessfulMetrics);
+                }
+            },
+        });
+        if (ownMetricRequestId === metricRequestId) {
+            metricAbortController = null;
+        }
     };
 
     const refreshFavorites = async (showLoading = open) => {
@@ -152,8 +330,14 @@
             if (destroyed || ownRequestId !== requestId) {
                 return;
             }
+            favoriteMetricsCache.retain(nextFavorites);
+            cacheCurrentMetrics(nextFavorites);
+            seedMetricViews(nextFavorites);
             favorites = nextFavorites;
             status = 'ready';
+            if (open) {
+                void refreshFavoriteMetrics(nextFavorites);
+            }
         } catch {
             if (destroyed || ownRequestId !== requestId) {
                 return;
@@ -168,6 +352,7 @@
 
     const closePanel = (restoreFocus = true) => {
         sortMenuOpen = false;
+        cancelMetricLoading();
         open = false;
         if (restoreFocus) {
             void tick().then(() => returnFocus?.focus());
@@ -196,6 +381,17 @@
             if (destroyed || ownActionRequestId !== actionRequestId) {
                 return;
             }
+            if (targetState === 'removed') {
+                favoriteMetricsCache.remove(location);
+            } else {
+                const currentMetrics = successfulMetrics({
+                    elevationM: currentElevationM,
+                    lightPollution: currentLightPollution,
+                });
+                if (currentMetrics.elevationM !== undefined || currentMetrics.lightPollution) {
+                    favoriteMetricsCache.set(location, currentMetrics);
+                }
+            }
             feedback = targetState === 'removed' ? text.removed : text.saved;
             await refreshFavorites(false);
         } catch {
@@ -210,7 +406,11 @@
     };
 
     const selectFavorite = (favorite: LocationFavorite) => {
-        dispatch('select', favoriteLocationSelection(favorite, distanceOrigin));
+        dispatch('select', favoriteLocationSelection(
+            favorite,
+            distanceOrigin,
+            successfulMetrics(metricViewFor(favorite)),
+        ));
         closePanel();
     };
 
@@ -322,6 +522,7 @@
         destroyed = true;
         requestId += 1;
         actionRequestId += 1;
+        cancelMetricLoading();
         bcast.off('favChanged', handleFavoriteChange);
     });
 </script>
@@ -393,7 +594,7 @@
                                 on:click={() => chooseSortMode(option, index)}
                                 on:keydown={event => handleSortOptionKeydown(event, index)}
                             >
-                                <span>{option === 'distance' ? text.orderedByDistance : text.orderedByRecent}</span>
+                                <span>{sortModeLabel(option, text)}</span>
                                 <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                                     {#if sortMode === option}
                                         <path d="m3 8 3 3 7-7"></path>
@@ -442,9 +643,11 @@
         {:else}
             <div id="favorite-locations-list" class="favorite-locations__list" aria-label={text.panel}>
                 {#each filteredItems as item (item.favorite.id)}
+                    {@const metrics = metricsByLocation[favoriteMetricsLocationKey(item.favorite)] || {}}
                     <button
                         type="button"
                         aria-current={item.isCurrent ? 'location' : undefined}
+                        aria-label={favoriteButtonLabel(item, metrics)}
                         class:current={item.isCurrent}
                         on:click={() => selectFavorite(item.favorite)}
                     >
@@ -452,8 +655,20 @@
                             <path d="M12 21s6-5.4 6-11a6 6 0 1 0-12 0c0 5.6 6 11 6 11Z"></path>
                             <circle cx="12" cy="10" r="2"></circle>
                         </svg>
-                        <span class="favorite-locations__name" title={item.favorite.title}>
-                            {compactLocationLabel(item.favorite.title)}
+                        <span class="favorite-locations__identity">
+                            <span class="favorite-locations__name" title={item.favorite.title}>
+                                {compactLocationLabel(item.favorite.title)}
+                            </span>
+                            <span class="favorite-locations__metrics" aria-hidden="true">
+                                <span class="favorite-locations__metric-icon">▲</span>
+                                <span class="favorite-locations__elevation-value">
+                                    {elevationLabel(metrics.elevationM)}
+                                </span>
+                                <span class="favorite-locations__metric-label">{text.bortle}</span>
+                                <span class="favorite-locations__bortle-value">
+                                    {bortleLabel(metrics.lightPollution)}
+                                </span>
+                            </span>
                         </span>
                         <span class="favorite-locations__distance">{localizedDistance(item, text.current)}</span>
                         <svg class="favorite-locations__selected" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -485,7 +700,7 @@
     }
 
     .favorite-locations.sort-menu-open {
-        min-height: 134px;
+        min-height: 214px;
     }
 
     .favorite-locations.open-upward {
@@ -740,7 +955,7 @@
         gap: 8px;
         align-items: center;
         width: 100%;
-        min-height: 42px;
+        min-height: 50px;
         padding: 4px 8px;
         border: 0;
         border-bottom: 1px solid var(--panel-border);
@@ -768,12 +983,55 @@
     }
 
     .favorite-locations__name {
+        display: block;
         min-width: 0;
         overflow: hidden;
         font-size: 12px;
         font-weight: 700;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .favorite-locations__identity {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .favorite-locations__metrics {
+        display: grid;
+        grid-template-columns: 12px 7ch max-content 3ch;
+        column-gap: 5px;
+        align-items: center;
+        width: max-content;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--panel-muted);
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .favorite-locations__metric-icon {
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 10px;
+        line-height: 1;
+        text-align: center;
+    }
+
+    .favorite-locations__metric-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .favorite-locations__elevation-value {
+        text-align: left;
+    }
+
+    .favorite-locations__bortle-value {
+        text-align: right;
     }
 
     .favorite-locations__distance {
@@ -832,7 +1090,7 @@
 
     @media (max-width: 600px) {
         .favorite-locations.sort-menu-open {
-            min-height: 138px;
+            min-height: 214px;
         }
 
         .favorite-locations__heading {
@@ -850,7 +1108,7 @@
         }
 
         .favorite-locations__list button {
-            min-height: 44px;
+            min-height: 52px;
         }
 
     }

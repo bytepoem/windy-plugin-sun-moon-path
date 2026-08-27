@@ -181,6 +181,8 @@
         locationName={locationDisplayName}
         locationNameResolved={locationNameResolved}
         distanceOrigin={favoriteDistanceOrigin}
+        currentElevationM={elevationLocationKey === locationKey ? elevationM : null}
+        currentLightPollution={lightPollutionLoadedKey === locationKey ? lightPollutionPoint : null}
         returnFocus={favoriteReturnFocus}
         openUpward={isMobileCollapsed}
         on:select={handleFavoriteLocationSelect}
@@ -297,8 +299,12 @@
                                             <path d="m6 3 5 5-5 5"></path>
                                         </svg>
                                     </span>
-                                    <span class="astronomy-location__metrics">
-                                        {text.elevationLabel} {locationElevationText}
+                                    <span
+                                        class="astronomy-location__metrics"
+                                        aria-label={`${text.elevationLabel} ${locationElevationText}`}
+                                    >
+                                        <span class="astronomy-location__elevation-icon" aria-hidden="true">▲</span>
+                                        <span>{locationElevationText}</span>
                                     </span>
                                 </span>
                             </button>
@@ -2267,6 +2273,7 @@
         reopenWhenClosed = true,
         displayName = '',
         knownElevationM?: number | null,
+        knownLightPollution?: LightPollutionPoint | null,
     ) => {
         const nextLocation = coordinatesFromLocation(latLon);
         if (!nextLocation) {
@@ -2301,11 +2308,17 @@
         atmosphereErrorMessage = '';
         latestLightPollutionRequestId += 1;
         lightPollutionAbortController?.abort();
-        lightPollutionLoadedKey = '';
         lightPollutionLoadingKey = '';
-        lightPollutionPoint = null;
-        lightPollutionStatus = 'idle';
         lightPollutionErrorKind = 'none';
+        if (knownLightPollution) {
+            lightPollutionLoadedKey = nextLocationKey;
+            lightPollutionPoint = knownLightPollution;
+            lightPollutionStatus = 'ready';
+        } else {
+            lightPollutionLoadedKey = '';
+            lightPollutionPoint = null;
+            lightPollutionStatus = 'idle';
+        }
         const nextKey = makeAstronomyKey(nextLocation, selectedDate);
         const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted, astronomyKey, nextKey);
         astronomyKey = nextKey;
@@ -2341,7 +2354,13 @@
             wgs84: { ...selection.wgs84 },
         };
         favoritesOpen = false;
-        setLocation(selection.wgs84, false, selection.name, selection.elevationM);
+        setLocation(
+            selection.wgs84,
+            false,
+            selection.name,
+            selection.elevationM,
+            selection.lightPollution,
+        );
         centerMap({ lat: selection.wgs84.lat, lon: selection.wgs84.lon, zoom: 12 });
     };
 
@@ -4016,7 +4035,9 @@
     }
 
     .astronomy-location__metrics {
-        display: block;
+        display: flex;
+        gap: 4px;
+        align-items: center;
         min-width: 0;
         overflow: hidden;
         color: var(--astronomy-muted);
@@ -4025,6 +4046,13 @@
         line-height: 1.2;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .astronomy-location__elevation-icon {
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 10px;
+        line-height: 1;
+        text-align: center;
     }
 
     .live-positions {
