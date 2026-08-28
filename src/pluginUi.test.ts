@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import locationSearchSource from './LocationSearch.svelte?raw';
 import pluginSource from './plugin.svelte?raw';
 import weatherMetricIconSource from './WeatherMetricIcon.svelte?raw';
 import weatherTableSource from './WeatherTable.svelte?raw';
@@ -159,6 +160,70 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('on:click={openDatePicker}');
         expect(pluginSource).toContain('const openDatePicker = (event: MouseEvent) => {');
         expect(pluginSource).toContain('input.showPicker();');
+    });
+
+    it('uses one hidden search setting while exposing coordinate search in both languages', () => {
+        expect(pluginSource).toContain('{#if !hideLocationSearch}');
+        expect(pluginSource).toContain("hideLocationSearchLabel: '隐藏地点搜索框'");
+        expect(pluginSource).toContain("hideLocationSearchLabel: 'Hide location search'");
+        expect(pluginSource).not.toContain('hideDomesticLocationSearch');
+        expect(locationSearchSource).toContain('? [...LOCATION_PROVIDERS, ...COORDINATE_SYSTEMS]');
+        expect(locationSearchSource).toContain(': [...COORDINATE_SYSTEMS]');
+        expect(locationSearchSource).toContain("latitude: 'Lat'");
+        expect(locationSearchSource).toContain("longitude: 'Lon'");
+        expect(locationSearchSource).toContain('id="location-search-latitude"');
+        expect(locationSearchSource).toContain('id="location-search-longitude"');
+        expect(locationSearchSource).toContain('inputmode="text"');
+        expect(locationSearchSource).not.toContain('inputmode="decimal"');
+        expect(locationSearchSource).toContain(
+            '{#if !coordinateMode}\n            <label class="location-search__label"',
+        );
+        expect(locationSearchSource).toContain('{coordinateMode ? text.locate : text.search}');
+        expect(locationSearchSource).not.toContain('disabled={!apiKey}');
+    });
+
+    it('keeps the search-mode dropdown compact with a centered selection indicator', () => {
+        const providerPickerStyle = locationSearchSource.match(
+            /\.location-search__provider-picker\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const providerButtonStyle = locationSearchSource.match(
+            /\.location-search__provider-button\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const providerButtonLabelStyle = locationSearchSource.match(
+            /\.location-search__provider-button > span:first-child\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const providerChevronStyle = locationSearchSource.match(
+            /\.location-search__provider-chevron\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const providerMenuStyle = locationSearchSource.match(
+            /\.location-search__provider-menu\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const providerOptionStyle = locationSearchSource.match(
+            /\.location-search__provider-menu button\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const providerCheckStyle = locationSearchSource.match(
+            /\.location-search__provider-check\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const mobileSearchStyle = locationSearchSource.slice(
+            locationSearchSource.indexOf('@media (max-width: 600px)'),
+        );
+
+        expect(providerPickerStyle).toContain('width: 96px;');
+        expect(providerPickerStyle).toContain('min-width: 96px;');
+        expect(providerButtonStyle).toContain('grid-template-columns: minmax(0, 1fr) 10px;');
+        expect(providerButtonStyle).toContain('gap: 8px;');
+        expect(providerButtonStyle).toContain('padding: 0 10px;');
+        expect(providerButtonLabelStyle).toContain('white-space: nowrap;');
+        expect(providerChevronStyle).toContain('justify-self: center;');
+        expect(providerMenuStyle).toContain('width: max(100%, 88px);');
+        expect(providerOptionStyle).toContain('grid-template-columns: minmax(0, 1fr) 12px;');
+        expect(providerOptionStyle).toContain('padding: 0 6px;');
+        expect(providerCheckStyle).toContain('justify-self: center;');
+        expect(providerCheckStyle).not.toContain('right:');
+        expect(mobileSearchStyle).toContain('width: 72px;');
+        expect(mobileSearchStyle).toContain('min-width: 72px;');
+        expect(mobileSearchStyle).toContain('gap: 4px;');
+        expect(mobileSearchStyle).toContain('padding: 0 4px;');
     });
 
     it('localizes accessibility labels and names astronomy regions for the selected date', () => {

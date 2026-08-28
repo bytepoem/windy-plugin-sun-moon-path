@@ -6,6 +6,12 @@
         suggestAmapLocations,
     } from './amap';
     import { disposeBaiduSdk, suggestBaiduLocations } from './baidu';
+    import {
+        COORDINATE_SYSTEMS,
+        coordinateLocationSelection,
+        parseCoordinateFields,
+        type CoordinateSystem,
+    } from './coordinateSearch';
     import { loadElevationsWithConcurrency } from './locationSearch';
     import {
         LOCATION_PROVIDERS,
@@ -29,6 +35,7 @@
     export let provider: LocationProvider = 'amap';
 
     type DisplayResult = LocationSearchSelection;
+    type SelectorOption = LocationProvider | CoordinateSystem;
 
     const dispatch = createEventDispatcher<{
         select: LocationSearchSelection;
@@ -36,48 +43,64 @@
     }>();
     const labels = {
         zh: {
-            label: '地址搜索',
-            providerLabel: '搜索提供商',
+            label: '地点搜索',
+            modeLabel: '搜索方式',
             providers: {
                 amap: '高德',
                 baidu: '百度',
                 tencent: '腾讯',
             },
             placeholder: '搜索地点或地址',
-            missingKey: '请先配置 {provider} API Key',
             missingKeyPrompt: '使用 {provider} 搜索需要对应的 API Key，请先申请并在设置中保存。',
             applyForKey: '申请 {provider} API Key',
             search: '搜索',
+            locate: '定位',
             loading: '正在搜索…',
             noResults: '没有找到可定位的地址，请换个关键词。',
             error: '地址搜索失败，请检查 API Key 或稍后重试。',
             suggestions: '地址推荐',
             distance: '直线',
             elevation: '海拔',
+            latitude: '纬度',
+            longitude: '经度',
+            coordinateErrors: {
+                format: '请完整填写纬度和经度。',
+                latitude: '纬度必须在 -90 到 90 之间。',
+                longitude: '经度必须在 -180 到 180 之间。',
+            },
         },
         en: {
             label: 'Location search',
-            providerLabel: 'Search provider',
+            modeLabel: 'Search mode',
             providers: {
                 amap: 'Amap',
                 baidu: 'Baidu',
                 tencent: 'Tencent',
             },
             placeholder: 'Search for a place or address',
-            missingKey: 'Configure a {provider} API Key first',
             missingKeyPrompt: '{provider} search requires its API Key. Apply for one, then save it in Settings.',
             applyForKey: 'Apply for a {provider} API Key',
             search: 'Search',
+            locate: 'Locate',
             loading: 'Searching…',
             noResults: 'No locatable address found. Try another keyword.',
             error: 'Location search failed. Check the API Key or try again later.',
             suggestions: 'Suggested locations',
             distance: 'Direct',
             elevation: 'Elevation',
+            latitude: 'Lat',
+            longitude: 'Lon',
+            coordinateErrors: {
+                format: 'Enter both latitude and longitude.',
+                latitude: 'Latitude must be between -90 and 90.',
+                longitude: 'Longitude must be between -180 and 180.',
+            },
         },
     } as const;
 
     let query = '';
+    let latitudeQuery = '';
+    let longitudeQuery = '';
     let results: DisplayResult[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
@@ -89,21 +112,50 @@
     let text = labels.zh;
     let searchContextKey = '';
     let apiKey = '';
-    let missingKeyText = '';
     let missingKeyPromptText = '';
     let applyForKeyText = '';
-    let providerMenuOpen = false;
-    let providerMenuIndex = 0;
-    let providerButtonElement: HTMLButtonElement | null = null;
-    let providerMenuElement: HTMLElement | null = null;
+    let coordinateMode = false;
+    let searchMode: SelectorOption = provider;
+    let previousProvider = provider;
+    let selectorOptions: SelectorOption[] = [];
+    let selectorValue: SelectorOption = provider;
+    let selectorMenuOpen = false;
+    let selectorMenuIndex = 0;
+    let selectorButtonElement: HTMLButtonElement | null = null;
+    let selectorMenuElement: HTMLElement | null = null;
 
     $: text = labels[language];
     $: apiKey = apiKeys[provider] || '';
-    $: missingKeyText = text.missingKey.replace('{provider}', text.providers[provider]);
     $: missingKeyPromptText = text.missingKeyPrompt.replace('{provider}', text.providers[provider]);
     $: applyForKeyText = text.applyForKey.replace('{provider}', text.providers[provider]);
     $: {
-        const nextSearchContextKey = `${provider}|${apiKey}|${location.lat}|${location.lon}`;
+        const nextSelectorOptions: SelectorOption[] = language === 'zh'
+            ? [...LOCATION_PROVIDERS, ...COORDINATE_SYSTEMS]
+            : [...COORDINATE_SYSTEMS];
+        selectorOptions = nextSelectorOptions;
+        if (!nextSelectorOptions.includes(searchMode)) {
+            searchMode = language === 'zh' ? provider : 'wgs84';
+            selectorMenuOpen = false;
+            results = [];
+            status = 'idle';
+            errorMessage = '';
+        }
+    }
+    $: if (provider !== previousProvider) {
+        if (LOCATION_PROVIDERS.includes(searchMode as LocationProvider)) {
+            searchMode = provider;
+        }
+        previousProvider = provider;
+    }
+    $: coordinateMode = COORDINATE_SYSTEMS.includes(searchMode as CoordinateSystem);
+    $: selectorValue = searchMode;
+    $: showMissingKey = !coordinateMode && !apiKey;
+    $: submitDisabled = status === 'loading'
+        || (coordinateMode
+            ? !latitudeQuery.trim() && !longitudeQuery.trim()
+            : !query.trim() || !apiKey);
+    $: {
+        const nextSearchContextKey = `${language}|${searchMode}|${provider}|${apiKey}|${location.lat}|${location.lon}`;
         if (searchContextKey && searchContextKey !== nextSearchContextKey) {
             cancelPendingSearch();
             results = [];
@@ -139,13 +191,42 @@
     };
 
     const runSearch = async () => {
+        if (coordinateMode) {
+            const coordinate = parseCoordinateFields(latitudeQuery, longitudeQuery);
+            if (coordinate.kind === 'valid') {
+                cancelPendingSearch();
+                results = [];
+                status = 'idle';
+                errorMessage = '';
+                activeIndex = -1;
+                dispatch('select', coordinateLocationSelection({
+                    source: coordinate.location,
+                    system: searchMode as CoordinateSystem,
+                    origin: location,
+                }));
+                return;
+            }
+            cancelPendingSearch();
+            results = [];
+            status = coordinate.kind === 'empty' ? 'idle' : 'error';
+            errorMessage = coordinate.kind === 'invalid'
+                ? text.coordinateErrors[coordinate.reason]
+                : '';
+            activeIndex = -1;
+            return;
+        }
+
         const keyword = query.trim();
-        if (!apiKey || !keyword) {
+        if (!keyword) {
             cancelPendingSearch();
             results = [];
             status = 'idle';
             errorMessage = '';
             activeIndex = -1;
+            return;
+        }
+
+        if (!apiKey) {
             return;
         }
 
@@ -196,7 +277,7 @@
     };
 
     const scheduleSearch = () => {
-        if (!apiKey || !query.trim()) {
+        if (coordinateMode || !apiKey || !query.trim()) {
             return;
         }
         debounceTimer = setTimeout(() => {
@@ -211,68 +292,95 @@
         status = 'idle';
         errorMessage = '';
         activeIndex = -1;
-        if (!apiKey || !query.trim()) {
+        if (!query.trim()) {
             return;
         }
-        scheduleSearch();
+        if (!coordinateMode && apiKey) {
+            scheduleSearch();
+        }
     };
 
-    const selectProvider = (nextProvider: LocationProvider) => {
-        if (nextProvider === provider) {
-            return;
-        }
+    const handleCoordinateInput = () => {
         cancelPendingSearch();
         results = [];
         status = 'idle';
         errorMessage = '';
         activeIndex = -1;
+    };
+
+    const selectProvider = (nextProvider: LocationProvider) => {
+        const providerChanged = nextProvider !== provider;
+        cancelPendingSearch();
+        results = [];
+        status = 'idle';
+        errorMessage = '';
+        activeIndex = -1;
+        searchMode = nextProvider;
         provider = nextProvider;
-        dispatch('providerchange', nextProvider);
+        if (providerChanged) {
+            dispatch('providerchange', nextProvider);
+        }
         void tick().then(scheduleSearch);
     };
 
-    const focusProviderOption = async () => {
+    const selectorOptionLabel = (option: SelectorOption): string => {
+        if (COORDINATE_SYSTEMS.includes(option as CoordinateSystem)) {
+            return option === 'gcj02' ? 'GCJ-02' : 'WGS84';
+        }
+        return text.providers[option as LocationProvider];
+    };
+
+    const focusSelectorOption = async () => {
         await tick();
-        providerMenuElement
-            ?.querySelectorAll<HTMLButtonElement>('[role="option"]')[providerMenuIndex]
+        selectorMenuElement
+            ?.querySelectorAll<HTMLButtonElement>('[role="option"]')[selectorMenuIndex]
             ?.focus();
     };
 
-    const openProviderMenu = (index = LOCATION_PROVIDERS.indexOf(provider)) => {
-        providerMenuIndex = Math.max(0, index);
-        providerMenuOpen = true;
-        void focusProviderOption();
+    const openSelectorMenu = (index = selectorOptions.indexOf(selectorValue)) => {
+        selectorMenuIndex = Math.max(0, index);
+        selectorMenuOpen = true;
+        void focusSelectorOption();
     };
 
-    const closeProviderMenu = (restoreFocus = false) => {
-        providerMenuOpen = false;
+    const closeSelectorMenu = (restoreFocus = false) => {
+        selectorMenuOpen = false;
         if (restoreFocus) {
-            void tick().then(() => providerButtonElement?.focus());
+            void tick().then(() => selectorButtonElement?.focus());
         }
     };
 
-    const chooseProvider = (nextProvider: LocationProvider) => {
-        selectProvider(nextProvider);
-        closeProviderMenu(true);
+    const chooseSelectorOption = (option: SelectorOption) => {
+        if (COORDINATE_SYSTEMS.includes(option as CoordinateSystem)) {
+            cancelPendingSearch();
+            results = [];
+            activeIndex = -1;
+            searchMode = option;
+            status = 'idle';
+            errorMessage = '';
+        } else {
+            selectProvider(option as LocationProvider);
+        }
+        closeSelectorMenu(true);
     };
 
-    const handleProviderButtonKeydown = (event: KeyboardEvent) => {
+    const handleSelectorButtonKeydown = (event: KeyboardEvent) => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
-            const selectedIndex = LOCATION_PROVIDERS.indexOf(provider);
-            openProviderMenu(event.key === 'ArrowDown'
+            const selectedIndex = selectorOptions.indexOf(selectorValue);
+            openSelectorMenu(event.key === 'ArrowDown'
                 ? selectedIndex
-                : (selectedIndex - 1 + LOCATION_PROVIDERS.length) % LOCATION_PROVIDERS.length);
-        } else if (event.key === 'Escape' && providerMenuOpen) {
+                : (selectedIndex - 1 + selectorOptions.length) % selectorOptions.length);
+        } else if (event.key === 'Escape' && selectorMenuOpen) {
             event.preventDefault();
-            closeProviderMenu();
+            closeSelectorMenu();
         }
     };
 
-    const handleProviderOptionKeydown = (event: KeyboardEvent, index: number) => {
+    const handleSelectorOptionKeydown = (event: KeyboardEvent, index: number) => {
         if (event.key === 'Escape') {
             event.preventDefault();
-            closeProviderMenu(true);
+            closeSelectorMenu(true);
             return;
         }
         if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
@@ -280,14 +388,14 @@
         }
         event.preventDefault();
         if (event.key === 'Home') {
-            providerMenuIndex = 0;
+            selectorMenuIndex = 0;
         } else if (event.key === 'End') {
-            providerMenuIndex = LOCATION_PROVIDERS.length - 1;
+            selectorMenuIndex = selectorOptions.length - 1;
         } else {
             const direction = event.key === 'ArrowDown' ? 1 : -1;
-            providerMenuIndex = (index + direction + LOCATION_PROVIDERS.length) % LOCATION_PROVIDERS.length;
+            selectorMenuIndex = (index + direction + selectorOptions.length) % selectorOptions.length;
         }
-        void focusProviderOption();
+        void focusSelectorOption();
     };
 
     const handleSubmit = (event: SubmitEvent) => {
@@ -339,7 +447,7 @@
 
     const handleFocusOut = (event: FocusEvent) => {
         if (!rootElement?.contains(event.relatedTarget as Node | null)) {
-            providerMenuOpen = false;
+            selectorMenuOpen = false;
             cancelPendingSearch();
             results = [];
             status = 'idle';
@@ -350,8 +458,8 @@
 
     const handleFocusIn = (event: FocusEvent) => {
         const target = event.target instanceof Element ? event.target : null;
-        if (providerMenuOpen && !target?.closest('.location-search__provider-picker')) {
-            providerMenuOpen = false;
+        if (selectorMenuOpen && !target?.closest('.location-search__provider-picker')) {
+            selectorMenuOpen = false;
         }
     };
 
@@ -394,72 +502,106 @@
     aria-label={text.label}
 >
     <form class="location-search__form" on:submit={handleSubmit}>
-        <label class="location-search__label" for="location-search-input">{text.label}</label>
+        {#if !coordinateMode}
+            <label class="location-search__label" for="location-search-input">{text.label}</label>
+        {/if}
         <div class="location-search__control">
             <div class="location-search__provider-picker">
                 <button
                     type="button"
                     class="location-search__provider-button"
-                    bind:this={providerButtonElement}
-                    aria-label={`${text.providerLabel}: ${text.providers[provider]}`}
+                    bind:this={selectorButtonElement}
+                    aria-label={`${text.modeLabel}: ${selectorOptionLabel(selectorValue)}`}
                     aria-haspopup="listbox"
-                    aria-expanded={providerMenuOpen}
+                    aria-expanded={selectorMenuOpen}
                     aria-controls="location-provider-menu"
-                    on:click={() => providerMenuOpen ? closeProviderMenu() : openProviderMenu()}
-                    on:keydown={handleProviderButtonKeydown}
+                    on:click={() => selectorMenuOpen ? closeSelectorMenu() : openSelectorMenu()}
+                    on:keydown={handleSelectorButtonKeydown}
                 >
-                    <span>{text.providers[provider]}</span>
+                    <span>{selectorOptionLabel(selectorValue)}</span>
                     <span class="location-search__provider-chevron" aria-hidden="true"></span>
                 </button>
-                {#if providerMenuOpen}
+                {#if selectorMenuOpen}
                     <div
                         id="location-provider-menu"
                         class="location-search__provider-menu"
-                        bind:this={providerMenuElement}
+                        bind:this={selectorMenuElement}
                         role="listbox"
-                        aria-label={text.providerLabel}
+                        aria-label={text.modeLabel}
                     >
-                        {#each LOCATION_PROVIDERS as providerOption, index}
+                        {#each selectorOptions as option, index}
                             <button
                                 type="button"
                                 role="option"
-                                aria-selected={provider === providerOption}
-                                tabindex={index === providerMenuIndex ? 0 : -1}
-                                class:active={provider === providerOption}
-                                on:click={() => chooseProvider(providerOption)}
-                                on:keydown={event => handleProviderOptionKeydown(event, index)}
+                                aria-selected={selectorValue === option}
+                                tabindex={index === selectorMenuIndex ? 0 : -1}
+                                class:active={selectorValue === option}
+                                on:click={() => chooseSelectorOption(option)}
+                                on:keydown={event => handleSelectorOptionKeydown(event, index)}
                             >
-                                <span>{text.providers[providerOption]}</span>
+                                <span>{selectorOptionLabel(option)}</span>
                                 <span class="location-search__provider-check" aria-hidden="true">
-                                    {provider === providerOption ? '✓' : ''}
+                                    {selectorValue === option ? '✓' : ''}
                                 </span>
                             </button>
                         {/each}
                     </div>
                 {/if}
             </div>
-            <input
-                id="location-search-input"
-                type="search"
-                bind:value={query}
-                placeholder={apiKey ? text.placeholder : missingKeyText}
-                disabled={!apiKey}
-                autocomplete="off"
-                role="combobox"
-                aria-autocomplete="list"
-                aria-controls="location-search-results"
-                aria-expanded={status === 'ready'}
-                aria-activedescendant={activeIndex >= 0 ? `location-search-result-${activeIndex}` : undefined}
-                aria-describedby="location-search-status"
-                on:input={handleInput}
-                on:keydown={handleKeydown}
-            />
+            {#if coordinateMode}
+                <div class="location-search__coordinate-fields">
+                    <label for="location-search-latitude">
+                        <span>{text.latitude}:</span>
+                        <input
+                            id="location-search-latitude"
+                            type="text"
+                            bind:value={latitudeQuery}
+                            inputmode="text"
+                            autocomplete="off"
+                            aria-describedby="location-search-status"
+                            on:input={handleCoordinateInput}
+                            on:keydown={handleKeydown}
+                        />
+                    </label>
+                    <span class="location-search__coordinate-divider" aria-hidden="true"></span>
+                    <label for="location-search-longitude">
+                        <span>{text.longitude}:</span>
+                        <input
+                            id="location-search-longitude"
+                            type="text"
+                            bind:value={longitudeQuery}
+                            inputmode="text"
+                            autocomplete="off"
+                            aria-describedby="location-search-status"
+                            on:input={handleCoordinateInput}
+                            on:keydown={handleKeydown}
+                        />
+                    </label>
+                </div>
+            {:else}
+                <input
+                    id="location-search-input"
+                    type="search"
+                    bind:value={query}
+                    placeholder={text.placeholder}
+                    autocomplete="off"
+                    inputmode="search"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="location-search-results"
+                    aria-expanded={status === 'ready'}
+                    aria-activedescendant={activeIndex >= 0 ? `location-search-result-${activeIndex}` : undefined}
+                    aria-describedby="location-search-status"
+                    on:input={handleInput}
+                    on:keydown={handleKeydown}
+                />
+            {/if}
             <button
                 type="submit"
                 class="location-search__submit"
-                disabled={!apiKey || !query.trim() || status === 'loading'}
+                disabled={submitDisabled}
             >
-                {text.search}
+                {coordinateMode ? text.locate : text.search}
             </button>
         </div>
     </form>
@@ -519,10 +661,10 @@
     <div
         id="location-search-status"
         class="location-search__status"
-        class:location-search__status--visible={!apiKey || status === 'loading' || status === 'empty' || status === 'error'}
+        class:location-search__status--visible={showMissingKey || status === 'loading' || status === 'empty' || status === 'error'}
         aria-live="polite"
     >
-        {#if !apiKey}
+        {#if showMissingKey}
             <span class="location-search__missing-key">
                 <span>{missingKeyPromptText}</span>
                 <a href={API_KEY_APPLICATION_URLS[provider]} target="_blank" rel="noreferrer">
@@ -574,19 +716,20 @@
 
     .location-search__provider-picker {
         position: relative;
-        min-width: 64px;
+        width: 96px;
+        min-width: 96px;
     }
 
     .location-search__provider-button {
-        display: flex;
-        gap: 5px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 10px;
+        gap: 8px;
         align-items: center;
-        justify-content: center;
         width: 100%;
-        min-width: 64px;
+        min-width: 0;
         height: 42px;
         min-height: 42px;
-        padding: 0 7px;
+        padding: 0 10px;
         border: 0;
         border-right: 1px solid var(--panel-border);
         border-radius: 6px 0 0 6px;
@@ -598,6 +741,14 @@
         cursor: pointer;
         touch-action: manipulation;
         transition: background-color 160ms ease;
+    }
+
+    .location-search__provider-button > span:first-child {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
     }
 
     .location-search__provider-button:hover,
@@ -613,9 +764,9 @@
     }
 
     .location-search__provider-chevron {
-        flex: 0 0 auto;
         width: 7px;
         height: 7px;
+        justify-self: center;
         border-right: 1.5px solid currentColor;
         border-bottom: 1.5px solid currentColor;
         transform: translateY(-2px) rotate(45deg);
@@ -628,7 +779,7 @@
         left: 0;
         display: grid;
         box-sizing: border-box;
-        width: 100%;
+        width: max(100%, 88px);
         padding: 4px;
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -638,11 +789,12 @@
     }
 
     .location-search__provider-menu button {
-        position: relative;
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 12px;
+        gap: 4px;
         align-items: center;
         min-height: 44px;
-        padding: 0 16px 0 6px;
+        padding: 0 6px;
         border: 0;
         border-radius: 5px;
         background: transparent;
@@ -673,15 +825,15 @@
     }
 
     .location-search__provider-check {
-        position: absolute;
-        right: 4px;
-        width: 10px;
+        width: 12px;
+        justify-self: center;
         color: var(--panel-accent);
         font-weight: 700;
+        line-height: 1;
         text-align: center;
     }
 
-    .location-search__control input {
+    .location-search__control > input {
         min-width: 0;
         height: 42px;
         padding: 0 9px;
@@ -693,14 +845,51 @@
         font-size: 13px;
     }
 
-    .location-search__control input::placeholder {
+    .location-search__control > input::placeholder {
         color: var(--panel-muted);
         opacity: 0.9;
     }
 
-    .location-search__control input:disabled {
-        cursor: not-allowed;
-        opacity: 0.72;
+    .location-search__coordinate-fields {
+        display: grid;
+        min-width: 0;
+        height: 42px;
+        grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+        align-items: center;
+    }
+
+    .location-search__coordinate-fields label {
+        display: grid;
+        min-width: 0;
+        height: 42px;
+        padding: 0 7px;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 4px;
+        color: var(--panel-muted);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .location-search__coordinate-fields input {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        height: 40px;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--panel-text);
+        font: inherit;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .location-search__coordinate-divider {
+        width: 1px;
+        height: 22px;
+        background: var(--panel-border);
     }
 
     .location-search__submit {
@@ -898,14 +1087,14 @@
     }
 
     @media (max-width: 600px) {
-        .location-search__provider-picker,
-        .location-search__provider-button {
-            min-width: 58px;
+        .location-search__provider-picker {
+            width: 72px;
+            min-width: 72px;
         }
 
         .location-search__provider-button {
             gap: 4px;
-            padding: 0 6px;
+            padding: 0 4px;
         }
 
         .location-search__submit {
@@ -915,6 +1104,16 @@
 
         .location-search__results [role='listbox'] {
             max-height: min(300px, calc(30dvh - 20px - env(safe-area-inset-bottom, 0px)));
+        }
+
+        .location-search__coordinate-fields label {
+            padding: 0 5px;
+            gap: 3px;
+            font-size: 10px;
+        }
+
+        .location-search__coordinate-fields input {
+            font-size: 11px;
         }
     }
 </style>

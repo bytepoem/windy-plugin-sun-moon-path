@@ -68,7 +68,7 @@
     </div>
 
     <div class="primary-controls">
-    {#if uiLanguage === 'zh' && !hideDomesticLocationSearch}
+    {#if !hideLocationSearch}
         <div
             class="location-tools"
             on:focusin={handleLocationToolsFocusIn}
@@ -756,20 +756,20 @@
                 </section>
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
+                    <label class="settings-toggle settings-toggle--location-search">
+                        <span class="settings-toggle__copy">
+                            <strong>{text.hideLocationSearchLabel}</strong>
+                            <span>{text.hideLocationSearchDescription}</span>
+                        </span>
+                        <input
+                            type="checkbox"
+                            checked={hideLocationSearch}
+                            aria-label={text.hideLocationSearchLabel}
+                            on:change={toggleLocationSearch}
+                        />
+                        <span class="settings-toggle__control" aria-hidden="true"></span>
+                    </label>
                     {#if uiLanguage === 'zh'}
-                        <label class="settings-toggle settings-toggle--location-search">
-                            <span class="settings-toggle__copy">
-                                <strong>{text.hideLocationSearchLabel}</strong>
-                                <span>{text.hideLocationSearchDescription}</span>
-                            </span>
-                            <input
-                                type="checkbox"
-                                checked={hideDomesticLocationSearch}
-                                aria-label={text.hideLocationSearchLabel}
-                                on:change={toggleDomesticLocationSearch}
-                            />
-                            <span class="settings-toggle__control" aria-hidden="true"></span>
-                        </label>
                         <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
                             {#each LOCATION_PROVIDERS as providerOption}
                                 <form
@@ -1223,8 +1223,8 @@
             lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
             show600Label: '显示 600 km 点',
             show600Description: '开启后事件方向线会延伸到 600 km，并在该距离增加一个参考点。设置会保存在当前浏览器。',
-            hideLocationSearchLabel: '隐藏国内地址搜索框',
-            hideLocationSearchDescription: '开启后不再显示面板顶部的国内地点搜索框；已保存的地图 API Key 不会清除。设置会保存在当前浏览器。',
+            hideLocationSearchLabel: '隐藏地点搜索框',
+            hideLocationSearchDescription: '开启后不再显示面板顶部的名称和经纬度搜索；已保存的地图 API Key 不会清除。设置会保存在当前浏览器。',
             locationApiKeyLabel: '国内地址搜索 API Key',
             locationApiKeyPlaceholder: '请输入 API Key',
             locationApiKeyDescription: '可配置高德、百度和腾讯，并在搜索框中切换。各 Key 仅保存在当前浏览器。',
@@ -1377,8 +1377,8 @@
             lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
             show600Label: 'Show 600 km point',
             show600Description: 'When enabled, event direction lines extend to 600 km and add a reference point there. This setting is saved in this browser.',
-            hideLocationSearchLabel: 'Hide domestic location search',
-            hideLocationSearchDescription: 'Hide the domestic location search control without removing saved map API keys. This setting is saved in this browser.',
+            hideLocationSearchLabel: 'Hide location search',
+            hideLocationSearchDescription: 'Hide place-name and coordinate search without removing saved map API keys. This setting is saved in this browser.',
             locationApiKeyLabel: 'Domestic location search API keys',
             locationApiKeyPlaceholder: 'Enter API Key',
             locationApiKeyDescription: 'Configure Amap, Baidu, and Tencent, then switch providers in search. Keys stay in this browser.',
@@ -1572,7 +1572,7 @@
     let latestLightPollutionRequestId = 0;
     let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
-    let hideDomesticLocationSearch = false;
+    let hideLocationSearch = false;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
     let locationSearchProvider: LocationProvider = 'amap';
     let locationApiKeys: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
@@ -1756,9 +1756,9 @@
         }
     };
 
-    const toggleDomesticLocationSearch = (event: Event) => {
-        hideDomesticLocationSearch = (event.currentTarget as HTMLInputElement).checked;
-        saveHideLocationSearchPreference(hideDomesticLocationSearch);
+    const toggleLocationSearch = (event: Event) => {
+        hideLocationSearch = (event.currentTarget as HTMLInputElement).checked;
+        saveHideLocationSearchPreference(hideLocationSearch);
     };
 
     const suspendMobileDetailRequests = () => {
@@ -2886,7 +2886,7 @@
         mobilePanelMode = isMobileOrTablet ? loadMobilePanelModePreference() : 'compact';
         lastMobileNonFullscreenMode = mobilePanelMode;
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
-        hideDomesticLocationSearch = loadHideLocationSearchPreference();
+        hideLocationSearch = loadHideLocationSearchPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         locationSearchProvider = loadLocationSearchProvider();
