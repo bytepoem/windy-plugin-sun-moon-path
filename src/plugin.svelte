@@ -265,6 +265,7 @@
         <div
             id="summary-panel"
             class="summary-panel-frame"
+            class:summary-panel-frame--events={summaryTab === 'events'}
             role={isMobileCollapsed ? 'region' : 'tabpanel'}
             aria-label={isMobileCollapsed ? text.eventTab : undefined}
             aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
@@ -458,6 +459,42 @@
                                             <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
                                         {:else if slot.interval}
                                             <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval, uiLanguage)}</span>
+                                            {@const evidenceState = observationEvidenceState(slot)}
+                                            {#if evidenceState === 'loading'}
+                                                <span class="astronomy-skeleton astronomy-skeleton--evidence" aria-hidden="true"></span>
+                                                <span class="visually-hidden">{text.observationEvidenceLoading}</span>
+                                            {:else if evidenceState === 'ready'}
+                                                <div class="night-window__evidence" role="group" aria-label={text.observationEvidenceLabel}>
+                                                    <span
+                                                        class="night-window__metric"
+                                                        title={text.observationMetricLabels.totalCloudPercent}
+                                                    >
+                                                        <span class="visually-hidden">{text.observationMetricLabels.totalCloudPercent}</span>
+                                                        <WeatherMetricIcon metric="totalCloudPercent" size={11} />
+                                                        {formatObservationMeasurement(slot.evidence.totalCloudPercent, 0, '%')}
+                                                    </span>
+                                                    <span
+                                                        class="night-window__metric"
+                                                        title={text.observationMetricLabels.precipMm}
+                                                    >
+                                                        <span class="visually-hidden">{text.observationMetricLabels.precipMm}</span>
+                                                        <WeatherMetricIcon metric="precipMm" size={11} />
+                                                        {formatObservationPrecipitation(slot.evidence.precipitationMm)}
+                                                    </span>
+                                                    <span
+                                                        class="night-window__metric"
+                                                        title={text.observationMetricLabels.visibilityKm}
+                                                    >
+                                                        <span class="visually-hidden">{text.observationMetricLabels.visibilityKm}</span>
+                                                        <WeatherMetricIcon metric="visibilityKm" size={11} />
+                                                        {formatObservationMeasurement(slot.evidence.visibilityKm, 1, 'km')}
+                                                    </span>
+                                                </div>
+                                            {:else}
+                                                <span class="night-window__evidence-state">
+                                                    {observationEvidenceStateLabel(evidenceState)}
+                                                </span>
+                                            {/if}
                                         {:else}
                                             <span>
                                                 {status === 'error'
@@ -466,6 +503,23 @@
                                                         ? text.noInterval
                                                         : text.calculating}
                                             </span>
+                                            <div
+                                                class="night-window__evidence night-window__evidence--placeholder"
+                                                aria-hidden="true"
+                                            >
+                                                <span class="night-window__metric">
+                                                    <WeatherMetricIcon metric="totalCloudPercent" size={11} />
+                                                    --
+                                                </span>
+                                                <span class="night-window__metric">
+                                                    <WeatherMetricIcon metric="precipMm" size={11} />
+                                                    --
+                                                </span>
+                                                <span class="night-window__metric">
+                                                    <WeatherMetricIcon metric="visibilityKm" size={11} />
+                                                    --
+                                                </span>
+                                            </div>
                                         {/if}
                                     </div>
                                 </article>
@@ -881,6 +935,7 @@
     import config from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
     import FavoriteLocations from './FavoriteLocations.svelte';
+    import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import {
         compactLocationLabel,
         DETAILED_REVERSE_NAME_ZOOM,
@@ -897,6 +952,10 @@
         mergeOpenMeteoAtmosphere,
         type OpenMeteoAtmospherePoint,
     } from './openMeteo';
+    import {
+        resolveObservationEvidenceState,
+        type ObservationEvidenceState,
+    } from './observationEvidence';
     import { claimOverlayOwner } from './overlayOwner';
     import { createMapOverlayController } from './mapOverlayController';
     import {
@@ -905,6 +964,7 @@
         ObservationPlannerError,
         selectObservationPaths,
         type ObservationEvent,
+        type ObservationMetricRange,
         type ObservationWindow,
     } from './observationPlanner';
     import LightPollutionSummary from './LightPollutionSummary.svelte';
@@ -940,6 +1000,7 @@
         transformWeatherPayload,
         buildWeatherLocationKey,
         buildWeatherRequestKey,
+        findWeatherDateSelection,
         isWeatherResponseCurrent,
         shouldLoadWeather,
         type WeatherForecastPayload,
@@ -999,6 +1060,13 @@
         currentMoonPhaseLabel: string;
         astronomyEventsLabel: (date: string, isToday: boolean) => string;
         nightObservationWindowsLabel: string;
+        observationEvidenceLabel: string;
+        observationEvidenceLoading: string;
+        observationEvidenceOutsideRange: string;
+        observationEvidenceMissing: string;
+        observationEvidencePartial: string;
+        observationEvidenceUnavailable: string;
+        observationMetricLabels: Record<'totalCloudPercent' | 'precipMm' | 'visibilityKm', string>;
         mapLegendLabel: string;
         eventDirectionLinesLabel: (event: string) => string;
         favoriteLocationsLabel: string;
@@ -1106,6 +1174,17 @@
             currentMoonPhaseLabel: '当前月相',
             astronomyEventsLabel: (date, isToday) => isToday ? '今日天文事件' : `${date}天文事件`,
             nightObservationWindowsLabel: '夜间观测时段',
+            observationEvidenceLabel: '观测时段天气证据',
+            observationEvidenceLoading: '正在匹配时段天气…',
+            observationEvidenceOutsideRange: '当前五天预报未覆盖该日期',
+            observationEvidenceMissing: '该时段暂无预报数据',
+            observationEvidencePartial: '当前预报仅覆盖部分时段',
+            observationEvidenceUnavailable: '观测天气暂不可用',
+            observationMetricLabels: {
+                totalCloudPercent: '云量',
+                precipMm: '降水',
+                visibilityKm: '能见度',
+            },
             mapLegendLabel: '地图图例',
             eventDirectionLinesLabel: event => `${event}方向线数据`,
             favoriteLocationsLabel: '收藏地点',
@@ -1249,6 +1328,17 @@
             currentMoonPhaseLabel: 'Current moon phase',
             astronomyEventsLabel: (date, isToday) => isToday ? 'Today’s astronomy events' : `Astronomy events for ${date}`,
             nightObservationWindowsLabel: 'Night observing windows',
+            observationEvidenceLabel: 'Weather evidence for the observing window',
+            observationEvidenceLoading: 'Matching forecast to this window…',
+            observationEvidenceOutsideRange: 'This date is outside the current five-day forecast',
+            observationEvidenceMissing: 'No forecast data is available for this window',
+            observationEvidencePartial: 'The current forecast covers only part of this window',
+            observationEvidenceUnavailable: 'Observing weather is unavailable',
+            observationMetricLabels: {
+                totalCloudPercent: 'Clouds',
+                precipMm: 'Precip.',
+                visibilityKm: 'Visibility',
+            },
             mapLegendLabel: 'Map legend',
             eventDirectionLinesLabel: event => `${event} direction-line data`,
             favoriteLocationsLabel: 'Favorite locations',
@@ -1519,6 +1609,11 @@
 
     $: isMobileFullscreen = isMobileOrTablet && mobilePanelMode === 'fullscreen';
 
+    // Observation evidence belongs to the Events view, so both compact data
+    // views must trigger the same weather and atmosphere requests on mobile.
+    $: shouldLoadVisibleWeatherData = !isMobileCollapsed
+        && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather');
+
     $: if (mobilePluginRoot) {
         mobilePluginRoot.classList.toggle('sun-path-favorites-open', isMobileOrTablet && favoritesOpen);
     }
@@ -1539,6 +1634,8 @@
 
     $: weatherPoints = mergeOpenMeteoAtmosphere(baseWeatherPoints, atmospherePoints);
 
+    $: selectedWeatherDate = findWeatherDateSelection(weatherPoints, timeZone, selectedDate);
+
     $: lightPollutionRequestKey = locationKey;
 
     $: lightPollutionErrorMessage = lightPollutionErrorKind === 'out-of-bounds'
@@ -1553,7 +1650,7 @@
 
     $: if (shouldLoadWeather({
         isMounted,
-        isWeatherTabActive: !isMobileCollapsed && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather'),
+        isWeatherTabActive: shouldLoadVisibleWeatherData,
         locationKey,
         resolvedContextLocationKey,
         requestKey: weatherRequestKey,
@@ -1565,7 +1662,7 @@
 
     $: if (shouldLoadWeather({
         isMounted,
-        isWeatherTabActive: !isMobileCollapsed && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather'),
+        isWeatherTabActive: shouldLoadVisibleWeatherData,
         locationKey,
         resolvedContextLocationKey,
         requestKey: atmosphereRequestKey,
@@ -2576,6 +2673,57 @@
     const formatIntervalDuration = (interval: AstronomyInterval, language = uiLanguage): string =>
         formatRemaining(interval.end.getTime() - interval.start.getTime(), language);
 
+    const observationEvidenceState = (slot: ObservationWindow): ObservationEvidenceState =>
+        resolveObservationEvidenceState({
+            weatherStatus,
+            atmosphereStatus,
+            dateCoverage: selectedWeatherDate.coverage,
+            evidence: slot.evidence,
+        });
+
+    const observationEvidenceStateLabel = (state: ObservationEvidenceState): string => {
+        if (state === 'outside-range') {
+            return text.observationEvidenceOutsideRange;
+        }
+        if (state === 'missing') {
+            return text.observationEvidenceMissing;
+        }
+        if (state === 'partial') {
+            return text.observationEvidencePartial;
+        }
+        return text.observationEvidenceUnavailable;
+    };
+
+    const formatObservationRange = (range: ObservationMetricRange | null, maximumFractionDigits: number): string => {
+        if (!range) {
+            return '--';
+        }
+        const formatter = new Intl.NumberFormat(uiLanguage === 'zh' ? 'zh-CN' : 'en-US', {
+            maximumFractionDigits,
+        });
+        const minimum = formatter.format(range.minimum);
+        const maximum = formatter.format(range.maximum);
+        return minimum === maximum ? minimum : `${minimum}–${maximum}`;
+    };
+
+    const formatObservationMeasurement = (
+        range: ObservationMetricRange | null,
+        maximumFractionDigits: number,
+        unit: '%' | 'km',
+    ): string => range
+        ? `${formatObservationRange(range, maximumFractionDigits)}${unit === '%' ? '' : ' '}${unit}`
+        : '--';
+
+    const formatObservationPrecipitation = (range: ObservationMetricRange | null): string => {
+        if (!range) {
+            return '--';
+        }
+        if (range.maximum === 0) {
+            return '0 mm';
+        }
+        return `${formatObservationRange(range, 1)} mm`;
+    };
+
     const formatDateControlLabel = (dateInput: string): string => {
         const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
         return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
@@ -2828,7 +2976,8 @@
         --weather-tone-cool: #9092ba;
         --weather-tone-mild: #aff5c0;
         --weather-tone-freezing: #f7f7f7;
-        --summary-panel-height: 256px;
+        --summary-panel-height: 268px;
+        --events-summary-panel-height: 280px;
         --desktop-weather-panel-height: 592px;
 
         box-sizing: border-box;
@@ -2906,6 +3055,7 @@
 
     .sun-path-panel.mobile_ui {
         --summary-panel-height: 250px;
+        --events-summary-panel-height: 250px;
 
         display: flex;
         flex-direction: column;
@@ -3935,6 +4085,10 @@
         background: #1d263d;
     }
 
+    .summary-panel-frame--events {
+        height: var(--events-summary-panel-height);
+    }
+
     .desktop-weather-module {
         flex: 0 0 auto;
         height: var(--desktop-weather-panel-height);
@@ -3970,7 +4124,7 @@
 
     .astronomy-panel__heading {
         display: grid;
-        grid-template-columns: minmax(132px, 1fr) max-content minmax(132px, 1fr);
+        grid-template-columns: minmax(112px, 1fr) max-content minmax(112px, 1fr);
         align-items: center;
         gap: 6px;
         min-height: 40px;
@@ -4191,7 +4345,7 @@
         justify-self: center;
         align-self: center;
         align-items: center;
-        column-gap: 1px;
+        column-gap: 2px;
         row-gap: 3px;
         min-width: 0;
         align-content: center;
@@ -4264,7 +4418,7 @@
     .live-position strong {
         display: grid;
         grid-template-columns: 3.8ch minmax(2em, auto);
-        column-gap: 0.2ch;
+        column-gap: 0.5ch;
         color: var(--astronomy-text);
         font-weight: 700;
     }
@@ -4284,9 +4438,9 @@
 
     .live-position .live-position__metric {
         display: grid;
-        grid-template-columns: 6.2ch 4.2ch 4.2ch;
+        grid-template-columns: 7ch 4.4ch 5.1ch;
         align-items: center;
-        column-gap: 1px;
+        column-gap: 4px;
     }
 
     .live-position__metric > span {
@@ -4406,6 +4560,12 @@
         margin-top: 2px;
     }
 
+    .astronomy-skeleton--evidence {
+        width: min(100%, 150px);
+        height: 20px;
+        margin-top: 3px;
+    }
+
     @keyframes astronomy-skeleton-pulse {
         0%, 100% {
             opacity: 0.34;
@@ -4500,6 +4660,37 @@
         text-overflow: clip;
         white-space: normal;
         line-height: 1.25;
+    }
+
+    .night-window__evidence {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 1px;
+        padding-top: 3px;
+        border-top: 1px solid rgba(153, 181, 235, 0.16);
+    }
+
+    .night-window__body span.night-window__metric {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        color: #c4d5ee;
+        font-size: 9.5px;
+        white-space: nowrap;
+    }
+
+    .night-window__body span.night-window__evidence-state {
+        margin-top: 2px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(153, 181, 235, 0.16);
+        color: #93a3bc;
+        font-size: 9.5px;
+    }
+
+    .night-window__evidence--placeholder {
+        opacity: 0.48;
     }
 
     .module-about {
@@ -5350,7 +5541,7 @@
             --live-row-height: 13px;
 
             justify-self: center;
-            column-gap: 1px;
+            column-gap: 2px;
             row-gap: 3px;
         }
 
@@ -5358,9 +5549,9 @@
             font-size: 9px;
         }
 
-        .live-position__metric {
-            grid-template-columns: 6ch 4.1ch 4.1ch;
-            column-gap: 1px;
+        .live-position .live-position__metric {
+            grid-template-columns: 6.8ch 4.3ch 5.2ch;
+            column-gap: 3px;
         }
 
         .orbit-moon {
@@ -5376,14 +5567,20 @@
         .night-window-list {
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 5px;
+            margin-top: 4px;
         }
 
         .night-window {
-            padding: 5px 7px;
+            padding: 2px 6px;
         }
 
         .night-window__body {
-            gap: 1px;
+            gap: 0;
+        }
+
+        .night-window__evidence {
+            margin-top: 0;
+            padding-top: 1px;
         }
     }
 
@@ -5465,6 +5662,7 @@
     @media (orientation: landscape) {
         .sun-path-panel.mobile_ui {
             --summary-panel-height: 256px;
+            --events-summary-panel-height: 256px;
         }
     }
 

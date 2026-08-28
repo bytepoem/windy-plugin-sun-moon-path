@@ -54,8 +54,11 @@ export type ObservationMetricRange = {
     maximum: number;
 };
 
+export type ObservationWeatherCoverage = 'none' | 'partial' | 'full';
+
 export type ObservationWindowEvidence = {
     weatherSampleCount: number;
+    weatherCoverage: ObservationWeatherCoverage;
     totalCloudPercent: ObservationMetricRange | null;
     precipitationMm: ObservationMetricRange | null;
     visibilityKm: ObservationMetricRange | null;
@@ -192,12 +195,12 @@ const metricRange = (
         : null;
 };
 
-const weatherPointsForInterval = (
+const weatherEvidenceForInterval = (
     points: WeatherPoint[],
     interval: AstronomyInterval,
-): WeatherPoint[] => {
+): { samples: WeatherPoint[]; coverage: ObservationWeatherCoverage } => {
     const sortedPoints = [...points].sort((left, right) => left.timestamp - right.timestamp);
-    return sortedPoints.filter((point, index) => {
+    const representedCells = sortedPoints.map((point, index) => {
         const previousTimestamp = sortedPoints[index - 1]?.timestamp;
         const nextTimestamp = sortedPoints[index + 1]?.timestamp;
         const representedStart = previousTimestamp === undefined
@@ -210,8 +213,32 @@ const weatherPointsForInterval = (
                 ? point.timestamp
                 : point.timestamp + (point.timestamp - previousTimestamp) / 2
             : (point.timestamp + nextTimestamp) / 2;
-        return representedEnd >= interval.start.getTime() && representedStart <= interval.end.getTime();
+        return { point, representedStart, representedEnd };
     });
+
+    const intervalStart = interval.start.getTime();
+    const intervalEnd = interval.end.getTime();
+    const overlappingCells = representedCells.filter(cell =>
+        cell.representedEnd >= intervalStart && cell.representedStart <= intervalEnd,
+    );
+    if (overlappingCells.length === 0) {
+        return { samples: [], coverage: 'none' };
+    }
+
+    // Forecast values represent time cells around each timestamp. Walk their
+    // union so an edge sample cannot silently make a partially covered
+    // observing interval look fully forecasted.
+    let coveredUntil = intervalStart;
+    for (const cell of overlappingCells) {
+        if (cell.representedStart > coveredUntil) {
+            return { samples: overlappingCells.map(item => item.point), coverage: 'partial' };
+        }
+        coveredUntil = Math.max(coveredUntil, cell.representedEnd);
+        if (coveredUntil >= intervalEnd) {
+            return { samples: overlappingCells.map(item => item.point), coverage: 'full' };
+        }
+    }
+    return { samples: overlappingCells.map(item => item.point), coverage: 'partial' };
 };
 
 export const buildObservationWindows = ({
@@ -234,12 +261,16 @@ export const buildObservationWindows = ({
 
     return (['moonless-night', 'milky-way'] as const).map(kind => {
         const interval = preferredInterval(kind);
-        const samples = interval ? weatherPointsForInterval(weatherPoints, interval) : [];
+        const weatherEvidence = interval
+            ? weatherEvidenceForInterval(weatherPoints, interval)
+            : { samples: [], coverage: 'none' as const };
+        const { samples } = weatherEvidence;
         return {
             kind,
             interval,
             evidence: {
                 weatherSampleCount: samples.length,
+                weatherCoverage: weatherEvidence.coverage,
                 totalCloudPercent: metricRange(samples, 'totalCloudPercent'),
                 precipitationMm: metricRange(samples, 'precipMm'),
                 visibilityKm: metricRange(samples, 'visibilityKm'),

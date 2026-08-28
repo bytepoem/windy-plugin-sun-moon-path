@@ -4,6 +4,7 @@
     import CelestialIcon from './CelestialIcon.svelte';
     import { buildCelestialCurves, type CelestialCurveSegment } from './celestialCurve';
     import WeatherIcon from './WeatherIcon.svelte';
+    import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import {
         buildWeatherDateGroups,
         findCurrentTimePosition,
@@ -422,7 +423,10 @@
                             role="rowheader"
                             aria-label={metricAriaLabel(metric)}
                         >
-                            <span>{text.metrics[metric][0]}</span>
+                            <span class="weather-metric-label__name">
+                                <WeatherMetricIcon {metric} size={10} />
+                                <span>{text.metrics[metric][0]}</span>
+                            </span>
                             {#if text.metrics[metric][1]}
                                 <small>{text.metrics[metric][1]}</small>
                             {/if}
@@ -834,7 +838,18 @@
         display: grid;
         align-content: center;
         justify-items: center;
+        padding-right: 2px;
+        padding-left: 2px;
         line-height: 1.1;
+    }
+
+    .weather-metric-label__name {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        max-width: 100%;
+        gap: 2px;
+        white-space: nowrap;
     }
 
     .weather-metric-label small {

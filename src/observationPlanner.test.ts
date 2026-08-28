@@ -141,6 +141,7 @@ describe('observation planner', () => {
         expect(windows[0].interval).toEqual(timeline.intervals[0]);
         expect(windows[0].evidence).toMatchObject({
             weatherSampleCount: 2,
+            weatherCoverage: 'full',
             totalCloudPercent: { minimum: 20, maximum: 60 },
             precipitationMm: { minimum: 0, maximum: 1.2 },
             visibilityKm: { minimum: 8, maximum: 12 },
@@ -179,7 +180,40 @@ describe('observation planner', () => {
         });
 
         expect(window.evidence.weatherSampleCount).toBe(2);
+        expect(window.evidence.weatherCoverage).toBe('full');
         expect(window.evidence.totalCloudPercent).toEqual({ minimum: 20, maximum: 60 });
+    });
+
+    it('marks an observing window as partially covered at a forecast boundary', () => {
+        const interval = {
+            kind: 'moonless-night' as const,
+            label: 'Moonless',
+            start: new Date('2026-08-24T02:13:00Z'),
+            end: new Date('2026-08-24T04:48:00Z'),
+        };
+        const timeline = {
+            dayStart: new Date('2026-08-24T00:00:00Z'),
+            dayEnd: new Date('2026-08-25T00:00:00Z'),
+            items: [],
+            tracks: [],
+            moonIllumination: { fraction: 0.1, phase: 0.1, waxing: true },
+            intervals: [interval],
+        } satisfies AstronomyTimeline;
+        const points = [
+            weatherPoint(new Date('2026-08-24T04:00:00Z').getTime(), { totalCloudPercent: 20 }),
+            weatherPoint(new Date('2026-08-24T07:00:00Z').getTime(), { totalCloudPercent: 60 }),
+        ];
+
+        const [window] = buildObservationWindows({
+            timeline,
+            weatherPoints: points,
+            lightPollution: null,
+            referenceTime: timeline.dayStart.getTime(),
+        });
+
+        expect(window.evidence.weatherSampleCount).toBe(1);
+        expect(window.evidence.weatherCoverage).toBe('partial');
+        expect(window.evidence.totalCloudPercent).toEqual({ minimum: 20, maximum: 20 });
     });
 
     it('keeps missing moon illumination distinct from a new moon', () => {
@@ -191,5 +225,6 @@ describe('observation planner', () => {
         });
 
         expect(windows[0].evidence.moonIlluminationFraction).toBeNull();
+        expect(windows[0].evidence.weatherCoverage).toBe('none');
     });
 });

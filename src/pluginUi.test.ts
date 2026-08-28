@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import pluginSource from './plugin.svelte?raw';
+import weatherMetricIconSource from './WeatherMetricIcon.svelte?raw';
 import weatherTableSource from './WeatherTable.svelte?raw';
 
 describe('plugin astronomy loading presentation', () => {
@@ -69,6 +70,89 @@ describe('plugin astronomy loading presentation', () => {
         expect(weatherTableSource).toContain('class:weather-date-group--selected={group.key === selectedDate}');
         expect(weatherTableSource).toContain('class:weather-value-cell--selected={isSelectedDateIndex(index, selectedDateStartIndex, selectedDateEndIndex)}');
         expect(weatherTableSource).toContain('weather-date-notice');
+    });
+
+    it('uses one accessible metric icon vocabulary in observation evidence and weather row labels', () => {
+        expect(pluginSource).toContain("import WeatherMetricIcon from './WeatherMetricIcon.svelte';");
+        expect(weatherTableSource).toContain("import WeatherMetricIcon from './WeatherMetricIcon.svelte';");
+        expect(pluginSource).toContain('<WeatherMetricIcon metric="totalCloudPercent"');
+        expect(pluginSource).toContain('<WeatherMetricIcon metric="precipMm"');
+        expect(pluginSource).toContain('<WeatherMetricIcon metric="visibilityKm"');
+        expect(weatherTableSource).toContain('<WeatherMetricIcon {metric} size={10} />');
+        expect(weatherMetricIconSource).toContain('aria-hidden="true"');
+        expect(weatherMetricIconSource).toContain('focusable="false"');
+    });
+
+    it('loads weather evidence while the compact mobile Events view is visible', () => {
+        expect(pluginSource).toContain(
+            "!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather'",
+        );
+        expect(pluginSource.match(/isWeatherTabActive: shouldLoadVisibleWeatherData/g)).toHaveLength(2);
+    });
+
+    it('reserves desktop Events headroom and separates live direction metrics', () => {
+        const desktopMetricRule = pluginSource.match(
+            /\.live-position \.live-position__metric\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const narrowMobileStart = pluginSource.indexOf('@media (max-width: 360px)');
+        const narrowMobileEnd = pluginSource.indexOf('@media (max-height: 740px)', narrowMobileStart);
+        const narrowMobileSource = pluginSource.slice(narrowMobileStart, narrowMobileEnd);
+        const mobileStart = pluginSource.indexOf('@media (max-width: 520px)');
+        const mobileEnd = pluginSource.indexOf('@media (max-width: 360px)', mobileStart);
+        const mobileSource = pluginSource.slice(mobileStart, mobileEnd);
+        const mobileMetricRule = mobileSource.match(
+            /\.live-position \.live-position__metric\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const landscapeStart = pluginSource.indexOf('@media (orientation: landscape)');
+        const landscapeEnd = pluginSource.indexOf('@media (prefers-reduced-motion: reduce)', landscapeStart);
+        const landscapeSource = pluginSource.slice(landscapeStart, landscapeEnd);
+
+        expect(pluginSource).toContain("class:summary-panel-frame--events={summaryTab === 'events'}");
+        expect(pluginSource).toContain(
+            'grid-template-columns: minmax(112px, 1fr) max-content minmax(112px, 1fr);',
+        );
+        expect(pluginSource).toContain(
+            '--summary-panel-height: 268px;\n        --events-summary-panel-height: 280px;',
+        );
+        expect(pluginSource).toContain(
+            '--summary-panel-height: 250px;\n        --events-summary-panel-height: 250px;',
+        );
+        expect(landscapeSource).toContain('--summary-panel-height: 256px;');
+        expect(landscapeSource).toContain('--events-summary-panel-height: 256px;');
+        expect(pluginSource).toContain('height: var(--events-summary-panel-height);');
+        expect(pluginSource).toContain('column-gap: 0.5ch;');
+        expect(desktopMetricRule).toContain('grid-template-columns: 7ch 4.4ch 5.1ch;');
+        expect(desktopMetricRule).toContain('column-gap: 4px;');
+        expect(mobileMetricRule).toContain('grid-template-columns: 6.8ch 4.3ch 5.2ch;');
+        expect(mobileMetricRule).toContain('column-gap: 3px;');
+        expect(narrowMobileSource).toMatch(/\.live-position__compass\s*{[\s\S]*?display: none;/);
+        expect(narrowMobileSource).toMatch(/\.live-position__event-azimuth\s*{[\s\S]*?display: none;/);
+    });
+
+    it('keeps the evidence skeleton when no observing interval exists', () => {
+        const placeholderStart = pluginSource.indexOf(
+            'class="night-window__evidence night-window__evidence--placeholder"',
+        );
+        const placeholderEnd = pluginSource.indexOf('</div>', placeholderStart);
+        const placeholderSource = pluginSource.slice(placeholderStart, placeholderEnd);
+        const placeholderStyle = pluginSource.match(
+            /\.night-window__evidence--placeholder\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+
+        expect(placeholderStart).toBeGreaterThanOrEqual(0);
+        expect(placeholderEnd).toBeGreaterThan(placeholderStart);
+        expect(placeholderSource).toContain('aria-hidden="true"');
+        expect(placeholderSource.match(/class="night-window__metric"/g)).toHaveLength(3);
+        expect(Array.from(placeholderSource.matchAll(/metric="([^"]+)"/g), match => match[1])).toEqual([
+            'totalCloudPercent',
+            'precipMm',
+            'visibilityKm',
+        ]);
+        expect(placeholderSource.match(/>\s*--\s*<\/span>/g)).toHaveLength(3);
+        expect(placeholderSource).not.toContain('astronomy-skeleton');
+        expect(placeholderSource).not.toContain('aria-live');
+        expect(placeholderStyle).toContain('opacity: 0.48;');
+        expect(placeholderStyle).not.toContain('animation');
     });
 
     it('opens the native date picker when the compact date control is clicked', () => {
