@@ -38,6 +38,7 @@
     const dispatch = createEventDispatcher<{
         back: void;
         close: void;
+        select: FavoriteComparisonTarget;
     }>();
     const labels = {
         zh: {
@@ -71,6 +72,7 @@
             outsideForecast: '日期超出预报范围',
             weatherError: '模型数据不可用',
             retry: '刷新对比',
+            locate: (title: string) => `定位到${title}`,
         },
         en: {
             title: 'Favorite time-window comparison',
@@ -103,6 +105,7 @@
             outsideForecast: 'Date outside forecast range',
             weatherError: 'Model data unavailable',
             retry: 'Refresh comparison',
+            locate: (title: string) => `Show ${title} on the map`,
         },
     } as const;
     const modelOptions: { value: WeatherModel; label: string }[] = [
@@ -161,7 +164,6 @@
     let modelRequestId = 0;
     let prepareAbortController: AbortController | null = null;
     let modelAbortController: AbortController | null = null;
-    let expandedLocationId: string | null = null;
     let destroyed = false;
     let comparisonMetrics: ComparisonMetric[] = [];
 
@@ -183,7 +185,6 @@
         previousOpen = open;
         if (open) {
             model = initialModel;
-            expandedLocationId = null;
             void prepareComparison();
             void tick().then(() => panelElement?.focus());
         } else {
@@ -294,7 +295,6 @@
 
     const closeComparison = () => {
         cancelRequests();
-        expandedLocationId = null;
         open = false;
         dispatch('close');
         void tick().then(() => returnFocus?.focus());
@@ -302,7 +302,6 @@
 
     const backToFavorites = () => {
         cancelRequests();
-        expandedLocationId = null;
         open = false;
         dispatch('back');
     };
@@ -311,21 +310,7 @@
         if (event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
-            if (expandedLocationId) {
-                expandedLocationId = null;
-                return;
-            }
             closeComparison();
-        }
-    };
-
-    const handlePanelClick = (event: MouseEvent) => {
-        if (
-            expandedLocationId
-            && event.target instanceof Element
-            && !event.target.closest('.favorite-comparison__location-cell')
-        ) {
-            expandedLocationId = null;
         }
     };
 
@@ -336,8 +321,11 @@
         }
     };
 
-    const toggleLocationDetails = (locationId: string) => {
-        expandedLocationId = expandedLocationId === locationId ? null : locationId;
+    /** Closes comparison before the parent switches the selected map location. */
+    const selectLocation = (target: FavoriteComparisonTarget) => {
+        cancelRequests();
+        open = false;
+        dispatch('select', target);
     };
 
     const openDatePicker = (event: MouseEvent) => {
@@ -514,7 +502,6 @@
         aria-label={text.title}
         tabindex="-1"
         bind:this={panelElement}
-        on:click={handlePanelClick}
         on:touchmove|nonpassive={handlePanelScrollGesture}
         on:wheel|nonpassive={handlePanelScrollGesture}
         on:keydown={handleKeydown}
@@ -590,29 +577,14 @@
                                         <button
                                             type="button"
                                             class="favorite-comparison__location-button"
-                                            aria-label={result.prepared.target.title}
-                                            aria-expanded={expandedLocationId === result.prepared.target.id}
-                                            aria-describedby={expandedLocationId === result.prepared.target.id
-                                                ? `favorite-comparison-location-${result.prepared.target.id}`
-                                                : undefined}
-                                            on:click={() => toggleLocationDetails(result.prepared.target.id)}
-                                            on:blur={() => {
-                                                if (expandedLocationId === result.prepared.target.id) {
-                                                    expandedLocationId = null;
-                                                }
-                                            }}
+                                            aria-label={text.locate(result.prepared.target.title)}
+                                            title={result.prepared.target.title}
+                                            on:click={() => selectLocation(result.prepared.target)}
                                         >
                                             <span class="favorite-comparison__location-label">
                                                 {compactLocationLabel(result.prepared.target.title)}
                                             </span>
                                         </button>
-                                        {#if expandedLocationId === result.prepared.target.id}
-                                            <span
-                                                id={`favorite-comparison-location-${result.prepared.target.id}`}
-                                                class="favorite-comparison__location-tooltip"
-                                                role="tooltip"
-                                            >{result.prepared.target.title}</span>
-                                        {/if}
                                     </th>
                                 {/each}
                             </tr>
@@ -906,20 +878,25 @@
 
     .favorite-comparison__location-button {
         width: 100%;
-        height: 27px;
+        min-height: 44px;
         min-width: 0;
         padding: 2px 4px;
         border: 0;
-        color: inherit;
+        color: var(--panel-accent);
         background: transparent;
         font: inherit;
-        cursor: help;
+        cursor: pointer;
         touch-action: manipulation;
     }
 
     .favorite-comparison__location-button:hover,
-    .favorite-comparison__location-button[aria-expanded='true'] {
+    .favorite-comparison__location-button:focus-visible {
         background: rgba(99, 185, 238, 0.08);
+    }
+
+    .favorite-comparison__location-button:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: -2px;
     }
 
     .favorite-comparison__location-label {
@@ -927,40 +904,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-
-    .favorite-comparison__location-tooltip {
-        position: absolute;
-        z-index: 4;
-        top: calc(100% + 3px);
-        left: 50%;
-        width: max-content;
-        max-width: 190px;
-        padding: 4px 6px;
-        border: 1px solid rgba(116, 151, 188, 0.56);
-        border-radius: 4px;
-        color: var(--panel-text);
-        background: #071221;
-        box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42);
-        font-size: 9px;
-        font-weight: 500;
-        line-height: 1.35;
-        pointer-events: none;
-        text-align: left;
-        white-space: normal;
-        word-break: break-word;
-        transform: translateX(-50%);
-    }
-
-    .favorite-comparison__location-cell.column-1 .favorite-comparison__location-tooltip {
-        left: 2px;
-        transform: none;
-    }
-
-    .favorite-comparison__location-cell.last-location .favorite-comparison__location-tooltip {
-        right: 2px;
-        left: auto;
-        transform: none;
     }
 
     .favorite-comparison__model-cell {

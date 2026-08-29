@@ -27,13 +27,36 @@ describe('plugin astronomy loading presentation', () => {
         expect(favoriteComparisonSource).not.toContain('timelineScale');
     });
 
-    it('discloses full comparison location names to pointer, keyboard, and touch users', () => {
+    it('uses comparison location names to select and center the corresponding place', () => {
         expect(favoriteComparisonSource).toContain('class="favorite-comparison__location-button"');
-        expect(favoriteComparisonSource).toContain('aria-label={result.prepared.target.title}');
-        expect(favoriteComparisonSource).toContain('aria-expanded={expandedLocationId === result.prepared.target.id}');
-        expect(favoriteComparisonSource).toContain('role="tooltip"');
-        expect(favoriteComparisonSource).toContain('on:click={() => toggleLocationDetails(result.prepared.target.id)}');
-        expect(favoriteComparisonSource).toContain("if (expandedLocationId) {");
+        expect(favoriteComparisonSource).toContain('aria-label={text.locate(result.prepared.target.title)}');
+        expect(favoriteComparisonSource).toContain('on:click={() => selectLocation(result.prepared.target)}');
+        expect(favoriteComparisonSource).toContain("dispatch('select', target);");
+        expect(favoriteComparisonSource).not.toContain('expandedLocationId');
+        expect(favoriteComparisonSource).not.toContain('favorite-comparison__location-tooltip');
+        expect(pluginSource).toContain('on:select={handleFavoriteComparisonLocationSelect}');
+        const selectionHandlerStart = pluginSource.indexOf(
+            'const handleFavoriteComparisonLocationSelect =',
+        );
+        const selectionHandlerEnd = pluginSource.indexOf(
+            'const requestPreciseGpsLocation',
+            selectionHandlerStart,
+        );
+        const selectionHandler = pluginSource.slice(selectionHandlerStart, selectionHandlerEnd);
+        const closeComparison = selectionHandler.indexOf('favoriteComparisonOpen = false;');
+        const waitForPanelLayout = selectionHandler.indexOf('await tick();');
+        const recenterVisibleMap = selectionHandler.indexOf('restoreSearchLocationZoom();');
+
+        expect(selectionHandlerStart).toBeGreaterThanOrEqual(0);
+        expect(closeComparison).toBeGreaterThanOrEqual(0);
+        expect(waitForPanelLayout).toBeGreaterThan(closeComparison);
+        expect(recenterVisibleMap).toBeGreaterThan(waitForPanelLayout);
+        expect(selectionHandler).not.toContain(
+            'centerMap({ lat: target.location.lat, lon: target.location.lon, zoom: SEARCH_LOCATION_ZOOM });',
+        );
+        expect(favoriteComparisonSource).toMatch(
+            /\.favorite-comparison__location-button\s*{[\s\S]*?min-height: 44px;[\s\S]*?cursor: pointer;/,
+        );
         expect(favoriteComparisonSource).toContain('touch-action: manipulation;');
         expect(favoriteComparisonSource).not.toContain('document.addEventListener');
     });
@@ -173,6 +196,15 @@ describe('plugin astronomy loading presentation', () => {
         expect(inputStyle).toContain('height: 100%;');
         expect(inputStyle).toContain('cursor: pointer;');
         expect(inputStyle).not.toContain('pointer-events: none;');
+    });
+
+    it('uses one vertical gap between every top-level settings item', () => {
+        const settingsStyle = pluginSource.match(
+            /\.module-settings\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+
+        expect(settingsStyle).toContain('gap: 8px;');
+        expect(pluginSource).not.toContain('settings-toggle--location-search');
     });
 
     it('supports two to five comparison targets with horizontally scrollable location columns', () => {

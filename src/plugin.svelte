@@ -265,6 +265,7 @@
         openUpward={isMobileCollapsed}
         on:back={handleFavoriteComparisonBack}
         on:close={handleFavoriteComparisonClose}
+        on:select={handleFavoriteComparisonLocationSelect}
     />
     </div>
 
@@ -861,7 +862,7 @@
                 </section>
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
-                    <label class="settings-toggle settings-toggle--location-search">
+                    <label class="settings-toggle">
                         <span class="settings-toggle__copy">
                             <strong>{text.hideLocationSearchLabel}</strong>
                             <span>{text.hideLocationSearchDescription}</span>
@@ -2834,6 +2835,35 @@
 
     const handleFavoriteComparisonClose = () => {
         favoriteComparisonOpen = false;
+    };
+
+    /** Selects a compared favorite and recenters Windy on that observing location. */
+    const handleFavoriteComparisonLocationSelect = async (
+        event: CustomEvent<FavoriteComparisonTarget>,
+    ) => {
+        const target = event.detail;
+        currentLocationRequestId += 1;
+        if (locationSyncTimer) {
+            clearTimeout(locationSyncTimer);
+            locationSyncTimer = null;
+        }
+        addressSelectedLocation = {
+            wgs84: { ...target.location },
+        };
+        favoritesOpen = false;
+        favoriteComparisonOpen = false;
+        setLocation(
+            target.location,
+            false,
+            target.title,
+            target.knownElevationM,
+            target.knownLightPollution,
+        );
+        // The comparison dialog covers the map until this state change is rendered.
+        // Recenter only after its replacement panel geometry is available, then reuse
+        // the mobile delayed correction for Windy's settling bottom timeline.
+        await tick();
+        restoreSearchLocationZoom();
     };
 
     const requestPreciseGpsLocation = async (): Promise<Coordinates | null> =>
@@ -5611,10 +5641,6 @@
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.06);
         cursor: pointer;
-    }
-
-    .settings-toggle--location-search {
-        margin-bottom: 10px;
     }
 
     .settings-toggle__copy {
