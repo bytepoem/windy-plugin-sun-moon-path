@@ -400,6 +400,34 @@ describe('plugin astronomy loading presentation', () => {
         expect(mobileSearchStyle).toContain('padding: 0 4px;');
     });
 
+    it('documents the current user-facing features in usage order in both languages', () => {
+        const guideStart = pluginSource.indexOf("{:else if summaryTab === 'guide'}");
+        const settingsStart = pluginSource.indexOf("{:else if summaryTab === 'settings'}", guideStart);
+        const guideSource = pluginSource.slice(guideStart, settingsStart);
+        const coordinatesStart = guideSource.indexOf('{text.featureGuide.coordinates.title}');
+        const favoritesStart = guideSource.indexOf('{text.featureGuide.favorites.title}');
+        const comparisonStart = guideSource.indexOf('{text.featureGuide.comparison.title}');
+        const evidenceStart = guideSource.indexOf('{text.featureGuide.observationEvidence.title}');
+        const mapControlsStart = guideSource.indexOf('{text.featureGuide.mapControls.title}');
+        const mobileModeStart = guideSource.indexOf('{text.featureGuide.mobileMode.title}');
+
+        expect(guideSource).toContain('id="feature-guide-heading"');
+        expect(coordinatesStart).toBeGreaterThanOrEqual(0);
+        expect(mapControlsStart).toBeGreaterThan(coordinatesStart);
+        expect(evidenceStart).toBeGreaterThan(mapControlsStart);
+        expect(favoritesStart).toBeGreaterThan(evidenceStart);
+        expect(comparisonStart).toBeGreaterThan(favoritesStart);
+        expect(mobileModeStart).toBeGreaterThan(comparisonStart);
+        expect(pluginSource).toContain("featureGuideHeading: '功能说明'");
+        expect(pluginSource).toContain("featureGuideHeading: 'Feature guide'");
+        expect(pluginSource).not.toContain('0.8.0 新增功能');
+        expect(pluginSource).not.toContain('What’s new in 0.8.0');
+        expect(pluginSource).toContain("title: '收藏地点对比'");
+        expect(pluginSource).toContain("title: 'Favorite location comparison'");
+        expect(pluginSource).toContain("title: '地图视图按钮'");
+        expect(pluginSource).toContain("title: 'Map view controls'");
+    });
+
     it('localizes accessibility labels and names astronomy regions for the selected date', () => {
         const literalAriaLabels = Array.from(
             pluginSource.matchAll(/aria-label="([^"]+)"/g),

@@ -619,6 +619,37 @@
             {:else if summaryTab === 'guide'}
                 <section class="module-about module-guide" aria-label={text.guideHeading}>
                     <p>{text.aboutDescription}</p>
+
+                    <section class="feature-guide" aria-labelledby="feature-guide-heading">
+                        <h3 id="feature-guide-heading">{text.featureGuideHeading}</h3>
+                        <dl>
+                            <div>
+                                <dt>{text.featureGuide.coordinates.title}</dt>
+                                <dd>{text.featureGuide.coordinates.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.mapControls.title}</dt>
+                                <dd>{text.featureGuide.mapControls.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.observationEvidence.title}</dt>
+                                <dd>{text.featureGuide.observationEvidence.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.favorites.title}</dt>
+                                <dd>{text.featureGuide.favorites.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.comparison.title}</dt>
+                                <dd>{text.featureGuide.comparison.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.mobileMode.title}</dt>
+                                <dd>{text.featureGuide.mobileMode.description}</dd>
+                            </div>
+                        </dl>
+                    </section>
+
                     <div class="sun-path-legend sun-path-legend--module" aria-label={text.mapLegendLabel}>
                         <div class="sun-path-legend__items">
                             <span class="legend-item">
@@ -1175,6 +1206,16 @@
         lightPollutionOutOfBounds: string;
         aboutDescription: string;
         guideHeading: string;
+        featureGuideHeading: string;
+        featureGuide: Record<
+            | 'favorites'
+            | 'comparison'
+            | 'coordinates'
+            | 'observationEvidence'
+            | 'mobileMode'
+            | 'mapControls',
+            { title: string; description: string }
+        >;
         settingsGuideHeading: string;
         settingsHeading: string;
         lineOpacityLabel: string;
@@ -1295,6 +1336,33 @@
             lightPollutionOutOfBounds: '该地点超出光污染数据范围（南纬 65° 至北纬 75°）。',
             aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
             guideHeading: '地图说明',
+            featureGuideHeading: '功能说明',
+            featureGuide: {
+                favorites: {
+                    title: '收藏地点',
+                    description: '使用书签按钮收藏或取消收藏当前地点；列表显示距离、海拔和光污染，并支持按距离、收藏时间、海拔或光污染排序。',
+                },
+                comparison: {
+                    title: '收藏地点对比',
+                    description: '从收藏中选择 2–5 个地点，在同一观测日期下对比无月、银河时段、天气、光污染和月相。',
+                },
+                coordinates: {
+                    title: '坐标精确定位',
+                    description: '在搜索下拉中选择 WGS84 或 GCJ-02，分别输入纬度和经度；GCJ-02 会自动转换为 Windy 使用的 WGS84。',
+                },
+                observationEvidence: {
+                    title: '观测时段证据',
+                    description: '无月和银河时段同步显示综合云量、降水和能见度，用当前选择的预报模型补充观测条件依据。',
+                },
+                mobileMode: {
+                    title: '移动端方位线模式',
+                    description: '收起面板后保留搜索、日期、事件、实时方位和当天事件时间，并记住方位线模式或小窗口的选择。',
+                },
+                mapControls: {
+                    title: '地图视图按钮',
+                    description: '“−”用于缩放到完整方位线范围，“+”用于恢复搜索地点的详细缩放级别。',
+                },
+            },
             settingsGuideHeading: '设置说明',
             settingsHeading: '插件设置',
             lineOpacityLabel: '方位线透明度',
@@ -1451,6 +1519,33 @@
             lightPollutionOutOfBounds: 'This location is outside atlas coverage (65°S to 75°N).',
             aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30 minutes before, at the event, and 30 minutes after.',
             guideHeading: 'Map guide',
+            featureGuideHeading: 'Feature guide',
+            featureGuide: {
+                favorites: {
+                    title: 'Favorite locations',
+                    description: 'Use the bookmark button to save or remove the current location. The list shows distance, elevation, and light pollution, with sorting by distance, recency, elevation, or light pollution.',
+                },
+                comparison: {
+                    title: 'Favorite location comparison',
+                    description: 'Select 2–5 favorites to compare moonless and Milky Way windows, weather, light pollution, and moon phase for the same observing date.',
+                },
+                coordinates: {
+                    title: 'Exact coordinate location',
+                    description: 'Choose WGS84 or GCJ-02 from the search menu and enter latitude and longitude separately. GCJ-02 is converted to the WGS84 coordinates used by Windy.',
+                },
+                observationEvidence: {
+                    title: 'Observing-window evidence',
+                    description: 'Moonless and Milky Way windows now show total cloud cover, precipitation, and visibility from the selected forecast model.',
+                },
+                mobileMode: {
+                    title: 'Mobile direction-line mode',
+                    description: 'Collapse the panel while keeping search, date, event, live directions, and daily event times. The direction-line or compact choice is remembered.',
+                },
+                mapControls: {
+                    title: 'Map view controls',
+                    description: 'Use “−” to fit the full direction-line range and “+” to restore the detailed search-location zoom.',
+                },
+            },
             settingsGuideHeading: 'Settings guide',
             settingsHeading: 'Plugin settings',
             lineOpacityLabel: 'Direction line opacity',
@@ -5053,12 +5148,17 @@
         line-height: 1.45;
     }
 
+    .feature-guide,
     .settings-guide {
         display: grid;
         gap: 0;
         border-top: 1px solid var(--panel-border);
     }
 
+    .feature-guide h3,
+    .feature-guide dl,
+    .feature-guide dt,
+    .feature-guide dd,
     .settings-guide h3,
     .settings-guide dl,
     .settings-guide dt,
@@ -5066,6 +5166,7 @@
         margin: 0;
     }
 
+    .feature-guide h3,
     .settings-guide h3 {
         padding: 10px 0 4px;
         color: var(--panel-text);
@@ -5073,6 +5174,7 @@
         line-height: 1.2;
     }
 
+    .feature-guide dl > div,
     .settings-guide dl > div {
         display: grid;
         gap: 4px;
@@ -5080,10 +5182,12 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    .feature-guide dl > div:last-child,
     .settings-guide dl > div:last-child {
         border-bottom: 0;
     }
 
+    .feature-guide dt,
     .settings-guide dt {
         color: var(--panel-text);
         font-size: 11px;
@@ -5091,6 +5195,7 @@
         line-height: 1.25;
     }
 
+    .feature-guide dd,
     .settings-guide dd {
         color: var(--panel-muted);
         font-size: 10px;
