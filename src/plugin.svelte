@@ -407,24 +407,44 @@
                                     </span>
                                 </span>
                             </button>
-                            <button
-                                type="button"
-                                class="astronomy-location__favorite"
-                                class:saved={currentLocationSaved}
-                                aria-label={currentLocationSaved
-                                    ? text.removeCurrentLocationFavoriteLabel
-                                    : text.saveCurrentLocationFavoriteLabel}
-                                aria-pressed={currentLocationSaved}
-                                title={currentLocationSaved
-                                    ? text.removeCurrentLocationFavoriteLabel
-                                    : text.saveCurrentLocationFavoriteLabel}
-                                disabled={currentFavoriteActionDisabled}
-                                on:click={toggleCurrentLocationFavorite}
-                            >
-                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="m12 3.8 2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8Z"></path>
-                                </svg>
-                            </button>
+                            <span class="astronomy-location__actions">
+                                <button
+                                    type="button"
+                                    class="astronomy-location__favorite"
+                                    class:saved={currentLocationSaved}
+                                    aria-label={currentLocationSaved
+                                        ? text.removeCurrentLocationFavoriteLabel
+                                        : text.saveCurrentLocationFavoriteLabel}
+                                    aria-pressed={currentLocationSaved}
+                                    title={currentLocationSaved
+                                        ? text.removeCurrentLocationFavoriteLabel
+                                        : text.saveCurrentLocationFavoriteLabel}
+                                    disabled={currentFavoriteActionDisabled}
+                                    on:click={toggleCurrentLocationFavorite}
+                                >
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="m12 3.8 2.5 5.1 5.6.8-4.1 4 1 5.6-5-2.6-5 2.6 1-5.6-4.1-4 5.6-.8Z"></path>
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="astronomy-location__pin"
+                                    class:pinned={locationPinned}
+                                    aria-label={locationPinned
+                                        ? text.unpinCurrentLocationLabel
+                                        : text.pinCurrentLocationLabel}
+                                    aria-pressed={locationPinned}
+                                    title={locationPinned
+                                        ? text.unpinCurrentLocationLabel
+                                        : text.pinCurrentLocationLabel}
+                                    on:click={toggleLocationPinned}
+                                >
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path class="astronomy-location__pin-head" d="M9 3h6l-1 5 3 3v2H7v-2l3-3-1-5Z"></path>
+                                        <path d="M12 13v8"></path>
+                                    </svg>
+                                </button>
+                            </span>
                         </div>
                         <div class="live-positions" aria-label={text.currentDirectionsLabel}>
                             <div class="live-position live-position--sun" aria-label={text.sun}>
@@ -862,6 +882,23 @@
                 </section>
             {:else if summaryTab === 'settings'}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
+                    <div class="settings-select">
+                        <label for="initial-overlay">{text.initialOverlayLabel}</label>
+                        <select
+                            id="initial-overlay"
+                            value={initialOverlayPreference}
+                            aria-describedby="initial-overlay-description"
+                            on:change={changeInitialOverlayPreference}
+                        >
+                            <option value={KEEP_CURRENT_OVERLAY}>{text.keepCurrentOverlayLabel}</option>
+                            {#each initialOverlayOptions as option}
+                                <option value={option.value}>{option.label}</option>
+                            {/each}
+                        </select>
+                        <span id="initial-overlay-description" class="settings-select__description">
+                            {text.initialOverlayDescription}
+                        </span>
+                    </div>
                     <label class="settings-toggle">
                         <span class="settings-toggle__copy">
                             <strong>{text.hideLocationSearchLabel}</strong>
@@ -1032,10 +1069,12 @@
     import { getElevation, getPointForecastData, getTimezoneInfo } from '@windy/fetch';
     import { getGPSlocation, getMyLatestPos } from '@windy/geolocation';
     import { centerMap, map } from '@windy/map';
+    import windyOverlays from '@windy/overlays';
     import * as reverseName from '@windy/reverseName';
     import { isMobileOrTablet } from '@windy/rootScope';
     import { setUrl } from '@windy/location';
     import { singleclick } from '@windy/singleclick';
+    import store from '@windy/store';
     import { onDestroy, onMount, tick } from 'svelte';
 
     import config from './pluginConfig';
@@ -1124,6 +1163,13 @@
         type LocationSearchResult,
         type LocationSearchSelection,
     } from './locationProvider';
+    import {
+        DEFAULT_INITIAL_OVERLAY,
+        KEEP_CURRENT_OVERLAY,
+        normalizeInitialOverlayPreference,
+        orderInitialOverlayOptions,
+        type InitialOverlayPreference,
+    } from './initialOverlay';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
 
     import type { LatLon } from '@windy/interfaces.d';
@@ -1185,6 +1231,8 @@
         favoriteLocationsCountLabel: (count: number) => string;
         saveCurrentLocationFavoriteLabel: string;
         removeCurrentLocationFavoriteLabel: string;
+        pinCurrentLocationLabel: string;
+        unpinCurrentLocationLabel: string;
         eventTab: string;
         weatherTab: string;
         guideTab: string;
@@ -1222,6 +1270,9 @@
         >;
         settingsGuideHeading: string;
         settingsHeading: string;
+        initialOverlayLabel: string;
+        initialOverlayDescription: string;
+        keepCurrentOverlayLabel: string;
         lineOpacityLabel: string;
         lineOpacityDescription: string;
         show600Label: string;
@@ -1315,6 +1366,8 @@
             favoriteLocationsCountLabel: count => `打开收藏地点，共 ${count} 个`,
             saveCurrentLocationFavoriteLabel: '收藏当前地点',
             removeCurrentLocationFavoriteLabel: '取消收藏当前地点',
+            pinCurrentLocationLabel: '钉住当前地点',
+            unpinCurrentLocationLabel: '取消钉住当前地点',
             eventTab: '事件',
             weatherTab: '天气',
             guideTab: '说明',
@@ -1369,6 +1422,9 @@
             },
             settingsGuideHeading: '设置说明',
             settingsHeading: '插件设置',
+            initialOverlayLabel: '打开插件时的图层',
+            initialOverlayDescription: '选择后立即切换到对应 Windy 图层，并在以后打开插件时继续使用；选择“保持 Windy 当前图层”则不自动切换。设置会保存在当前浏览器。',
+            keepCurrentOverlayLabel: '保持 Windy 当前图层',
             lineOpacityLabel: '方位线透明度',
             lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
             show600Label: '显示 600 km 点',
@@ -1498,6 +1554,8 @@
             favoriteLocationsCountLabel: count => `Open ${count} favorite locations`,
             saveCurrentLocationFavoriteLabel: 'Save current location',
             removeCurrentLocationFavoriteLabel: 'Remove current location from favorites',
+            pinCurrentLocationLabel: 'Pin current location',
+            unpinCurrentLocationLabel: 'Unpin current location',
             eventTab: 'Events',
             weatherTab: 'Weather',
             guideTab: 'Guide',
@@ -1552,6 +1610,9 @@
             },
             settingsGuideHeading: 'Settings guide',
             settingsHeading: 'Plugin settings',
+            initialOverlayLabel: 'Layer when opening the plugin',
+            initialOverlayDescription: 'Switch to the selected Windy layer immediately and keep using it whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
+            keepCurrentOverlayLabel: 'Keep Windy’s current layer',
             lineOpacityLabel: 'Direction line opacity',
             lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
             show600Label: 'Show 600 km point',
@@ -1652,6 +1713,7 @@
     const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-mode';
     const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
     const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
+    const INITIAL_OVERLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:initial-overlay';
     const LOCATION_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:location-provider';
     const LOCATION_PROVIDER_API_KEY_STORAGE_KEYS: Record<LocationProvider, string> = {
         amap: 'windy-plugin-sun-moon-path:amap-api-key',
@@ -1667,6 +1729,18 @@
     const SEARCH_LOCATION_ZOOM = 12;
     const MAP_VIEW_EDGE_PADDING_PX = 18;
     const MOBILE_MAP_RECENTER_DELAY_MS = 550;
+    const initialOverlayOptions = orderInitialOverlayOptions(Array.from(new Map(
+        Object.values(windyOverlays)
+            .filter(overlay => !overlay.partOf)
+            .map(overlay => [
+                overlay.getMenuIdent(),
+                {
+                    value: overlay.getMenuIdent(),
+                    label: overlay.getMenuName(),
+                },
+            ] as const),
+    ).values()));
+    const availableInitialOverlays = initialOverlayOptions.map(option => option.value);
     let lastKnownGpsLocation: Coordinates | null = null;
     const cachedGpsLocation = (): Coordinates | null => {
         const gpsLocation = gpsCoordinatesFromLocation(getMyLatestPos());
@@ -1717,6 +1791,7 @@
     let favoriteCount = 0;
     let currentLocationSaved = false;
     let currentFavoriteActionDisabled = true;
+    let locationPinned = false;
     let favoriteLocationsComponent: FavoriteLocations | null = null;
     let favoriteReturnFocus: HTMLElement | null = null;
     let locationElevationText = '--';
@@ -1759,6 +1834,7 @@
     let showExtendedDistanceMarker = false;
     let hideLocationSearch = false;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
+    let initialOverlayPreference: InitialOverlayPreference = DEFAULT_INITIAL_OVERLAY;
     let locationSearchProvider: LocationProvider = 'amap';
     let locationApiKeys: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
     let locationApiKeyDrafts: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
@@ -1982,9 +2058,13 @@
         saveLanguagePreference(uiLanguage);
     };
 
-    const setMobilePanelMode = (value: MobilePanelMode) => {
+    const setMobilePanelMode = async (value: MobilePanelMode) => {
         if (!isMobileOrTablet) {
             return;
+        }
+        if (mapDetailRecenterTimer) {
+            clearTimeout(mapDetailRecenterTimer);
+            mapDetailRecenterTimer = null;
         }
         if (value === 'collapsed') {
             summaryTab = 'events';
@@ -2017,14 +2097,27 @@
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', collapsed);
         mobilePluginRoot?.classList.toggle('sun-path-mobile-fullscreen', fullscreen);
         mobileBottomWrapper?.classList.toggle('sun-path-mobile-fullscreen-wrapper', fullscreen);
+
+        if (fullscreen) {
+            return;
+        }
+
+        // The compact/collapsed classes change the map pixels left above the
+        // bottom panel. Wait for Svelte to render the new mode, then center
+        // again without changing the user's current zoom. The shared delayed
+        // pass also covers Windy's bottom timeline settling afterwards.
+        await tick();
+        if (mobilePanelMode === value) {
+            recenterSelectedLocationInVisibleMap(map.getZoom());
+        }
     };
 
     const toggleMobileCollapsed = () => {
-        setMobilePanelMode(isMobileCollapsed ? 'compact' : 'collapsed');
+        void setMobilePanelMode(isMobileCollapsed ? 'compact' : 'collapsed');
     };
 
     const toggleMobileFullscreen = () => {
-        setMobilePanelMode(isMobileFullscreen ? lastMobileNonFullscreenMode : 'fullscreen');
+        void setMobilePanelMode(isMobileFullscreen ? lastMobileNonFullscreenMode : 'fullscreen');
     };
 
     const handleNestedWheel = (event: WheelEvent) => {
@@ -2141,35 +2234,40 @@
     };
 
     /** Centers the selected location inside the currently unobscured map region. */
-    const centerSelectedLocationInVisibleMap = () => {
+    const centerSelectedLocationInVisibleMap = (zoom: number) => {
         const visibleViewport = currentVisibleMapViewport();
         centerMap({
             lat: selectedLocation.lat,
             lon: selectedLocation.lon,
-            zoom: SEARCH_LOCATION_ZOOM,
+            zoom,
             paddingTop: visibleViewport.centerPaddingTop,
             paddingLeft: visibleViewport.centerPaddingLeft,
         });
     };
 
-    /** Restores the selected location to the exact zoom used after a search result is chosen. */
-    const restoreSearchLocationZoom = () => {
+    /** Re-centers the selected location after map or plugin layout changes. */
+    const recenterSelectedLocationInVisibleMap = (zoom: number) => {
         map.stop?.();
         if (mapDetailRecenterTimer) {
             clearTimeout(mapDetailRecenterTimer);
             mapDetailRecenterTimer = null;
         }
 
-        centerSelectedLocationInVisibleMap();
+        centerSelectedLocationInVisibleMap(zoom);
         if (isMobileOrTablet && !isMobileFullscreen) {
             // A map interaction can make Windy's bottom timeline reserve more
             // height. Re-read the settled panel position once so one tap still
             // lands at the center of the final visible map area.
             mapDetailRecenterTimer = setTimeout(() => {
                 mapDetailRecenterTimer = null;
-                centerSelectedLocationInVisibleMap();
+                centerSelectedLocationInVisibleMap(zoom);
             }, MOBILE_MAP_RECENTER_DELAY_MS);
         }
+    };
+
+    /** Restores the selected location to the exact zoom used after a search result is chosen. */
+    const restoreSearchLocationZoom = () => {
+        recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
     const selectEvent = (event: DirectionEvent) => {
@@ -2180,6 +2278,55 @@
         const paths = selectedMapPaths();
         status = paths.some(path => path.status === 'ok') ? 'ready' : 'empty';
         renderMapFeatures(paths);
+    };
+
+    const loadInitialOverlayPreference = (): InitialOverlayPreference => {
+        try {
+            return normalizeInitialOverlayPreference(
+                localStorage.getItem(INITIAL_OVERLAY_STORAGE_KEY),
+                availableInitialOverlays,
+            );
+        } catch {
+            return DEFAULT_INITIAL_OVERLAY;
+        }
+    };
+
+    const saveInitialOverlayPreference = (value: InitialOverlayPreference) => {
+        try {
+            localStorage.setItem(INITIAL_OVERLAY_STORAGE_KEY, value);
+        } catch {
+            // Storage can be unavailable in hardened browser modes; the setting still works for this session.
+        }
+    };
+
+    const changeInitialOverlayPreference = (event: Event) => {
+        const nextPreference = normalizeInitialOverlayPreference(
+            (event.currentTarget as HTMLSelectElement).value,
+            availableInitialOverlays,
+        );
+        initialOverlayPreference = nextPreference;
+        saveInitialOverlayPreference(nextPreference);
+        void applyInitialOverlayPreference(nextPreference);
+    };
+
+    /** Applies the plugin-selected layer without changing Windy's own saved startup preference. */
+    const applyInitialOverlayPreference = async (preference: InitialOverlayPreference) => {
+        if (preference === KEEP_CURRENT_OVERLAY) {
+            return;
+        }
+        try {
+            await store.set('overlay', preference, {
+                UIident: name,
+                doNotSaveToCloud: true,
+                doNotStore: true,
+            });
+            // Some overlays rebuild or resize Windy's map surface. Preserve
+            // the current zoom while restoring the selected place to the
+            // center of the still-visible map pixels on mobile and desktop.
+            recenterSelectedLocationInVisibleMap(map.getZoom());
+        } catch {
+            // Windy keeps the currently visible layer when the selected layer cannot be activated.
+        }
     };
 
     const loadExtendedDistancePreference = (): boolean => {
@@ -2786,7 +2933,14 @@
         }
     };
 
+    const toggleLocationPinned = () => {
+        locationPinned = !locationPinned;
+    };
+
     const setLocationFromMapClick = (latLon: LatLon) => {
+        if (locationPinned) {
+            return;
+        }
         currentLocationRequestId += 1;
         addressSelectedLocation = null;
         favoritesOpen = false;
@@ -2810,7 +2964,7 @@
             selection.elevationM,
             selection.lightPollution,
         );
-        centerMap({ lat: selection.wgs84.lat, lon: selection.wgs84.lon, zoom: SEARCH_LOCATION_ZOOM });
+        recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
     const handleLocationSearchSelect = (event: CustomEvent<LocationSearchSelection>) => {
@@ -2886,7 +3040,7 @@
             favoriteDistanceOrigin = gpsLocation;
             addressSelectedLocation = null;
             setLocation(gpsLocation, false);
-            centerMap({ lat: gpsLocation.lat, lon: gpsLocation.lon, zoom: 6 });
+            recenterSelectedLocationInVisibleMap(6);
         } catch {
             // Keep the current map center when precise GPS permission is unavailable.
         }
@@ -3155,11 +3309,14 @@
 
     export const onopen = (params?: LatLon) => {
         const requestId = ++currentLocationRequestId;
+        locationPinned = false;
+        initialOverlayPreference = loadInitialOverlayPreference();
+        void applyInitialOverlayPreference(initialOverlayPreference);
         addressSelectedLocation = null;
         favoriteDistanceOrigin = cachedGpsLocation();
         const nextLocation = params ? coordinatesFromLocation(params) || defaultLocation() : defaultLocation();
         setLocation(nextLocation, false);
-        centerMap({ lat: selectedLocation.lat, lon: selectedLocation.lon, zoom: 6 });
+        recenterSelectedLocationInVisibleMap(6);
         if (!params) {
             void centerOnCurrentGps(requestId);
         }
@@ -3179,6 +3336,7 @@
             mobilePluginRoot = null;
             mobileBottomWrapper = null;
             favoriteReturnFocus = null;
+            locationPinned = false;
             latestRequestId += 1;
             latestWeatherRequestId += 1;
             latestAtmosphereRequestId += 1;
@@ -3227,6 +3385,7 @@
         hideLocationSearch = loadHideLocationSearchPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
+        initialOverlayPreference = loadInitialOverlayPreference();
         locationSearchProvider = loadLocationSearchProvider();
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
@@ -4577,7 +4736,7 @@
         flex: 0 1 auto;
         align-items: center;
         width: max-content;
-        max-width: calc(100% - 30px);
+        max-width: calc(100% - 58px);
         min-height: 40px;
         padding: 2px 0;
         overflow: hidden;
@@ -4598,7 +4757,15 @@
         color: var(--panel-accent);
     }
 
-    .astronomy-location__favorite {
+    .astronomy-location__actions {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .astronomy-location__favorite,
+    .astronomy-location__pin {
         display: grid;
         flex: 0 0 28px;
         align-self: center;
@@ -4615,12 +4782,15 @@
     }
 
     .astronomy-location__favorite:hover,
-    .astronomy-location__favorite:focus-visible {
+    .astronomy-location__favorite:focus-visible,
+    .astronomy-location__pin:hover,
+    .astronomy-location__pin:focus-visible {
         background: rgba(99, 185, 238, 0.14);
         color: var(--panel-accent);
     }
 
-    .astronomy-location__favorite:focus-visible {
+    .astronomy-location__favorite:focus-visible,
+    .astronomy-location__pin:focus-visible {
         outline: 2px solid var(--panel-accent);
         outline-offset: -2px;
     }
@@ -4634,7 +4804,8 @@
         opacity: 0.5;
     }
 
-    .astronomy-location__favorite svg {
+    .astronomy-location__favorite svg,
+    .astronomy-location__pin svg {
         width: 15px;
         height: 15px;
         fill: none;
@@ -4642,6 +4813,19 @@
         stroke-width: 1.8;
         stroke-linecap: round;
         stroke-linejoin: round;
+    }
+
+    .astronomy-location__pin .astronomy-location__pin-head {
+        fill: transparent;
+    }
+
+    .astronomy-location__pin.pinned {
+        background: rgba(99, 185, 238, 0.16);
+        color: var(--panel-accent);
+    }
+
+    .astronomy-location__pin.pinned .astronomy-location__pin-head {
+        fill: currentColor;
     }
 
     .astronomy-location__favorite.saved svg {
@@ -5414,6 +5598,49 @@
         gap: 8px;
     }
 
+    .settings-select {
+        display: grid;
+        gap: 6px;
+        padding: 10px 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .settings-select label {
+        color: var(--panel-text);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .settings-select select {
+        width: 100%;
+        min-width: 0;
+        height: 44px;
+        padding: 0 10px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        outline: 0;
+        background: rgba(8, 15, 27, 0.68);
+        color: var(--panel-text);
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .settings-select select:focus-visible {
+        border-color: var(--panel-accent);
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .settings-select__description {
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
     .settings-api-keys {
         display: grid;
         gap: 8px;
@@ -5974,6 +6201,15 @@
 
         .astronomy-location__favorite {
             height: 28px;
+        }
+
+        /* Keep both 28px hit targets while visually tightening their 15px glyphs. */
+        .astronomy-location__favorite svg {
+            transform: translateX(3px);
+        }
+
+        .astronomy-location__pin svg {
+            transform: translateX(-3px);
         }
 
         .astronomy-location__metrics {

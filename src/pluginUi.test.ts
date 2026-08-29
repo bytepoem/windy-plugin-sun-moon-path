@@ -162,7 +162,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toMatch(
             /plugin-mobile-bottom-small > \.closing-x\)\s*{[\s\S]*?justify-content: center;/,
         );
-        expect(pluginSource).toContain('zoom: SEARCH_LOCATION_ZOOM');
+        expect(pluginSource).toContain('recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);');
         expect(pluginSource).toContain('paddingTop: visibleViewport.centerPaddingTop');
         expect(pluginSource).toContain('paddingLeft: visibleViewport.centerPaddingLeft');
         expect(pluginSource).toContain('MOBILE_MAP_RECENTER_DELAY_MS');
@@ -180,6 +180,95 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toMatch(
             /\.desktop-map-control\s*{[\s\S]*?width: 30px;[\s\S]*?height: 30px;/,
         );
+    });
+
+    it('pins the selected location without blocking explicit location controls', () => {
+        expect(pluginSource).toContain('class="astronomy-location__pin"');
+        expect(pluginSource).toContain('class:pinned={locationPinned}');
+        expect(pluginSource).toContain('aria-pressed={locationPinned}');
+        expect(pluginSource).toContain("pinCurrentLocationLabel: '钉住当前地点'");
+        expect(pluginSource).toContain("unpinCurrentLocationLabel: 'Unpin current location'");
+        expect(pluginSource).toContain('const toggleLocationPinned = () => {');
+
+        const mapClickStart = pluginSource.indexOf('const setLocationFromMapClick =');
+        const mapClickEnd = pluginSource.indexOf('const selectLocationSearchResult =', mapClickStart);
+        const mapClickSource = pluginSource.slice(mapClickStart, mapClickEnd);
+        expect(mapClickSource).toContain('if (locationPinned) {');
+        expect(mapClickSource).toContain('return;');
+
+        const searchSelectionStart = pluginSource.indexOf('const selectLocationSearchResult =');
+        const searchSelectionEnd = pluginSource.indexOf('const handleLocationSearchSelect =', searchSelectionStart);
+        const searchSelectionSource = pluginSource.slice(searchSelectionStart, searchSelectionEnd);
+        expect(searchSelectionSource).not.toContain('locationPinned');
+        expect(pluginSource).toMatch(
+            /\.astronomy-location__pin\.pinned\s*{[\s\S]*?color: var\(--panel-accent\);/,
+        );
+        expect(pluginSource).toContain(
+            '.astronomy-location__pin.pinned .astronomy-location__pin-head',
+        );
+        expect(pluginSource).toMatch(
+            /@media \(max-width: 520px\)[\s\S]*?\.astronomy-location__favorite svg\s*{[\s\S]*?transform: translateX\(3px\);/,
+        );
+        expect(pluginSource).toMatch(
+            /@media \(max-width: 520px\)[\s\S]*?\.astronomy-location__pin svg\s*{[\s\S]*?transform: translateX\(-3px\);/,
+        );
+    });
+
+    it('applies the selected Windy layer immediately and on later plugin opens', () => {
+        expect(pluginSource).toContain('class="settings-select"');
+        expect(pluginSource).toContain('<label for="initial-overlay">{text.initialOverlayLabel}</label>');
+        expect(pluginSource).toContain('aria-describedby="initial-overlay-description"');
+        expect(pluginSource).toContain('<option value={KEEP_CURRENT_OVERLAY}>');
+        expect(pluginSource).toContain('{#each initialOverlayOptions as option}');
+        expect(pluginSource).toContain('.filter(overlay => !overlay.partOf)');
+        expect(pluginSource).toContain('label: overlay.getMenuName()');
+        expect(pluginSource).toContain('orderInitialOverlayOptions(Array.from(new Map(');
+        expect(pluginSource).toContain('initialOverlayPreference = loadInitialOverlayPreference();');
+        expect(pluginSource).toContain('applyInitialOverlayPreference(initialOverlayPreference);');
+        const changeHandlerStart = pluginSource.indexOf('const changeInitialOverlayPreference =');
+        const changeHandlerEnd = pluginSource.indexOf('const applyInitialOverlayPreference =', changeHandlerStart);
+        const changeHandlerSource = pluginSource.slice(changeHandlerStart, changeHandlerEnd);
+        expect(changeHandlerSource).toContain('saveInitialOverlayPreference(nextPreference);');
+        expect(changeHandlerSource).toContain('void applyInitialOverlayPreference(nextPreference);');
+        expect(pluginSource).toContain("store.set('overlay', preference, {");
+        expect(pluginSource).toContain("await store.set('overlay', preference, {");
+        expect(pluginSource).toContain('doNotSaveToCloud: true');
+        expect(pluginSource).toContain('doNotStore: true');
+        expect(pluginSource).toContain('recenterSelectedLocationInVisibleMap(map.getZoom());');
+        expect(pluginSource).toContain("initialOverlayLabel: '打开插件时的图层'");
+        expect(pluginSource).toContain('选择后立即切换到对应 Windy 图层');
+        expect(pluginSource).toContain("keepCurrentOverlayLabel: 'Keep Windy’s current layer'");
+        expect(pluginSource).toMatch(
+            /\.settings-select select\s*{[\s\S]*?height: 44px;[\s\S]*?cursor: pointer;/,
+        );
+    });
+
+    it('routes map, layer, and mobile panel state changes through the visible map center', () => {
+        expect(pluginSource.match(/centerMap\(/g)).toHaveLength(1);
+        expect(pluginSource).toContain('const centerSelectedLocationInVisibleMap = (zoom: number) => {');
+        expect(pluginSource).toContain('const recenterSelectedLocationInVisibleMap = (zoom: number) => {');
+        expect(pluginSource).toContain('paddingTop: visibleViewport.centerPaddingTop');
+        expect(pluginSource).toContain('paddingLeft: visibleViewport.centerPaddingLeft');
+
+        const mobileModeStart = pluginSource.indexOf('const setMobilePanelMode = async');
+        const mobileModeEnd = pluginSource.indexOf('const toggleMobileCollapsed =', mobileModeStart);
+        const mobileModeSource = pluginSource.slice(mobileModeStart, mobileModeEnd);
+        expect(mobileModeSource).toContain('await tick();');
+        expect(mobileModeSource).toContain('recenterSelectedLocationInVisibleMap(map.getZoom());');
+
+        const searchSelectionStart = pluginSource.indexOf('const selectLocationSearchResult =');
+        const searchSelectionEnd = pluginSource.indexOf('const handleLocationSearchSelect =', searchSelectionStart);
+        expect(pluginSource.slice(searchSelectionStart, searchSelectionEnd)).toContain(
+            'recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);',
+        );
+
+        const gpsStart = pluginSource.indexOf('const centerOnCurrentGps =');
+        const gpsEnd = pluginSource.indexOf('const syncLocationFromMapCenter =', gpsStart);
+        expect(pluginSource.slice(gpsStart, gpsEnd)).toContain('recenterSelectedLocationInVisibleMap(6);');
+
+        const openStart = pluginSource.indexOf('export const onopen =');
+        const openEnd = pluginSource.indexOf('const overlayOwner =', openStart);
+        expect(pluginSource.slice(openStart, openEnd)).toContain('recenterSelectedLocationInVisibleMap(6);');
     });
 
     it('keeps settings checkbox focus inside the visible toggle card', () => {
