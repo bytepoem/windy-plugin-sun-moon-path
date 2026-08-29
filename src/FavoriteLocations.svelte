@@ -45,6 +45,7 @@
     export let distanceOrigin: Coordinates | null = null;
     export let language: 'zh' | 'en' = 'zh';
     export let mobile = false;
+    export let fullscreen = false;
     export let returnFocus: HTMLElement | null = null;
     export let openUpward = false;
     export let currentSaved = false;
@@ -200,7 +201,10 @@
                     const searchInput = panelElement?.querySelector<HTMLInputElement>(
                         '.favorite-locations__heading-search input:not(:disabled)',
                     );
-                    if (searchInput) {
+                    // Desktop users keep the fast search workflow. On mobile,
+                    // focus the close control so opening favorites never invokes
+                    // the software keyboard before the user chooses to search.
+                    if (!mobile && searchInput) {
                         searchInput.focus();
                         return;
                     }
@@ -611,6 +615,7 @@
         id="favorite-locations-panel"
         class="favorite-locations"
         class:mobile={mobile}
+        class:fullscreen={fullscreen}
         class:open-upward={openUpward}
         class:sort-menu-open={sortMenuOpen}
         role="dialog"
@@ -1249,6 +1254,12 @@
         top: 0;
         bottom: 0;
         max-height: none;
+    }
+
+    .favorite-locations.mobile.fullscreen {
+        top: calc(52px + env(safe-area-inset-top, 0px));
+        bottom: env(safe-area-inset-bottom, 0px);
+        height: auto;
     }
 
     .favorite-locations.mobile .favorite-locations__heading,

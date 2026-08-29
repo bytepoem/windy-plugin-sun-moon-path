@@ -31,6 +31,7 @@
     export let initialModel: WeatherModel = 'ecmwf';
     export let language: 'zh' | 'en' = 'zh';
     export let mobile = false;
+    export let fullscreen = false;
     export let openUpward = false;
     export let returnFocus: HTMLElement | null = null;
 
@@ -506,6 +507,7 @@
         id="favorite-comparison-panel"
         class="favorite-comparison"
         class:mobile={mobile}
+        class:fullscreen={fullscreen}
         class:open-upward={openUpward}
         role="dialog"
         aria-modal="true"
@@ -1149,6 +1151,12 @@
         bottom: 0;
         height: 100%;
         max-height: none;
+    }
+
+    .favorite-comparison.mobile.fullscreen {
+        top: calc(52px + env(safe-area-inset-top, 0px));
+        bottom: env(safe-area-inset-bottom, 0px);
+        height: auto;
     }
 
     .favorite-comparison.mobile .favorite-comparison__header,

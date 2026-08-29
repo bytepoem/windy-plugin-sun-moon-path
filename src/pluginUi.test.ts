@@ -69,7 +69,7 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('covers the mobile content area and keeps comparison actions in one toolbar', () => {
-        expect(pluginSource.match(/mobile=\{isMobileOrTablet\}/g)).toHaveLength(2);
+        expect(pluginSource.match(/mobile=\{isMobileOrTablet\}/g)).toHaveLength(3);
         expect(pluginSource).toContain(
             '.sun-path-panel.mobile_ui.favorites_open .primary-controls',
         );
@@ -95,12 +95,31 @@ describe('plugin astronomy loading presentation', () => {
         expect(favoriteLocationsSource).not.toContain('favorite-locations__compare-footer');
     });
 
-    it('hides redundant host window controls while a fullscreen favorite dialog is open', () => {
-        expect(pluginSource).toMatch(
-            /\.sun-path-panel\.mobile_ui\.mobile_fullscreen\.favorites_open \.mobile-window-control\s*{[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none;/,
+    it('keeps fullscreen window controls reachable above mobile favorite dialogs', () => {
+        expect(pluginSource).not.toContain(
+            '.sun-path-panel.mobile_ui.mobile_fullscreen.favorites_open .mobile-window-control',
         );
-        expect(pluginSource).toMatch(
-            /sun-path-mobile-fullscreen\.sun-path-favorites-open > \.closing-x\)\s*{[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none;/,
+        expect(pluginSource).not.toContain(
+            'sun-path-mobile-fullscreen.sun-path-favorites-open > .closing-x',
+        );
+        expect(pluginSource.match(/\n\s+fullscreen=\{isMobileFullscreen\}/g)).toHaveLength(2);
+        expect(favoriteLocationsSource).toContain('export let fullscreen = false;');
+        expect(favoriteLocationsSource).toContain('class:fullscreen={fullscreen}');
+        expect(favoriteLocationsSource).toMatch(
+            /\.favorite-locations\.mobile\.fullscreen\s*{[\s\S]*?top: calc\(52px \+ env\(safe-area-inset-top, 0px\)\);[\s\S]*?bottom: env\(safe-area-inset-bottom, 0px\);[\s\S]*?height: auto;/,
+        );
+        expect(favoriteComparisonSource).toContain('export let fullscreen = false;');
+        expect(favoriteComparisonSource).toContain('class:fullscreen={fullscreen}');
+        expect(favoriteComparisonSource).toMatch(
+            /\.favorite-comparison\.mobile\.fullscreen\s*{[\s\S]*?top: calc\(52px \+ env\(safe-area-inset-top, 0px\)\);[\s\S]*?bottom: env\(safe-area-inset-bottom, 0px\);[\s\S]*?height: auto;/,
+        );
+    });
+
+    it('opens mobile favorites without focusing the search field', () => {
+        expect(favoriteLocationsSource).toContain('if (!mobile && searchInput) {');
+        expect(favoriteLocationsSource).toContain('searchInput.focus();');
+        expect(favoriteLocationsSource).toContain(
+            "panelElement?.querySelector<HTMLButtonElement>('.favorite-locations__close')?.focus();",
         );
     });
 
@@ -394,6 +413,18 @@ describe('plugin astronomy loading presentation', () => {
         expect(providerOptionStyle).toContain('padding: 0 6px;');
         expect(providerCheckStyle).toContain('justify-self: center;');
         expect(providerCheckStyle).not.toContain('right:');
+        expect(locationSearchSource).toContain('export let mobile = false;');
+        expect(pluginSource).toContain('mobile={isMobileOrTablet}\n                provider={locationSearchProvider}');
+        expect(locationSearchSource).toContain('focusOption = false');
+        expect(locationSearchSource).toContain('if (focusOption) {');
+        expect(locationSearchSource).toContain('const keyboardActivated = event.detail === 0;');
+        expect(locationSearchSource).toContain(
+            'openSelectorMenu(selectorOptions.indexOf(selectorValue), !mobile || keyboardActivated);',
+        );
+        expect(locationSearchSource).toContain('on:click={handleSelectorButtonClick}');
+        expect(locationSearchSource).toMatch(
+            /openSelectorMenu\([\s\S]*?\(selectedIndex - 1 \+ selectorOptions\.length\) % selectorOptions\.length,[\s\S]*?true,[\s\S]*?\);/,
+        );
         expect(mobileSearchStyle).toContain('width: 72px;');
         expect(mobileSearchStyle).toContain('min-width: 72px;');
         expect(mobileSearchStyle).toContain('gap: 4px;');

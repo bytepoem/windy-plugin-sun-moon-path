@@ -32,6 +32,7 @@
     export let apiKeys: LocationProviderApiKeys;
     export let language: 'zh' | 'en' = 'zh';
     export let location: Coordinates;
+    export let mobile = false;
     export let provider: LocationProvider = 'amap';
 
     type DisplayResult = LocationSearchSelection;
@@ -337,10 +338,20 @@
             ?.focus();
     };
 
-    const openSelectorMenu = (index = selectorOptions.indexOf(selectorValue)) => {
+    /**
+     * Opens the search-mode menu without moving focus for pointer/touch input.
+     * Keyboard navigation opts into focusing an option so a second mobile tap
+     * continues to target the trigger button reliably.
+     */
+    const openSelectorMenu = (
+        index = selectorOptions.indexOf(selectorValue),
+        focusOption = false,
+    ) => {
         selectorMenuIndex = Math.max(0, index);
         selectorMenuOpen = true;
-        void focusSelectorOption();
+        if (focusOption) {
+            void focusSelectorOption();
+        }
     };
 
     const closeSelectorMenu = (restoreFocus = false) => {
@@ -348,6 +359,16 @@
         if (restoreFocus) {
             void tick().then(() => selectorButtonElement?.focus());
         }
+    };
+
+    /** Preserve desktop and keyboard listbox focus while keeping mobile taps on the trigger. */
+    const handleSelectorButtonClick = (event: MouseEvent) => {
+        if (selectorMenuOpen) {
+            closeSelectorMenu();
+            return;
+        }
+        const keyboardActivated = event.detail === 0;
+        openSelectorMenu(selectorOptions.indexOf(selectorValue), !mobile || keyboardActivated);
     };
 
     const chooseSelectorOption = (option: SelectorOption) => {
@@ -368,9 +389,12 @@
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
             const selectedIndex = selectorOptions.indexOf(selectorValue);
-            openSelectorMenu(event.key === 'ArrowDown'
-                ? selectedIndex
-                : (selectedIndex - 1 + selectorOptions.length) % selectorOptions.length);
+            openSelectorMenu(
+                event.key === 'ArrowDown'
+                    ? selectedIndex
+                    : (selectedIndex - 1 + selectorOptions.length) % selectorOptions.length,
+                true,
+            );
         } else if (event.key === 'Escape' && selectorMenuOpen) {
             event.preventDefault();
             closeSelectorMenu();
@@ -515,7 +539,7 @@
                     aria-haspopup="listbox"
                     aria-expanded={selectorMenuOpen}
                     aria-controls="location-provider-menu"
-                    on:click={() => selectorMenuOpen ? closeSelectorMenu() : openSelectorMenu()}
+                    on:click={handleSelectorButtonClick}
                     on:keydown={handleSelectorButtonKeydown}
                 >
                     <span>{selectorOptionLabel(selectorValue)}</span>

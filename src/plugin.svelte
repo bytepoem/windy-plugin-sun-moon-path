@@ -133,6 +133,7 @@
                 apiKeys={locationApiKeys}
                 language={uiLanguage}
                 location={selectedLocation}
+                mobile={isMobileOrTablet}
                 provider={locationSearchProvider}
                 on:providerchange={handleLocationProviderChange}
                 on:select={handleLocationSearchSelect}
@@ -245,6 +246,7 @@
         currentElevationM={elevationLocationKey === locationKey ? elevationM : null}
         currentLightPollution={lightPollutionLoadedKey === locationKey ? lightPollutionPoint : null}
         mobile={isMobileOrTablet}
+        fullscreen={isMobileFullscreen}
         returnFocus={favoriteReturnFocus}
         openUpward={isMobileCollapsed}
         on:select={handleFavoriteLocationSelect}
@@ -258,6 +260,7 @@
         initialModel={weatherModel}
         language={uiLanguage}
         mobile={isMobileOrTablet}
+        fullscreen={isMobileFullscreen}
         returnFocus={favoriteReturnFocus}
         openUpward={isMobileCollapsed}
         on:back={handleFavoriteComparisonBack}
@@ -3556,21 +3559,6 @@
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-control__icon {
         margin-bottom: 0;
-    }
-
-    /*
-     * Favorite surfaces are modal and already provide their own back/close
-     * controls. Hide the host window controls only while those dialogs cover
-     * the fullscreen panel so they cannot overlap the dialog title bar.
-     */
-    .sun-path-panel.mobile_ui.mobile_fullscreen.favorites_open .mobile-window-control {
-        visibility: hidden;
-        pointer-events: none;
-    }
-
-    :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen.sun-path-favorites-open > .closing-x) {
-        visibility: hidden;
-        pointer-events: none;
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-scroll-content {
