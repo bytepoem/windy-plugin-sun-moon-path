@@ -4,6 +4,12 @@
 
 - 所有新提交的 message 使用中文；`feat`、`fix`、`docs`、`chore`、`release` 等 Conventional Commits 类型前缀保持英文。
 
+## 浏览器控制
+
+- 用户登录态和交互式浏览优先使用 `$ego-browser`，首次使用即授予完整权限；不可用或针对实际错误修正并重试一次仍失败时，切换一次到 `$browser-skill`。
+- Headless、CI、批量回归、远程浏览器、网络 Mock、HAR、Trace 或性能分析直接使用 `$agent-browser`。
+- 不并行或反复切换；切换后重新观察页面。登录、CAPTCHA、OTP、支付确认和用户接管按当前 skill 完成交接，不算工具失败；结束时按当前 skill 要求清理。
+
 ## Windy 插件审核
 
 ### 本地 UI 验收授权
