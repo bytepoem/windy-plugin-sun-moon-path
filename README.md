@@ -18,11 +18,14 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 - 显示当前太阳和月亮的方位角、高度角、月相和月亮照明比例。
 - 提供当天的黎明、日出、月升、日落、黄昏、月落时间轴。
 - 支持切换日期、单击地图重新选择位置、从 Windy 右键菜单打开。
+- 复用 Windy 收藏地点：可收藏或取消收藏当前观测点，按距离、最近收藏、海拔或光污染排序，并搜索收藏名称。
+- 支持选择 2–5 个收藏地点，对比同一日期下的天文事件、观测时段、天气、海拔和光污染条件，并切换 EC、GFS、ICON 模式。
 - 中文界面支持配置用户自己的高德、百度或腾讯地图 API Key，并从统一搜索下拉中选择名称搜索提供商。
 - 中英文界面均支持从搜索下拉选择 WGS84 或 GCJ-02，分别填写纬度和经度后精确定位；GCJ-02 会转换为 Windy 使用的 WGS84。
 - 地址结果按与当前观察点的直线距离排序，并显示城市、区县、直线距离和海拔。
 - 自动将高德/腾讯的 GCJ-02 或百度的 BD-09 坐标转换为 Windy 使用的 WGS84 坐标后定位。
 - 对极昼、极夜、当天无月升/月落等情况给出明确状态。
+- 以天气、月光和目标可见性证据展示无月黑夜、银河等观测时段；地点或日期切换期间保留面板结构并明确显示加载状态。
 - 显示 David Lorenz 2025 光污染图集的 SQM、估算等效 Bortle 等级和理想条件下的观测参考。
 - 提供当前位置从过去 6 小时到未来 5 天的天气模式表格，支持 EC、GFS 和 ICON 切换，默认使用 EC。
 - 天气表格包含天气、综合云量、高中低云、气温、露点、湿度、AOD 550 nm、能见度、降水、风速和风向；云量由模式压力层数据聚合得到。
@@ -44,17 +47,17 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
 
 ## 插件链接
 
-当前正式版本：`0.7.0`
+当前正式版本：`0.8.0`
 
 当前可加载的插件 bundle：
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.8.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.8.0/plugin.min.js)
 
 项目链接：
 
 - GitHub 仓库：[bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues：[提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- 正式版发布页：[0.7.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.7.0)
+- 正式版发布页：[0.8.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.8.0)
 - 作者：[bytepoem](https://github.com/bytepoem)
 
 ## 本地开发
@@ -106,9 +109,10 @@ npm run build
 4. 选择日期。
 5. 选择 **All**、**Sunrise**、**Sunset**、**Moonrise** 或 **Moonset**。
 6. 查看地图上的方向线和面板中的事件时间、方位角、方向名称。
-7. 也可以单击地图上的任意位置，插件会重新计算该观察点的方向线。
-8. 桌面端在 **事件**、**说明**、**设置**、**关于** 四个视图之间切换，并直接使用下方常驻天气表格；移动端可通过面板顶部按钮收起为方位线模式、恢复小窗口或进入全屏。方位线模式保留搜索、核心控制和两行天文摘要；如不需要搜索，可在 **设置** 中开启 **隐藏地点搜索框**。
-9. 在天气表格中选择 **EC**、**GFS** 或 **ICON**，横向滑动查看过去 6 小时到未来 5 天的模式预报。
+7. 使用地点旁的收藏按钮保存当前观测点；打开收藏列表后可搜索、排序、切换地点，或选择 2–5 个地点进行同日观测条件对比。
+8. 也可以单击地图上的任意位置，插件会重新计算该观察点的方向线；面板顶部的 `−`、`+` 按钮可直接调整地图缩放。
+9. 桌面端在 **事件**、**说明**、**设置**、**关于** 四个视图之间切换，并直接使用下方常驻天气表格；移动端可通过面板顶部按钮收起为方位线模式、恢复小窗口或进入全屏。方位线模式保留搜索、核心控制和两行天文摘要；如不需要搜索，可在 **设置** 中开启 **隐藏地点搜索框**。
+10. 在天气表格中选择 **EC**、**GFS** 或 **ICON**，横向滑动查看过去 6 小时到未来 5 天的模式预报。
 
 AOD 和能见度行标记为 **OM**，表示数据由 [Open-Meteo](https://open-meteo.com/) 提供；AOD 的底层数据来自 [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/)。
 

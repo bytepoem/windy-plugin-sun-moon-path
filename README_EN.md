@@ -21,6 +21,10 @@ relative to a point on the Windy map.
   moonset.
 - Supports date switching, map single-click location updates, and Windy context
   menu opening.
+- Reuses Windy favorites to save or remove the current observing location, search
+  saved names, and sort by distance, recency, elevation, or light pollution.
+- Compares 2–5 favorite locations for the same date across astronomy events,
+  observing windows, weather, elevation, and light pollution, with EC/GFS/ICON switching.
 - Searches domestic places and addresses in the Chinese UI with the user's own Amap,
   Baidu, or Tencent Maps API Key and switches providers from the unified search menu.
 - Locates exact coordinates in both languages by selecting WGS84 or GCJ-02 and entering
@@ -30,6 +34,8 @@ relative to a point on the Windy map.
 - Converts Amap/Tencent GCJ-02 or Baidu BD-09 coordinates to the WGS84 coordinates
   used by Windy before moving the map.
 - Handles unavailable polar-day, polar-night, and missing moon event cases.
+- Presents moonless-night and Milky Way observing windows with weather, moonlight,
+  and target-visibility evidence, while keeping the panel stable during location/date loading.
 - Shows SQM, estimated equivalent Bortle level, and ideal-condition observing
   references from the David Lorenz 2025 light-pollution atlas.
 - Adds a location forecast table spanning the available past 6 hours through the
@@ -74,17 +80,17 @@ relative to a point on the Windy map.
 
 ## Plugin URL
 
-Current formal version: `0.7.0`
+Current formal version: `0.8.0`
 
 Current loadable plugin bundle:
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.7.0/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.8.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.8.0/plugin.min.js)
 
 Project links:
 
 - GitHub repository: [bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues: [report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- Formal release: [0.7.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.7.0)
+- Formal release: [0.8.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.8.0)
 - Author: [bytepoem](https://github.com/bytepoem)
 
 ## Development
@@ -143,13 +149,16 @@ After the plugin is open:
 5. Choose **All**, **Sunrise**, **Sunset**, **Moonrise**, or **Moonset**.
 6. Check the map direction lines and the event time, azimuth, and compass
    direction in the panel.
-7. You can also click the map to recalculate directions for another location.
-8. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
+7. Use the favorite control beside the place name to save the current observing point.
+   Open favorites to search, sort, switch locations, or compare 2–5 places for the same date.
+8. You can also click the map to recalculate directions for another location, and use
+   the `−` / `+` controls in the panel header to adjust the map zoom.
+9. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
    while using the always-visible forecast below. On mobile, use the panel controls
    to collapse into direction-line mode, restore the compact window, or enter
    fullscreen. Direction-line mode keeps search, the primary controls, and two compact
    astronomy rows; enable **Hide location search** in **Settings** when search is not needed.
-9. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
+10. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
    6 hours through the next 5 days.
 
 Rows marked **OM** are provided by [Open-Meteo](https://open-meteo.com/). The AOD
