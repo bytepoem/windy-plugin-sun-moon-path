@@ -27,6 +27,8 @@ jobs:
                   echo "{\"repositoryName\": \"${{ github.repository }}\", \"commitSha\": \"${{ github.sha }}\", \"repositoryOwner\": \"${{ github.repository_owner }}\"}" > /tmp/plugin-info.json
                   mv plugin.json /tmp
                   jq -s '.[0] * .[1]' /tmp/plugin.json /tmp/plugin-info.json > plugin.json
-                  tar cf ../plugin.tar .
+                  # Source maps are useful in local builds but are not runtime assets.
+                  # Excluding them keeps the Windy upload request below its size limit.
+                  tar --exclude='*.map' -cf ../plugin.tar .
                   echo "Publishing plugin..."
                   curl -s --fail-with-body -XPOST 'https://node.windy.com/plugins/v1.0/upload' -H "x-windy-api-key: ${WINDY_API_KEY}" -F "plugin_archive=@../plugin.tar"
