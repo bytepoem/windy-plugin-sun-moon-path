@@ -5,7 +5,7 @@
     class:mobile_ui={isMobileOrTablet}
     class:mobile_collapsed={isMobileCollapsed}
     class:mobile_fullscreen={isMobileFullscreen}
-    class:favorites_open={favoritesOpen}
+    class:favorites_open={favoritesOpen || favoriteComparisonOpen}
     bind:this={panelElement}
     on:wheel|capture|nonpassive={handleNestedWheel}
 >
@@ -188,9 +188,24 @@
         distanceOrigin={favoriteDistanceOrigin}
         currentElevationM={elevationLocationKey === locationKey ? elevationM : null}
         currentLightPollution={lightPollutionLoadedKey === locationKey ? lightPollutionPoint : null}
+        mobile={isMobileOrTablet}
         returnFocus={favoriteReturnFocus}
         openUpward={isMobileCollapsed}
         on:select={handleFavoriteLocationSelect}
+        on:compare={handleFavoriteComparisonStart}
+    />
+    <FavoriteComparison
+        bind:open={favoriteComparisonOpen}
+        bind:selectedDate
+        currentInstant={currentInstant}
+        targets={favoriteComparisonTargets}
+        initialModel={weatherModel}
+        language={uiLanguage}
+        mobile={isMobileOrTablet}
+        returnFocus={favoriteReturnFocus}
+        openUpward={isMobileCollapsed}
+        on:back={handleFavoriteComparisonBack}
+        on:close={handleFavoriteComparisonClose}
     />
     </div>
 
@@ -934,6 +949,7 @@
 
     import config from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
+    import FavoriteComparison from './FavoriteComparison.svelte';
     import FavoriteLocations from './FavoriteLocations.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import {
@@ -1016,6 +1032,7 @@
         type LocationSearchResult,
         type LocationSearchSelection,
     } from './locationProvider';
+    import type { FavoriteComparisonTarget } from './favoriteComparison';
 
     import type { LatLon } from '@windy/interfaces.d';
 
@@ -1171,7 +1188,7 @@
             sunMoonPanelLabel: '日月信息面板',
             summaryViewsLabel: '日月信息视图',
             astronomyPanelLabel: (date, isToday) => isToday ? '今日天文时段' : `${date}天文时段`,
-            currentMoonPhaseLabel: '当前月相',
+            currentMoonPhaseLabel: '月相',
             astronomyEventsLabel: (date, isToday) => isToday ? '今日天文事件' : `${date}天文事件`,
             nightObservationWindowsLabel: '夜间观测时段',
             observationEvidenceLabel: '观测时段天气证据',
@@ -1325,7 +1342,7 @@
             sunMoonPanelLabel: 'Sun and moon information panel',
             summaryViewsLabel: 'Sun and moon information views',
             astronomyPanelLabel: (date, isToday) => isToday ? 'Today’s astronomy windows' : `Astronomy windows for ${date}`,
-            currentMoonPhaseLabel: 'Current moon phase',
+            currentMoonPhaseLabel: 'Moon phase',
             astronomyEventsLabel: (date, isToday) => isToday ? 'Today’s astronomy events' : `Astronomy events for ${date}`,
             nightObservationWindowsLabel: 'Night observing windows',
             observationEvidenceLabel: 'Weather evidence for the observing window',
@@ -1521,6 +1538,7 @@
     let astronomyTimeline: AstronomyTimeline | null = null;
     let currentSolarDirection: SolarDirection | null = null;
     let currentMoonInfo: CurrentMoonInfo | null = null;
+    let displayedMoonIllumination: { fraction: number; waxing: boolean } | null = null;
     let currentInstant = new Date();
     let timelineLeadLabel = '正在计算…';
     let timelineLeadTime = '';
@@ -1529,6 +1547,8 @@
     let locationNameResolved = false;
     let locationNameOverflows = false;
     let favoritesOpen = false;
+    let favoriteComparisonOpen = false;
+    let favoriteComparisonTargets: FavoriteComparisonTarget[] = [];
     let favoriteCount = 0;
     let currentLocationSaved = false;
     let currentFavoriteActionDisabled = true;
@@ -1615,7 +1635,10 @@
         && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather');
 
     $: if (mobilePluginRoot) {
-        mobilePluginRoot.classList.toggle('sun-path-favorites-open', isMobileOrTablet && favoritesOpen);
+        mobilePluginRoot.classList.toggle(
+            'sun-path-favorites-open',
+            isMobileOrTablet && (favoritesOpen || favoriteComparisonOpen),
+        );
     }
 
     $: eventLocationDisplayName = compactLocationLabel(locationDisplayName);
@@ -2060,6 +2083,7 @@
 
     const openFavoriteLocations = (event: MouseEvent) => {
         favoriteReturnFocus = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+        favoriteComparisonOpen = false;
         favoritesOpen = true;
         void refreshFavoriteDistanceOrigin();
     };
@@ -2067,6 +2091,7 @@
     const toggleFavoriteLocations = (event: MouseEvent) => {
         favoriteReturnFocus = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
         const nextOpen = !favoritesOpen;
+        favoriteComparisonOpen = false;
         favoritesOpen = nextOpen;
         if (nextOpen) {
             void refreshFavoriteDistanceOrigin();
@@ -2081,19 +2106,21 @@
         const target = event.target instanceof Element ? event.target : null;
         if (target?.closest('.location-search')) {
             favoritesOpen = false;
+            favoriteComparisonOpen = false;
         }
     };
 
     const handleFavoriteOutsidePointerDown = (event: PointerEvent) => {
-        if (!favoritesOpen || !(event.target instanceof Node)) {
+        if ((!favoritesOpen && !favoriteComparisonOpen) || !(event.target instanceof Node)) {
             return;
         }
         if (event.target instanceof Element && event.target.closest(
-            '#favorite-locations-panel, .favorite-locations-trigger, .astronomy-location__button, .astronomy-location__favorite',
+            '#favorite-locations-panel, #favorite-comparison-panel, .favorite-locations-trigger, .astronomy-location__button, .astronomy-location__favorite',
         )) {
             return;
         }
         favoritesOpen = false;
+        favoriteComparisonOpen = false;
     };
 
     const makeAstronomyKey = (location: Coordinates, dateInput: string): string =>
@@ -2541,6 +2568,22 @@
         selectLocationSearchResult(event.detail);
     };
 
+    const handleFavoriteComparisonStart = (event: CustomEvent<FavoriteComparisonTarget[]>) => {
+        favoriteComparisonTargets = event.detail;
+        favoritesOpen = false;
+        favoriteComparisonOpen = true;
+    };
+
+    const handleFavoriteComparisonBack = () => {
+        favoriteComparisonOpen = false;
+        favoritesOpen = true;
+        void refreshFavoriteDistanceOrigin();
+    };
+
+    const handleFavoriteComparisonClose = () => {
+        favoriteComparisonOpen = false;
+    };
+
     const requestPreciseGpsLocation = async (): Promise<Coordinates | null> =>
         gpsCoordinatesFromLocation(await getGPSlocation({
             enableHighAccuracy: true,
@@ -2774,16 +2817,24 @@
         return hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
     };
 
+    // 今日使用实时月相；选择其他日期时，使用该日当地中午的天文时间线月相。
+    $: displayedMoonIllumination = selectedDateIsToday && currentMoonInfo
+        ? {
+            fraction: currentMoonInfo.illuminationFraction,
+            waxing: currentMoonInfo.waxing,
+        }
+        : astronomyTimeline?.moonIllumination ?? null;
+
     $: moonIlluminationPercentText = (() => {
-        const fraction = currentMoonInfo?.illuminationFraction ?? astronomyTimeline?.moonIllumination.fraction;
+        const fraction = displayedMoonIllumination?.fraction;
         return typeof fraction === 'number' && Number.isFinite(fraction)
             ? `${(fraction * 100).toFixed(1)}%`
             : '';
     })();
 
     $: moonShadowCenterValue = (() => {
-        const fraction = currentMoonInfo?.illuminationFraction ?? astronomyTimeline?.moonIllumination.fraction ?? 0;
-        const waxing = currentMoonInfo?.waxing ?? astronomyTimeline?.moonIllumination.waxing ?? true;
+        const fraction = displayedMoonIllumination?.fraction ?? 0;
+        const waxing = displayedMoonIllumination?.waxing ?? true;
         return 24 + (waxing ? -1 : 1) * fraction * 36;
     })();
 
@@ -2838,6 +2889,7 @@
             mobilePanelMode = 'compact';
             lastMobileNonFullscreenMode = 'compact';
             favoritesOpen = false;
+            favoriteComparisonOpen = false;
             mobilePluginRoot?.classList.remove('sun-path-favorites-open');
             mobilePluginRoot?.classList.remove('sun-path-mobile-collapsed');
             mobilePluginRoot?.classList.remove('sun-path-mobile-fullscreen');
@@ -2994,6 +3046,7 @@
     }
 
     .mobile-scroll-content {
+        position: relative;
         width: 100%;
     }
 
@@ -3223,12 +3276,49 @@
         margin-bottom: 0;
     }
 
+    /*
+     * Favorite surfaces are modal and already provide their own back/close
+     * controls. Hide the host window controls only while those dialogs cover
+     * the fullscreen panel so they cannot overlap the dialog title bar.
+     */
+    .sun-path-panel.mobile_ui.mobile_fullscreen.favorites_open .mobile-window-control {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen.sun-path-favorites-open > .closing-x) {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
     .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-scroll-content {
         height: 100%;
         max-height: none;
         flex: 1 1 auto;
         padding-top: calc(52px + env(safe-area-inset-top, 0px));
         padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .sun-path-panel.mobile_ui.favorites_open {
+        overflow: hidden;
+        scrollbar-width: none;
+    }
+
+    .sun-path-panel.mobile_ui.favorites_open .mobile-scroll-content {
+        overflow: hidden;
+        overscroll-behavior: none;
+        scrollbar-width: none;
+    }
+
+    .sun-path-panel.mobile_ui.favorites_open .primary-controls {
+        position: static;
+    }
+
+    .sun-path-panel.mobile_ui.favorites_open::-webkit-scrollbar,
+    .sun-path-panel.mobile_ui.favorites_open .mobile-scroll-content::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {

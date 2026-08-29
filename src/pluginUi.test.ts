@@ -1,11 +1,131 @@
 import { describe, expect, it } from 'vitest';
 
+import favoriteComparisonSource from './FavoriteComparison.svelte?raw';
+import favoriteLocationsSource from './FavoriteLocations.svelte?raw';
 import locationSearchSource from './LocationSearch.svelte?raw';
 import pluginSource from './plugin.svelte?raw';
 import weatherMetricIconSource from './WeatherMetricIcon.svelte?raw';
 import weatherTableSource from './WeatherTable.svelte?raw';
 
 describe('plugin astronomy loading presentation', () => {
+    it('places moonless and Milky Way windows in the comparison table without a separate timeline', () => {
+        const tableBodyStart = favoriteComparisonSource.indexOf('<tbody>');
+        const weatherRowStart = favoriteComparisonSource.indexOf(
+            '<WeatherMetricIcon metric="totalCloudPercent"',
+            tableBodyStart,
+        );
+        const windowRowsStart = favoriteComparisonSource.indexOf(
+            '{#each windowKinds as kind}',
+            tableBodyStart,
+        );
+
+        expect(windowRowsStart).toBeGreaterThan(tableBodyStart);
+        expect(windowRowsStart).toBeLessThan(weatherRowStart);
+        expect(favoriteComparisonSource).toContain('{windowTimeLabel(result, kind)}');
+        expect(favoriteComparisonSource).toContain("class:last-window={kind === 'milky-way'}");
+        expect(favoriteComparisonSource).not.toContain('favorite-comparison__timeline');
+        expect(favoriteComparisonSource).not.toContain('timelineScale');
+    });
+
+    it('discloses full comparison location names to pointer, keyboard, and touch users', () => {
+        expect(favoriteComparisonSource).toContain('class="favorite-comparison__location-button"');
+        expect(favoriteComparisonSource).toContain('aria-label={result.prepared.target.title}');
+        expect(favoriteComparisonSource).toContain('aria-expanded={expandedLocationId === result.prepared.target.id}');
+        expect(favoriteComparisonSource).toContain('role="tooltip"');
+        expect(favoriteComparisonSource).toContain('on:click={() => toggleLocationDetails(result.prepared.target.id)}');
+        expect(favoriteComparisonSource).toContain("if (expandedLocationId) {");
+        expect(favoriteComparisonSource).toContain('touch-action: manipulation;');
+        expect(favoriteComparisonSource).not.toContain('document.addEventListener');
+    });
+
+    it('keeps mobile favorite and comparison scrolling inside their list regions', () => {
+        expect(favoriteLocationsSource).toContain(
+            'on:touchmove|nonpassive={handlePanelScrollGesture}',
+        );
+        expect(favoriteLocationsSource).toContain(
+            'on:wheel|nonpassive={handlePanelScrollGesture}',
+        );
+        expect(favoriteLocationsSource).toMatch(
+            /\.favorite-locations__list\s*{[\s\S]*?overscroll-behavior-y: contain;[\s\S]*?touch-action: pan-y;/,
+        );
+        expect(favoriteComparisonSource).toContain(
+            'on:touchmove|nonpassive={handlePanelScrollGesture}',
+        );
+        expect(favoriteComparisonSource).toContain(
+            'on:wheel|nonpassive={handlePanelScrollGesture}',
+        );
+        expect(pluginSource).toContain('mobile={isMobileOrTablet}');
+        expect(favoriteComparisonSource).toContain('export let mobile = false;');
+        expect(favoriteComparisonSource).toContain('class:mobile={mobile}');
+        expect(favoriteComparisonSource).toMatch(
+            /\.favorite-comparison\.mobile\s*{[\s\S]*?overflow: hidden;/,
+        );
+        expect(favoriteComparisonSource).toContain(
+            '.favorite-comparison.mobile .favorite-comparison__footer',
+        );
+        expect(favoriteComparisonSource).toMatch(
+            /\.favorite-comparison\.mobile \.favorite-comparison__table-wrap\s*{[\s\S]*?overflow: auto;[\s\S]*?overscroll-behavior: none;/,
+        );
+    });
+
+    it('covers the mobile content area and keeps comparison actions in one toolbar', () => {
+        expect(pluginSource.match(/mobile=\{isMobileOrTablet\}/g)).toHaveLength(2);
+        expect(pluginSource).toContain(
+            '.sun-path-panel.mobile_ui.favorites_open .primary-controls',
+        );
+        expect(pluginSource).toMatch(
+            /\.sun-path-panel\.mobile_ui\.favorites_open\s*{[\s\S]*?overflow: hidden;[\s\S]*?scrollbar-width: none;/,
+        );
+        expect(pluginSource).toContain(
+            '.sun-path-panel.mobile_ui.favorites_open .mobile-scroll-content::-webkit-scrollbar',
+        );
+        expect(favoriteLocationsSource).toContain('export let mobile = false;');
+        expect(favoriteLocationsSource).toContain('class:mobile={mobile}');
+        expect(favoriteLocationsSource).toMatch(
+            /\.favorite-locations\.mobile\s*{[\s\S]*?inset: 0;[\s\S]*?height: 100%;/,
+        );
+        const toolbarStart = favoriteLocationsSource.indexOf(
+            '<div class="favorite-locations__compare-toolbar">',
+        );
+        const toolbarEnd = favoriteLocationsSource.indexOf('</div>', toolbarStart);
+        const toolbarSource = favoriteLocationsSource.slice(toolbarStart, toolbarEnd);
+        expect(toolbarSource).toContain('text.compareCancel');
+        expect(toolbarSource).toContain('{text.compareStart}');
+        expect(toolbarSource).toContain('on:click={startComparison}');
+        expect(favoriteLocationsSource).not.toContain('favorite-locations__compare-footer');
+    });
+
+    it('hides redundant host window controls while a fullscreen favorite dialog is open', () => {
+        expect(pluginSource).toMatch(
+            /\.sun-path-panel\.mobile_ui\.mobile_fullscreen\.favorites_open \.mobile-window-control\s*{[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none;/,
+        );
+        expect(pluginSource).toMatch(
+            /sun-path-mobile-fullscreen\.sun-path-favorites-open > \.closing-x\)\s*{[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none;/,
+        );
+    });
+
+    it('supports two to five comparison targets with horizontally scrollable location columns', () => {
+        expect(favoriteLocationsSource).toContain(
+            '选择 2–${FAVORITE_COMPARISON_MAX_TARGETS} 个收藏地点',
+        );
+        expect(favoriteLocationsSource).toContain(
+            '`已选 ${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS}`',
+        );
+        expect(favoriteLocationsSource).toContain(
+            'comparisonIds.length >= FAVORITE_COMPARISON_MAX_TARGETS',
+        );
+        expect(favoriteComparisonSource).toContain(
+            'style={`--comparison-table-width: ${122 + results.length * 80}px`}',
+        );
+        expect(favoriteComparisonSource).toContain('class:last-location={index === results.length - 1}');
+        expect(favoriteComparisonSource).toMatch(
+            /table\s*{[\s\S]*?width: max\(100%, var\(--comparison-table-width\)\);/,
+        );
+        expect(favoriteComparisonSource).toMatch(
+            /tbody th\s*{[\s\S]*?position: sticky;[\s\S]*?left: 0;/,
+        );
+    });
+
     it('keeps loading feedback inside the stable astronomy panel', () => {
         const eventsBranchStart = pluginSource.indexOf("{#if summaryTab === 'events'}");
         const busyStatus = pluginSource.indexOf('class="visually-hidden" role="status"', eventsBranchStart);
@@ -65,7 +185,9 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('passes the selected date into both weather layouts and presents forecast coverage', () => {
-        expect(pluginSource.match(/\n\s+\{selectedDate\}\n/g)).toHaveLength(2);
+        const weatherLayouts = pluginSource.match(/<WeatherTable[\s\S]*?\/>/g) || [];
+        expect(weatherLayouts).toHaveLength(2);
+        expect(weatherLayouts.every(layout => layout.includes('{selectedDate}'))).toBe(true);
         expect(weatherTableSource).toContain("export let selectedDate = '';");
         expect(weatherTableSource).toContain('findWeatherDateSelection(points, timeZone, selectedDate)');
         expect(weatherTableSource).toContain('class:weather-date-group--selected={group.key === selectedDate}');
@@ -251,6 +373,32 @@ describe('plugin astronomy loading presentation', () => {
             'aria-label={text.eventDirectionLinesLabel(eventDisplayName(selectedEvent, text))}',
         );
         expect(pluginSource).toContain("summaryViewsLabel: 'Sun and moon information views'");
-        expect(pluginSource).toContain("currentMoonPhaseLabel: 'Current moon phase'");
+        expect(pluginSource).toContain("currentMoonPhaseLabel: 'Moon phase'");
+    });
+
+    it('uses live moon illumination only for the observer-local current date', () => {
+        const moonDisplayStart = pluginSource.indexOf('$: displayedMoonIllumination =');
+        const moonDisplayEnd = pluginSource.indexOf('\n\n    const nextWindowParts', moonDisplayStart);
+        const moonDisplaySource = pluginSource.slice(moonDisplayStart, moonDisplayEnd);
+
+        expect(moonDisplayStart).toBeGreaterThanOrEqual(0);
+        expect(moonDisplaySource).toContain('selectedDateIsToday && currentMoonInfo');
+        expect(moonDisplaySource).toContain('astronomyTimeline?.moonIllumination ?? null');
+        expect(moonDisplaySource).toContain('displayedMoonIllumination?.fraction');
+        expect(moonDisplaySource).toContain('displayedMoonIllumination?.waxing');
+        expect(moonDisplaySource).not.toContain(
+            'currentMoonInfo?.illuminationFraction ?? astronomyTimeline?.moonIllumination.fraction',
+        );
+        expect(pluginSource).toContain('<FavoriteComparison\n        bind:open={favoriteComparisonOpen}');
+        expect(pluginSource).toContain('currentInstant={currentInstant}');
+        expect(favoriteComparisonSource).toContain('export let currentInstant: Date;');
+        expect(favoriteComparisonSource).toContain(
+            'dateInputForInstant(currentInstant, result.prepared.timeZone) === selectedDate',
+        );
+        expect(favoriteComparisonSource).toContain('calculateCurrentMoonInfo({');
+        expect(favoriteComparisonSource).toContain('Number((fraction * 100).toFixed(1))');
+        expect(favoriteComparisonSource).not.toContain(
+            'Math.round(result.prepared.timeline.moonIllumination.fraction * 100)',
+        );
     });
 });

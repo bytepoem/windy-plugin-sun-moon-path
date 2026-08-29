@@ -30,6 +30,10 @@
         type LightPollutionPoint,
     } from './lightPollution';
     import { compactLocationLabel } from './location';
+    import {
+        FAVORITE_COMPARISON_MAX_TARGETS,
+        type FavoriteComparisonTarget,
+    } from './favoriteComparison';
     import type { LocationSearchSelection } from './locationProvider';
     import type { Coordinates } from './solar';
 
@@ -40,6 +44,7 @@
     export let locationNameResolved = false;
     export let distanceOrigin: Coordinates | null = null;
     export let language: 'zh' | 'en' = 'zh';
+    export let mobile = false;
     export let returnFocus: HTMLElement | null = null;
     export let openUpward = false;
     export let currentSaved = false;
@@ -49,6 +54,7 @@
 
     const dispatch = createEventDispatcher<{
         select: LocationSearchSelection;
+        compare: FavoriteComparisonTarget[];
     }>();
     const labels = {
         zh: {
@@ -61,7 +67,7 @@
             close: '关闭收藏地点',
             current: '当前',
             search: '搜索收藏地点',
-            searchResults: (total: number) => `找到 ${total} 个收藏地点。`,
+            searchResults: (totalMatches: number) => `找到 ${totalMatches} 个收藏地点。`,
             noMatches: '没有匹配的收藏地点。',
             loading: '正在读取收藏地点…',
             empty: '还没有收藏地点，可以先收藏当前观测地点。',
@@ -72,6 +78,12 @@
             actionError: '收藏操作失败，请稍后重试。',
             elevation: '海拔',
             bortle: '光污染',
+            compare: '对比',
+            compareHint: `选择 2–${FAVORITE_COMPARISON_MAX_TARGETS} 个收藏地点，对比同一观测日期。`,
+            compareSelection: (selectedCount: number) => `已选 ${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS}`,
+            compareStart: '开始对比',
+            compareCancel: '取消选择',
+            compareLimit: `最多选择 ${FAVORITE_COMPARISON_MAX_TARGETS} 个地点。`,
         },
         en: {
             panel: 'Favorites',
@@ -83,7 +95,7 @@
             close: 'Close favorite locations',
             current: 'Current',
             search: 'Search favorites',
-            searchResults: (total: number) => `${total} favorite locations found.`,
+            searchResults: (totalMatches: number) => `${totalMatches} favorite locations found.`,
             noMatches: 'No matching favorite locations.',
             loading: 'Loading favorite locations…',
             empty: 'No favorite locations yet. Save the current observing location first.',
@@ -94,6 +106,12 @@
             actionError: 'Favorite action failed. Try again later.',
             elevation: 'Elevation',
             bortle: 'Bortle',
+            compare: 'Compare',
+            compareHint: `Select 2–${FAVORITE_COMPARISON_MAX_TARGETS} favorites for the same observing date.`,
+            compareSelection: (selectedCount: number) => `${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS} selected`,
+            compareStart: 'Compare now',
+            compareCancel: 'Cancel selection',
+            compareLimit: `You can compare up to ${FAVORITE_COMPARISON_MAX_TARGETS} locations.`,
         },
     } as const;
     const sortModes: FavoriteSortMode[] = ['distance', 'recent', 'elevation', 'lightPollution'];
@@ -139,6 +157,8 @@
     let metricRequestId = 0;
     let metricAbortController: AbortController | null = null;
     let metricsByLocation: Record<string, FavoriteMetricUpdate> = {};
+    let comparisonMode = false;
+    let comparisonIds: string[] = [];
     let destroyed = false;
     let previousOpen = false;
     let panelElement: HTMLElement | null = null;
@@ -169,6 +189,8 @@
             if (open) {
                 feedback = '';
                 favoriteQuery = '';
+                comparisonMode = false;
+                comparisonIds = [];
                 sortMenuOpen = false;
                 void refreshFavorites(true).then(async () => {
                     if (!open || destroyed) {
@@ -186,6 +208,8 @@
                 });
             } else {
                 sortMenuOpen = false;
+                comparisonMode = false;
+                comparisonIds = [];
                 cancelMetricLoading();
             }
         }
@@ -352,6 +376,8 @@
 
     const closePanel = (restoreFocus = true) => {
         sortMenuOpen = false;
+        comparisonMode = false;
+        comparisonIds = [];
         cancelMetricLoading();
         open = false;
         if (restoreFocus) {
@@ -412,6 +438,59 @@
             successfulMetrics(metricViewFor(favorite)),
         ));
         closePanel();
+    };
+
+    const toggleComparisonTarget = (favorite: LocationFavorite) => {
+        if (!comparisonMode) {
+            selectFavorite(favorite);
+            return;
+        }
+        if (comparisonIds.includes(favorite.id)) {
+            comparisonIds = comparisonIds.filter(id => id !== favorite.id);
+            feedback = '';
+            return;
+        }
+        if (comparisonIds.length >= FAVORITE_COMPARISON_MAX_TARGETS) {
+            feedback = text.compareLimit;
+            return;
+        }
+        comparisonIds = [...comparisonIds, favorite.id];
+        feedback = '';
+    };
+
+    const startComparison = () => {
+        if (comparisonIds.length < 2) {
+            return;
+        }
+        const favoritesById = new Map(favorites.map(favorite => [favorite.id, favorite]));
+        const targets = comparisonIds.flatMap(id => {
+            const favorite = favoritesById.get(id);
+            if (!favorite) {
+                return [];
+            }
+            const metrics = successfulMetrics(metricViewFor(favorite));
+            return [{
+                id: favorite.id,
+                title: favorite.title,
+                location: { lat: favorite.lat, lon: favorite.lon },
+                ...(metrics.elevationM === undefined ? {} : { knownElevationM: metrics.elevationM }),
+                ...(metrics.lightPollution === undefined
+                    ? {}
+                    : { knownLightPollution: metrics.lightPollution }),
+            } satisfies FavoriteComparisonTarget];
+        });
+        if (targets.length < 2) {
+            return;
+        }
+        dispatch('compare', targets);
+        closePanel(false);
+    };
+
+    const handlePanelScrollGesture = (event: WheelEvent | TouchEvent) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target?.closest('.favorite-locations__list')) {
+            event.preventDefault();
+        }
     };
 
     const focusSortOption = async () => {
@@ -531,12 +610,15 @@
     <section
         id="favorite-locations-panel"
         class="favorite-locations"
+        class:mobile={mobile}
         class:open-upward={openUpward}
         class:sort-menu-open={sortMenuOpen}
         role="dialog"
         bind:this={panelElement}
         aria-label={text.panel}
         on:pointerdown={handlePanelPointerDown}
+        on:touchmove|nonpassive={handlePanelScrollGesture}
+        on:wheel|nonpassive={handlePanelScrollGesture}
         on:keydown={handlePanelKeydown}
     >
         <header class="favorite-locations__heading">
@@ -626,6 +708,31 @@
             {/if}
         </div>
 
+        {#if status === 'ready' && items.length >= 2}
+            <div class="favorite-locations__compare-toolbar">
+                <span>{comparisonMode ? text.compareSelection(comparisonIds.length) : text.compareHint}</span>
+                <div class="favorite-locations__compare-actions">
+                    <button
+                        type="button"
+                        class:active={comparisonMode}
+                        on:click={() => {
+                            comparisonMode = !comparisonMode;
+                            comparisonIds = [];
+                            feedback = '';
+                        }}
+                    >{comparisonMode ? text.compareCancel : text.compare}</button>
+                    {#if comparisonMode}
+                        <button
+                            type="button"
+                            class="favorite-locations__compare-start"
+                            disabled={comparisonIds.length < 2}
+                            on:click={startComparison}
+                        >{text.compareStart}</button>
+                    {/if}
+                </div>
+            </div>
+        {/if}
+
         {#if status === 'loading'}
             <div class="favorite-locations__message">{text.loading}</div>
         {:else if status === 'error'}
@@ -647,9 +754,14 @@
                     <button
                         type="button"
                         aria-current={item.isCurrent ? 'location' : undefined}
+                        aria-pressed={comparisonMode ? comparisonIds.includes(item.favorite.id) : undefined}
                         aria-label={favoriteButtonLabel(item, metrics)}
                         class:current={item.isCurrent}
-                        on:click={() => selectFavorite(item.favorite)}
+                        class:comparison-selected={comparisonIds.includes(item.favorite.id)}
+                        class:comparison-disabled={comparisonMode
+                            && comparisonIds.length >= FAVORITE_COMPARISON_MAX_TARGETS
+                            && !comparisonIds.includes(item.favorite.id)}
+                        on:click={() => toggleComparisonTarget(item.favorite)}
                     >
                         <svg class="favorite-locations__pin" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path d="M12 21s6-5.4 6-11a6 6 0 1 0-12 0c0 5.6 6 11 6 11Z"></path>
@@ -672,7 +784,14 @@
                         </span>
                         <span class="favorite-locations__distance">{localizedDistance(item, text.current)}</span>
                         <svg class="favorite-locations__selected" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="m5 12 4 4L19 6"></path>
+                            {#if comparisonMode}
+                                <rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect>
+                                {#if comparisonIds.includes(item.favorite.id)}
+                                    <path d="m8 12 2.7 2.7L16.5 9"></path>
+                                {/if}
+                            {:else}
+                                <path d="m5 12 4 4L19 6"></path>
+                            {/if}
                         </svg>
                     </button>
                 {/each}
@@ -941,12 +1060,68 @@
         white-space: nowrap;
     }
 
+    .favorite-locations__compare-toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 34px;
+        padding: 0 8px 0 12px;
+        border-bottom: 1px solid var(--panel-border);
+        color: var(--panel-muted);
+        font-size: 10px;
+    }
+
+    .favorite-locations__compare-toolbar span {
+        min-width: 0;
+    }
+
+    .favorite-locations__compare-toolbar button {
+        min-height: 28px;
+        padding: 0 10px;
+        border: 1px solid rgba(99, 185, 238, 0.55);
+        border-radius: 6px;
+        color: var(--panel-accent);
+        background: rgba(99, 185, 238, 0.1);
+        font: inherit;
+        font-size: 10px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .favorite-locations__compare-toolbar button.active {
+        border-color: var(--panel-border);
+        color: var(--panel-muted);
+        background: transparent;
+    }
+
+    .favorite-locations__compare-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .favorite-locations__compare-toolbar .favorite-locations__compare-start {
+        border-color: transparent;
+        color: #071525;
+        background: var(--panel-accent);
+    }
+
+    .favorite-locations__compare-toolbar .favorite-locations__compare-start:disabled {
+        cursor: not-allowed;
+        opacity: 0.42;
+    }
+
     .favorite-locations__list {
         max-height: 220px;
         margin: 6px;
         overflow-y: auto;
+        overscroll-behavior-y: contain;
         border: 1px solid var(--panel-border);
         border-radius: 7px;
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
     }
 
     .favorite-locations__list button {
@@ -973,6 +1148,15 @@
     .favorite-locations__list button:hover,
     .favorite-locations__list button.current {
         background: rgba(99, 185, 238, 0.16);
+    }
+
+    .favorite-locations__list button.comparison-selected {
+        background: rgba(99, 185, 238, 0.18);
+        box-shadow: inset 3px 0 0 var(--panel-accent);
+    }
+
+    .favorite-locations__list button.comparison-disabled {
+        opacity: 0.46;
     }
 
     .favorite-locations__pin,
@@ -1045,8 +1229,43 @@
         visibility: hidden;
     }
 
-    .favorite-locations__list button.current .favorite-locations__selected {
+    .favorite-locations__list button.current .favorite-locations__selected,
+    .favorite-locations__list button[aria-pressed] .favorite-locations__selected {
         visibility: visible;
+    }
+
+    .favorite-locations.mobile {
+        inset: 0;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        max-height: none;
+        overflow: hidden;
+    }
+
+    .favorite-locations.mobile.open-upward {
+        top: 0;
+        bottom: 0;
+        max-height: none;
+    }
+
+    .favorite-locations.mobile .favorite-locations__heading,
+    .favorite-locations.mobile .favorite-locations__compare-toolbar {
+        flex: 0 0 auto;
+    }
+
+    .favorite-locations.mobile .favorite-locations__list,
+    .favorite-locations.mobile.open-upward .favorite-locations__list {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+    }
+
+    .favorite-locations.mobile .favorite-locations__message {
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     .favorite-locations__message {

@@ -59,8 +59,16 @@ export type ObservationWeatherCoverage = 'none' | 'partial' | 'full';
 export type ObservationWindowEvidence = {
     weatherSampleCount: number;
     weatherCoverage: ObservationWeatherCoverage;
+    dominantWeatherIconCode: number | null;
     totalCloudPercent: ObservationMetricRange | null;
+    highCloudPercent: ObservationMetricRange | null;
+    mediumCloudPercent: ObservationMetricRange | null;
+    lowCloudPercent: ObservationMetricRange | null;
+    temperatureC: ObservationMetricRange | null;
+    dewPointC: ObservationMetricRange | null;
     precipitationMm: ObservationMetricRange | null;
+    windKmh: ObservationMetricRange | null;
+    humidityPercent: ObservationMetricRange | null;
     visibilityKm: ObservationMetricRange | null;
     aod550: ObservationMetricRange | null;
     moonIlluminationFraction: number | null;
@@ -185,7 +193,18 @@ export const selectObservationPaths = (
 
 const metricRange = (
     points: WeatherPoint[],
-    field: 'totalCloudPercent' | 'precipMm' | 'visibilityKm' | 'aod550',
+    field:
+        | 'totalCloudPercent'
+        | 'highCloudPercent'
+        | 'mediumCloudPercent'
+        | 'lowCloudPercent'
+        | 'temperatureC'
+        | 'dewPointC'
+        | 'precipMm'
+        | 'windKmh'
+        | 'humidityPercent'
+        | 'visibilityKm'
+        | 'aod550',
 ): ObservationMetricRange | null => {
     const values = points
         .map(point => point[field])
@@ -193,6 +212,25 @@ const metricRange = (
     return values.length > 0
         ? { minimum: Math.min(...values), maximum: Math.max(...values) }
         : null;
+};
+
+/** Returns the most frequent weather condition while preserving first-seen order for ties. */
+const dominantWeatherIconCode = (points: WeatherPoint[]): number | null => {
+    const counts = new Map<number, number>();
+    let dominantCode: number | null = null;
+    let dominantCount = 0;
+    for (const point of points) {
+        if (point.iconCode === null) {
+            continue;
+        }
+        const count = (counts.get(point.iconCode) || 0) + 1;
+        counts.set(point.iconCode, count);
+        if (count > dominantCount) {
+            dominantCode = point.iconCode;
+            dominantCount = count;
+        }
+    }
+    return dominantCode;
 };
 
 const weatherEvidenceForInterval = (
@@ -271,8 +309,16 @@ export const buildObservationWindows = ({
             evidence: {
                 weatherSampleCount: samples.length,
                 weatherCoverage: weatherEvidence.coverage,
+                dominantWeatherIconCode: dominantWeatherIconCode(samples),
                 totalCloudPercent: metricRange(samples, 'totalCloudPercent'),
+                highCloudPercent: metricRange(samples, 'highCloudPercent'),
+                mediumCloudPercent: metricRange(samples, 'mediumCloudPercent'),
+                lowCloudPercent: metricRange(samples, 'lowCloudPercent'),
+                temperatureC: metricRange(samples, 'temperatureC'),
+                dewPointC: metricRange(samples, 'dewPointC'),
                 precipitationMm: metricRange(samples, 'precipMm'),
+                windKmh: metricRange(samples, 'windKmh'),
+                humidityPercent: metricRange(samples, 'humidityPercent'),
                 visibilityKm: metricRange(samples, 'visibilityKm'),
                 aod550: metricRange(samples, 'aod550'),
                 moonIlluminationFraction: timeline?.moonIllumination.fraction ?? null,
