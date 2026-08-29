@@ -104,6 +104,58 @@ describe('plugin astronomy loading presentation', () => {
         );
     });
 
+    it('adds accessible mobile map-fit and search-zoom controls to the window toolbar', () => {
+        expect(pluginSource).toContain('class="mobile-window-control mobile-map-fit-toggle"');
+        expect(pluginSource).toContain('class="mobile-window-control mobile-map-detail-toggle"');
+        expect(pluginSource).toContain('<path d="M7 12h10"></path>');
+        expect(pluginSource).toContain('<path d="M7 12h10M12 7v10"></path>');
+        expect(pluginSource).toContain('disabled={!canFitDirectionLines}');
+        expect(pluginSource).toContain('paths: selectObservationPaths(solarPaths, selectedEvent)');
+        expect(pluginSource).toContain('aria-label={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}');
+        expect(pluginSource).toContain('aria-label={text.restoreSearchZoomLabel}');
+        expect(pluginSource).toContain('paddingBottomRight: visibleViewport.fitPaddingBottomRight');
+        expect(pluginSource).toContain('duration: 0.45');
+        expect(pluginSource).toContain('--mobile-window-control-width: 36px;');
+        expect(pluginSource).toContain('--mobile-window-control-gap: 0px;');
+        expect(pluginSource).toMatch(
+            /plugin-mobile-bottom-small > \.closing-x\)\s*{[\s\S]*?justify-content: center;/,
+        );
+        expect(pluginSource).toContain('zoom: SEARCH_LOCATION_ZOOM');
+        expect(pluginSource).toContain('paddingTop: visibleViewport.centerPaddingTop');
+        expect(pluginSource).toContain('paddingLeft: visibleViewport.centerPaddingLeft');
+        expect(pluginSource).toContain('MOBILE_MAP_RECENTER_DELAY_MS');
+        expect(pluginSource).toContain('clearTimeout(mapDetailRecenterTimer)');
+        expect(pluginSource).toContain("fitDirectionLinesLabel: distanceKm => `完整显示 ${distanceKm} km 方位线`");
+        expect(pluginSource).toContain("restoreSearchZoomLabel: 'Restore search-location zoom'");
+    });
+
+    it('adds the same map controls to the desktop title bar', () => {
+        expect(pluginSource).toContain('class="desktop-map-controls"');
+        expect(pluginSource).toContain('class="desktop-map-control desktop-map-fit-control"');
+        expect(pluginSource).toContain('class="desktop-map-control desktop-map-detail-control"');
+        expect(pluginSource).toContain('on:click|stopPropagation');
+        expect(pluginSource).toContain('paddingTopLeft: visibleViewport.fitPaddingTopLeft');
+        expect(pluginSource).toMatch(
+            /\.desktop-map-control\s*{[\s\S]*?width: 30px;[\s\S]*?height: 30px;/,
+        );
+    });
+
+    it('keeps settings checkbox focus inside the visible toggle card', () => {
+        const toggleStyle = pluginSource.match(
+            /\.settings-toggle\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+        const inputStyle = pluginSource.match(
+            /\.settings-toggle input\s*{([\s\S]*?)\n\s*}/,
+        )?.[1];
+
+        expect(toggleStyle).toContain('position: relative;');
+        expect(inputStyle).toContain('inset: 0;');
+        expect(inputStyle).toContain('width: 100%;');
+        expect(inputStyle).toContain('height: 100%;');
+        expect(inputStyle).toContain('cursor: pointer;');
+        expect(inputStyle).not.toContain('pointer-events: none;');
+    });
+
     it('supports two to five comparison targets with horizontally scrollable location columns', () => {
         expect(favoriteLocationsSource).toContain(
             '选择 2–${FAVORITE_COMPARISON_MAX_TARGETS} 个收藏地点',

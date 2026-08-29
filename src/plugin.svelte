@@ -14,11 +14,67 @@
             class="plugin__title plugin__title--chevron-back panel-title"
             on:click={() => bcast.emit('rqstOpen', 'menu')}
         >
-            {title}
+            <span class="panel-title__text">{title}</span>
+            <span class="desktop-map-controls">
+                <button
+                    type="button"
+                    class="desktop-map-control desktop-map-fit-control"
+                    aria-label={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
+                    title={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
+                    disabled={!canFitDirectionLines}
+                    on:click|stopPropagation={fitVisibleDirectionLines}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M7 12h10"></path>
+                    </svg>
+                </button>
+                <button
+                    type="button"
+                    class="desktop-map-control desktop-map-detail-control"
+                    aria-label={text.restoreSearchZoomLabel}
+                    title={text.restoreSearchZoomLabel}
+                    on:click|stopPropagation={restoreSearchLocationZoom}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M7 12h10M12 7v10"></path>
+                    </svg>
+                </button>
+            </span>
         </div>
     {/if}
 
     {#if isMobileOrTablet}
+        {#if !isMobileFullscreen}
+            <button
+                type="button"
+                class="mobile-window-control mobile-map-fit-toggle"
+                aria-label={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
+                title={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
+                disabled={!canFitDirectionLines}
+                on:click={fitVisibleDirectionLines}
+            >
+                <span class="mobile-window-control__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M7 12h10"></path>
+                    </svg>
+                </span>
+            </button>
+
+            <button
+                type="button"
+                class="mobile-window-control mobile-map-detail-toggle"
+                aria-label={text.restoreSearchZoomLabel}
+                title={text.restoreSearchZoomLabel}
+                on:click={restoreSearchLocationZoom}
+            >
+                <span class="mobile-window-control__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M7 12h10M12 7v10"></path>
+                    </svg>
+                </span>
+            </button>
+        {/if}
+
         <button
             type="button"
             class="mobile-window-control mobile-collapse-toggle"
@@ -974,6 +1030,7 @@
     } from './observationEvidence';
     import { claimOverlayOwner } from './overlayOwner';
     import { createMapOverlayController } from './mapOverlayController';
+    import { buildDirectionLineFitBounds, calculateVisibleMapViewport } from './mapView';
     import {
         buildObservationWindows,
         createObservationPlanner,
@@ -1070,6 +1127,8 @@
         expandCompactPanelLabel: string;
         expandPanelLabel: string;
         restorePanelLabel: string;
+        fitDirectionLinesLabel: (distanceKm: number) => string;
+        restoreSearchZoomLabel: string;
         panelIntro: string;
         sunMoonPanelLabel: string;
         summaryViewsLabel: string;
@@ -1184,6 +1243,8 @@
             expandCompactPanelLabel: '展开面板',
             expandPanelLabel: '全屏显示',
             restorePanelLabel: '恢复小窗口',
+            fitDirectionLinesLabel: distanceKm => `完整显示 ${distanceKm} km 方位线`,
+            restoreSearchZoomLabel: '回到搜索定位缩放',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
             sunMoonPanelLabel: '日月信息面板',
             summaryViewsLabel: '日月信息视图',
@@ -1338,6 +1399,8 @@
             expandCompactPanelLabel: 'Expand panel',
             expandPanelLabel: 'Show fullscreen',
             restorePanelLabel: 'Restore compact window',
+            fitDirectionLinesLabel: distanceKm => `Fit ${distanceKm} km direction lines`,
+            restoreSearchZoomLabel: 'Restore search-location zoom',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
             sunMoonPanelLabel: 'Sun and moon information panel',
             summaryViewsLabel: 'Sun and moon information views',
@@ -1502,6 +1565,9 @@
         tencent: 'https://lbs.qq.com/webApi/javascriptGL/glGuide/glBasic',
     };
     const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
+    const SEARCH_LOCATION_ZOOM = 12;
+    const MAP_VIEW_EDGE_PADDING_PX = 18;
+    const MOBILE_MAP_RECENTER_DELAY_MS = 550;
     let lastKnownGpsLocation: Coordinates | null = null;
     const cachedGpsLocation = (): Coordinates | null => {
         const gpsLocation = gpsCoordinatesFromLocation(getMyLatestPos());
@@ -1611,6 +1677,7 @@
     let astronomyKey = '';
     let currentDirectionTimer: ReturnType<typeof setInterval> | null = null;
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
+    let mapDetailRecenterTimer: ReturnType<typeof setTimeout> | null = null;
     let releaseOverlayOwnership: (() => void) | null = null;
     let currentLocationRequestId = 0;
     let favoriteDistanceRequestId = 0;
@@ -1618,6 +1685,7 @@
     let mapWasDragged = false;
     let reopenAfterHome = false;
     let addressSelectedLocation: Pick<LocationSearchResult, 'wgs84'> | null = null;
+    let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
 
@@ -1918,6 +1986,92 @@
 
     const selectedMapPaths = (paths = solarPaths): SolarPath[] =>
         selectObservationPaths(paths, selectedEvent);
+
+    $: canFitDirectionLines = buildDirectionLineFitBounds({
+        location: selectedLocation,
+        // Keep the reactive inputs explicit: Svelte cannot infer state read
+        // from inside selectedMapPaths(), so an async path refresh would
+        // otherwise leave the toolbar button in its initial disabled state.
+        paths: selectObservationPaths(solarPaths, selectedEvent),
+        showExtendedDistanceMarker,
+    }) !== null;
+
+    /** Returns fit and center offsets for the map pixels not covered by Windy's UI. */
+    const currentVisibleMapViewport = () => {
+        const pluginRoot = panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path') || null;
+        const obstruction = pluginRoot && !isMobileFullscreen
+            ? {
+                side: isMobileOrTablet ? 'bottom' as const : 'right' as const,
+                rect: pluginRoot.getBoundingClientRect(),
+            }
+            : null;
+
+        return calculateVisibleMapViewport({
+            // On wide desktop layouts Windy shifts the full-width Leaflet
+            // container behind both the viewport edge and the plugin pane.
+            // Use the real container rectangle so those hidden pixels are
+            // included symmetrically instead of compensating the pane twice.
+            containerRect: map.getContainer().getBoundingClientRect(),
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            obstruction,
+            edgePadding: MAP_VIEW_EDGE_PADDING_PX,
+        });
+    };
+
+    /** Fits the currently rendered 400/600 km event lines into the unobscured map area. */
+    const fitVisibleDirectionLines = () => {
+        const bounds = buildDirectionLineFitBounds({
+            location: selectedLocation,
+            paths: selectedMapPaths(),
+            showExtendedDistanceMarker,
+        });
+        if (!bounds) {
+            return;
+        }
+
+        map.stop?.();
+        const visibleViewport = currentVisibleMapViewport();
+        map.fitBounds(bounds, {
+            animate: true,
+            duration: 0.45,
+            maxZoom: SEARCH_LOCATION_ZOOM,
+            paddingTopLeft: visibleViewport.fitPaddingTopLeft,
+            paddingBottomRight: visibleViewport.fitPaddingBottomRight,
+        });
+    };
+
+    /** Centers the selected location inside the currently unobscured map region. */
+    const centerSelectedLocationInVisibleMap = () => {
+        const visibleViewport = currentVisibleMapViewport();
+        centerMap({
+            lat: selectedLocation.lat,
+            lon: selectedLocation.lon,
+            zoom: SEARCH_LOCATION_ZOOM,
+            paddingTop: visibleViewport.centerPaddingTop,
+            paddingLeft: visibleViewport.centerPaddingLeft,
+        });
+    };
+
+    /** Restores the selected location to the exact zoom used after a search result is chosen. */
+    const restoreSearchLocationZoom = () => {
+        map.stop?.();
+        if (mapDetailRecenterTimer) {
+            clearTimeout(mapDetailRecenterTimer);
+            mapDetailRecenterTimer = null;
+        }
+
+        centerSelectedLocationInVisibleMap();
+        if (isMobileOrTablet && !isMobileFullscreen) {
+            // A map interaction can make Windy's bottom timeline reserve more
+            // height. Re-read the settled panel position once so one tap still
+            // lands at the center of the final visible map area.
+            mapDetailRecenterTimer = setTimeout(() => {
+                mapDetailRecenterTimer = null;
+                centerSelectedLocationInVisibleMap();
+            }, MOBILE_MAP_RECENTER_DELAY_MS);
+        }
+    };
 
     const selectEvent = (event: DirectionEvent) => {
         selectedEvent = event;
@@ -2557,7 +2711,7 @@
             selection.elevationM,
             selection.lightPollution,
         );
-        centerMap({ lat: selection.wgs84.lat, lon: selection.wgs84.lon, zoom: 12 });
+        centerMap({ lat: selection.wgs84.lat, lon: selection.wgs84.lon, zoom: SEARCH_LOCATION_ZOOM });
     };
 
     const handleLocationSearchSelect = (event: CustomEvent<LocationSearchSelection>) => {
@@ -2918,6 +3072,10 @@
                 clearTimeout(locationSyncTimer);
                 locationSyncTimer = null;
             }
+            if (mapDetailRecenterTimer) {
+                clearTimeout(mapDetailRecenterTimer);
+                mapDetailRecenterTimer = null;
+            }
             mapOverlayController.destroy();
             singleclick.off(name, setLocationFromMapClick);
             bcast.off('back2home', handleBackToHome);
@@ -3052,7 +3210,8 @@
 
     :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-moon-path) {
         --mobile-window-control-size: 44px;
-        --mobile-window-control-gap: 5px;
+        --mobile-window-control-width: 36px;
+        --mobile-window-control-gap: 0px;
         --mobile-window-control-edge: 32px;
         --mobile-window-icon-size: 25px;
 
@@ -3078,9 +3237,9 @@
         bottom: auto !important;
         display: flex;
         align-items: flex-end;
-        justify-content: flex-start;
+        justify-content: center;
         box-sizing: border-box;
-        width: var(--mobile-window-control-size);
+        width: var(--mobile-window-control-width);
         height: var(--mobile-window-control-size);
         margin: 0;
         padding: 0;
@@ -3130,7 +3289,7 @@
         align-items: flex-end;
         justify-content: center;
         box-sizing: border-box;
-        width: var(--mobile-window-control-size);
+        width: var(--mobile-window-control-width);
         height: var(--mobile-window-control-size);
         padding: 0;
         border: 0;
@@ -3151,16 +3310,34 @@
 
     .mobile-collapse-toggle {
         right: calc(
-            var(--mobile-window-control-edge) + var(--mobile-window-control-size) +
-                var(--mobile-window-control-gap) + var(--mobile-window-control-size) +
+            var(--mobile-window-control-edge) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
                 var(--mobile-window-control-gap)
         );
-        justify-content: flex-end;
     }
 
     .mobile-window-toggle {
         right: calc(
-            var(--mobile-window-control-edge) + var(--mobile-window-control-size) +
+            var(--mobile-window-control-edge) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap)
+        );
+    }
+
+    .mobile-map-detail-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap)
+        );
+    }
+
+    .mobile-map-fit-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
                 var(--mobile-window-control-gap)
         );
     }
@@ -3191,6 +3368,16 @@
     .mobile-window-control:hover .mobile-window-control__icon,
     .mobile-window-control:active .mobile-window-control__icon {
         background: var(--panel-surface-hover);
+    }
+
+    .mobile-window-control:disabled {
+        color: var(--panel-muted);
+        cursor: default;
+        opacity: 0.42;
+    }
+
+    .mobile-window-control:disabled .mobile-window-control__icon {
+        background: var(--panel-bg);
     }
 
     .mobile-window-control:focus-visible {
@@ -3384,6 +3571,50 @@
         font-weight: 700;
         text-align: left;
         cursor: pointer;
+    }
+
+    .panel-title__text {
+        white-space: nowrap;
+    }
+
+    .desktop-map-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 5px;
+    }
+
+    .desktop-map-control {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        place-items: center;
+        border: 1px solid var(--panel-border);
+        border-radius: 50%;
+        background: var(--panel-surface);
+        color: var(--panel-text);
+        cursor: pointer;
+    }
+
+    .desktop-map-control svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+    }
+
+    .desktop-map-control:hover:not(:disabled),
+    .desktop-map-control:active:not(:disabled) {
+        background: var(--panel-surface-hover);
+    }
+
+    .desktop-map-control:disabled {
+        color: var(--panel-muted);
+        cursor: default;
+        opacity: 0.42;
     }
 
     .panel-title__arrow {
@@ -5275,6 +5506,7 @@
     }
 
     .settings-toggle {
+        position: relative;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 12px;
@@ -5312,10 +5544,13 @@
 
     .settings-toggle input {
         position: absolute;
-        width: 1px;
-        height: 1px;
+        inset: 0;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        margin: 0;
         opacity: 0;
-        pointer-events: none;
+        cursor: pointer;
     }
 
     .settings-toggle__control {
