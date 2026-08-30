@@ -30,5 +30,14 @@ jobs:
                   # Source maps are useful in local builds but are not runtime assets.
                   # Excluding them keeps the Windy upload request below its size limit.
                   tar --exclude='*.map' -cf ../plugin.tar .
+                  # Keep a safety margin below Windy's 4 MB request limit so package
+                  # growth fails here with an actionable message instead of at upload.
+                  max_plugin_archive_bytes=3800000
+                  plugin_archive_bytes=$(wc -c < ../plugin.tar | tr -d '[:space:]')
+                  echo "Plugin archive size: ${plugin_archive_bytes} bytes (limit: ${max_plugin_archive_bytes} bytes)"
+                  if [ "$plugin_archive_bytes" -gt "$max_plugin_archive_bytes" ]; then
+                    echo "Plugin archive exceeds the 3.8 MB release safety limit" >&2
+                    exit 1
+                  fi
                   echo "Publishing plugin..."
                   curl -s --fail-with-body -XPOST 'https://node.windy.com/plugins/v1.0/upload' -H "x-windy-api-key: ${WINDY_API_KEY}" -F "plugin_archive=@../plugin.tar"
