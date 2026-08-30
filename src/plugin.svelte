@@ -5,6 +5,7 @@
     class:mobile_ui={isMobileOrTablet}
     class:mobile_collapsed={isMobileCollapsed}
     class:mobile_fullscreen={isMobileFullscreen}
+    class:mobile_compact={isMobileOrTablet && !isMobileCollapsed && !isMobileFullscreen}
     class:favorites_open={favoritesOpen || favoriteComparisonOpen}
     bind:this={panelElement}
     on:wheel|capture|nonpassive={handleNestedWheel}
@@ -16,6 +17,24 @@
         >
             <span class="panel-title__text">{title}</span>
             <span class="desktop-map-controls">
+                <button
+                    type="button"
+                    class="desktop-map-control desktop-radar-toggle"
+                    class:radar-toggle--error={radarProvider === 'rainviewer' && radarOverlayStatus === 'error'}
+                    aria-label={radarProvider === 'rainviewer'
+                        ? text.disableRadarOverlayLabel
+                        : text.enableRadarOverlayLabel}
+                    aria-pressed={radarProvider === 'rainviewer'}
+                    title={radarProvider === 'rainviewer'
+                        ? text.disableRadarOverlayLabel
+                        : text.enableRadarOverlayLabel}
+                    on:click|stopPropagation={toggleRadarOverlay}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
+                        <path d="m12 12 6.2-6.2M5.6 18.4a9 9 0 0 1 12.8-12.8M8.4 15.6a5 5 0 0 1 7.2-7.2"></path>
+                    </svg>
+                </button>
                 <button
                     type="button"
                     class="desktop-map-control desktop-map-fit-control"
@@ -45,6 +64,27 @@
 
     {#if isMobileOrTablet}
         {#if !isMobileFullscreen}
+            <button
+                type="button"
+                class="mobile-window-control mobile-radar-toggle"
+                class:radar-toggle--error={radarProvider === 'rainviewer' && radarOverlayStatus === 'error'}
+                aria-label={radarProvider === 'rainviewer'
+                    ? text.disableRadarOverlayLabel
+                    : text.enableRadarOverlayLabel}
+                aria-pressed={radarProvider === 'rainviewer'}
+                title={radarProvider === 'rainviewer'
+                    ? text.disableRadarOverlayLabel
+                    : text.enableRadarOverlayLabel}
+                on:click={toggleRadarOverlay}
+            >
+                <span class="mobile-window-control__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
+                        <path d="m12 12 6.2-6.2M5.6 18.4a9 9 0 0 1 12.8-12.8M8.4 15.6a5 5 0 0 1 7.2-7.2"></path>
+                    </svg>
+                </span>
+            </button>
+
             <button
                 type="button"
                 class="mobile-window-control mobile-map-fit-toggle"
@@ -166,6 +206,7 @@
                         class:active={selectedEvent === option.value}
                         aria-pressed={selectedEvent === option.value}
                         aria-label={text.events[option.value]}
+                        title={text.eventButtonTitles[option.value]}
                         on:click={() => selectEvent(option.value)}
                     >
                         {#if option.value === 'all'}
@@ -225,6 +266,7 @@
             type="button"
             class="language-toggle"
             aria-label={text.languageToggleLabel}
+            title={text.languageToggleLabel}
             on:click={toggleLanguage}
         >
             <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中</span>
@@ -361,8 +403,10 @@
                                 type="button"
                                 class="astronomy-location__button"
                                 class:scrolling={locationNameOverflows}
-                                title={locationDisplayName || text.locationResolvingLabel}
                                 aria-label={text.locationFavoritesLabel(
+                                    locationDisplayName || text.locationResolvingLabel,
+                                )}
+                                title={text.locationFavoritesLabel(
                                     locationDisplayName || text.locationResolvingLabel,
                                 )}
                                 aria-haspopup="dialog"
@@ -646,6 +690,10 @@
 
                     <section class="feature-guide" aria-labelledby="feature-guide-heading">
                         <h3 id="feature-guide-heading">{text.featureGuideHeading}</h3>
+                        <section class="button-hints" aria-labelledby="button-hints-heading">
+                            <h4 id="button-hints-heading">{text.buttonHintsHeading}</h4>
+                            <p>{text.buttonHintsDescription}</p>
+                        </section>
                         <dl>
                             <div>
                                 <dt>{text.featureGuide.coordinates.title}</dt>
@@ -654,6 +702,10 @@
                             <div>
                                 <dt>{text.featureGuide.mapControls.title}</dt>
                                 <dd>{text.featureGuide.mapControls.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.radarOverlay.title}</dt>
+                                <dd>{text.featureGuide.radarOverlay.description}</dd>
                             </div>
                             <div>
                                 <dt>{text.featureGuide.observationEvidence.title}</dt>
@@ -899,6 +951,59 @@
                             {text.initialOverlayDescription}
                         </span>
                     </div>
+                    <div class="settings-range settings-range--radar-opacity">
+                        <div class="settings-range__header">
+                            <label for="radar-overlay-opacity">{text.radarOpacityLabel}</label>
+                            <output for="radar-overlay-opacity">{radarOpacityPercent}%</output>
+                        </div>
+                        <input
+                            id="radar-overlay-opacity"
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={radarOpacityPercent}
+                            aria-describedby="radar-overlay-opacity-description"
+                            on:input={changeRadarOpacity}
+                        />
+                        <span id="radar-overlay-opacity-description" class="settings-range__description">
+                            {text.radarOpacityDescription}
+                        </span>
+                    </div>
+                    <div class="settings-select settings-radar-source">
+                        <label for="radar-provider">{text.radarProviderLabel}</label>
+                        <select
+                            id="radar-provider"
+                            value={radarProvider}
+                            aria-describedby="radar-provider-description radar-provider-status"
+                            on:change={changeRadarProvider}
+                        >
+                            {#each RADAR_PROVIDERS as providerOption}
+                                <option value={providerOption}>{text.radarProviderLabels[providerOption]}</option>
+                            {/each}
+                        </select>
+                        <span id="radar-provider-description" class="settings-select__description">
+                            {text.radarProviderDescription}
+                        </span>
+                        {#if radarProvider === 'rainviewer'}
+                            <span class="settings-select__description settings-radar-source__provider-note">
+                                {text.rainViewerDescription}
+                                <a href={RAINVIEWER_WEBSITE_URL} target="_blank" rel="noreferrer">RainViewer</a>
+                            </span>
+                        {/if}
+                        <span
+                            id="radar-provider-status"
+                            class="settings-radar-status"
+                            class:settings-radar-status--ready={radarOverlayStatus === 'ready'}
+                            class:settings-radar-status--warning={radarOverlayStatus === 'out-of-range'}
+                            class:settings-radar-status--error={radarOverlayStatus === 'error'}
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <span aria-hidden="true"></span>
+                            {radarStatusText}
+                        </span>
+                    </div>
                     <label class="settings-toggle">
                         <span class="settings-toggle__copy">
                             <strong>{text.hideLocationSearchLabel}</strong>
@@ -1106,6 +1211,21 @@
     import { createMapOverlayController } from './mapOverlayController';
     import { buildDirectionLineFitBounds, calculateVisibleMapViewport } from './mapView';
     import {
+        createRadarFrameTimeLabel,
+        type RadarFrameTimeLabelController,
+    } from './radarFrameTimeLabel';
+    import {
+        createRadarOverlayController,
+        DEFAULT_RADAR_OPACITY_PERCENT,
+        normalizeRadarProvider,
+        normalizeRadarOpacityPercent,
+        RADAR_PROVIDERS,
+        RAINVIEWER_WEBSITE_URL,
+        type RadarOverlayStatus,
+        type RadarOverlayController,
+        type RadarProvider,
+    } from './radarOverlay';
+    import {
         buildObservationWindows,
         createObservationPlanner,
         ObservationPlannerError,
@@ -1203,6 +1323,7 @@
     const translations: Record<UiLanguage, {
         dateLabel: string;
         eventSelectorLabel: string;
+        eventButtonTitles: Record<DirectionEvent, string>;
         languageToggleLabel: string;
         collapsePanelLabel: string;
         expandCompactPanelLabel: string;
@@ -1210,6 +1331,8 @@
         restorePanelLabel: string;
         fitDirectionLinesLabel: (distanceKm: number) => string;
         restoreSearchZoomLabel: string;
+        enableRadarOverlayLabel: string;
+        disableRadarOverlayLabel: string;
         panelIntro: string;
         sunMoonPanelLabel: string;
         summaryViewsLabel: string;
@@ -1259,13 +1382,16 @@
         aboutDescription: string;
         guideHeading: string;
         featureGuideHeading: string;
+        buttonHintsHeading: string;
+        buttonHintsDescription: string;
         featureGuide: Record<
             | 'favorites'
             | 'comparison'
             | 'coordinates'
             | 'observationEvidence'
             | 'mobileMode'
-            | 'mapControls',
+            | 'mapControls'
+            | 'radarOverlay',
             { title: string; description: string }
         >;
         settingsGuideHeading: string;
@@ -1273,6 +1399,13 @@
         initialOverlayLabel: string;
         initialOverlayDescription: string;
         keepCurrentOverlayLabel: string;
+        radarProviderLabel: string;
+        radarProviderDescription: string;
+        radarProviderLabels: Record<RadarProvider, string>;
+        radarStatusLabels: Record<RadarOverlayStatus, string>;
+        rainViewerDescription: string;
+        radarOpacityLabel: string;
+        radarOpacityDescription: string;
         lineOpacityLabel: string;
         lineOpacityDescription: string;
         show600Label: string;
@@ -1334,6 +1467,13 @@
         zh: {
             dateLabel: '观测日期',
             eventSelectorLabel: '选择日月事件',
+            eventButtonTitles: {
+                all: '显示全部日月事件方位线',
+                sunrise: '只显示日出方位线',
+                sunset: '只显示日落方位线',
+                moonrise: '只显示月升方位线',
+                moonset: '只显示月落方位线',
+            },
             languageToggleLabel: '切换到英文',
             collapsePanelLabel: '收起为方位线模式',
             expandCompactPanelLabel: '展开面板',
@@ -1341,6 +1481,8 @@
             restorePanelLabel: '恢复小窗口',
             fitDirectionLinesLabel: distanceKm => `完整显示 ${distanceKm} km 方位线`,
             restoreSearchZoomLabel: '回到搜索定位缩放',
+            enableRadarOverlayLabel: '开启气象雷达叠加',
+            disableRadarOverlayLabel: '关闭气象雷达叠加',
             panelIntro: '日月关键时刻、事件前后 30 分钟方位线和夜间观测时段。',
             sunMoonPanelLabel: '日月信息面板',
             summaryViewsLabel: '日月信息视图',
@@ -1394,6 +1536,8 @@
             aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
             guideHeading: '地图说明',
             featureGuideHeading: '功能说明',
+            buttonHintsHeading: '按钮提示',
+            buttonHintsDescription: '将鼠标停留在图标或紧凑型按钮上片刻，可查看该按钮的功能说明；按钮的键盘和屏幕阅读器名称保持一致。',
             featureGuide: {
                 favorites: {
                     title: '收藏地点',
@@ -1417,7 +1561,11 @@
                 },
                 mapControls: {
                     title: '地图视图按钮',
-                    description: '“−”用于缩放到完整方位线范围，“+”用于恢复搜索地点的详细缩放级别。',
+                    description: '标题栏或移动端窗口上方的“−”用于缩放到完整方位线范围，“+”用于恢复搜索地点的详细缩放级别。',
+                },
+                radarOverlay: {
+                    title: '气象雷达叠加',
+                    description: '使用标题栏或移动端窗口上方的雷达按钮快速开关 RainViewer；开启后按钮高亮，雷达图层会跟随 Windy 时间条切换，透明度可在设置中调整。',
                 },
             },
             settingsGuideHeading: '设置说明',
@@ -1425,6 +1573,22 @@
             initialOverlayLabel: '打开插件时的图层',
             initialOverlayDescription: '选择后立即切换到对应 Windy 图层，并在以后打开插件时继续使用；选择“保持 Windy 当前图层”则不自动切换。设置会保存在当前浏览器。',
             keepCurrentOverlayLabel: '保持 Windy 当前图层',
+            radarProviderLabel: '叠加雷达数据',
+            radarProviderDescription: '在当前 Windy 图层上叠加 RainViewer 雷达瓦片，并跟随 Windy 自带时间条切换时次。数据源选择仅保存在当前浏览器。',
+            radarProviderLabels: {
+                none: '不叠加',
+                rainviewer: 'RainViewer（无需 Key）',
+            },
+            radarStatusLabels: {
+                disabled: '雷达叠加已关闭',
+                loading: '正在加载雷达图层…',
+                ready: '雷达图层已加载',
+                'out-of-range': '当前 Windy 时间超出第三方雷达可用范围',
+                error: '雷达图层加载失败，请检查网络',
+            },
+            rainViewerDescription: 'RainViewer 使用无需 Key 的公共接口并按中央气象台色阶显示；拖动 Windy 底部时间条可切换可用历史帧。',
+            radarOpacityLabel: '雷达图层透明度',
+            radarOpacityDescription: '实时调整第三方雷达图层的显示强度。0% 为完全透明，100% 为完全不透明。设置会保存在当前浏览器。',
             lineOpacityLabel: '方位线透明度',
             lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
             show600Label: '显示 600 km 点',
@@ -1522,6 +1686,13 @@
         en: {
             dateLabel: 'Date',
             eventSelectorLabel: 'Choose event',
+            eventButtonTitles: {
+                all: 'Show all Sun and Moon direction lines',
+                sunrise: 'Show only sunrise direction lines',
+                sunset: 'Show only sunset direction lines',
+                moonrise: 'Show only moonrise direction lines',
+                moonset: 'Show only moonset direction lines',
+            },
             languageToggleLabel: 'Switch to Chinese',
             collapsePanelLabel: 'Collapse to direction-line mode',
             expandCompactPanelLabel: 'Expand panel',
@@ -1529,6 +1700,8 @@
             restorePanelLabel: 'Restore compact window',
             fitDirectionLinesLabel: distanceKm => `Fit ${distanceKm} km direction lines`,
             restoreSearchZoomLabel: 'Restore search-location zoom',
+            enableRadarOverlayLabel: 'Enable radar overlay',
+            disableRadarOverlayLabel: 'Disable radar overlay',
             panelIntro: 'Key sun and moon times, direction lines 30 minutes before and after each event, and night observing windows.',
             sunMoonPanelLabel: 'Sun and moon information panel',
             summaryViewsLabel: 'Sun and moon information views',
@@ -1582,6 +1755,8 @@
             aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30 minutes before, at the event, and 30 minutes after.',
             guideHeading: 'Map guide',
             featureGuideHeading: 'Feature guide',
+            buttonHintsHeading: 'Button hints',
+            buttonHintsDescription: 'Pause the pointer over an icon or compact control to see what it does. The same name is also exposed to keyboard and screen-reader users.',
             featureGuide: {
                 favorites: {
                     title: 'Favorite locations',
@@ -1605,7 +1780,11 @@
                 },
                 mapControls: {
                     title: 'Map view controls',
-                    description: 'Use “−” to fit the full direction-line range and “+” to restore the detailed search-location zoom.',
+                    description: 'Use “−” in the title bar or above the mobile window to fit the full direction-line range, and “+” to restore the detailed search-location zoom.',
+                },
+                radarOverlay: {
+                    title: 'Weather radar overlay',
+                    description: 'Use the radar button in the title bar or above the mobile window to toggle RainViewer. The active button is highlighted, radar follows Windy’s timeline, and opacity is adjustable in Settings.',
                 },
             },
             settingsGuideHeading: 'Settings guide',
@@ -1613,6 +1792,22 @@
             initialOverlayLabel: 'Layer when opening the plugin',
             initialOverlayDescription: 'Switch to the selected Windy layer immediately and keep using it whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
             keepCurrentOverlayLabel: 'Keep Windy’s current layer',
+            radarProviderLabel: 'Radar data overlay',
+            radarProviderDescription: 'Overlay RainViewer radar tiles on the current Windy layer and follow Windy’s native timeline. The provider choice stays in this browser.',
+            radarProviderLabels: {
+                none: 'Off',
+                rainviewer: 'RainViewer (no key required)',
+            },
+            radarStatusLabels: {
+                disabled: 'Radar overlay is off',
+                loading: 'Loading radar overlay…',
+                ready: 'Radar overlay loaded',
+                'out-of-range': 'The selected Windy time is outside the third-party radar range',
+                error: 'Radar overlay failed to load. Check the network.',
+            },
+            rainViewerDescription: 'RainViewer uses its keyless public API and the NMC color scale. Drag Windy’s bottom timeline to switch between available historical frames.',
+            radarOpacityLabel: 'Radar overlay opacity',
+            radarOpacityDescription: 'Adjust the third-party radar layer immediately. 0% is fully transparent and 100% is fully opaque. This setting is saved in this browser.',
             lineOpacityLabel: 'Direction line opacity',
             lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
             show600Label: 'Show 600 km point',
@@ -1714,6 +1909,12 @@
     const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
     const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
     const INITIAL_OVERLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:initial-overlay';
+    const RADAR_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-provider';
+    const RADAR_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-opacity';
+    const REMOVED_RADAR_CREDENTIAL_STORAGE_KEYS = [
+        'windy-plugin-sun-moon-path:xweather-client-id',
+        'windy-plugin-sun-moon-path:xweather-client-secret',
+    ] as const;
     const LOCATION_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:location-provider';
     const LOCATION_PROVIDER_API_KEY_STORAGE_KEYS: Record<LocationProvider, string> = {
         amap: 'windy-plugin-sun-moon-path:amap-api-key',
@@ -1761,6 +1962,14 @@
         getElevation: async location => (await getElevation(location.lat, location.lon)).data,
     });
     const mapOverlayController = createMapOverlayController(map);
+    let radarOverlayStatus: RadarOverlayStatus = 'disabled';
+    let radarFrameTimeMs: number | null = null;
+    let radarFrameTimeLabelController: RadarFrameTimeLabelController | null = null;
+    let radarOverlayController: RadarOverlayController;
+    radarOverlayController = createRadarOverlayController(map, nextStatus => {
+        radarOverlayStatus = nextStatus;
+        radarFrameTimeMs = radarOverlayController?.getActiveFrameTime() ?? null;
+    });
 
     let selectedLocation: Coordinates = {
         ...defaultLocation(),
@@ -1835,6 +2044,8 @@
     let hideLocationSearch = false;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
     let initialOverlayPreference: InitialOverlayPreference = DEFAULT_INITIAL_OVERLAY;
+    let radarProvider: RadarProvider = 'none';
+    let radarOpacityPercent = DEFAULT_RADAR_OPACITY_PERCENT;
     let locationSearchProvider: LocationProvider = 'amap';
     let locationApiKeys: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
     let locationApiKeyDrafts: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
@@ -1851,6 +2062,7 @@
     let lastMobileNonFullscreenMode: MobileNonFullscreenPanelMode = 'compact';
     let astronomyKey = '';
     let currentDirectionTimer: ReturnType<typeof setInterval> | null = null;
+    let radarTimestampSubscriptionId: number | null = null;
     let locationSyncTimer: ReturnType<typeof setTimeout> | null = null;
     let mapDetailRecenterTimer: ReturnType<typeof setTimeout> | null = null;
     let releaseOverlayOwnership: (() => void) | null = null;
@@ -1863,6 +2075,13 @@
     let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
+    $: radarStatusText = text.radarStatusLabels[radarOverlayStatus];
+    $: radarFrameTimeLabelController?.update({
+        language: uiLanguage,
+        provider: radarProvider,
+        status: radarOverlayStatus,
+        timestampMs: radarFrameTimeMs,
+    });
 
     $: selectedDateIsToday = dateInputForInstant(currentInstant, timeZone) === selectedDate;
 
@@ -1881,6 +2100,10 @@
         mobilePluginRoot.classList.toggle(
             'sun-path-favorites-open',
             isMobileOrTablet && (favoritesOpen || favoriteComparisonOpen),
+        );
+        mobilePluginRoot.classList.toggle(
+            'sun-path-mobile-compact',
+            isMobileOrTablet && !isMobileCollapsed && !isMobileFullscreen,
         );
     }
 
@@ -2135,6 +2358,17 @@
         if (!(nestedScroller instanceof HTMLElement) || !outerScroller.contains(nestedScroller)) {
             return;
         }
+        if (
+            isMobileOrTablet
+            && mobilePanelMode === 'compact'
+            && summaryTab === 'events'
+            && nestedScroller.matches('.astronomy-panel')
+        ) {
+            // Compact Events is a fixed card. Do not transfer its boundary
+            // wheel delta to the outer shell, which would shift the whole Tab.
+            event.preventDefault();
+            return;
+        }
 
         const delta = event.deltaMode === WheelEvent.DOM_DELTA_LINE
             ? event.deltaY * 16
@@ -2327,6 +2561,77 @@
         } catch {
             // Windy keeps the currently visible layer when the selected layer cannot be activated.
         }
+    };
+
+    const loadRadarProvider = (): RadarProvider => {
+        try {
+            return normalizeRadarProvider(localStorage.getItem(RADAR_PROVIDER_STORAGE_KEY));
+        } catch {
+            return 'none';
+        }
+    };
+
+    const loadRadarOpacityPreference = (): number => {
+        try {
+            const storedValue = localStorage.getItem(RADAR_OPACITY_STORAGE_KEY);
+            return storedValue === null
+                ? DEFAULT_RADAR_OPACITY_PERCENT
+                : normalizeRadarOpacityPercent(Number(storedValue));
+        } catch {
+            return DEFAULT_RADAR_OPACITY_PERCENT;
+        }
+    };
+
+    /** Remove credentials persisted by the retired radar provider. */
+    const clearRemovedRadarCredentials = () => {
+        try {
+            REMOVED_RADAR_CREDENTIAL_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+        } catch {
+            // Feature removal remains effective when browser storage is unavailable.
+        }
+    };
+
+    const changeRadarOpacity = (event: Event) => {
+        radarOpacityPercent = normalizeRadarOpacityPercent(
+            Number((event.currentTarget as HTMLInputElement).value),
+        );
+        try {
+            localStorage.setItem(RADAR_OPACITY_STORAGE_KEY, String(radarOpacityPercent));
+        } catch {
+            // The opacity still changes for this plugin session when storage is unavailable.
+        }
+        radarOverlayController.setOpacity(radarOpacityPercent);
+    };
+
+    /** Apply the selected third-party radar source without changing Windy's native overlay. */
+    const applyRadarProvider = async () => {
+        await radarOverlayController.apply({
+            provider: radarProvider,
+        });
+    };
+
+    /** Keep the third-party radar frame synchronized with Windy's native timeline. */
+    const syncRadarTimestamp = (timestampMs: number) => {
+        radarOverlayController.setTimestamp(timestampMs);
+    };
+
+    /** Persist and apply one radar state so Settings and the homepage shortcut stay synchronized. */
+    const setRadarProvider = (nextProvider: RadarProvider) => {
+        radarProvider = nextProvider;
+        try {
+            localStorage.setItem(RADAR_PROVIDER_STORAGE_KEY, radarProvider);
+        } catch {
+            // The provider still changes for this plugin session when storage is unavailable.
+        }
+        void applyRadarProvider();
+    };
+
+    const changeRadarProvider = (event: Event) => {
+        setRadarProvider(normalizeRadarProvider((event.currentTarget as HTMLSelectElement).value));
+    };
+
+    const toggleRadarOverlay = () => {
+        setRadarProvider(radarProvider === 'rainviewer' ? 'none' : 'rainviewer');
     };
 
     const loadExtendedDistancePreference = (): boolean => {
@@ -3332,6 +3637,7 @@
             mobilePluginRoot?.classList.remove('sun-path-favorites-open');
             mobilePluginRoot?.classList.remove('sun-path-mobile-collapsed');
             mobilePluginRoot?.classList.remove('sun-path-mobile-fullscreen');
+            mobilePluginRoot?.classList.remove('sun-path-mobile-compact');
             mobileBottomWrapper?.classList.remove('sun-path-mobile-fullscreen-wrapper');
             mobilePluginRoot = null;
             mobileBottomWrapper = null;
@@ -3363,6 +3669,13 @@
                 mapDetailRecenterTimer = null;
             }
             mapOverlayController.destroy();
+            radarOverlayController.destroy();
+            radarFrameTimeLabelController?.destroy();
+            radarFrameTimeLabelController = null;
+            if (radarTimestampSubscriptionId !== null) {
+                store.off(radarTimestampSubscriptionId);
+                radarTimestampSubscriptionId = null;
+            }
             singleclick.off(name, setLocationFromMapClick);
             bcast.off('back2home', handleBackToHome);
             map.off('dragstart', handleMapDragStart);
@@ -3374,6 +3687,7 @@
 
     onMount(() => {
         releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
+        radarFrameTimeLabelController = createRadarFrameTimeLabel();
         mobilePluginRoot = isMobileOrTablet
             ? panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path') || null
             : null;
@@ -3386,10 +3700,17 @@
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         initialOverlayPreference = loadInitialOverlayPreference();
+        clearRemovedRadarCredentials();
+        radarProvider = loadRadarProvider();
+        radarOpacityPercent = loadRadarOpacityPreference();
+        radarOverlayController.setOpacity(radarOpacityPercent);
+        radarOverlayController.setTimestamp(store.get('timestamp'));
         locationSearchProvider = loadLocationSearchProvider();
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
         isMounted = true;
+        radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
+        void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
         bcast.on('back2home', handleBackToHome);
         map.on('dragstart', handleMapDragStart);
@@ -3412,6 +3733,32 @@
 </script>
 
 <style lang="less">
+    :global(.sun-path-radar-frame-time) {
+        position: fixed;
+        z-index: 10000;
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 3px 8px;
+        transform: translateX(-50%);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 6px;
+        color: #f3f6f8;
+        background: rgba(19, 25, 32, 0.92);
+        box-shadow: 0 2px 7px rgba(0, 0, 0, 0.38);
+        font-family: inherit;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        line-height: 1.25;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+
+    :global(.sun-path-radar-frame-time[hidden]) {
+        display: none;
+    }
+
     :global(.sun-path-marker) {
         background: transparent;
         border: 0;
@@ -3629,6 +3976,17 @@
         );
     }
 
+    .mobile-radar-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap) + var(--mobile-window-control-width) +
+                var(--mobile-window-control-gap)
+        );
+    }
+
     .mobile-window-control__icon {
         box-sizing: border-box;
         display: grid;
@@ -3655,6 +4013,17 @@
     .mobile-window-control:hover .mobile-window-control__icon,
     .mobile-window-control:active .mobile-window-control__icon {
         background: var(--panel-surface-hover);
+    }
+
+    .mobile-radar-toggle[aria-pressed='true'] .mobile-window-control__icon {
+        border-color: var(--panel-accent);
+        background: rgba(99, 185, 238, 0.2);
+        color: var(--panel-accent);
+    }
+
+    .mobile-radar-toggle.radar-toggle--error .mobile-window-control__icon {
+        border-color: var(--panel-warning);
+        color: var(--panel-warning);
     }
 
     .mobile-window-control:disabled {
@@ -3690,6 +4059,39 @@
         overscroll-behavior-y: contain;
         touch-action: pan-y;
         padding: 8px 8px 0;
+    }
+
+    /* Compact mode is a fixed shell in both orientations; each Tab owns any scrolling it needs. */
+    :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-moon-path.sun-path-mobile-compact:not(.sun-path-mobile-fullscreen)) {
+        max-height: min(
+            430px,
+            calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+        ) !important;
+    }
+
+    .sun-path-panel.mobile_ui.mobile_compact:not(.mobile_fullscreen),
+    .sun-path-panel.mobile_ui.mobile_compact:not(.mobile_fullscreen) .mobile-scroll-content {
+        max-height: min(
+            430px,
+            calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+        );
+    }
+
+    .sun-path-panel.mobile_ui.mobile_compact:not(.mobile_fullscreen) .mobile-scroll-content {
+        /* A clipped shell is not a scroll container, including for programmatic scrollTop writes. */
+        overflow: clip;
+        overscroll-behavior-y: none;
+        touch-action: manipulation;
+    }
+
+    .sun-path-panel.mobile_ui.mobile_compact .astronomy-panel {
+        overflow-y: clip;
+        overscroll-behavior-y: none;
+        touch-action: none;
+    }
+
+    .sun-path-panel.mobile_ui .summary-tabs {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
@@ -3881,6 +4283,17 @@
     .desktop-map-control:hover:not(:disabled),
     .desktop-map-control:active:not(:disabled) {
         background: var(--panel-surface-hover);
+    }
+
+    .desktop-radar-toggle[aria-pressed='true'] {
+        border-color: var(--panel-accent);
+        background: rgba(99, 185, 238, 0.2);
+        color: var(--panel-accent);
+    }
+
+    .desktop-radar-toggle.radar-toggle--error {
+        border-color: var(--panel-warning);
+        color: var(--panel-warning);
     }
 
     .desktop-map-control:disabled {
@@ -4672,6 +5085,12 @@
         border-bottom-color: var(--panel-accent);
     }
 
+    /* Keep keyboard focus visible without letting the clipped card cut it into scrollbar-like lines. */
+    .summary-tabs button:focus-visible {
+        outline: none;
+        box-shadow: inset 0 0 0 2px var(--panel-accent);
+    }
+
     .summary-panel-frame {
         height: var(--summary-panel-height);
         overflow: hidden;
@@ -4813,6 +5232,15 @@
         stroke-width: 1.8;
         stroke-linecap: round;
         stroke-linejoin: round;
+    }
+
+    /* Pull the two glyphs inward while retaining their separate 28px click targets. */
+    .astronomy-location__favorite svg {
+        transform: translateX(3px);
+    }
+
+    .astronomy-location__pin svg {
+        transform: translateX(-3px);
     }
 
     .astronomy-location__pin .astronomy-location__pin-head {
@@ -5376,6 +5804,34 @@
         line-height: 1.2;
     }
 
+    .button-hints {
+        display: grid;
+        gap: 2px;
+        margin: 4px 0 2px;
+        padding: 7px 8px;
+        border: 1px solid rgba(99, 185, 238, 0.28);
+        border-radius: 6px;
+        background: rgba(99, 185, 238, 0.08);
+    }
+
+    .button-hints h4,
+    .button-hints p {
+        margin: 0;
+    }
+
+    .button-hints h4 {
+        color: var(--panel-text);
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .button-hints p {
+        color: var(--panel-muted);
+        font-size: 10px;
+        line-height: 1.45;
+    }
+
     .feature-guide dl > div,
     .settings-guide dl > div {
         display: grid;
@@ -5595,7 +6051,7 @@
     }
 
     .module-settings {
-        gap: 8px;
+        gap: 6px;
     }
 
     .settings-select {
@@ -5617,7 +6073,7 @@
     .settings-select select {
         width: 100%;
         min-width: 0;
-        height: 44px;
+        height: 30px;
         padding: 0 10px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -5641,15 +6097,69 @@
         line-height: 1.35;
     }
 
+    .settings-radar-source__provider-note {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 6px;
+        align-items: baseline;
+    }
+
+    .settings-radar-source__provider-note a {
+        color: var(--panel-accent);
+        font-weight: 700;
+        text-underline-offset: 2px;
+    }
+
+    .settings-radar-source__provider-note a:hover {
+        color: var(--panel-text);
+    }
+
+    .settings-radar-source__provider-note a:focus-visible {
+        border-radius: 3px;
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .settings-radar-status {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        min-height: 18px;
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .settings-radar-status > span[aria-hidden='true'] {
+        flex: 0 0 auto;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.72;
+    }
+
+    .settings-radar-status--ready {
+        color: #8bd6a3;
+    }
+
+    .settings-radar-status--warning {
+        color: var(--panel-warning);
+    }
+
+    .settings-radar-status--error {
+        color: #ffc078;
+    }
+
     .settings-api-keys {
         display: grid;
-        gap: 8px;
+        gap: 6px;
     }
 
     .settings-api-key {
         display: grid;
-        gap: 6px;
-        padding: 10px 12px;
+        gap: 4px;
+        padding: 7px 10px;
         border: 1px solid var(--panel-border);
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.06);
@@ -5658,7 +6168,7 @@
     .settings-api-key__header {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
-        gap: 8px;
+        gap: 6px;
         align-items: center;
         color: var(--panel-text);
         font-size: 13px;
@@ -5700,12 +6210,12 @@
     .settings-api-key__control {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto auto;
-        gap: 6px;
+        gap: 4px;
     }
 
     .settings-api-key__control input {
         min-width: 0;
-        height: 44px;
+        height: 30px;
         padding: 0 10px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -5723,7 +6233,7 @@
 
     .settings-api-key__control button {
         min-width: 54px;
-        min-height: 44px;
+        min-height: 30px;
         padding: 0 10px;
         border: 1px solid rgba(99, 185, 238, 0.45);
         border-radius: 6px;
@@ -5733,6 +6243,16 @@
         font-size: 12px;
         font-weight: 700;
         cursor: pointer;
+    }
+
+    /* Preserve full-size touch targets on the mobile Settings Tab. */
+    .sun-path-panel.mobile_ui .settings-select select,
+    .sun-path-panel.mobile_ui .settings-api-key__control input {
+        height: 44px;
+    }
+
+    .sun-path-panel.mobile_ui .settings-api-key__control button {
+        min-height: 44px;
     }
 
     .settings-api-key__control button:hover:not(:disabled) {
@@ -6201,15 +6721,6 @@
 
         .astronomy-location__favorite {
             height: 28px;
-        }
-
-        /* Keep both 28px hit targets while visually tightening their 15px glyphs. */
-        .astronomy-location__favorite svg {
-            transform: translateX(3px);
-        }
-
-        .astronomy-location__pin svg {
-            transform: translateX(-3px);
         }
 
         .astronomy-location__metrics {

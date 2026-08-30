@@ -507,7 +507,7 @@
         on:keydown={handleKeydown}
     >
         <header class="favorite-comparison__header">
-            <button type="button" class="icon-button" aria-label={text.back} on:click={backToFavorites}>
+            <button type="button" class="icon-button" aria-label={text.back} title={text.back} on:click={backToFavorites}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7M8 12h11"></path></svg>
             </button>
             <strong>{text.title}</strong>
@@ -530,7 +530,7 @@
                     {text.moonIllumination} {moonIlluminationLabel(results)}
                 </span>
             </div>
-            <button type="button" class="icon-button" aria-label={text.close} on:click={closeComparison}>
+            <button type="button" class="icon-button" aria-label={text.close} title={text.close} on:click={closeComparison}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
             </button>
         </header>

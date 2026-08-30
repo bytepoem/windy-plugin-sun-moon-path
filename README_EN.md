@@ -27,6 +27,8 @@ relative to a point on the Windy map.
   observing windows, weather, elevation, and light pollution, with EC/GFS/ICON switching.
 - Searches domestic places and addresses in the Chinese UI with the user's own Amap,
   Baidu, or Tencent Maps API Key and switches providers from the unified search menu.
+- Overlays RainViewer live radar on any Windy layer using its keyless public API
+  and a GPU mapping to the NMC color scale.
 - Locates exact coordinates in both languages by selecting WGS84 or GCJ-02 and entering
   latitude and longitude in separate fields. GCJ-02 input is converted to Windy's WGS84.
 - Sorts results by straight-line distance from the observer and displays city,
@@ -66,9 +68,9 @@ relative to a point on the Windy map.
   - **Events** shows event times, directions, and the daily astronomy timeline.
   - **Weather** provides a horizontally scrollable EC, GFS, or ICON five-day forecast.
   - **Guide** explains the map legend, weather color scales, wind symbol, and data.
-  - **Settings** controls location-search visibility, line opacity, and the optional
-    600 km reference point in the current browser. Switch to the Chinese UI to configure
-    Amap, Baidu, or Tencent Maps API Keys.
+  - **Settings** selects the startup Windy layer, configures the RainViewer radar
+    overlay, controls location-search visibility, line opacity, and the optional
+    600 km reference point. Switch to the Chinese UI to configure Amap, Baidu, or Tencent Maps API Keys.
   - **About** links to the repository and Issues, identifies the author and
     version, and provides a GitHub Star entry point.
 
@@ -139,26 +141,35 @@ After the plugin is open:
 
 1. To use domestic place-name search, switch to the Chinese UI, then save an Amap,
    Baidu, or Tencent Maps API Key under **Settings**.
-2. In the Chinese UI, select Amap, Baidu, or Tencent from the search menu, enter a
+2. To add third-party radar, use the radar shortcut in the homepage map controls,
+   or select **RainViewer** under **Settings → Radar data overlay**. On desktop the
+   shortcut is beside the title-bar map zoom controls; on mobile it is in the map-control
+   group above the plugin window. Radar opacity appears above the provider selector.
+   The overlay follows Windy’s native bottom
+   timeline, and a label above it shows the actual third-party radar frame in use.
+   Windy’s dragging and play/pause controls drive the third-party radar directly.
+   The dedicated opacity slider updates the layer immediately.
+   RainViewer needs no key.
+3. In the Chinese UI, select Amap, Baidu, or Tencent from the search menu, enter a
    domestic place or address, and choose a distance-sorted autocomplete result. Each
    row includes its city, district, direct distance, and elevation.
-3. In either language, select **WGS84** or **GCJ-02** from the same search menu and
+4. In either language, select **WGS84** or **GCJ-02** from the same search menu and
    enter latitude and longitude in their separate fields. The English menu contains
    only these two coordinate choices.
-4. Select a date.
-5. Choose **All**, **Sunrise**, **Sunset**, **Moonrise**, or **Moonset**.
-6. Check the map direction lines and the event time, azimuth, and compass
+5. Select a date.
+6. Choose **All**, **Sunrise**, **Sunset**, **Moonrise**, or **Moonset**.
+7. Check the map direction lines and the event time, azimuth, and compass
    direction in the panel.
-7. Use the favorite control beside the place name to save the current observing point.
+8. Use the favorite control beside the place name to save the current observing point.
    Open favorites to search, sort, switch locations, or compare 2–5 places for the same date.
-8. You can also click the map to recalculate directions for another location, and use
+9. You can also click the map to recalculate directions for another location, and use
    the `−` / `+` controls in the panel header to adjust the map zoom.
-9. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
+10. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
    while using the always-visible forecast below. On mobile, use the panel controls
    to collapse into direction-line mode, restore the compact window, or enter
    fullscreen. Direction-line mode keeps search, the primary controls, and two compact
    astronomy rows; enable **Hide location search** in **Settings** when search is not needed.
-10. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
+11. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
    6 hours through the next 5 days.
 
 Rows marked **OM** are provided by [Open-Meteo](https://open-meteo.com/). The AOD
@@ -166,6 +177,17 @@ field is sourced from the [Copernicus Atmosphere Monitoring Service (CAMS)](http
 
 Map API Keys are stored only in the current browser's local storage. Domestic GCJ-02
 or BD-09 results are converted to WGS84 so the selected observer location does not shift on Windy.
+
+The radar-provider choice and opacity remain only in the current browser. Opacity
+defaults to 90% and updates immediately across the 0–100% range. The plugin listens
+to Windy’s native timeline timestamp and selects the nearest RainViewer frame from
+its public manifest. When Windy selects a time outside the available data range, the
+plugin hides that radar layer instead of presenting a mismatched timestamp. RainViewer
+automatically checks for its latest frame, retains its
+required data-source link, and uses a Windy GPU shader to map Universal Blue into
+the NMC reflectivity colors. RainViewer collapses 65–74 dBZ into one white source
+color and 75 dBZ and above into one green source color, so those extreme ranges can
+only be assigned to the nearest recoverable NMC classes.
 
 Direction lines start at the selected observer location. Each sampled line uses
 the calculated azimuth for that event time and extends through 200 km and
@@ -175,6 +197,9 @@ the calculated azimuth for that event time and extends through 200 km and
 
 - `src/plugin.svelte` - Windy plugin UI, state orchestration, and lifecycle integration.
 - `src/mapOverlayController.ts` - map direction lines, distance markers, live directions, and cleanup.
+- `src/radarOverlay.ts` - RainViewer radar tiles, historical-frame matching, refresh timers, and cleanup.
+- `src/radarFrameTimeLabel.ts` - actual third-party frame label above Windy’s native timecode and host-layout tracking.
+- `src/radarPalette.ts` - CPU reference and GPU shader for mapping RainViewer Universal Blue to NMC dBZ colors.
 - `src/observationPlanner.ts` - location-context caching, astronomy planning, and observing-window evidence.
 - `src/LocationSearch.svelte` - multi-provider autocomplete, result list, and keyboard interaction.
 - `src/amap.ts` - Amap Web Service requests, result parsing, and GCJ-02/WGS84 conversion.
