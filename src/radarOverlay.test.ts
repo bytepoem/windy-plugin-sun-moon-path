@@ -28,30 +28,24 @@ const createRuntime = () => {
     const layers: {
         url: string;
         options: L.TileLayerOptions;
-        listeners: Partial<Record<'load' | 'tileerror', () => void>>;
+        loading: boolean;
+        isLoading: ReturnType<typeof vi.fn>;
         addTo: ReturnType<typeof vi.fn>;
-        off: ReturnType<typeof vi.fn>;
-        on: ReturnType<typeof vi.fn>;
         remove: ReturnType<typeof vi.fn>;
         setOpacity: ReturnType<typeof vi.fn>;
     }[] = [];
+    const animationFrames: { callback: () => void; id: number }[] = [];
     const timers: { callback: () => void; intervalMs: number; id: ReturnType<typeof setInterval> }[] = [];
     const runtime: RadarOverlayRuntime = {
+        cancelAnimationFrame: vi.fn(),
         clearInterval: vi.fn(),
         createTileLayer: (url, options) => {
             const layer = {
                 url,
                 options,
-                listeners: {} as Partial<Record<'load' | 'tileerror', () => void>>,
+                loading: true,
+                isLoading: vi.fn(() => layer.loading),
                 addTo: vi.fn(function addTo() {
-                    return layer;
-                }),
-                off: vi.fn(function off(type: 'load' | 'tileerror') {
-                    delete layer.listeners[type];
-                    return layer;
-                }),
-                on: vi.fn(function on(type: 'load' | 'tileerror', listener: () => void) {
-                    layer.listeners[type] = listener;
                     return layer;
                 }),
                 remove: vi.fn(),
@@ -69,6 +63,11 @@ const createRuntime = () => {
             });
         }),
         now: () => Date.parse('2026-08-30T10:00:00Z'),
+        requestAnimationFrame: callback => {
+            const id = animationFrames.length + 1;
+            animationFrames.push({ callback, id });
+            return id;
+        },
         setInterval: (callback, intervalMs) => {
             const id = timers.length as unknown as ReturnType<typeof setInterval>;
             timers.push({ callback, intervalMs, id });
@@ -77,6 +76,7 @@ const createRuntime = () => {
     };
     return {
         runtime,
+        animationFrames,
         layers,
         timers,
     };
@@ -129,8 +129,8 @@ describe('radar overlay provider contracts', () => {
 });
 
 describe('radar overlay controller', () => {
-    it('loads the latest RainViewer frame and reports ready after the tile layer loads', async () => {
-        const { runtime, layers, timers } = createRuntime();
+    it('loads the latest RainViewer frame and reports ready after Windy finishes loading the tile grid', async () => {
+        const { runtime, animationFrames, layers, timers } = createRuntime();
         const statuses: RadarOverlayStatus[] = [];
         const controller = createRadarOverlayController(
             {} as L.LeafletGlMap,
@@ -152,7 +152,10 @@ describe('radar overlay controller', () => {
         expect(layers[0].options.tileFilter).toBe(9728);
         expect(timers).toHaveLength(1);
         expect(controller.getActiveFrameTime()).toBe(200_000);
-        layers[0].listeners.load?.();
+        expect(statuses).toEqual(['loading']);
+
+        layers[0].loading = false;
+        animationFrames.shift()?.callback();
         expect(statuses).toEqual(['loading', 'ready']);
 
         controller.setTimestamp(100_000);
@@ -164,11 +167,36 @@ describe('radar overlay controller', () => {
         );
 
         expect(statuses).toEqual(['loading', 'ready', 'loading']);
-        layers[1].listeners.load?.();
+        layers[1].loading = false;
+        animationFrames.shift()?.callback();
         expect(statuses).toEqual(['loading', 'ready', 'loading', 'ready']);
 
         timers[0].callback();
         await vi.waitFor(() => expect(layers).toHaveLength(2));
+    });
+
+    it('waits for the first render frame before observing a tile grid that starts loading asynchronously', async () => {
+        const { runtime, animationFrames, layers } = createRuntime();
+        const statuses: RadarOverlayStatus[] = [];
+        const controller = createRadarOverlayController(
+            {} as L.LeafletGlMap,
+            status => statuses.push(status),
+            runtime,
+        );
+        controller.setTimestamp(200_000);
+
+        await controller.apply({ provider: 'rainviewer' });
+
+        expect(layers[0].isLoading).not.toHaveBeenCalled();
+        expect(statuses).toEqual(['loading']);
+
+        layers[0].loading = true;
+        animationFrames.shift()?.callback();
+        expect(statuses).toEqual(['loading']);
+
+        layers[0].loading = false;
+        animationFrames.shift()?.callback();
+        expect(statuses).toEqual(['loading', 'ready']);
     });
 
     it('reports a RainViewer layer-construction failure after loading the manifest', async () => {
@@ -190,7 +218,7 @@ describe('radar overlay controller', () => {
         expect(statuses).toEqual(['loading', 'error']);
     });
 
-    it('removes RainViewer listeners, layer and refresh timer on destroy', async () => {
+    it('cancels RainViewer readiness polling and removes the layer and refresh timer on destroy', async () => {
         const { runtime, layers } = createRuntime();
         const statuses: RadarOverlayStatus[] = [];
         const controller = createRadarOverlayController(
@@ -205,7 +233,7 @@ describe('radar overlay controller', () => {
         expect(layers).toHaveLength(1);
 
         controller.destroy();
-        expect(layers[0].off).toHaveBeenCalledTimes(2);
+        expect(runtime.cancelAnimationFrame).toHaveBeenCalledOnce();
         expect(layers[0].remove).toHaveBeenCalledOnce();
         expect(runtime.clearInterval).toHaveBeenCalledOnce();
         expect(statuses.at(-1)).toBe('disabled');
@@ -231,7 +259,7 @@ describe('radar overlay controller', () => {
     });
 
     it('hides the radar outside its history and restores the matching frame on Windy timeline changes', async () => {
-        const { runtime, layers } = createRuntime();
+        const { runtime, animationFrames, layers } = createRuntime();
         const statuses: RadarOverlayStatus[] = [];
         const controller = createRadarOverlayController(
             {} as L.LeafletGlMap,
@@ -242,7 +270,8 @@ describe('radar overlay controller', () => {
         await controller.apply({
             provider: 'rainviewer',
         });
-        layers[0].listeners.load?.();
+        layers[0].loading = false;
+        animationFrames.shift()?.callback();
 
         controller.setTimestamp(Date.parse('2026-08-30T10:00:00Z'));
         expect(controller.getActiveFrameTime()).toBeNull();
@@ -258,12 +287,13 @@ describe('radar overlay controller', () => {
             'https://tilecache.rainviewer.com/v2/radar/old/256/{z}/{x}/{y}/2/0_0.png',
         );
         expect(statuses.at(-1)).toBe('loading');
-        layers[1].listeners.load?.();
+        layers[1].loading = false;
+        animationFrames.shift()?.callback();
         expect(statuses.at(-1)).toBe('ready');
     });
 
-    it('remembers a hidden layer load and restores the same frame without getting stuck loading', async () => {
-        const { runtime, layers } = createRuntime();
+    it('remembers a hidden settled layer and restores the same frame without getting stuck loading', async () => {
+        const { runtime, animationFrames, layers } = createRuntime();
         const statuses: RadarOverlayStatus[] = [];
         const controller = createRadarOverlayController(
             {} as L.LeafletGlMap,
@@ -278,7 +308,8 @@ describe('radar overlay controller', () => {
 
         expect(statuses).toEqual(['loading', 'out-of-range']);
         expect(layers).toHaveLength(1);
-        layers[0].listeners.load?.();
+        layers[0].loading = false;
+        animationFrames.shift()?.callback();
         expect(statuses).toEqual(['loading', 'out-of-range']);
 
         controller.setTimestamp(200_000);

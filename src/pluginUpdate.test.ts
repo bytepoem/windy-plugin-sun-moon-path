@@ -4,6 +4,7 @@ import {
     checkPluginUpdate,
     compareSemanticVersions,
     readPluginUpdateReminderSeenVersion,
+    selectPluginLinkVersion,
     writePluginUpdateReminderSeenVersion,
 } from './pluginUpdate';
 
@@ -39,6 +40,20 @@ const currentUserNotes = {
     releasedAt: '2026-08-29',
 };
 
+const patchUserNotes = {
+    ...userNotes,
+    version: '0.9.1',
+    releasedAt: '2026-08-31',
+    zh: {
+        ...userNotes.zh,
+        title: '更稳定的雷达状态',
+    },
+    en: {
+        ...userNotes.en,
+        title: 'More reliable radar status',
+    },
+};
+
 describe('compareSemanticVersions', () => {
     it('compares numeric segments instead of plain text', () => {
         expect(compareSemanticVersions('0.10.0', '0.9.0')).toBeGreaterThan(0);
@@ -56,6 +71,19 @@ describe('compareSemanticVersions', () => {
         expect(() => compareSemanticVersions('1.2.3-alpha..1', '1.2.3')).toThrow('Invalid semantic version');
         expect(() => compareSemanticVersions('1.2.3-alpha.01', '1.2.3')).toThrow('Invalid semantic version');
         expect(() => compareSemanticVersions('9007199254740992.0.0', '1.0.0')).toThrow('Invalid semantic version');
+    });
+});
+
+describe('selectPluginLinkVersion', () => {
+    it('uses the installed version when current and the remote version only for an available update', () => {
+        expect(selectPluginLinkVersion('0.9.1', {
+            status: 'current',
+            latestVersion: '0.9.0',
+        })).toBe('0.9.1');
+        expect(selectPluginLinkVersion('0.9.1', {
+            status: 'available',
+            latestVersion: '0.9.2',
+        })).toBe('0.9.2');
     });
 });
 
@@ -122,6 +150,7 @@ describe('checkPluginUpdate', () => {
             releasedAt: '2026-08-31',
             releaseUrl: null,
             notes: userNotes,
+            seriesNotes: [userNotes],
             notesStatus: 'loaded',
         });
         expect(fetchImpl).toHaveBeenCalledWith(
@@ -151,6 +180,28 @@ describe('checkPluginUpdate', () => {
         });
     });
 
+    it('adds older formal notes from the same minor series behind the local beta notes', async () => {
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(patchUserNotes))
+            .mockResolvedValueOnce(jsonResponse(userNotes));
+
+        await expect(checkPluginUpdate({
+            currentVersion: '0.9.1',
+            repositoryUrl,
+            betaNotesUrl: 'https://localhost:9999/release-notes/beta.json',
+            fetchImpl,
+            sessionCache: null,
+        })).resolves.toMatchObject({
+            status: 'available',
+            channel: 'beta',
+            latestVersion: '0.9.1',
+            notes: patchUserNotes,
+            seriesNotes: [patchUserNotes, userNotes],
+            notesStatus: 'loaded',
+        });
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
     it('reads the latest version from the raw main package without using the rate-limited GitHub API', async () => {
         const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
             name: 'windy-plugin-sun-moon-path',
@@ -172,7 +223,8 @@ describe('checkPluginUpdate', () => {
     it('loads the current version release notes when the installed version is already current', async () => {
         const fetchImpl = vi.fn<typeof fetch>()
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes));
+            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
+            .mockResolvedValueOnce(jsonResponse({}, 404));
 
         await expect(checkPluginUpdate({
             currentVersion: '0.8.1',
@@ -196,7 +248,8 @@ describe('checkPluginUpdate', () => {
     it('does not show notes from an older formal version to a newer installed prerelease', async () => {
         const fetchImpl = vi.fn<typeof fetch>()
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes));
+            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
+            .mockResolvedValueOnce(jsonResponse({}, 404));
 
         await expect(checkPluginUpdate({
             currentVersion: '0.9.0-beta.1',
@@ -221,6 +274,7 @@ describe('checkPluginUpdate', () => {
         const fetchImpl = vi.fn<typeof fetch>()
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
             .mockResolvedValueOnce(jsonResponse(currentUserNotes))
+            .mockResolvedValueOnce(jsonResponse({}, 404))
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
             .mockResolvedValueOnce(jsonResponse(userNotes));
 
@@ -251,7 +305,7 @@ describe('checkPluginUpdate', () => {
             notes: userNotes,
             notesStatus: 'loaded',
         });
-        expect(fetchImpl).toHaveBeenCalledTimes(4);
+        expect(fetchImpl).toHaveBeenCalledTimes(5);
         expect(values.size).toBe(1);
     });
 
@@ -264,8 +318,10 @@ describe('checkPluginUpdate', () => {
         const fetchImpl = vi.fn<typeof fetch>()
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
             .mockRejectedValueOnce(new TypeError('network unavailable'))
+            .mockResolvedValueOnce(jsonResponse({}, 404))
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes));
+            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
+            .mockResolvedValueOnce(jsonResponse({}, 404));
 
         await expect(checkPluginUpdate({
             currentVersion: '0.8.1',
@@ -289,7 +345,7 @@ describe('checkPluginUpdate', () => {
             notes: currentUserNotes,
             notesStatus: 'loaded',
         });
-        expect(fetchImpl).toHaveBeenCalledTimes(4);
+        expect(fetchImpl).toHaveBeenCalledTimes(6);
         expect(values.size).toBe(1);
     });
 
@@ -318,7 +374,78 @@ describe('checkPluginUpdate', () => {
         );
     });
 
-    it('keeps the update visible when the friendly notes file is unavailable', async () => {
+    it('loads every release note in the latest minor series from newest to oldest', async () => {
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.1')))
+            .mockResolvedValueOnce(jsonResponse(patchUserNotes))
+            .mockResolvedValueOnce(jsonResponse(userNotes));
+
+        await expect(checkPluginUpdate({
+            currentVersion: '0.9.1',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache: null,
+        })).resolves.toMatchObject({
+            status: 'current',
+            latestVersion: '0.9.1',
+            seriesNotes: [patchUserNotes, userNotes],
+            notesStatus: 'loaded',
+        });
+        expect(fetchImpl).toHaveBeenNthCalledWith(
+            3,
+            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/0.9.0/release-notes/0.9.0.json',
+            { signal: undefined },
+        );
+        expect(fetchImpl).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps loaded series entries visible and marks the result retryable when one entry fails', async () => {
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.1')))
+            .mockResolvedValueOnce(jsonResponse(patchUserNotes))
+            .mockRejectedValueOnce(new TypeError('network unavailable'));
+
+        await expect(checkPluginUpdate({
+            currentVersion: '0.9.1',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache: null,
+        })).resolves.toMatchObject({
+            status: 'current',
+            latestVersion: '0.9.1',
+            notes: patchUserNotes,
+            seriesNotes: [patchUserNotes],
+            notesStatus: 'error',
+        });
+    });
+
+    it('treats a missing latest release note as retryable even when an older series note loads', async () => {
+        const values = new Map<string, string>();
+        const sessionCache = {
+            getItem: (key: string) => values.get(key) || null,
+            setItem: (key: string, value: string) => values.set(key, value),
+        };
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.1')))
+            .mockResolvedValueOnce(jsonResponse({}, 404))
+            .mockResolvedValueOnce(jsonResponse(userNotes));
+
+        await expect(checkPluginUpdate({
+            currentVersion: '0.9.1',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache,
+        })).resolves.toMatchObject({
+            status: 'current',
+            latestVersion: '0.9.1',
+            notes: null,
+            seriesNotes: [userNotes],
+            notesStatus: 'error',
+        });
+        expect(values.size).toBe(0);
+    });
+
+    it('keeps the update visible and retryable when the latest notes file is unavailable', async () => {
         const fetchImpl = vi.fn<typeof fetch>()
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
             .mockResolvedValueOnce(jsonResponse({}, 404));
@@ -333,7 +460,7 @@ describe('checkPluginUpdate', () => {
             latestVersion: '0.9.0',
             releasedAt: null,
             notes: null,
-            notesStatus: 'missing',
+            notesStatus: 'error',
         });
     });
 
@@ -404,16 +531,17 @@ describe('checkPluginUpdate', () => {
         };
         const fetchImpl = vi.fn<typeof fetch>()
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
+            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
             .mockResolvedValueOnce(jsonResponse({}, 404));
 
         await checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache });
         await checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache });
 
-        expect(fetchImpl).toHaveBeenCalledTimes(2);
+        expect(fetchImpl).toHaveBeenCalledTimes(3);
     });
 
     it('ignores malformed cached notes instead of rendering unvalidated session data', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v6:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v7:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({
@@ -435,11 +563,11 @@ describe('checkPluginUpdate', () => {
             fetchImpl,
             sessionCache,
         })).resolves.toMatchObject({ status: 'current', latestVersion: '0.8.1' });
-        expect(fetchImpl).toHaveBeenCalledTimes(2);
+        expect(fetchImpl).toHaveBeenCalledTimes(3);
     });
 
     it('ignores a cached release link outside the configured GitHub repository', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v6:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v7:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({
@@ -461,11 +589,11 @@ describe('checkPluginUpdate', () => {
             fetchImpl,
             sessionCache,
         })).resolves.toMatchObject({ status: 'current', latestVersion: '0.8.1' });
-        expect(fetchImpl).toHaveBeenCalledTimes(2);
+        expect(fetchImpl).toHaveBeenCalledTimes(3);
     });
 
     it('ignores a cached release link whose tag does not match the cached version', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v6:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v7:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({
@@ -487,7 +615,7 @@ describe('checkPluginUpdate', () => {
             fetchImpl,
             sessionCache,
         })).resolves.toMatchObject({ status: 'current', latestVersion: '0.8.1' });
-        expect(fetchImpl).toHaveBeenCalledTimes(2);
+        expect(fetchImpl).toHaveBeenCalledTimes(3);
     });
 
     it('rejects failed GitHub version-file requests so the UI can offer a retry', async () => {

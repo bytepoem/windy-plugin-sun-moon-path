@@ -1178,31 +1178,62 @@
                                         {pluginUpdateStatus === 'current'
                                             ? text.aboutUpdateCurrent
                                             : pluginUpdateResult.channel === 'beta'
-                                            ? text.aboutBetaAvailable(pluginUpdateResult.latestVersion)
-                                            : text.aboutUpdateAvailable(pluginUpdateResult.latestVersion)}
+                                            ? text.aboutBetaAvailable
+                                            : text.aboutUpdateAvailable}
                                     </strong>
-                                    {#if pluginUpdateResult.releasedAt}
-                                        <span class="about-update__release-date">
-                                            <span aria-hidden="true">·</span>
-                                            <time datetime={pluginUpdateResult.releasedAt}>{pluginUpdateResult.releasedAt}</time>
+                                </div>
+                                <div class="about-update__actions">
+                                    <button type="button" on:click={copyLatestPluginLink}>
+                                        {text.aboutCopyLatestPluginLink(latestPluginVersion)}
+                                    </button>
+                                    {#if pluginLinkCopyStatus !== 'idle'}
+                                        <span
+                                            class:about-update__copy-feedback--error={pluginLinkCopyStatus === 'error'}
+                                            class="about-update__copy-feedback"
+                                            role="status"
+                                            aria-live="polite"
+                                            aria-atomic="true"
+                                        >
+                                            {pluginLinkCopyStatus === 'copied'
+                                                ? text.aboutPluginLinkCopied(latestPluginVersion)
+                                                : text.aboutPluginLinkCopyError}
                                         </span>
                                     {/if}
                                 </div>
-                                {#if localizedUpdateNotes}
+                                {#if localizedUpdateNotes.length > 0}
                                     <div class="about-update__notes">
-                                        <strong class="about-update__title">{localizedUpdateNotes.title}</strong>
-                                        <p>{localizedUpdateNotes.summary}</p>
-                                        <ul>
-                                            {#each localizedUpdateNotes.items as item}
-                                                <li>
-                                                    <span class={`about-update__type about-update__type--${item.type}`}>
-                                                        {text.aboutUpdateTypeLabels[item.type]}
-                                                    </span>
-                                                    <span>{item.text}</span>
-                                                </li>
-                                            {/each}
-                                        </ul>
+                                        {#each localizedUpdateNotes as releaseNote}
+                                            <section class="about-update__release-note">
+                                                <div class="about-update__release-note-header">
+                                                    <strong>{releaseNote.version}</strong>
+                                                    <time datetime={releaseNote.releasedAt}>{releaseNote.releasedAt}</time>
+                                                </div>
+                                                <strong class="about-update__title">{releaseNote.notes.title}</strong>
+                                                <p>{releaseNote.notes.summary}</p>
+                                                <ul>
+                                                    {#each releaseNote.notes.items as item}
+                                                        <li>
+                                                            <span class={`about-update__type about-update__type--${item.type}`}>
+                                                                {text.aboutUpdateTypeLabels[item.type]}
+                                                            </span>
+                                                            <span>{item.text}</span>
+                                                        </li>
+                                                    {/each}
+                                                </ul>
+                                            </section>
+                                        {/each}
                                     </div>
+                                    {#if pluginUpdateResult.notesStatus === 'error'}
+                                        <button
+                                            type="button"
+                                            disabled={pluginUpdateNotesRetrying}
+                                            on:click={retryPluginUpdateNotes}
+                                        >
+                                            {pluginUpdateNotesRetrying
+                                                ? text.aboutUpdateNotesRetrying
+                                                : text.aboutUpdateNotesRetry}
+                                        </button>
+                                    {/if}
                                 {:else}
                                     <p>{text.aboutUpdateNotesUnavailable}</p>
                                     {#if pluginUpdateResult.notesStatus === 'error'}
@@ -1216,16 +1247,6 @@
                                                 : text.aboutUpdateNotesRetry}
                                         </button>
                                     {/if}
-                                {/if}
-                                {#if pluginUpdateResult.releaseUrl}
-                                    <a
-                                        class="about-update__release-link"
-                                        href={pluginUpdateResult.releaseUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        {text.aboutUpdateReleaseLink}
-                                    </a>
                                 {/if}
                             {:else}
                                 <span class="about-update__status" role="status" aria-live="polite">
@@ -1399,6 +1420,7 @@
     import {
         checkPluginUpdate,
         readPluginUpdateReminderSeenVersion,
+        selectPluginLinkVersion,
         type LocalizedUpdateNotes,
         type PluginUpdateResult,
         type UpdateNoteKind,
@@ -1409,6 +1431,11 @@
     import type { LatLon } from '@windy/interfaces.d';
 
     const { author: pluginAuthor, name, repository: repositoryUrl, title, version: pluginVersion } = config;
+    type LocalizedUpdateSeriesNote = {
+        version: string;
+        releasedAt: string;
+        notes: LocalizedUpdateNotes;
+    };
     const issuesUrl = `${repositoryUrl}/issues`;
     const OPEN_METEO_URL = 'https://open-meteo.com/';
     const CAMS_URL = 'https://atmosphere.copernicus.eu/';
@@ -1548,14 +1575,16 @@
         aboutStarHint: string;
         aboutUpdateChecking: string;
         aboutUpdateCurrent: string;
-        aboutUpdateAvailable: (version: string) => string;
-        aboutBetaAvailable: (version: string) => string;
+        aboutUpdateAvailable: string;
+        aboutBetaAvailable: string;
         aboutUpdateError: string;
         aboutUpdateRetry: string;
         aboutUpdateNotesUnavailable: string;
         aboutUpdateNotesRetry: string;
         aboutUpdateNotesRetrying: string;
-        aboutUpdateReleaseLink: string;
+        aboutCopyLatestPluginLink: (version: string) => string;
+        aboutPluginLinkCopied: (version: string) => string;
+        aboutPluginLinkCopyError: string;
         aboutUpdateTypeLabels: Record<UpdateNoteKind, string>;
         weatherLoadError: string;
         atmosphereLoadError: string;
@@ -1757,14 +1786,16 @@
             aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
             aboutUpdateChecking: '正在检查新版本…',
             aboutUpdateCurrent: '暂无新版本。',
-            aboutUpdateAvailable: version => `发现新版本 ${version}`,
-            aboutBetaAvailable: version => `测试版更新预览 ${version}`,
+            aboutUpdateAvailable: '发现新版本',
+            aboutBetaAvailable: '测试版更新预览',
             aboutUpdateError: '暂时无法检查版本。',
             aboutUpdateRetry: '重试',
             aboutUpdateNotesUnavailable: '版本更新说明暂时无法加载。',
             aboutUpdateNotesRetry: '重新加载更新说明',
             aboutUpdateNotesRetrying: '正在重新加载…',
-            aboutUpdateReleaseLink: '查看版本详情',
+            aboutCopyLatestPluginLink: version => `复制 ${version} 插件链接`,
+            aboutPluginLinkCopied: version => `已复制 ${version} 插件链接`,
+            aboutPluginLinkCopyError: '复制失败，请重试',
             aboutUpdateTypeLabels: {
                 new: '新增',
                 improved: '优化',
@@ -1994,14 +2025,16 @@
             aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
             aboutUpdateChecking: 'Checking for a new version…',
             aboutUpdateCurrent: 'No new version is available.',
-            aboutUpdateAvailable: version => `Version ${version} is available`,
-            aboutBetaAvailable: version => `Beta update preview ${version}`,
+            aboutUpdateAvailable: 'New version available',
+            aboutBetaAvailable: 'Beta update preview',
             aboutUpdateError: 'Unable to check for a new version.',
             aboutUpdateRetry: 'Retry',
             aboutUpdateNotesUnavailable: 'The user-facing update notes could not be loaded.',
             aboutUpdateNotesRetry: 'Reload update notes',
             aboutUpdateNotesRetrying: 'Reloading…',
-            aboutUpdateReleaseLink: 'View version details',
+            aboutCopyLatestPluginLink: version => `Copy ${version} plugin link`,
+            aboutPluginLinkCopied: version => `Copied ${version} plugin link`,
+            aboutPluginLinkCopyError: 'Copy failed. Try again.',
             aboutUpdateTypeLabels: {
                 new: 'New',
                 improved: 'Improved',
@@ -2177,12 +2210,15 @@
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
     let pluginUpdateResult: PluginUpdateResult | null = null;
     let pluginUpdateNotesRetrying = false;
+    let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
+    let latestPluginVersion = '';
+    let latestPluginUrl = '';
     let pluginUpdateReminderSeenVersion = readPluginUpdateReminderSeenVersion({
         currentVersion: pluginVersion,
         repositoryUrl,
     });
     let pluginUpdateReminderVersion: string | null = null;
-    let localizedUpdateNotes: LocalizedUpdateNotes | null = null;
+    let localizedUpdateNotes: LocalizedUpdateSeriesNote[] = [];
     let pluginUpdateAbortController: AbortController | null = null;
     let latestPluginUpdateRequestId = 0;
     let weatherModel: WeatherModel = 'ecmwf';
@@ -2250,9 +2286,17 @@
     let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
-    $: localizedUpdateNotes = pluginUpdateResult?.notes
-        ? pluginUpdateResult.notes[uiLanguage]
-        : null;
+    $: latestPluginVersion = pluginUpdateResult
+        ? selectPluginLinkVersion(pluginVersion, pluginUpdateResult)
+        : '';
+    $: latestPluginUrl = latestPluginVersion
+        ? `https://windy-plugins.com/17629746/${name}/${latestPluginVersion}/plugin.min.js`
+        : '';
+    $: localizedUpdateNotes = pluginUpdateResult?.seriesNotes.map(notes => ({
+        version: notes.version,
+        releasedAt: notes.releasedAt,
+        notes: notes[uiLanguage],
+    })) ?? [];
     $: radarStatusText = text.radarStatusLabels[radarOverlayStatus];
     $: radarFrameTimeLabelController?.update({
         language: uiLanguage,
@@ -3344,6 +3388,7 @@
             pluginUpdateStatus = 'loading';
             pluginUpdateResult = null;
             pluginUpdateReminderVersion = null;
+            pluginLinkCopyStatus = 'idle';
         }
 
         try {
@@ -3392,6 +3437,19 @@
 
     const retryPluginUpdate = () => {
         pluginUpdateStatus = 'idle';
+    };
+
+    /** Copy the public Windy CDN URL for the newest version represented by the update result. */
+    const copyLatestPluginLink = async () => {
+        if (!latestPluginUrl) {
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(latestPluginUrl);
+            pluginLinkCopyStatus = 'copied';
+        } catch {
+            pluginLinkCopyStatus = 'error';
+        }
     };
 
     const retryPluginUpdateNotes = () => {
@@ -6876,16 +6934,6 @@
         gap: 5px;
     }
 
-    .about-update__release-date {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 5px;
-        color: var(--panel-muted);
-        font-size: 10px;
-        line-height: 1.35;
-        white-space: nowrap;
-    }
-
     .about-update__status {
         align-self: center;
         font-size: 11px;
@@ -6901,7 +6949,34 @@
 
     .about-update__notes {
         display: grid;
+        gap: 8px;
+    }
+
+    .about-update__release-note {
+        display: grid;
         gap: 5px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .about-update__release-note + .about-update__release-note {
+        padding-top: 8px;
+        border-top: 1px solid rgba(153, 181, 235, 0.2);
+    }
+
+    .about-update__release-note-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--panel-muted);
+        font-size: 10px;
+        line-height: 1.35;
+    }
+
+    .about-update__release-note-header strong {
+        color: var(--panel-text);
+        font-size: 11px;
     }
 
     .about-update__title {
@@ -6958,7 +7033,6 @@
         color: #91dfaa;
     }
 
-    .about-update__release-link,
     .about-update button {
         display: inline-flex;
         align-items: center;
@@ -6979,7 +7053,6 @@
         touch-action: manipulation;
     }
 
-    .about-update__release-link:hover,
     .about-update button:hover {
         border-color: rgba(99, 185, 238, 0.72);
         background: rgba(99, 185, 238, 0.18);
@@ -6990,15 +7063,30 @@
         opacity: 0.55;
     }
 
-    .about-update__release-link:focus-visible,
     .about-update button:focus-visible {
         outline: 2px solid var(--panel-accent);
         outline-offset: 2px;
     }
 
-    .sun-path-panel.mobile_ui .about-update__release-link,
     .sun-path-panel.mobile_ui .about-update button {
-        min-height: 44px;
+        min-height: 32px;
+    }
+
+    .about-update__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .about-update__copy-feedback {
+        color: #91dfaa;
+        font-size: 10px;
+        line-height: 1.35;
+    }
+
+    .about-update__copy-feedback--error {
+        color: #f8aa68;
     }
 
     .about-actions {

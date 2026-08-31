@@ -248,11 +248,25 @@ describe('plugin astronomy loading presentation', () => {
             /catch \(error\) \{[\s\S]*?pluginUpdateStatus = 'error';[\s\S]*?\} finally/,
         );
         expect(pluginSource).toContain("pluginUpdateResult.channel === 'beta'");
-        expect(pluginSource).toContain('aboutBetaAvailable: version => `测试版更新预览 ${version}`');
-        expect(pluginSource).toContain('{#if pluginUpdateResult.releaseUrl}');
+        expect(pluginSource).toContain("aboutBetaAvailable: '测试版更新预览'");
+        expect(pluginSource).toContain("aboutUpdateAvailable: '发现新版本'");
+        expect(pluginSource).not.toContain('{#if pluginUpdateResult.releaseUrl}');
+        expect(pluginSource).toContain('on:click={copyLatestPluginLink}');
+        expect(pluginSource).toContain('navigator.clipboard.writeText(latestPluginUrl);');
+        expect(pluginSource).toContain('selectPluginLinkVersion(pluginVersion, pluginUpdateResult)');
+        expect(pluginSource).toContain('https://windy-plugins.com/17629746/${name}/${latestPluginVersion}/plugin.min.js');
+        expect(pluginSource).toContain("aboutCopyLatestPluginLink: version => `复制 ${version} 插件链接`");
+        expect(pluginSource).toContain("aboutPluginLinkCopied: version => `已复制 ${version} 插件链接`");
+        expect(pluginSource).toContain("aboutPluginLinkCopyError: '复制失败，请重试'");
+        expect(pluginSource).toContain('role="status" aria-live="polite" aria-atomic="true"');
+        expect(pluginSource.indexOf('class="about-update__actions"')).toBeLessThan(
+            pluginSource.indexOf('class="about-update__notes"'),
+        );
         expect(pluginSource).toContain("class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}");
         expect(pluginSource).toContain('role="status" aria-live="polite"');
-        expect(pluginSource).toContain('{localizedUpdateNotes.title}');
+        expect(pluginSource).toContain('{#each localizedUpdateNotes as releaseNote}');
+        expect(pluginSource).toContain('{releaseNote.version}');
+        expect(pluginSource).toContain('{releaseNote.notes.title}');
         expect(pluginSource).toContain("pluginUpdateStatus === 'current'");
         expect(pluginSource).toContain('? text.aboutUpdateCurrent');
         expect(pluginSource).toContain('{text.aboutUpdateTypeLabels[item.type]}');
@@ -273,12 +287,11 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).not.toContain('{text.aboutCurrentVersionLabel}');
         expect(pluginSource).not.toContain('{text.aboutLatestVersionLabel}');
         expect(pluginSource).not.toContain('{text.aboutUpdateDateLabel}');
-        expect(pluginSource).toContain('class="about-update__release-date"');
-        expect(pluginSource).toContain('<time datetime={pluginUpdateResult.releasedAt}>');
-        expect(pluginSource).toContain('{pluginUpdateResult.releasedAt}</time>');
+        expect(pluginSource).not.toContain('class="about-update__release-date"');
+        expect(pluginSource).not.toContain('<time datetime={pluginUpdateResult.releasedAt}>');
         expect(pluginSource).toContain("aboutVersionLabel: '版本'");
         expect(pluginSource).toContain("aboutUpdateNotesUnavailable: '版本更新说明暂时无法加载。'");
-        expect(pluginSource).toContain("aboutUpdateReleaseLink: 'View version details'");
+        expect(pluginSource).not.toContain('aboutUpdateReleaseLink');
         expect(pluginSource).toMatch(
             /\.about-update--compact\s*{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;[\s\S]*?align-items: center;/,
         );
@@ -288,6 +301,10 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toMatch(
             /\.about-update--compact\s*{[\s\S]*?padding: 0;/,
         );
+        expect(pluginSource).toMatch(
+            /\.sun-path-panel\.mobile_ui \.about-update button\s*{[\s\S]*?min-height: 32px;/,
+        );
+        expect(pluginConfigSource).toContain("version: '0.9.1'");
         expect(pluginSource).toMatch(
             /\.summary-tab__badge\s*{[\s\S]*?white-space: nowrap;[\s\S]*?background: var\(--panel-accent\);/,
         );

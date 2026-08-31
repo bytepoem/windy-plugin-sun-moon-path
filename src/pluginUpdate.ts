@@ -28,6 +28,7 @@ export type PluginUpdateResult =
         releasedAt: string | null;
         releaseUrl: string | null;
         notes: UserFacingReleaseNotes | null;
+        seriesNotes: UserFacingReleaseNotes[];
         notesStatus: PluginUpdateNotesStatus;
     }
     | {
@@ -37,8 +38,15 @@ export type PluginUpdateResult =
         releasedAt: string | null;
         releaseUrl: string | null;
         notes: UserFacingReleaseNotes | null;
+        seriesNotes: UserFacingReleaseNotes[];
         notesStatus: PluginUpdateNotesStatus;
     };
+
+/** Use the installed version while current; use the remote version only for a real update. */
+export const selectPluginLinkVersion = (
+    currentVersion: string,
+    result: Pick<PluginUpdateResult, 'status' | 'latestVersion'>,
+): string => result.status === 'current' ? currentVersion : result.latestVersion;
 
 interface GithubPackageManifest {
     name: string;
@@ -229,6 +237,51 @@ const parseBetaReleaseNotes = (value: unknown): { version: string; notes: UserFa
     }
 };
 
+/** Build every formal patch version in the latest major/minor series, newest first. */
+const releaseSeriesVersions = (latestVersion: string, includeLatest = true): string[] => {
+    const parsed = parseSemanticVersion(latestVersion);
+    const [major, minor, latestPatch] = parsed.core;
+    const firstPatch = includeLatest ? latestPatch : latestPatch - 1;
+    return Array.from(
+        { length: Math.max(0, firstPatch + 1) },
+        (_, index) => `${major}.${minor}.${firstPatch - index}`,
+    );
+};
+
+const parseReleaseNoteSeries = (
+    value: unknown,
+    latestVersion: string,
+): UserFacingReleaseNotes[] | null => {
+    if (!Array.isArray(value)) {
+        return null;
+    }
+    const latest = parseSemanticVersion(latestVersion);
+    const seenVersions = new Set<string>();
+    const notes: UserFacingReleaseNotes[] = [];
+    for (const item of value) {
+        if (!item || typeof item !== 'object' || !isNonEmptyString((item as Partial<UserFacingReleaseNotes>).version)) {
+            return null;
+        }
+        const version = parseSemanticVersion((item as UserFacingReleaseNotes).version).raw;
+        const parsed = parseSemanticVersion(version);
+        if (
+            parsed.core[0] !== latest.core[0]
+            || parsed.core[1] !== latest.core[1]
+            || compareSemanticVersions(version, latestVersion) > 0
+            || seenVersions.has(version)
+        ) {
+            return null;
+        }
+        const parsedNotes = parseUserFacingReleaseNotes(item, version);
+        if (!parsedNotes) {
+            return null;
+        }
+        seenVersions.add(version);
+        notes.push(parsedNotes);
+    }
+    return notes.sort((left, right) => compareSemanticVersions(right.version, left.version));
+};
+
 const parseGithubRepository = (repositoryUrl: string): { owner: string; repository: string } => {
     const url = new URL(repositoryUrl);
     const [owner, repositorySegment] = url.pathname.split('/').filter(Boolean);
@@ -244,6 +297,55 @@ const buildGithubReleaseUrl = (
     repository: string,
     version: string,
 ): string => `https://github.com/${owner}/${repository}/releases/tag/${version}`;
+
+const buildGithubReleaseNotesUrl = (
+    owner: string,
+    repository: string,
+    version: string,
+): string => `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/${encodeURIComponent(version)}/release-notes/${encodeURIComponent(version)}.json`;
+
+const loadReleaseNoteSeries = async ({
+    owner,
+    repository,
+    versions,
+    requiredVersion,
+    signal,
+    fetchImpl,
+}: {
+    owner: string;
+    repository: string;
+    versions: string[];
+    requiredVersion?: string;
+    signal?: AbortSignal;
+    fetchImpl: typeof fetch;
+}): Promise<{ notes: UserFacingReleaseNotes[]; status: PluginUpdateNotesStatus }> => {
+    const notes: UserFacingReleaseNotes[] = [];
+    let encounteredError = false;
+    for (const version of versions) {
+        try {
+            const response = await fetchImpl(buildGithubReleaseNotesUrl(owner, repository, version), { signal });
+            if (response.ok) {
+                const parsed = parseUserFacingReleaseNotes(await response.json(), version);
+                if (parsed) {
+                    notes.push(parsed);
+                } else {
+                    encounteredError = true;
+                }
+            } else if (response.status !== 404 || version === requiredVersion) {
+                encounteredError = true;
+            }
+        } catch (error) {
+            if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+                throw error;
+            }
+            encounteredError = true;
+        }
+    }
+    return {
+        notes,
+        status: encounteredError ? 'error' : notes.length > 0 ? 'loaded' : 'missing',
+    };
+};
 
 const isGithubPackageManifest = (
     value: unknown,
@@ -345,12 +447,15 @@ const parseCachedResult = (
             if (currentCandidate.notesStatus !== 'loaded' && currentCandidate.notesStatus !== 'missing') {
                 return null;
             }
-            const notes = currentCandidate.notesStatus === 'loaded'
-                ? parseUserFacingReleaseNotes(currentCandidate.notes, candidate.latestVersion)
-                : null;
+            const seriesNotes = parseReleaseNoteSeries(currentCandidate.seriesNotes, candidate.latestVersion);
+            const notes = currentCandidate.notes === null
+                ? null
+                : parseUserFacingReleaseNotes(currentCandidate.notes, candidate.latestVersion);
             if (
-                (currentCandidate.notesStatus === 'loaded' && !notes)
-                || (currentCandidate.notesStatus === 'missing' && currentCandidate.notes !== null)
+                !seriesNotes
+                || (currentCandidate.notes !== null && !notes)
+                || (currentCandidate.notesStatus === 'loaded' && seriesNotes.length === 0)
+                || (currentCandidate.notesStatus === 'missing' && seriesNotes.length > 0)
             ) {
                 return null;
             }
@@ -365,6 +470,7 @@ const parseCachedResult = (
                 releasedAt,
                 releaseUrl,
                 notes,
+                seriesNotes,
                 notesStatus: currentCandidate.notesStatus,
             };
         }
@@ -373,12 +479,15 @@ const parseCachedResult = (
             if (availableCandidate.notesStatus !== 'loaded' && availableCandidate.notesStatus !== 'missing') {
                 return null;
             }
-            const notes = availableCandidate.notesStatus === 'loaded'
-                ? parseUserFacingReleaseNotes(availableCandidate.notes, candidate.latestVersion)
-                : null;
+            const seriesNotes = parseReleaseNoteSeries(availableCandidate.seriesNotes, candidate.latestVersion);
+            const notes = availableCandidate.notes === null
+                ? null
+                : parseUserFacingReleaseNotes(availableCandidate.notes, candidate.latestVersion);
             if (
-                (availableCandidate.notesStatus === 'loaded' && !notes)
-                || (availableCandidate.notesStatus === 'missing' && availableCandidate.notes !== null)
+                !seriesNotes
+                || (availableCandidate.notes !== null && !notes)
+                || (availableCandidate.notesStatus === 'loaded' && seriesNotes.length === 0)
+                || (availableCandidate.notesStatus === 'missing' && seriesNotes.length > 0)
             ) {
                 return null;
             }
@@ -393,6 +502,7 @@ const parseCachedResult = (
                 releasedAt,
                 releaseUrl,
                 notes,
+                seriesNotes,
                 notesStatus: availableCandidate.notesStatus,
             };
         }
@@ -448,6 +558,7 @@ export const checkPluginUpdate = async ({
     betaNotesUrl = null,
 }: CheckPluginUpdateOptions): Promise<PluginUpdateResult> => {
     const normalizedCurrentVersion = parseSemanticVersion(currentVersion).raw;
+    const { owner, repository } = parseGithubRepository(repositoryUrl);
     if (betaNotesUrl) {
         const betaResponse = await fetchImpl(betaNotesUrl, { signal, cache: 'no-store' });
         if (!betaResponse.ok) {
@@ -457,6 +568,13 @@ export const checkPluginUpdate = async ({
         if (!betaValue) {
             throw new Error('Beta release notes are invalid');
         }
+        const previousSeries = await loadReleaseNoteSeries({
+            owner,
+            repository,
+            versions: releaseSeriesVersions(betaValue.version, false),
+            signal,
+            fetchImpl,
+        });
         return {
             status: 'available',
             channel: 'beta',
@@ -464,12 +582,12 @@ export const checkPluginUpdate = async ({
             releasedAt: betaValue.notes.releasedAt,
             releaseUrl: null,
             notes: betaValue.notes,
-            notesStatus: 'loaded',
+            seriesNotes: [betaValue.notes, ...previousSeries.notes],
+            notesStatus: previousSeries.status === 'error' ? 'error' : 'loaded',
         };
     }
 
-    const { owner, repository } = parseGithubRepository(repositoryUrl);
-    const cacheKey = `github:${owner}/${repository}:update-check:v6:${normalizedCurrentVersion}`;
+    const cacheKey = `github:${owner}/${repository}:update-check:v7:${normalizedCurrentVersion}`;
     const cachedResult = readCachedResult(
         sessionCache,
         cacheKey,
@@ -495,23 +613,16 @@ export const checkPluginUpdate = async ({
 
     const latestVersion = parseSemanticVersion(manifestValue.version).raw;
     const releaseUrl = buildGithubReleaseUrl(owner, repository, latestVersion);
-    let notes: UserFacingReleaseNotes | null = null;
-    let notesStatus: PluginUpdateNotesStatus = 'missing';
-    const notesUrl = `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/${encodeURIComponent(latestVersion)}/release-notes/${encodeURIComponent(latestVersion)}.json`;
-    try {
-        const notesResponse = await fetchImpl(notesUrl, { signal });
-        if (notesResponse.ok) {
-            notes = parseUserFacingReleaseNotes(await notesResponse.json(), latestVersion);
-            notesStatus = notes ? 'loaded' : 'error';
-        } else if (notesResponse.status !== 404) {
-            notesStatus = 'error';
-        }
-    } catch (error) {
-        if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
-            throw error;
-        }
-        notesStatus = 'error';
-    }
+    const noteSeries = await loadReleaseNoteSeries({
+        owner,
+        repository,
+        versions: releaseSeriesVersions(latestVersion),
+        requiredVersion: latestVersion,
+        signal,
+        fetchImpl,
+    });
+    const notes = noteSeries.notes.find(note => compareSemanticVersions(note.version, latestVersion) === 0) ?? null;
+    const notesStatus = noteSeries.status;
 
     const versionDifference = compareSemanticVersions(latestVersion, normalizedCurrentVersion);
     if (versionDifference <= 0) {
@@ -523,6 +634,7 @@ export const checkPluginUpdate = async ({
             releasedAt: matchesInstalledVersion ? notes?.releasedAt ?? null : null,
             releaseUrl: matchesInstalledVersion ? releaseUrl : null,
             notes: matchesInstalledVersion ? notes : null,
+            seriesNotes: matchesInstalledVersion ? noteSeries.notes : [],
             notesStatus: matchesInstalledVersion ? notesStatus : 'missing',
         };
         if (matchesInstalledVersion && currentResult.notesStatus !== 'error') {
@@ -538,6 +650,7 @@ export const checkPluginUpdate = async ({
         releasedAt: notes?.releasedAt ?? null,
         releaseUrl,
         notes,
+        seriesNotes: noteSeries.notes,
         notesStatus,
     };
     if (notesStatus !== 'error') {

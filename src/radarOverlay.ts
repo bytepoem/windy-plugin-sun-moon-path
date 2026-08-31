@@ -27,17 +27,18 @@ type RadarFrame = {
 
 type RadarTileLayer = {
     addTo: (map: L.LeafletGlMap) => RadarTileLayer;
-    off: (type: 'load' | 'tileerror', listener: () => void) => RadarTileLayer;
-    on: (type: 'load' | 'tileerror', listener: () => void) => RadarTileLayer;
+    isLoading: () => boolean;
     remove: () => void;
     setOpacity: (opacity: number) => RadarTileLayer;
 };
 
 export type RadarOverlayRuntime = {
+    cancelAnimationFrame: (frameId: number) => void;
     clearInterval: (timer: ReturnType<typeof setInterval>) => void;
     createTileLayer: (url: string, options: L.TileLayerOptions) => RadarTileLayer;
     fetch: typeof fetch;
     now: () => number;
+    requestAnimationFrame: (callback: () => void) => number;
     setInterval: (callback: () => void, intervalMs: number) => ReturnType<typeof setInterval>;
 };
 
@@ -57,10 +58,12 @@ const MINIMUM_FRAME_EDGE_TOLERANCE_MS = 5 * 60 * 1_000;
 export const DEFAULT_RADAR_OPACITY_PERCENT = 90;
 
 const browserRuntime: RadarOverlayRuntime = {
+    cancelAnimationFrame: frameId => cancelAnimationFrame(frameId),
     clearInterval: timer => clearInterval(timer),
     createTileLayer: (url, options) => new L.TileLayer(url, options) as unknown as RadarTileLayer,
     fetch: (...args) => fetch(...args),
     now: () => Date.now(),
+    requestAnimationFrame: callback => requestAnimationFrame(callback),
     setInterval: (callback, intervalMs) => setInterval(callback, intervalMs),
 };
 
@@ -138,7 +141,7 @@ export const matchRadarFrame = (
 };
 
 /**
- * Owns one third-party radar tile layer and all related requests, listeners and refresh timers.
+ * Owns one third-party radar tile layer and all related requests, readiness checks and refresh timers.
  * Applying a new provider atomically tears down the previous provider before activating the next one.
  */
 export const createRadarOverlayController = (
@@ -147,8 +150,7 @@ export const createRadarOverlayController = (
     runtime: RadarOverlayRuntime = browserRuntime,
 ): RadarOverlayController => {
     let layer: RadarTileLayer | null = null;
-    let layerLoadedListener: (() => void) | null = null;
-    let layerErrorListener: (() => void) | null = null;
+    let layerReadinessFrame: number | null = null;
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
     let requestController: AbortController | null = null;
     let generation = 0;
@@ -167,20 +169,20 @@ export const createRadarOverlayController = (
         frameVisible = true;
     };
 
+    const cancelLayerReadinessCheck = () => {
+        if (layerReadinessFrame !== null) {
+            runtime.cancelAnimationFrame(layerReadinessFrame);
+            layerReadinessFrame = null;
+        }
+    };
+
     const clearLayer = () => {
+        cancelLayerReadinessCheck();
         if (!layer) {
             return;
         }
-        if (layerLoadedListener) {
-            layer.off('load', layerLoadedListener);
-        }
-        if (layerErrorListener) {
-            layer.off('tileerror', layerErrorListener);
-        }
         layer.remove();
         layer = null;
-        layerLoadedListener = null;
-        layerErrorListener = null;
         activeTileUrl = '';
         layerIsLoaded = false;
     };
@@ -222,12 +224,18 @@ export const createRadarOverlayController = (
         selectRequestedFrame();
     };
 
-    const installLayer = (url: string, options: L.TileLayerOptions, ownGeneration: number) => {
-        clearLayer();
-        const nextLayer = runtime.createTileLayer(url, options);
-        layerIsLoaded = false;
-        layerLoadedListener = () => {
-            if (generation !== ownGeneration) {
+    /**
+     * Windy's GL-backed TileLayer does not emit Leaflet's load/tileerror events.
+     * Poll its documented isLoading() state until the current raster grid settles.
+     */
+    const watchLayerReadiness = (nextLayer: RadarTileLayer, ownGeneration: number) => {
+        const check = () => {
+            layerReadinessFrame = null;
+            if (generation !== ownGeneration || layer !== nextLayer) {
+                return;
+            }
+            if (nextLayer.isLoading()) {
+                layerReadinessFrame = runtime.requestAnimationFrame(check);
                 return;
             }
             layerIsLoaded = true;
@@ -235,20 +243,17 @@ export const createRadarOverlayController = (
                 onStatus('ready');
             }
         };
-        layerErrorListener = () => {
-            if (generation !== ownGeneration) {
-                return;
-            }
-            layerIsLoaded = false;
-            if (frameVisible) {
-                onStatus('error');
-            }
-        };
-        nextLayer.on('load', layerLoadedListener);
-        nextLayer.on('tileerror', layerErrorListener);
+        layerReadinessFrame = runtime.requestAnimationFrame(check);
+    };
+
+    const installLayer = (url: string, options: L.TileLayerOptions, ownGeneration: number) => {
+        clearLayer();
+        const nextLayer = runtime.createTileLayer(url, options);
+        layerIsLoaded = false;
         layer = nextLayer.addTo(map);
         activeLayerOptions = options;
         activeTileUrl = url;
+        watchLayerReadiness(nextLayer, ownGeneration);
     };
 
     /**
