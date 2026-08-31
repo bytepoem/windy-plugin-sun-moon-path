@@ -169,7 +169,7 @@ describe('checkPluginUpdate', () => {
         );
     });
 
-    it('loads the release date even when the installed version is already current', async () => {
+    it('loads the current version release notes when the installed version is already current', async () => {
         const fetchImpl = vi.fn<typeof fetch>()
             .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
             .mockResolvedValueOnce(jsonResponse(currentUserNotes));
@@ -183,12 +183,114 @@ describe('checkPluginUpdate', () => {
             status: 'current',
             latestVersion: '0.8.1',
             releasedAt: '2026-08-29',
+            notes: currentUserNotes,
+            notesStatus: 'loaded',
         });
         expect(fetchImpl).toHaveBeenNthCalledWith(
             2,
             'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/0.8.1/release-notes/0.8.1.json',
             { signal: undefined },
         );
+    });
+
+    it('does not show notes from an older formal version to a newer installed prerelease', async () => {
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
+            .mockResolvedValueOnce(jsonResponse(currentUserNotes));
+
+        await expect(checkPluginUpdate({
+            currentVersion: '0.9.0-beta.1',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache: null,
+        })).resolves.toMatchObject({
+            status: 'current',
+            latestVersion: '0.8.1',
+            releasedAt: null,
+            notes: null,
+            notesStatus: 'missing',
+        });
+    });
+
+    it('rechecks when main catches up instead of caching an older formal version for a newer install', async () => {
+        const values = new Map<string, string>();
+        const sessionCache = {
+            getItem: (key: string) => values.get(key) || null,
+            setItem: (key: string, value: string) => values.set(key, value),
+        };
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
+            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
+            .mockResolvedValueOnce(jsonResponse(userNotes));
+
+        const aheadResult = await checkPluginUpdate({
+            currentVersion: '0.9.0',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache,
+        });
+        const caughtUpResult = await checkPluginUpdate({
+            currentVersion: '0.9.0',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache,
+        });
+
+        expect(aheadResult).toMatchObject({
+            status: 'current',
+            latestVersion: '0.8.1',
+            releaseUrl: null,
+            notes: null,
+            notesStatus: 'missing',
+        });
+        expect(caughtUpResult).toMatchObject({
+            status: 'current',
+            latestVersion: '0.9.0',
+            releaseUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.9.0',
+            notes: userNotes,
+            notesStatus: 'loaded',
+        });
+        expect(fetchImpl).toHaveBeenCalledTimes(4);
+        expect(values.size).toBe(1);
+    });
+
+    it('retries transient current-version notes failures instead of caching the missing log', async () => {
+        const values = new Map<string, string>();
+        const sessionCache = {
+            getItem: (key: string) => values.get(key) || null,
+            setItem: (key: string, value: string) => values.set(key, value),
+        };
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
+            .mockRejectedValueOnce(new TypeError('network unavailable'))
+            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
+            .mockResolvedValueOnce(jsonResponse(currentUserNotes));
+
+        await expect(checkPluginUpdate({
+            currentVersion: '0.8.1',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache,
+        })).resolves.toMatchObject({
+            status: 'current',
+            notes: null,
+            notesStatus: 'error',
+        });
+        expect(values.size).toBe(0);
+
+        await expect(checkPluginUpdate({
+            currentVersion: '0.8.1',
+            repositoryUrl,
+            fetchImpl,
+            sessionCache,
+        })).resolves.toMatchObject({
+            status: 'current',
+            notes: currentUserNotes,
+            notesStatus: 'loaded',
+        });
+        expect(fetchImpl).toHaveBeenCalledTimes(4);
+        expect(values.size).toBe(1);
     });
 
     it('loads user-facing notes from the matching release tag', async () => {
@@ -311,7 +413,7 @@ describe('checkPluginUpdate', () => {
     });
 
     it('ignores malformed cached notes instead of rendering unvalidated session data', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v5:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v6:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({
@@ -337,7 +439,7 @@ describe('checkPluginUpdate', () => {
     });
 
     it('ignores a cached release link outside the configured GitHub repository', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v5:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v6:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({
@@ -363,7 +465,7 @@ describe('checkPluginUpdate', () => {
     });
 
     it('ignores a cached release link whose tag does not match the cached version', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v5:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v6:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({

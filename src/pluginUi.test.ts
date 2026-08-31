@@ -250,9 +250,11 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain("pluginUpdateResult.channel === 'beta'");
         expect(pluginSource).toContain('aboutBetaAvailable: version => `测试版更新预览 ${version}`');
         expect(pluginSource).toContain('{#if pluginUpdateResult.releaseUrl}');
-        expect(pluginSource).toContain("class:about-update--compact={pluginUpdateStatus !== 'available'}");
+        expect(pluginSource).toContain("class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}");
         expect(pluginSource).toContain('role="status" aria-live="polite"');
         expect(pluginSource).toContain('{localizedUpdateNotes.title}');
+        expect(pluginSource).toContain("pluginUpdateStatus === 'current'");
+        expect(pluginSource).toContain('? text.aboutUpdateCurrent');
         expect(pluginSource).toContain('{text.aboutUpdateTypeLabels[item.type]}');
         expect(pluginSource).toContain('on:click={retryPluginUpdate}');
         expect(pluginSource).toContain("pluginUpdateResult.notesStatus === 'error'");
@@ -262,7 +264,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('{text.aboutAuthorLabel}');
         expect(pluginSource).toContain('{text.aboutVersionLabel}');
         expect(pluginSource).toContain('{text.aboutCurrentVersionDateLabel}');
-        expect(pluginConfigSource).toContain("export const currentVersionReleasedAt = '2026-08-29';");
+        expect(pluginConfigSource).toContain("export const currentVersionReleasedAt = '2026-08-31';");
         expect(pluginSource).toContain("import config, { currentVersionReleasedAt } from './pluginConfig';");
         expect(pluginSource).toContain('class="about-meta__date"');
         expect(pluginSource).toContain('<time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>');
@@ -275,7 +277,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('<time datetime={pluginUpdateResult.releasedAt}>');
         expect(pluginSource).toContain('{pluginUpdateResult.releasedAt}</time>');
         expect(pluginSource).toContain("aboutVersionLabel: '版本'");
-        expect(pluginSource).toContain("aboutUpdateNotesUnavailable: '新版本已经发布，用户更新说明暂时无法加载。'");
+        expect(pluginSource).toContain("aboutUpdateNotesUnavailable: '版本更新说明暂时无法加载。'");
         expect(pluginSource).toContain("aboutUpdateReleaseLink: 'View version details'");
         expect(pluginSource).toMatch(
             /\.about-update--compact\s*{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;[\s\S]*?align-items: center;/,

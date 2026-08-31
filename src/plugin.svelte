@@ -1163,8 +1163,8 @@
                         </div>
                         <div
                             class="about-update"
-                            class:about-update--compact={pluginUpdateStatus !== 'available'}
-                            class:about-update--available={pluginUpdateStatus === 'available'}
+                            class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}
+                            class:about-update--available={pluginUpdateStatus === 'available' || pluginUpdateStatus === 'current'}
                             class:about-update--error={pluginUpdateStatus === 'error'}
                             aria-busy={pluginUpdateStatus === 'idle' || pluginUpdateStatus === 'loading'}
                         >
@@ -1172,14 +1172,12 @@
                                 <span class="about-update__status" role="status" aria-live="polite">
                                     {text.aboutUpdateChecking}
                                 </span>
-                            {:else if pluginUpdateStatus === 'current'}
-                                <span class="about-update__status" role="status" aria-live="polite">
-                                    {text.aboutUpdateCurrent}
-                                </span>
-                            {:else if pluginUpdateStatus === 'available' && pluginUpdateResult?.status === 'available'}
+                            {:else if (pluginUpdateStatus === 'current' || pluginUpdateStatus === 'available') && pluginUpdateResult}
                                 <div class="about-update__header" role="status" aria-live="polite">
                                     <strong>
-                                        {pluginUpdateResult.channel === 'beta'
+                                        {pluginUpdateStatus === 'current'
+                                            ? text.aboutUpdateCurrent
+                                            : pluginUpdateResult.channel === 'beta'
                                             ? text.aboutBetaAvailable(pluginUpdateResult.latestVersion)
                                             : text.aboutUpdateAvailable(pluginUpdateResult.latestVersion)}
                                     </strong>
@@ -1763,7 +1761,7 @@
             aboutBetaAvailable: version => `测试版更新预览 ${version}`,
             aboutUpdateError: '暂时无法检查版本。',
             aboutUpdateRetry: '重试',
-            aboutUpdateNotesUnavailable: '新版本已经发布，用户更新说明暂时无法加载。',
+            aboutUpdateNotesUnavailable: '版本更新说明暂时无法加载。',
             aboutUpdateNotesRetry: '重新加载更新说明',
             aboutUpdateNotesRetrying: '正在重新加载…',
             aboutUpdateReleaseLink: '查看版本详情',
@@ -2000,7 +1998,7 @@
             aboutBetaAvailable: version => `Beta update preview ${version}`,
             aboutUpdateError: 'Unable to check for a new version.',
             aboutUpdateRetry: 'Retry',
-            aboutUpdateNotesUnavailable: 'A new version is available, but its user update notes could not be loaded.',
+            aboutUpdateNotesUnavailable: 'The user-facing update notes could not be loaded.',
             aboutUpdateNotesRetry: 'Reload update notes',
             aboutUpdateNotesRetrying: 'Reloading…',
             aboutUpdateReleaseLink: 'View version details',
@@ -2252,7 +2250,7 @@
     let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
-    $: localizedUpdateNotes = pluginUpdateResult?.status === 'available' && pluginUpdateResult.notes
+    $: localizedUpdateNotes = pluginUpdateResult?.notes
         ? pluginUpdateResult.notes[uiLanguage]
         : null;
     $: radarStatusText = text.radarStatusLabels[radarOverlayStatus];
@@ -3398,7 +3396,7 @@
 
     const retryPluginUpdateNotes = () => {
         if (
-            pluginUpdateResult?.status !== 'available'
+            !pluginUpdateResult
             || pluginUpdateResult.notesStatus !== 'error'
             || pluginUpdateNotesRetrying
         ) {

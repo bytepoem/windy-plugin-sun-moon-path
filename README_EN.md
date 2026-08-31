@@ -84,17 +84,17 @@ relative to a point on the Windy map.
 
 ## Plugin URL
 
-Current formal version: `0.8.1`
+Current formal version: `0.9.0`
 
 Current loadable plugin bundle:
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.8.1/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.8.1/plugin.min.js)
+[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.9.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.9.0/plugin.min.js)
 
 Project links:
 
 - GitHub repository: [bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
 - Issues: [report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- Formal release: [0.8.1](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.8.1)
+- Formal release: [0.9.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.9.0)
 - Author: [bytepoem](https://github.com/bytepoem)
 
 ## Development

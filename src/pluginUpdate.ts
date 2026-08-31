@@ -27,6 +27,8 @@ export type PluginUpdateResult =
         latestVersion: string;
         releasedAt: string | null;
         releaseUrl: string | null;
+        notes: UserFacingReleaseNotes | null;
+        notesStatus: PluginUpdateNotesStatus;
     }
     | {
         status: 'available';
@@ -338,11 +340,22 @@ const parseCachedResult = (
         if (candidate.releaseUrl !== releaseUrl) {
             return null;
         }
-        if (candidate.status === 'current' && versionDifference <= 0) {
-            const releasedAt = candidate.releasedAt === null
-                ? null
-                : isReleaseDate(candidate.releasedAt) ? candidate.releasedAt : null;
-            if (candidate.releasedAt !== null && releasedAt === null) {
+        if (candidate.status === 'current' && versionDifference === 0) {
+            const currentCandidate = candidate as Partial<Extract<PluginUpdateResult, { status: 'current' }>>;
+            if (currentCandidate.notesStatus !== 'loaded' && currentCandidate.notesStatus !== 'missing') {
+                return null;
+            }
+            const notes = currentCandidate.notesStatus === 'loaded'
+                ? parseUserFacingReleaseNotes(currentCandidate.notes, candidate.latestVersion)
+                : null;
+            if (
+                (currentCandidate.notesStatus === 'loaded' && !notes)
+                || (currentCandidate.notesStatus === 'missing' && currentCandidate.notes !== null)
+            ) {
+                return null;
+            }
+            const releasedAt = notes?.releasedAt ?? null;
+            if ((currentCandidate.releasedAt ?? null) !== releasedAt) {
                 return null;
             }
             return {
@@ -351,6 +364,8 @@ const parseCachedResult = (
                 latestVersion: candidate.latestVersion,
                 releasedAt,
                 releaseUrl,
+                notes,
+                notesStatus: currentCandidate.notesStatus,
             };
         }
         if (candidate.status === 'available' && versionDifference > 0) {
@@ -454,7 +469,7 @@ export const checkPluginUpdate = async ({
     }
 
     const { owner, repository } = parseGithubRepository(repositoryUrl);
-    const cacheKey = `github:${owner}/${repository}:update-check:v5:${normalizedCurrentVersion}`;
+    const cacheKey = `github:${owner}/${repository}:update-check:v6:${normalizedCurrentVersion}`;
     const cachedResult = readCachedResult(
         sessionCache,
         cacheKey,
@@ -498,15 +513,19 @@ export const checkPluginUpdate = async ({
         notesStatus = 'error';
     }
 
-    if (compareSemanticVersions(latestVersion, normalizedCurrentVersion) <= 0) {
+    const versionDifference = compareSemanticVersions(latestVersion, normalizedCurrentVersion);
+    if (versionDifference <= 0) {
+        const matchesInstalledVersion = versionDifference === 0;
         const currentResult: PluginUpdateResult = {
             status: 'current',
             channel: 'formal',
             latestVersion,
-            releasedAt: notes?.releasedAt ?? null,
-            releaseUrl,
+            releasedAt: matchesInstalledVersion ? notes?.releasedAt ?? null : null,
+            releaseUrl: matchesInstalledVersion ? releaseUrl : null,
+            notes: matchesInstalledVersion ? notes : null,
+            notesStatus: matchesInstalledVersion ? notesStatus : 'missing',
         };
-        if (notesStatus !== 'error') {
+        if (matchesInstalledVersion && currentResult.notesStatus !== 'error') {
             writeCachedResult(sessionCache, cacheKey, currentResult);
         }
         return currentResult;
