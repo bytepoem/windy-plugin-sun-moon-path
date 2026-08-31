@@ -39,7 +39,7 @@ Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图�
   - **天气**：横向查看 EC、GFS 或 ICON 模式的五天天气时间序列。
   - **说明**：查看地图图例、天气色阶、风向符号和数据说明。
   - **设置**：选择打开插件时的 Windy 图层，配置 RainViewer 雷达叠加，填写高德、百度或腾讯地图 API Key，选择是否隐藏整个地点搜索框，并控制方位线透明度和是否显示 600 km 参考点；设置会保存在当前浏览器。
-  - **关于**：查看仓库、Issues、作者和版本信息，并提供 GitHub Star 入口。
+  - **关于**：查看仓库、Issues、作者和当前版本；本地 Developer mode 会直接展示 `release-notes/beta.json` 测试版日志，正式插件会读取 GitHub `main` 分支记录的正式版本，并展示与对应 tag 绑定的用户更新说明，同时提供 GitHub Star 入口。
 
 ## 环境要求
 
@@ -145,8 +145,11 @@ AOD 和能见度行标记为 **OM**，表示数据由 [Open-Meteo](https://open-
 - `src/celestialCurve.ts` - 与天气列对齐的日月高度曲线和地平线事件计算。
 - `src/solar.ts` - 日月计算、方位角、距离、时间轴和几何计算逻辑。
 - `src/overlayOwner.ts` - 处理 Windy 面板重新挂载时的地图覆盖物归属。
+- `src/pluginUpdate.ts` - GitHub Raw 版本检测、SemVer 比较、会话缓存和用户更新说明加载。
 - `src/pluginConfig.ts` - Windy 外部插件元数据。
 - `src/*.test.ts` - 几何计算、日月计算、天气转换和覆盖物归属的 Vitest 测试。
+- `release-notes/beta.json` - 本地 Developer mode 使用的测试版中英文更新说明，可在正式发布前预览。
+- `release-notes/<version>.json` - 与正式版 tag 绑定的中英文用户更新说明，不包含构建、提交等开发日志。
 - `docs/` - 本地开发记录和验证清单。
 
 ## 开源协议

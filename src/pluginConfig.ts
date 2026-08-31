@@ -1,5 +1,8 @@
 import type { ExternalPluginConfig } from '@windy/interfaces.d';
 
+/** Keep this date aligned with the published GitHub Release for the configured version. */
+export const currentVersionReleasedAt = '2026-08-29';
+
 const config: ExternalPluginConfig = {
     name: 'windy-plugin-sun-moon-path',
     version: '0.8.1',

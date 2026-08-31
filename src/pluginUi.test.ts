@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import favoriteComparisonSource from './FavoriteComparison.svelte?raw';
 import favoriteLocationsSource from './FavoriteLocations.svelte?raw';
 import locationSearchSource from './LocationSearch.svelte?raw';
+import pluginConfigSource from './pluginConfig.ts?raw';
 import pluginSource from './plugin.svelte?raw';
 import radarFrameTimeLabelSource from './radarFrameTimeLabel.ts?raw';
 import weatherMetricIconSource from './WeatherMetricIcon.svelte?raw';
@@ -224,6 +225,86 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toMatch(
             /\.summary-tabs button:focus-visible\s*{[\s\S]*?outline: none;[\s\S]*?box-shadow: inset 0 0 0 2px var\(--panel-accent\);/,
         );
+    });
+
+    it('checks for updates on mount, marks the About tab, and presents user-facing notes', () => {
+        expect(pluginSource).toContain("isMounted && pluginUpdateStatus === 'idle'");
+        expect(pluginSource).not.toContain("summaryTab === 'about' && pluginUpdateStatus === 'idle'");
+        expect(pluginSource).toContain('checkPluginUpdate({');
+        expect(pluginSource).toContain('betaNotesUrl: betaReleaseNotesUrl');
+        expect(pluginSource).toContain('let pluginUpdateReminderSeenVersion = readPluginUpdateReminderSeenVersion({');
+        expect(pluginSource).toContain('readPluginUpdateReminderSeenVersion({');
+        expect(pluginSource).toContain('writePluginUpdateReminderSeenVersion({');
+        expect(pluginSource).toContain("pluginUpdateReminderVersion = result.status === 'available'");
+        expect(pluginSource).toContain("nextTab === 'about' && pluginUpdateReminderVersion");
+        expect(pluginSource).toContain('rememberPluginUpdateReminder(pluginUpdateReminderVersion);');
+        expect(pluginSource).toContain('aria-label={pluginUpdateReminderVersion');
+        expect(pluginSource).toContain('class="summary-tab__badge" aria-hidden="true"');
+        expect(pluginSource).toContain('{text.aboutTabUpdateBadge}');
+        expect(pluginSource).toContain('role="status" aria-live="polite" aria-atomic="true"');
+        expect(pluginSource).toContain('text.aboutTabUpdateLabel(pluginUpdateReminderVersion)');
+        expect(pluginSource).toContain('void refreshPluginUpdate();');
+        expect(pluginSource).toMatch(
+            /catch \(error\) \{[\s\S]*?pluginUpdateStatus = 'error';[\s\S]*?\} finally/,
+        );
+        expect(pluginSource).toContain("pluginUpdateResult.channel === 'beta'");
+        expect(pluginSource).toContain('aboutBetaAvailable: version => `测试版更新预览 ${version}`');
+        expect(pluginSource).toContain('{#if pluginUpdateResult.releaseUrl}');
+        expect(pluginSource).toContain("class:about-update--compact={pluginUpdateStatus !== 'available'}");
+        expect(pluginSource).toContain('role="status" aria-live="polite"');
+        expect(pluginSource).toContain('{localizedUpdateNotes.title}');
+        expect(pluginSource).toContain('{text.aboutUpdateTypeLabels[item.type]}');
+        expect(pluginSource).toContain('on:click={retryPluginUpdate}');
+        expect(pluginSource).toContain("pluginUpdateResult.notesStatus === 'error'");
+        expect(pluginSource).toContain('on:click={retryPluginUpdateNotes}');
+        expect(pluginSource).toContain('text.aboutUpdateNotesRetry');
+        expect(pluginSource).toContain('let pluginUpdateNotesRetrying = false;');
+        expect(pluginSource).toContain('{text.aboutAuthorLabel}');
+        expect(pluginSource).toContain('{text.aboutVersionLabel}');
+        expect(pluginSource).toContain('{text.aboutCurrentVersionDateLabel}');
+        expect(pluginConfigSource).toContain("export const currentVersionReleasedAt = '2026-08-29';");
+        expect(pluginSource).toContain("import config, { currentVersionReleasedAt } from './pluginConfig';");
+        expect(pluginSource).toContain('class="about-meta__date"');
+        expect(pluginSource).toContain('<time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>');
+        expect(pluginSource).toContain("aboutCurrentVersionDateLabel: '更新日期'");
+        expect(pluginSource).toContain("aboutCurrentVersionDateLabel: 'Updated'");
+        expect(pluginSource).not.toContain('{text.aboutCurrentVersionLabel}');
+        expect(pluginSource).not.toContain('{text.aboutLatestVersionLabel}');
+        expect(pluginSource).not.toContain('{text.aboutUpdateDateLabel}');
+        expect(pluginSource).toContain('class="about-update__release-date"');
+        expect(pluginSource).toContain('<time datetime={pluginUpdateResult.releasedAt}>');
+        expect(pluginSource).toContain('{pluginUpdateResult.releasedAt}</time>');
+        expect(pluginSource).toContain("aboutVersionLabel: '版本'");
+        expect(pluginSource).toContain("aboutUpdateNotesUnavailable: '新版本已经发布，用户更新说明暂时无法加载。'");
+        expect(pluginSource).toContain("aboutUpdateReleaseLink: 'View version details'");
+        expect(pluginSource).toMatch(
+            /\.about-update--compact\s*{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;[\s\S]*?align-items: center;/,
+        );
+        expect(pluginSource).toMatch(
+            /\.about-update\s*{[\s\S]*?box-sizing: border-box;/,
+        );
+        expect(pluginSource).toMatch(
+            /\.about-update--compact\s*{[\s\S]*?padding: 0;/,
+        );
+        expect(pluginSource).toMatch(
+            /\.summary-tab__badge\s*{[\s\S]*?white-space: nowrap;[\s\S]*?background: var\(--panel-accent\);/,
+        );
+        expect(pluginSource).toMatch(
+            /\.about-update__header\s*{[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;/,
+        );
+        expect(pluginSource).toMatch(
+            /\.about-hero__header\s*{[^}]*align-items: end;[^}]*}/,
+        );
+        expect(pluginSource).toMatch(
+            /\.about-hero__copy strong\s*{[^}]*font-size: 12px;[^}]*}/,
+        );
+        expect(pluginSource).toMatch(
+            /\.about-meta\s*{[^}]*grid-template-columns: repeat\(3, auto\);[^}]*grid-template-rows: auto auto;[^}]*grid-auto-flow: column;[^}]*align-items: baseline;[^}]*}/,
+        );
+        expect(pluginSource).toMatch(
+            /\.about-meta div\s*{[^}]*display: contents;[^}]*}/,
+        );
+        expect(pluginSource).not.toMatch(/\.about-meta__date dd\s*{/);
     });
 
     it('uses the Events-tab height as a fixed non-scrolling compact mobile shell', () => {

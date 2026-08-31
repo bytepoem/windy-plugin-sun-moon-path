@@ -1,6 +1,8 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import terser from '@rollup/plugin-terser';
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 import serve from 'rollup-plugin-serve';
 import rollupSvelte from 'rollup-plugin-svelte';
@@ -13,6 +15,33 @@ import sveltePreprocess from 'svelte-preprocess';
 import { transformCodeToESMPlugin, keyPEM, certificatePEM } from '@windycom/plugin-devtools';
 
 const useSourceMaps = true;
+const serveBuild = process.env.SERVE?.trim().toLowerCase() !== 'false';
+const betaReleaseNotesSource = 'release-notes/beta.json';
+const betaReleaseNotesTarget = 'dist/release-notes/beta.json';
+const betaReleaseNotesVirtualId = 'virtual:beta-release-notes-url';
+const resolvedBetaReleaseNotesVirtualId = `\0${betaReleaseNotesVirtualId}`;
+const betaReleaseNotesUrl = 'https://localhost:9999/release-notes/beta.json';
+
+const betaReleaseNotesPlugin = () => ({
+    name: 'beta-release-notes',
+    resolveId(source) {
+        return source === betaReleaseNotesVirtualId ? resolvedBetaReleaseNotesVirtualId : null;
+    },
+    load(id) {
+        if (id !== resolvedBetaReleaseNotesVirtualId) {
+            return null;
+        }
+        return `export default ${serveBuild ? JSON.stringify(betaReleaseNotesUrl) : 'null'};`;
+    },
+    buildStart() {
+        if (!serveBuild) {
+            return;
+        }
+        this.addWatchFile(betaReleaseNotesSource);
+        mkdirSync(dirname(betaReleaseNotesTarget), { recursive: true });
+        copyFileSync(betaReleaseNotesSource, betaReleaseNotesTarget);
+    },
+});
 
 const buildConfigurations = {
     src: {
@@ -77,6 +106,7 @@ export default {
         clearScreen: false,
     },
     plugins: [
+        betaReleaseNotesPlugin(),
         rollupSvelte({
             emitCss: false,
             preprocess: {
@@ -102,7 +132,7 @@ export default {
         }),
         commonjs(),
         transformCodeToESMPlugin(),
-        process.env.SERVE !== 'false' &&
+        serveBuild &&
             serve({
                 contentBase: 'dist',
                 host: '0.0.0.0',

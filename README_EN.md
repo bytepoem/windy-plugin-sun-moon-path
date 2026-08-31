@@ -72,7 +72,9 @@ relative to a point on the Windy map.
     overlay, controls location-search visibility, line opacity, and the optional
     600 km reference point. Switch to the Chinese UI to configure Amap, Baidu, or Tencent Maps API Keys.
   - **About** links to the repository and Issues, identifies the author and
-    version, and provides a GitHub Star entry point.
+    current version, previews `release-notes/beta.json` in local Developer mode,
+    or reads the formal version recorded on GitHub `main` in production and shows
+    user-facing notes pinned to that release, with a GitHub Star entry point.
 
 ## Requirements
 
@@ -213,9 +215,14 @@ the calculated azimuth for that event time and extends through 200 km and
 - `src/celestialCurve.ts` - sun/moon altitude curves and horizon events aligned with forecast columns.
 - `src/solar.ts` - astronomy, azimuth, distance, timeline, and geometry logic.
 - `src/overlayOwner.ts` - map overlay ownership across Windy panel remounts.
+- `src/pluginUpdate.ts` - GitHub Raw version checks, SemVer comparison,
+  session caching, and user-facing update-note loading.
 - `src/pluginConfig.ts` - Windy external plugin metadata.
 - `src/*.test.ts` - Vitest coverage for geometry, solar/moon calculations,
   weather transformation, and overlay ownership.
+- `release-notes/beta.json` - bilingual beta notes previewed by local Developer mode before release.
+- `release-notes/<version>.json` - bilingual user-facing notes pinned to a formal
+  release tag, without build, commit, or other developer-log details.
 - `docs/` - local development notes and validation checklist.
 
 ## License

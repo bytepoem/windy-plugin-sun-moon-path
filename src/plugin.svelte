@@ -376,8 +376,34 @@
             {/if}
             <button id="summary-tab-guide" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'guide'} aria-selected={summaryTab === 'guide'} tabindex={summaryTab === 'guide' ? 0 : -1} on:click={() => (summaryTab = 'guide')} on:keydown={event => handleSummaryTabKeydown(event, 'guide')}>{text.guideTab}</button>
             <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => (summaryTab = 'settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
-            <button id="summary-tab-about" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'about'} aria-selected={summaryTab === 'about'} tabindex={summaryTab === 'about' ? 0 : -1} on:click={() => (summaryTab = 'about')} on:keydown={event => handleSummaryTabKeydown(event, 'about')}>{text.aboutTab}</button>
+            <button
+                id="summary-tab-about"
+                type="button"
+                role="tab"
+                aria-controls="summary-panel"
+                aria-label={pluginUpdateReminderVersion
+                    ? text.aboutTabUpdateLabel(pluginUpdateReminderVersion)
+                    : text.aboutTab}
+                class:active={summaryTab === 'about'}
+                aria-selected={summaryTab === 'about'}
+                tabindex={summaryTab === 'about' ? 0 : -1}
+                on:click={() => {
+                    summaryTab = 'about';
+                    acknowledgePluginUpdateReminder();
+                }}
+                on:keydown={event => handleSummaryTabKeydown(event, 'about')}
+            >
+                <span>{text.aboutTab}</span>
+                {#if pluginUpdateReminderVersion}
+                    <span class="summary-tab__badge" aria-hidden="true">{text.aboutTabUpdateBadge}</span>
+                {/if}
+            </button>
         </nav>
+        {#if pluginUpdateReminderVersion}
+            <span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+                {text.aboutTabUpdateLabel(pluginUpdateReminderVersion)}
+            </span>
+        {/if}
 
         <div
             id="summary-panel"
@@ -1127,7 +1153,88 @@
                                     <dt>{text.aboutVersionLabel}</dt>
                                     <dd>{pluginVersion}</dd>
                                 </div>
+                                <div class="about-meta__date">
+                                    <dt>{text.aboutCurrentVersionDateLabel}</dt>
+                                    <dd>
+                                        <time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>
+                                    </dd>
+                                </div>
                             </dl>
+                        </div>
+                        <div
+                            class="about-update"
+                            class:about-update--compact={pluginUpdateStatus !== 'available'}
+                            class:about-update--available={pluginUpdateStatus === 'available'}
+                            class:about-update--error={pluginUpdateStatus === 'error'}
+                            aria-busy={pluginUpdateStatus === 'idle' || pluginUpdateStatus === 'loading'}
+                        >
+                            {#if pluginUpdateStatus === 'idle' || pluginUpdateStatus === 'loading'}
+                                <span class="about-update__status" role="status" aria-live="polite">
+                                    {text.aboutUpdateChecking}
+                                </span>
+                            {:else if pluginUpdateStatus === 'current'}
+                                <span class="about-update__status" role="status" aria-live="polite">
+                                    {text.aboutUpdateCurrent}
+                                </span>
+                            {:else if pluginUpdateStatus === 'available' && pluginUpdateResult?.status === 'available'}
+                                <div class="about-update__header" role="status" aria-live="polite">
+                                    <strong>
+                                        {pluginUpdateResult.channel === 'beta'
+                                            ? text.aboutBetaAvailable(pluginUpdateResult.latestVersion)
+                                            : text.aboutUpdateAvailable(pluginUpdateResult.latestVersion)}
+                                    </strong>
+                                    {#if pluginUpdateResult.releasedAt}
+                                        <span class="about-update__release-date">
+                                            <span aria-hidden="true">·</span>
+                                            <time datetime={pluginUpdateResult.releasedAt}>{pluginUpdateResult.releasedAt}</time>
+                                        </span>
+                                    {/if}
+                                </div>
+                                {#if localizedUpdateNotes}
+                                    <div class="about-update__notes">
+                                        <strong class="about-update__title">{localizedUpdateNotes.title}</strong>
+                                        <p>{localizedUpdateNotes.summary}</p>
+                                        <ul>
+                                            {#each localizedUpdateNotes.items as item}
+                                                <li>
+                                                    <span class={`about-update__type about-update__type--${item.type}`}>
+                                                        {text.aboutUpdateTypeLabels[item.type]}
+                                                    </span>
+                                                    <span>{item.text}</span>
+                                                </li>
+                                            {/each}
+                                        </ul>
+                                    </div>
+                                {:else}
+                                    <p>{text.aboutUpdateNotesUnavailable}</p>
+                                    {#if pluginUpdateResult.notesStatus === 'error'}
+                                        <button
+                                            type="button"
+                                            disabled={pluginUpdateNotesRetrying}
+                                            on:click={retryPluginUpdateNotes}
+                                        >
+                                            {pluginUpdateNotesRetrying
+                                                ? text.aboutUpdateNotesRetrying
+                                                : text.aboutUpdateNotesRetry}
+                                        </button>
+                                    {/if}
+                                {/if}
+                                {#if pluginUpdateResult.releaseUrl}
+                                    <a
+                                        class="about-update__release-link"
+                                        href={pluginUpdateResult.releaseUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        {text.aboutUpdateReleaseLink}
+                                    </a>
+                                {/if}
+                            {:else}
+                                <span class="about-update__status" role="status" aria-live="polite">
+                                    {text.aboutUpdateError}
+                                </span>
+                                <button type="button" on:click={retryPluginUpdate}>{text.aboutUpdateRetry}</button>
+                            {/if}
                         </div>
                         <div class="about-actions" aria-label={text.aboutLinksLabel}>
                             <a href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutGithubLabel}</a>
@@ -1181,8 +1288,9 @@
     import { singleclick } from '@windy/singleclick';
     import store from '@windy/store';
     import { onDestroy, onMount, tick } from 'svelte';
+    import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
 
-    import config from './pluginConfig';
+    import config, { currentVersionReleasedAt } from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
     import FavoriteComparison from './FavoriteComparison.svelte';
     import FavoriteLocations from './FavoriteLocations.svelte';
@@ -1290,6 +1398,14 @@
         orderInitialOverlayOptions,
         type InitialOverlayPreference,
     } from './initialOverlay';
+    import {
+        checkPluginUpdate,
+        readPluginUpdateReminderSeenVersion,
+        type LocalizedUpdateNotes,
+        type PluginUpdateResult,
+        type UpdateNoteKind,
+        writePluginUpdateReminderSeenVersion,
+    } from './pluginUpdate';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
 
     import type { LatLon } from '@windy/interfaces.d';
@@ -1361,6 +1477,8 @@
         guideTab: string;
         settingsTab: string;
         aboutTab: string;
+        aboutTabUpdateBadge: string;
+        aboutTabUpdateLabel: (version: string) => string;
         retry: string;
         eventTimeSuffix: string;
         now: string;
@@ -1424,11 +1542,23 @@
         aboutHeading: string;
         aboutAuthorLabel: string;
         aboutVersionLabel: string;
+        aboutCurrentVersionDateLabel: string;
         aboutLinksLabel: string;
         aboutGithubLabel: string;
         aboutIssuesLabel: string;
         aboutStarLabel: string;
         aboutStarHint: string;
+        aboutUpdateChecking: string;
+        aboutUpdateCurrent: string;
+        aboutUpdateAvailable: (version: string) => string;
+        aboutBetaAvailable: (version: string) => string;
+        aboutUpdateError: string;
+        aboutUpdateRetry: string;
+        aboutUpdateNotesUnavailable: string;
+        aboutUpdateNotesRetry: string;
+        aboutUpdateNotesRetrying: string;
+        aboutUpdateReleaseLink: string;
+        aboutUpdateTypeLabels: Record<UpdateNoteKind, string>;
         weatherLoadError: string;
         atmosphereLoadError: string;
         timeZoneLoadError: string;
@@ -1515,6 +1645,8 @@
             guideTab: '说明',
             settingsTab: '设置',
             aboutTab: '关于',
+            aboutTabUpdateBadge: '新',
+            aboutTabUpdateLabel: version => `关于，发现新版本 ${version}`,
             retry: '重试',
             eventTimeSuffix: '时间',
             now: '现在',
@@ -1619,11 +1751,27 @@
             aboutHeading: '关于插件',
             aboutAuthorLabel: '作者',
             aboutVersionLabel: '版本',
+            aboutCurrentVersionDateLabel: '更新日期',
             aboutLinksLabel: '项目链接',
             aboutGithubLabel: 'GitHub 仓库',
             aboutIssuesLabel: 'Issues',
             aboutStarLabel: 'Star',
             aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
+            aboutUpdateChecking: '正在检查新版本…',
+            aboutUpdateCurrent: '暂无新版本。',
+            aboutUpdateAvailable: version => `发现新版本 ${version}`,
+            aboutBetaAvailable: version => `测试版更新预览 ${version}`,
+            aboutUpdateError: '暂时无法检查版本。',
+            aboutUpdateRetry: '重试',
+            aboutUpdateNotesUnavailable: '新版本已经发布，用户更新说明暂时无法加载。',
+            aboutUpdateNotesRetry: '重新加载更新说明',
+            aboutUpdateNotesRetrying: '正在重新加载…',
+            aboutUpdateReleaseLink: '查看版本详情',
+            aboutUpdateTypeLabels: {
+                new: '新增',
+                improved: '优化',
+                fixed: '修复',
+            },
             weatherLoadError: '无法取得天气模式数据，请稍后重试。',
             atmosphereLoadError: '无法取得 Open-Meteo 的 AOD 和能见度数据。',
             timeZoneLoadError: '无法取得观察点时区，请稍后重试。',
@@ -1734,6 +1882,8 @@
             guideTab: 'Guide',
             settingsTab: 'Settings',
             aboutTab: 'About',
+            aboutTabUpdateBadge: 'NEW',
+            aboutTabUpdateLabel: version => `About, version ${version} is available`,
             retry: 'Retry',
             eventTimeSuffix: ' time',
             now: 'Now',
@@ -1838,11 +1988,27 @@
             aboutHeading: 'About plugin',
             aboutAuthorLabel: 'Author',
             aboutVersionLabel: 'Version',
+            aboutCurrentVersionDateLabel: 'Updated',
             aboutLinksLabel: 'Project links',
             aboutGithubLabel: 'GitHub repo',
             aboutIssuesLabel: 'Issues',
             aboutStarLabel: 'Star',
             aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
+            aboutUpdateChecking: 'Checking for a new version…',
+            aboutUpdateCurrent: 'No new version is available.',
+            aboutUpdateAvailable: version => `Version ${version} is available`,
+            aboutBetaAvailable: version => `Beta update preview ${version}`,
+            aboutUpdateError: 'Unable to check for a new version.',
+            aboutUpdateRetry: 'Retry',
+            aboutUpdateNotesUnavailable: 'A new version is available, but its user update notes could not be loaded.',
+            aboutUpdateNotesRetry: 'Reload update notes',
+            aboutUpdateNotesRetrying: 'Reloading…',
+            aboutUpdateReleaseLink: 'View version details',
+            aboutUpdateTypeLabels: {
+                new: 'New',
+                improved: 'Improved',
+                fixed: 'Fixed',
+            },
             weatherLoadError: 'Unable to load weather model data. Please try again.',
             atmosphereLoadError: 'Unable to load AOD and visibility data from Open-Meteo.',
             timeZoneLoadError: 'Unable to load the observer time zone. Please try again.',
@@ -2010,6 +2176,17 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
+    let pluginUpdateResult: PluginUpdateResult | null = null;
+    let pluginUpdateNotesRetrying = false;
+    let pluginUpdateReminderSeenVersion = readPluginUpdateReminderSeenVersion({
+        currentVersion: pluginVersion,
+        repositoryUrl,
+    });
+    let pluginUpdateReminderVersion: string | null = null;
+    let localizedUpdateNotes: LocalizedUpdateNotes | null = null;
+    let pluginUpdateAbortController: AbortController | null = null;
+    let latestPluginUpdateRequestId = 0;
     let weatherModel: WeatherModel = 'ecmwf';
     let baseWeatherPoints: WeatherPoint[] = [];
     let weatherPoints: WeatherPoint[] = [];
@@ -2075,6 +2252,9 @@
     let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
+    $: localizedUpdateNotes = pluginUpdateResult?.status === 'available' && pluginUpdateResult.notes
+        ? pluginUpdateResult.notes[uiLanguage]
+        : null;
     $: radarStatusText = text.radarStatusLabels[radarOverlayStatus];
     $: radarFrameTimeLabelController?.update({
         language: uiLanguage,
@@ -2135,6 +2315,12 @@
 
     $: if (isMounted && astronomyKey) {
         void refreshPaths(astronomyKey);
+    }
+
+    // Check on mount so the About tab can notify users before they open it.
+    // Formal results remain session-cached; local beta notes are intentionally live.
+    $: if (isMounted && pluginUpdateStatus === 'idle') {
+        void refreshPluginUpdate();
     }
 
     $: if (shouldLoadWeather({
@@ -2391,6 +2577,25 @@
         outerScroller.scrollTop += remainingDelta;
     };
 
+    /** Remember the viewed update so a Windy remount does not recreate the badge. */
+    const rememberPluginUpdateReminder = (version: string) => {
+        pluginUpdateReminderSeenVersion = version;
+        writePluginUpdateReminderSeenVersion({
+            currentVersion: pluginVersion,
+            latestVersion: version,
+            repositoryUrl,
+        });
+    };
+
+    /** Clear the navigation reminder after the user opens the update details. */
+    const acknowledgePluginUpdateReminder = () => {
+        if (!pluginUpdateReminderVersion) {
+            return;
+        }
+        rememberPluginUpdateReminder(pluginUpdateReminderVersion);
+        pluginUpdateReminderVersion = null;
+    };
+
     const handleSummaryTabKeydown = async (event: KeyboardEvent, currentTab: SummaryTab) => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
             return;
@@ -2406,6 +2611,9 @@
                 ? summaryTabOrder.at(-1)!
                 : summaryTabOrder[(currentIndex + (event.key === 'ArrowLeft' ? -1 : 1) + summaryTabOrder.length) % summaryTabOrder.length];
         summaryTab = nextTab;
+        if (nextTab === 'about' && pluginUpdateReminderVersion) {
+            acknowledgePluginUpdateReminder();
+        }
         await tick();
         document.getElementById(`summary-tab-${nextTab}`)?.focus();
     };
@@ -3126,6 +3334,79 @@
         void refreshAtmosphere(atmosphereRequestKey);
     };
 
+    /** Load the configured update channel while ignoring closed or superseded requests. */
+    const refreshPluginUpdate = async ({ preserveAvailableResult = false } = {}) => {
+        pluginUpdateAbortController?.abort();
+        const abortController = new AbortController();
+        pluginUpdateAbortController = abortController;
+        const requestId = ++latestPluginUpdateRequestId;
+        if (preserveAvailableResult) {
+            pluginUpdateNotesRetrying = true;
+        } else {
+            pluginUpdateStatus = 'loading';
+            pluginUpdateResult = null;
+            pluginUpdateReminderVersion = null;
+        }
+
+        try {
+            const result = await checkPluginUpdate({
+                currentVersion: pluginVersion,
+                repositoryUrl,
+                betaNotesUrl: betaReleaseNotesUrl,
+                signal: abortController.signal,
+            });
+            if (
+                abortController.signal.aborted
+                || requestId !== latestPluginUpdateRequestId
+                || !isMounted
+            ) {
+                return;
+            }
+            pluginUpdateResult = result;
+            pluginUpdateStatus = result.status;
+            pluginUpdateReminderVersion = result.status === 'available'
+                && result.latestVersion !== pluginUpdateReminderSeenVersion
+                && summaryTab !== 'about'
+                ? result.latestVersion
+                : null;
+            if (result.status === 'available' && summaryTab === 'about') {
+                rememberPluginUpdateReminder(result.latestVersion);
+            }
+        } catch (error) {
+            if (
+                abortController.signal.aborted
+                || requestId !== latestPluginUpdateRequestId
+                || !isMounted
+            ) {
+                return;
+            }
+            // Update metadata is optional. A failed request must not affect core plugin features.
+            if (!preserveAvailableResult) {
+                pluginUpdateStatus = 'error';
+            }
+        } finally {
+            if (requestId === latestPluginUpdateRequestId) {
+                pluginUpdateAbortController = null;
+                pluginUpdateNotesRetrying = false;
+            }
+        }
+    };
+
+    const retryPluginUpdate = () => {
+        pluginUpdateStatus = 'idle';
+    };
+
+    const retryPluginUpdateNotes = () => {
+        if (
+            pluginUpdateResult?.status !== 'available'
+            || pluginUpdateResult.notesStatus !== 'error'
+            || pluginUpdateNotesRetrying
+        ) {
+            return;
+        }
+        void refreshPluginUpdate({ preserveAvailableResult: true });
+    };
+
     const unavailableMessage = (
         event: SolarEvent,
         reason: 'always-up' | 'always-down' | 'not-available',
@@ -3647,6 +3928,7 @@
             latestWeatherRequestId += 1;
             latestAtmosphereRequestId += 1;
             latestLightPollutionRequestId += 1;
+            latestPluginUpdateRequestId += 1;
             currentLocationRequestId += 1;
             favoriteDistanceRequestId += 1;
             locationNameRequestId += 1;
@@ -3656,6 +3938,8 @@
             atmosphereAbortController = null;
             lightPollutionAbortController?.abort();
             lightPollutionAbortController = null;
+            pluginUpdateAbortController?.abort();
+            pluginUpdateAbortController = null;
             if (currentDirectionTimer) {
                 clearInterval(currentDirectionTimer);
                 currentDirectionTimer = null;
@@ -5060,6 +5344,10 @@
     }
 
     .summary-tabs button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
         min-height: 36px;
         padding: 0 5px;
         border: 0;
@@ -5069,6 +5357,23 @@
         font: inherit;
         font-size: 15px;
         cursor: pointer;
+    }
+
+    .summary-tab__badge {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 16px;
+        height: 14px;
+        padding: 0 3px;
+        border-radius: 999px;
+        white-space: nowrap;
+        color: #0b1e2b;
+        background: var(--panel-accent);
+        font-size: 8px;
+        font-weight: 800;
+        line-height: 1;
     }
 
     .summary-tabs button + button {
@@ -6478,7 +6783,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 10px;
-        align-items: start;
+        align-items: end;
     }
 
     .about-hero__copy {
@@ -6495,26 +6800,29 @@
 
     .about-hero__copy strong {
         color: var(--panel-text);
-        font-size: 15px;
+        font-size: 12px;
         line-height: 1.2;
     }
 
     .about-meta {
         display: grid;
-        grid-template-columns: repeat(2, auto);
-        gap: 8px;
+        grid-template-columns: repeat(3, auto);
+        grid-template-rows: auto auto;
+        grid-auto-flow: column;
+        column-gap: 8px;
+        row-gap: 1px;
+        align-items: baseline;
         margin: 0;
     }
 
     .about-meta div {
-        display: grid;
-        gap: 1px;
-        text-align: right;
+        display: contents;
     }
 
     .about-meta dt,
     .about-meta dd {
         margin: 0;
+        text-align: right;
     }
 
     .about-meta dt {
@@ -6529,6 +6837,170 @@
         font-weight: 700;
         line-height: 1.2;
         white-space: nowrap;
+    }
+
+    .about-update {
+        box-sizing: border-box;
+        display: grid;
+        gap: 6px;
+        min-height: 32px;
+        padding: 0;
+        border-top: 1px solid rgba(153, 181, 235, 0.2);
+        border-bottom: 1px solid rgba(153, 181, 235, 0.2);
+    }
+
+    .about-update--compact {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        padding: 0;
+    }
+
+    .about-update--available {
+        padding: 7px 0;
+        border-color: rgba(99, 185, 238, 0.5);
+    }
+
+    .about-update--error {
+        border-color: rgba(248, 170, 104, 0.28);
+    }
+
+    .about-update__status,
+    .about-update__header strong,
+    .about-update__title {
+        color: var(--panel-text);
+        line-height: 1.35;
+    }
+
+    .about-update__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 5px;
+    }
+
+    .about-update__release-date {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 5px;
+        color: var(--panel-muted);
+        font-size: 10px;
+        line-height: 1.35;
+        white-space: nowrap;
+    }
+
+    .about-update__status {
+        align-self: center;
+        font-size: 11px;
+    }
+
+    .about-update--compact .about-update__status {
+        padding: 7px 0;
+    }
+
+    .about-update__header strong {
+        font-size: 12px;
+    }
+
+    .about-update__notes {
+        display: grid;
+        gap: 5px;
+    }
+
+    .about-update__title {
+        font-size: 12px;
+    }
+
+    .about-update__notes p,
+    .about-update > p {
+        margin: 0;
+        color: var(--panel-muted);
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+    .about-update__notes ul {
+        display: grid;
+        gap: 6px;
+        margin: 2px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .about-update__notes li {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 6px;
+        align-items: start;
+        color: var(--panel-text);
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+    .about-update__type {
+        min-width: 30px;
+        padding: 1px 4px;
+        border: 1px solid currentColor;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1.35;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .about-update__type--new {
+        color: #8dd2ff;
+    }
+
+    .about-update__type--improved {
+        color: #f7cf79;
+    }
+
+    .about-update__type--fixed {
+        color: #91dfaa;
+    }
+
+    .about-update__release-link,
+    .about-update button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        justify-self: start;
+        min-height: 28px;
+        padding: 0 8px;
+        border: 1px solid rgba(99, 185, 238, 0.42);
+        border-radius: 5px;
+        color: var(--panel-text) !important;
+        background: rgba(99, 185, 238, 0.1);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.2;
+        text-decoration: none;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .about-update__release-link:hover,
+    .about-update button:hover {
+        border-color: rgba(99, 185, 238, 0.72);
+        background: rgba(99, 185, 238, 0.18);
+    }
+
+    .about-update button:disabled {
+        cursor: default;
+        opacity: 0.55;
+    }
+
+    .about-update__release-link:focus-visible,
+    .about-update button:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+
+    .sun-path-panel.mobile_ui .about-update__release-link,
+    .sun-path-panel.mobile_ui .about-update button {
+        min-height: 44px;
     }
 
     .about-actions {

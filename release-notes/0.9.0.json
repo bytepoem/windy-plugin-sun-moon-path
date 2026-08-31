@@ -1,0 +1,56 @@
+{
+  "version": "0.9.0",
+  "releasedAt": "2026-08-31",
+  "zh": {
+    "title": "更直观的雷达、图层与地点操作",
+    "summary": "本次更新让降水变化、地图图层和常用地点操作更加清晰顺手。",
+    "items": [
+      {
+        "type": "new",
+        "text": "新增降水雷达叠加，可直接在地图上查看雷达画面、时间和播放进度，并调节透明度。"
+      },
+      {
+        "type": "new",
+        "text": "新增启动图层偏好，可保留当前 Windy 图层，或在打开插件时切换到指定图层。"
+      },
+      {
+        "type": "improved",
+        "text": "点击收藏对比中的地点名称即可切换位置，并自动将地点保持在可见地图区域。"
+      },
+      {
+        "type": "improved",
+        "text": "可临时固定当前位置，避免查看地图时因误触而切换观测地点。"
+      },
+      {
+        "type": "fixed",
+        "text": "修复移动端事件面板、收藏界面和地图定位的多处交互问题。"
+      }
+    ]
+  },
+  "en": {
+    "title": "More intuitive radar, layers, and location controls",
+    "summary": "This update makes precipitation changes, map layers, and common location actions clearer and easier to use.",
+    "items": [
+      {
+        "type": "new",
+        "text": "Added a precipitation radar overlay with frame time, playback progress, and adjustable opacity directly on the map."
+      },
+      {
+        "type": "new",
+        "text": "Added a startup-layer preference to keep the current Windy layer or switch to a selected layer when the plugin opens."
+      },
+      {
+        "type": "improved",
+        "text": "Select a location name in Favorites comparison to switch locations and keep it centered in the visible map area."
+      },
+      {
+        "type": "improved",
+        "text": "Temporarily pin the current location to prevent accidental map taps from changing the observing point."
+      },
+      {
+        "type": "fixed",
+        "text": "Fixed several mobile interaction issues in the Events panel, Favorites surfaces, and map positioning."
+      }
+    ]
+  }
+}
