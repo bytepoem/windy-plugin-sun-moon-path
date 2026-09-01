@@ -444,8 +444,10 @@ describe('plugin astronomy loading presentation', () => {
 
         const radarOpacityStart = pluginSource.indexOf('class="settings-range settings-range--radar-opacity"');
         const radarProviderStart = pluginSource.indexOf('class="settings-select settings-radar-source"');
-        expect(radarOpacityStart).toBeGreaterThanOrEqual(0);
-        expect(radarProviderStart).toBeGreaterThan(radarOpacityStart);
+        expect(radarProviderStart).toBeGreaterThanOrEqual(0);
+        expect(radarOpacityStart).toBeGreaterThan(radarProviderStart);
+        expect(pluginSource).toContain('窗口雷达按钮与此设置同步，任一处都可直接开关');
+        expect(pluginSource).toContain('The window radar button and this setting stay synchronized');
     });
 
     it('starts the selected radar overlay on mount and destroys it with the unified cleanup path', () => {

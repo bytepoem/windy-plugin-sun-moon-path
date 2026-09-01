@@ -977,25 +977,6 @@
                             {text.initialOverlayDescription}
                         </span>
                     </div>
-                    <div class="settings-range settings-range--radar-opacity">
-                        <div class="settings-range__header">
-                            <label for="radar-overlay-opacity">{text.radarOpacityLabel}</label>
-                            <output for="radar-overlay-opacity">{radarOpacityPercent}%</output>
-                        </div>
-                        <input
-                            id="radar-overlay-opacity"
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={radarOpacityPercent}
-                            aria-describedby="radar-overlay-opacity-description"
-                            on:input={changeRadarOpacity}
-                        />
-                        <span id="radar-overlay-opacity-description" class="settings-range__description">
-                            {text.radarOpacityDescription}
-                        </span>
-                    </div>
                     <div class="settings-select settings-radar-source">
                         <label for="radar-provider">{text.radarProviderLabel}</label>
                         <select
@@ -1028,6 +1009,25 @@
                         >
                             <span aria-hidden="true"></span>
                             {radarStatusText}
+                        </span>
+                    </div>
+                    <div class="settings-range settings-range--radar-opacity">
+                        <div class="settings-range__header">
+                            <label for="radar-overlay-opacity">{text.radarOpacityLabel}</label>
+                            <output for="radar-overlay-opacity">{radarOpacityPercent}%</output>
+                        </div>
+                        <input
+                            id="radar-overlay-opacity"
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={radarOpacityPercent}
+                            aria-describedby="radar-overlay-opacity-description"
+                            on:input={changeRadarOpacity}
+                        />
+                        <span id="radar-overlay-opacity-description" class="settings-range__description">
+                            {text.radarOpacityDescription}
                         </span>
                     </div>
                     <label class="settings-toggle">
@@ -1733,7 +1733,7 @@
             initialOverlayDescription: '选择后立即切换到对应 Windy 图层，并在以后打开插件时继续使用；选择“保持 Windy 当前图层”则不自动切换。设置会保存在当前浏览器。',
             keepCurrentOverlayLabel: '保持 Windy 当前图层',
             radarProviderLabel: '叠加雷达数据',
-            radarProviderDescription: '在当前 Windy 图层上叠加 RainViewer 雷达瓦片，并跟随 Windy 自带时间条切换时次。数据源选择仅保存在当前浏览器。',
+            radarProviderDescription: '窗口雷达按钮与此设置同步，任一处都可直接开关；开启后会在当前 Windy 图层上叠加 RainViewer，并跟随时间条切换时次。设置仅保存在当前浏览器。',
             radarProviderLabels: {
                 none: '不叠加',
                 rainviewer: 'RainViewer（无需 Key）',
@@ -1972,7 +1972,7 @@
             initialOverlayDescription: 'Switch to the selected Windy layer immediately and keep using it whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
             keepCurrentOverlayLabel: 'Keep Windy’s current layer',
             radarProviderLabel: 'Radar data overlay',
-            radarProviderDescription: 'Overlay RainViewer radar tiles on the current Windy layer and follow Windy’s native timeline. The provider choice stays in this browser.',
+            radarProviderDescription: 'The window radar button and this setting stay synchronized, and either one directly toggles the overlay. When enabled, RainViewer follows Windy’s timeline. The setting stays in this browser.',
             radarProviderLabels: {
                 none: 'Off',
                 rainviewer: 'RainViewer (no key required)',

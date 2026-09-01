@@ -107,21 +107,38 @@ describe('radar overlay provider contracts', () => {
         expect(latestRainViewerFrame({ host: 'x', radar: { past: [] } })).toBeNull();
     });
 
-    it('matches Windy timestamps to nearby frames and rejects times outside provider history', () => {
+    it('matches nearby frames and uses a recent latest frame only for Windy current time', () => {
         const times = [
             Date.parse('2026-08-30T09:40:00Z'),
             Date.parse('2026-08-30T09:50:00Z'),
             Date.parse('2026-08-30T10:00:00Z'),
         ];
-        expect(matchRadarFrame(times, Date.parse('2026-08-30T09:53:00Z'))).toEqual({
+        const currentTime = Date.parse('2026-08-30T10:08:00Z');
+        expect(matchRadarFrame(times, Date.parse('2026-08-30T09:53:00Z'), currentTime)).toEqual({
             index: 1,
             inRange: true,
         });
-        expect(matchRadarFrame(times, Date.parse('2026-08-30T09:30:00Z'))).toEqual({
+        expect(matchRadarFrame(times, Date.parse('2026-08-30T10:06:00Z'), currentTime)).toEqual({
+            index: 2,
+            inRange: true,
+        });
+        expect(matchRadarFrame(times, Date.parse('2026-08-30T10:09:00Z'), currentTime)).toEqual({
+            index: 2,
+            inRange: false,
+        });
+        expect(matchRadarFrame(times, Date.parse('2026-08-30T09:30:00Z'), currentTime)).toEqual({
             index: 0,
             inRange: false,
         });
-        expect(matchRadarFrame(times, Date.parse('2026-08-30T10:10:00Z'))).toEqual({
+        expect(matchRadarFrame(times, Date.parse('2026-08-30T10:20:00Z'), currentTime)).toEqual({
+            index: 2,
+            inRange: false,
+        });
+        expect(matchRadarFrame(
+            times,
+            Date.parse('2026-08-30T10:30:00Z'),
+            Date.parse('2026-08-30T10:30:00Z'),
+        )).toEqual({
             index: 2,
             inRange: false,
         });
@@ -129,6 +146,89 @@ describe('radar overlay provider contracts', () => {
 });
 
 describe('radar overlay controller', () => {
+    it('keeps the latest recent RainViewer frame visible at Windy current time', async () => {
+        const { runtime, animationFrames, layers } = createRuntime();
+        runtime.now = () => 560_000;
+        const statuses: RadarOverlayStatus[] = [];
+        const controller = createRadarOverlayController(
+            {} as L.LeafletGlMap,
+            status => statuses.push(status),
+            runtime,
+        );
+        controller.setTimestamp(560_000);
+
+        await controller.apply({ provider: 'rainviewer' });
+
+        expect(controller.getActiveFrameTime()).toBe(200_000);
+        expect(layers[0].options.opacity).toBe(0.9);
+        expect(statuses).toEqual(['loading']);
+        layers[0].loading = false;
+        animationFrames.shift()?.callback();
+        expect(statuses).toEqual(['loading', 'ready']);
+    });
+
+    it('hides a cached current-time fallback before a stalled refresh can leave it stale', async () => {
+        const { runtime, animationFrames, layers, timers } = createRuntime();
+        let currentTime = 560_000;
+        runtime.now = () => currentTime;
+        const statuses: RadarOverlayStatus[] = [];
+        const controller = createRadarOverlayController(
+            {} as L.LeafletGlMap,
+            status => statuses.push(status),
+            runtime,
+        );
+        controller.setTimestamp(560_000);
+        await controller.apply({ provider: 'rainviewer' });
+        layers[0].loading = false;
+        animationFrames.shift()?.callback();
+
+        runtime.fetch = vi.fn((_input, init) => new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+                reject(new DOMException('Aborted', 'AbortError'));
+            }, { once: true });
+        }));
+        currentTime = 1_160_000;
+        timers[0].callback();
+
+        expect(controller.getActiveFrameTime()).toBeNull();
+        expect(layers[0].setOpacity).toHaveBeenLastCalledWith(0);
+        expect(statuses.at(-1)).toBe('out-of-range');
+
+        controller.destroy();
+    });
+
+    it('restores a cached frame when a near-future selection becomes current during a stalled refresh', async () => {
+        const { runtime, animationFrames, layers, timers } = createRuntime();
+        let currentTime = 550_000;
+        runtime.now = () => currentTime;
+        const statuses: RadarOverlayStatus[] = [];
+        const controller = createRadarOverlayController(
+            {} as L.LeafletGlMap,
+            status => statuses.push(status),
+            runtime,
+        );
+        controller.setTimestamp(560_000);
+        await controller.apply({ provider: 'rainviewer' });
+        expect(controller.getActiveFrameTime()).toBeNull();
+        expect(statuses).toEqual(['loading', 'out-of-range']);
+        layers[0].loading = false;
+        animationFrames.shift()?.callback();
+
+        runtime.fetch = vi.fn((_input, init) => new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+                reject(new DOMException('Aborted', 'AbortError'));
+            }, { once: true });
+        }));
+        currentTime = 560_000;
+        timers[0].callback();
+
+        expect(controller.getActiveFrameTime()).toBe(200_000);
+        expect(layers[0].setOpacity).toHaveBeenLastCalledWith(0.9);
+        expect(statuses.at(-1)).toBe('ready');
+
+        controller.destroy();
+    });
+
     it('loads the latest RainViewer frame and reports ready after Windy finishes loading the tile grid', async () => {
         const { runtime, animationFrames, layers, timers } = createRuntime();
         const statuses: RadarOverlayStatus[] = [];

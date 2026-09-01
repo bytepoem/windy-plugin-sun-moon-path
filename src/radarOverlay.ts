@@ -55,6 +55,7 @@ export const RAINVIEWER_WEBSITE_URL = 'https://www.rainviewer.com/';
 
 const RAINVIEWER_REFRESH_INTERVAL_MS = 5 * 60 * 1_000;
 const MINIMUM_FRAME_EDGE_TOLERANCE_MS = 5 * 60 * 1_000;
+const CURRENT_FRAME_FALLBACK_TOLERANCE_MS = 15 * 60 * 1_000;
 export const DEFAULT_RADAR_OPACITY_PERCENT = 90;
 
 const browserRuntime: RadarOverlayRuntime = {
@@ -110,12 +111,20 @@ export const latestRainViewerFrame = (value: unknown): { host: string; frame: Ra
 export const buildRainViewerTileUrl = (host: string, path: string): string =>
     `${host.replace(/\/$/, '')}${path}/256/{z}/{x}/{y}/2/0_0.png`;
 
-/** Match Windy's selected timestamp to the closest provider frame without showing stale out-of-range data. */
+/**
+ * Match Windy's selected timestamp to the closest provider frame.
+ *
+ * RainViewer publishes ten-minute observations several minutes after their nominal timestamp. When Windy is still
+ * showing the current time, keep the newest recent observation visible through that normal publication delay. This
+ * fallback is intentionally limited to the current-time selection so moving Windy's timeline into the future never
+ * presents an old radar frame as a forecast.
+ */
 export const matchRadarFrame = (
     times: number[],
     timestampMs: number,
+    currentTimeMs: number,
 ): { index: number; inRange: boolean } | null => {
-    if (times.length === 0 || !Number.isFinite(timestampMs)) {
+    if (times.length === 0 || !Number.isFinite(timestampMs) || !Number.isFinite(currentTimeMs)) {
         return null;
     }
     const index = times.reduce((closestIndex, time, candidateIndex) => (
@@ -133,10 +142,21 @@ export const matchRadarFrame = (
         MINIMUM_FRAME_EDGE_TOLERANCE_MS,
         middleInterval === undefined ? 0 : middleInterval / 2,
     );
+    const latestTime = times[times.length - 1];
+    const selectedCurrentTime = Math.abs(timestampMs - currentTimeMs) <= edgeTolerance;
+    const latestFrameAge = currentTimeMs - latestTime;
+    const canUseLatestCurrentFrame = index === times.length - 1
+        && selectedCurrentTime
+        && latestFrameAge >= 0
+        && latestFrameAge <= CURRENT_FRAME_FALLBACK_TOLERANCE_MS;
     return {
         index,
-        inRange: timestampMs >= times[0] - edgeTolerance
-            && timestampMs <= times[times.length - 1] + edgeTolerance,
+        inRange: timestampMs <= currentTimeMs
+            && timestampMs >= times[0] - edgeTolerance
+            && (
+                timestampMs <= latestTime + edgeTolerance
+                || canUseLatestCurrentFrame
+            ),
     };
 };
 
@@ -209,7 +229,11 @@ export const createRadarOverlayController = (
     };
 
     const selectRequestedFrame = () => {
-        const match = matchRadarFrame(frames.map(frame => frame.time), requestedTimestampMs);
+        const match = matchRadarFrame(
+            frames.map(frame => frame.time),
+            requestedTimestampMs,
+            runtime.now(),
+        );
         if (!match) {
             selectedFrameIndex = -1;
             frameVisible = false;
@@ -222,6 +246,25 @@ export const createRadarOverlayController = (
     const replaceFrames = (nextFrames: RadarFrame[]) => {
         frames = nextFrames;
         selectRequestedFrame();
+    };
+
+    /** Stop presenting a cached current-time fallback once it is no longer recent enough. */
+    const revalidateCachedFrameVisibility = () => {
+        if (frames.length === 0) {
+            return;
+        }
+        const wasVisible = frameVisible;
+        selectRequestedFrame();
+        if (!layer || wasVisible === frameVisible) {
+            return;
+        }
+        if (!frameVisible) {
+            layer.setOpacity(0);
+            onStatus('out-of-range');
+            return;
+        }
+        layer.setOpacity(opacityPercent / 100);
+        onStatus(layerIsLoaded ? 'ready' : 'loading');
     };
 
     /**
@@ -272,6 +315,8 @@ export const createRadarOverlayController = (
     };
 
     const refreshRainViewer = async (ownGeneration: number) => {
+        // Recheck cached data before waiting on the network so a stalled request cannot leave stale radar visible.
+        revalidateCachedFrameVisibility();
         cancelRequest();
         const controller = new AbortController();
         requestController = controller;
