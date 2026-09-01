@@ -34,7 +34,7 @@
     {:else if metric === 'precipMm'}
         <path d="M6 13.5h11a3.5 3.5 0 0 0 .3-7 5.3 5.3 0 0 0-10 1.3A3 3 0 0 0 6 13.5Z"></path>
         <path d="m8 16-1 3M13 16l-1 3M18 16l-1 3"></path>
-    {:else if metric === 'windKmh'}
+    {:else if metric === 'windMs'}
         <path d="M4 8h10.5a2.5 2.5 0 1 0-2.2-3.7"></path>
         <path d="M4 12h14a2 2 0 1 1-1.8 2.9"></path>
         <path d="M4 16h7"></path>

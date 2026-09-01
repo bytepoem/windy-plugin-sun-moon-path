@@ -21,6 +21,11 @@
         type LocationSearchSelection,
     } from './locationProvider';
     import { suggestTencentLocations } from './tencent';
+    import {
+        formatDistanceKm,
+        formatElevationM,
+        type UnitPreferences,
+    } from './unitPreferences';
     import type { Coordinates } from './solar';
 
     const API_KEY_APPLICATION_URLS: Record<LocationProvider, string> = {
@@ -34,6 +39,7 @@
     export let location: Coordinates;
     export let mobile = false;
     export let provider: LocationProvider = 'amap';
+    export let units: UnitPreferences;
 
     type DisplayResult = LocationSearchSelection;
     type SelectorOption = LocationProvider | CoordinateSystem;
@@ -493,21 +499,25 @@
     const regionSecondary = (result: DisplayResult): string =>
         [result.area, result.address].filter(Boolean).join(' · ');
 
-    const distanceParts = (distanceKm: number | null): { value: string; unit: string } => {
+    const distanceParts = (
+        distanceKm: number | null,
+        selectedUnits: UnitPreferences,
+    ): { value: string; unit: string } => {
         if (distanceKm === null) {
-            return { value: '--', unit: 'km' };
-        }
-        if (distanceKm < 1) {
-            return { value: String(Math.max(1, Math.round(distanceKm * 1_000))), unit: 'm' };
+            return { value: '--', unit: selectedUnits.distance };
         }
         return {
-            value: distanceKm < 100 ? distanceKm.toFixed(1) : String(Math.round(distanceKm)),
-            unit: 'km',
+            value: formatDistanceKm(distanceKm, selectedUnits.distance),
+            unit: selectedUnits.distance,
         };
     };
 
-    const elevationValue = (elevationM: number | null | undefined): string =>
-        Number.isFinite(elevationM) ? String(Math.round(elevationM as number)) : '--';
+    const elevationValue = (
+        elevationM: number | null | undefined,
+        selectedUnits: UnitPreferences,
+    ): string => Number.isFinite(elevationM)
+        ? formatElevationM(elevationM as number, selectedUnits.elevation)
+        : '--';
 
     const metricLabel = (label: string, parts: { value: string; unit: string }): string =>
         `${label} ${parts.value} ${parts.unit}`;
@@ -652,11 +662,11 @@
                             <span
                                 class="location-result__metric"
                                 title={text.distance}
-                                aria-label={metricLabel(text.distance, distanceParts(result.distanceKm))}
+                                aria-label={metricLabel(text.distance, distanceParts(result.distanceKm, units))}
                             >
                                 <span class="location-result__metric-icon" aria-hidden="true">↔</span>
-                                <span class="location-result__metric-value">{distanceParts(result.distanceKm).value}</span>
-                                <span class="location-result__metric-unit">{distanceParts(result.distanceKm).unit}</span>
+                                <span class="location-result__metric-value">{distanceParts(result.distanceKm, units).value}</span>
+                                <span class="location-result__metric-unit">{distanceParts(result.distanceKm, units).unit}</span>
                             </span>
                         </span>
                         <span class="location-result__detail">
@@ -669,11 +679,11 @@
                             <span
                                 class="location-result__metric"
                                 title={text.elevation}
-                                aria-label={`${text.elevation} ${elevationValue(result.elevationM)} m`}
+                                aria-label={`${text.elevation} ${elevationValue(result.elevationM, units)} ${units.elevation}`}
                             >
                                 <span class="location-result__metric-icon" aria-hidden="true">▲</span>
-                                <span class="location-result__metric-value">{elevationValue(result.elevationM)}</span>
-                                <span class="location-result__metric-unit">m</span>
+                                <span class="location-result__metric-value">{elevationValue(result.elevationM, units)}</span>
+                                <span class="location-result__metric-unit">{units.elevation}</span>
                             </span>
                         </span>
                     </button>

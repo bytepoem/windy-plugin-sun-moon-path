@@ -34,7 +34,7 @@ const weatherPoint = (timestamp: number): WeatherPoint => ({
     dewPointC: 12,
     humidityPercent: 72,
     precipMm: 0.2,
-    windKmh: 11,
+    windMs: 11 / 3.6,
     windDirectionDeg: 120,
     aod550: null,
     visibilityKm: null,

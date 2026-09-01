@@ -56,9 +56,11 @@ const makePayload = (timestamps: number[]): WeatherForecastPayload => ({
 });
 
 describe('weather forecast transformation', () => {
-    it('converts units and aggregates pressure-level cloud coverage', () => {
+    it('normalizes weather values and aggregates pressure-level cloud coverage', () => {
         const now = Date.UTC(2026, 7, 19, 6);
-        const points = transformWeatherPayload(makePayload([now]), now);
+        const payload = makePayload([now]);
+        payload.data.wind[0] = 4.56;
+        const points = transformWeatherPayload(payload, now);
 
         expect(points).toEqual([
             expect.objectContaining({
@@ -69,7 +71,7 @@ describe('weather forecast transformation', () => {
                 dewPointC: 10,
                 humidityPercent: 64,
                 precipMm: 0,
-                windKmh: 18,
+                windMs: 4.6,
                 windDirectionDeg: 350,
                 aod550: null,
                 visibilityKm: null,
@@ -221,9 +223,9 @@ describe('weather forecast transformation', () => {
         expect(weatherMetricTone('dewPointC', fahrenheitToCelsius(85))).toBe('good');
         expect(weatherMetricTone('dewPointC', fahrenheitToCelsius(92))).toBe('warning');
         expect(weatherMetricTone('dewPointC', fahrenheitToCelsius(96))).toBe('danger');
-        expect(weatherMetricTone('windKmh', 16.2)).toBe('good');
-        expect(weatherMetricTone('windKmh', 16.3)).toBe('warning');
-        expect(weatherMetricTone('windKmh', 32.5)).toBe('danger');
+        expect(weatherMetricTone('windMs', 4.5)).toBe('good');
+        expect(weatherMetricTone('windMs', 4.6)).toBe('warning');
+        expect(weatherMetricTone('windMs', 9.1)).toBe('danger');
         expect(weatherMetricTone('visibilityKm', 0.8)).toBe('danger');
         expect(weatherMetricTone('visibilityKm', 1.5)).toBe('orange');
         expect(weatherMetricTone('visibilityKm', 3.5)).toBe('warning');

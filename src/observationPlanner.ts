@@ -67,7 +67,7 @@ export type ObservationWindowEvidence = {
     temperatureC: ObservationMetricRange | null;
     dewPointC: ObservationMetricRange | null;
     precipitationMm: ObservationMetricRange | null;
-    windKmh: ObservationMetricRange | null;
+    windMs: ObservationMetricRange | null;
     humidityPercent: ObservationMetricRange | null;
     visibilityKm: ObservationMetricRange | null;
     aod550: ObservationMetricRange | null;
@@ -201,7 +201,7 @@ const metricRange = (
         | 'temperatureC'
         | 'dewPointC'
         | 'precipMm'
-        | 'windKmh'
+        | 'windMs'
         | 'humidityPercent'
         | 'visibilityKm'
         | 'aod550',
@@ -317,7 +317,7 @@ export const buildObservationWindows = ({
                 temperatureC: metricRange(samples, 'temperatureC'),
                 dewPointC: metricRange(samples, 'dewPointC'),
                 precipitationMm: metricRange(samples, 'precipMm'),
-                windKmh: metricRange(samples, 'windKmh'),
+                windMs: metricRange(samples, 'windMs'),
                 humidityPercent: metricRange(samples, 'humidityPercent'),
                 visibilityKm: metricRange(samples, 'visibilityKm'),
                 aod550: metricRange(samples, 'aod550'),

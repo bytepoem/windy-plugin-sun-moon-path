@@ -38,8 +38,8 @@
                 <button
                     type="button"
                     class="desktop-map-control desktop-map-fit-control"
-                    aria-label={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
-                    title={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
+                    aria-label={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
+                    title={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
                     disabled={!canFitDirectionLines}
                     on:click|stopPropagation={fitVisibleDirectionLines}
                 >
@@ -88,8 +88,8 @@
             <button
                 type="button"
                 class="mobile-window-control mobile-map-fit-toggle"
-                aria-label={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
-                title={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}
+                aria-label={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
+                title={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
                 disabled={!canFitDirectionLines}
                 on:click={fitVisibleDirectionLines}
             >
@@ -175,6 +175,7 @@
                 location={selectedLocation}
                 mobile={isMobileOrTablet}
                 provider={locationSearchProvider}
+                {units}
                 on:providerchange={handleLocationProviderChange}
                 on:select={handleLocationSearchSelect}
             />
@@ -287,6 +288,7 @@
         distanceOrigin={favoriteDistanceOrigin}
         currentElevationM={elevationLocationKey === locationKey ? elevationM : null}
         currentLightPollution={lightPollutionLoadedKey === locationKey ? lightPollutionPoint : null}
+        {units}
         mobile={isMobileOrTablet}
         fullscreen={isMobileFullscreen}
         returnFocus={favoriteReturnFocus}
@@ -305,6 +307,7 @@
         fullscreen={isMobileFullscreen}
         returnFocus={favoriteReturnFocus}
         openUpward={isMobileCollapsed}
+        {units}
         on:back={handleFavoriteComparisonBack}
         on:close={handleFavoriteComparisonClose}
         on:select={handleFavoriteComparisonLocationSelect}
@@ -337,7 +340,7 @@
                 <div class="event-summary__meta">
                     <span>{timeZone}</span>
                     {#if elevationM > 0}
-                        <span>海拔 {Math.round(elevationM)} m</span>
+                        <span>{text.elevationLabel} {formatElevationLabel(elevationM, units.elevation)}</span>
                     {/if}
                 </div>
             </div>
@@ -644,7 +647,7 @@
                                                     >
                                                         <span class="visually-hidden">{text.observationMetricLabels.precipMm}</span>
                                                         <WeatherMetricIcon metric="precipMm" size={11} />
-                                                        {formatObservationPrecipitation(slot.evidence.precipitationMm)}
+                                                        {formatObservationPrecipitation(slot.evidence.precipitationMm, units.precipitation)}
                                                     </span>
                                                     <span
                                                         class="night-window__metric"
@@ -652,7 +655,7 @@
                                                     >
                                                         <span class="visually-hidden">{text.observationMetricLabels.visibilityKm}</span>
                                                         <WeatherMetricIcon metric="visibilityKm" size={11} />
-                                                        {formatObservationMeasurement(slot.evidence.visibilityKm, 1, 'km')}
+                                                        {formatObservationDistance(slot.evidence.visibilityKm, units.distance)}
                                                     </span>
                                                 </div>
                                             {:else}
@@ -706,6 +709,7 @@
                     {selectedDate}
                     dataKey={weatherRequestKey}
                     location={selectedLocation}
+                    {units}
                     on:modelchange={handleWeatherModelChange}
                     on:retry={retryWeather}
                     on:atmosphereretry={retryAtmosphere}
@@ -760,16 +764,16 @@
                             </span>
                             <span class="legend-item">
                                 <span class="legend-dot legend-dot--inner" aria-hidden="true"></span>
-                                200 km
+                                {formatDistanceLabel(200, units.distance)}
                             </span>
                             <span class="legend-item">
                                 <span class="legend-dot legend-dot--outer" aria-hidden="true"></span>
-                                400 km
+                                {formatDistanceLabel(400, units.distance)}
                             </span>
                             {#if showExtendedDistanceMarker}
                                 <span class="legend-item">
                                     <span class="legend-dot legend-dot--extended" aria-hidden="true"></span>
-                                    600 km
+                                    {formatDistanceLabel(600, units.distance)}
                                 </span>
                             {/if}
                         </div>
@@ -823,8 +827,8 @@
                                 <dd>{text.lineOpacityDescription}</dd>
                             </div>
                             <div>
-                                <dt>{text.show600Label}</dt>
-                                <dd>{text.show600Description}</dd>
+                                <dt>{text.show600Label(formatDistanceLabel(600, units.distance))}</dt>
+                                <dd>{text.show600Description(formatDistanceLabel(600, units.distance))}</dd>
                             </div>
                         </dl>
                     </section>
@@ -848,26 +852,26 @@
                         <section class="weather-legend__section">
                             <h4>{text.weatherLegend.temperature}</h4>
                             <div class="weather-legend__scale weather-legend__scale--temperature">
-                                <span class="weather-legend__swatch tone-freezing">&lt;0</span>
-                                <span class="weather-legend__swatch tone-cool">5</span>
-                                <span class="weather-legend__swatch tone-cold">12</span>
-                                <span class="weather-legend__swatch tone-mild">18</span>
-                                <span class="weather-legend__swatch tone-good">24</span>
-                                <span class="weather-legend__swatch tone-warning">30</span>
-                                <span class="weather-legend__swatch tone-orange">36</span>
-                                <span class="weather-legend__swatch tone-danger">≥38</span>
+                                <span class="weather-legend__swatch tone-freezing">&lt;{temperatureLegendValues[0]}</span>
+                                <span class="weather-legend__swatch tone-cool">{temperatureLegendValues[1]}</span>
+                                <span class="weather-legend__swatch tone-cold">{temperatureLegendValues[2]}</span>
+                                <span class="weather-legend__swatch tone-mild">{temperatureLegendValues[3]}</span>
+                                <span class="weather-legend__swatch tone-good">{temperatureLegendValues[4]}</span>
+                                <span class="weather-legend__swatch tone-warning">{temperatureLegendValues[5]}</span>
+                                <span class="weather-legend__swatch tone-orange">{temperatureLegendValues[6]}</span>
+                                <span class="weather-legend__swatch tone-danger">≥{temperatureLegendValues[7]}</span>
                             </div>
-                            <p>{text.weatherLegend.temperatureDescription}</p>
+                            <p>{text.weatherLegend.temperatureDescription(units.temperature)}</p>
                         </section>
 
                         <section class="weather-legend__section">
                             <h4>{text.weatherLegend.dewPoint}</h4>
                             <div class="weather-legend__scale">
-                                <span class="weather-legend__swatch tone-good">≤33</span>
-                                <span class="weather-legend__swatch tone-warning">34–35</span>
-                                <span class="weather-legend__swatch tone-danger">≥36</span>
+                                <span class="weather-legend__swatch tone-good">≤{dewPointLegendValues[0]}</span>
+                                <span class="weather-legend__swatch tone-warning">{dewPointLegendValues[1]}–{dewPointLegendValues[2]}</span>
+                                <span class="weather-legend__swatch tone-danger">≥{dewPointLegendValues[3]}</span>
                             </div>
-                            <p>{text.weatherLegend.dewPointDescription}</p>
+                            <p>{text.weatherLegend.dewPointDescription(units.temperature)}</p>
                         </section>
 
                         <section class="weather-legend__section">
@@ -884,21 +888,30 @@
                         <section class="weather-legend__section">
                             <h4>{text.weatherLegend.precipitation}</h4>
                             <div class="weather-legend__scale">
-                                <span class="weather-legend__swatch tone-warning">&gt;0–&lt;1</span>
-                                <span class="weather-legend__swatch tone-orange">1–2.5</span>
-                                <span class="weather-legend__swatch tone-danger">&gt;2.5</span>
+                                <span class="weather-legend__swatch tone-warning">&gt;0–&lt;{precipitationLegendValues[0]}</span>
+                                <span class="weather-legend__swatch tone-orange">{precipitationLegendValues[0]}–{precipitationLegendValues[1]}</span>
+                                <span class="weather-legend__swatch tone-danger">&gt;{precipitationLegendValues[1]}</span>
                             </div>
-                            <p>{text.weatherLegend.precipitationDescription}</p>
+                            <p>{text.weatherLegend.precipitationDescription(
+                                precipitationLegendValues[0],
+                                precipitationLegendValues[1],
+                                units.precipitation,
+                            )}</p>
                         </section>
 
                         <section class="weather-legend__section">
                             <h4>{text.weatherLegend.windSpeed}</h4>
                             <div class="weather-legend__scale">
-                                <span class="weather-legend__swatch tone-good">≤16</span>
-                                <span class="weather-legend__swatch tone-warning">17–32</span>
-                                <span class="weather-legend__swatch tone-danger">&gt;32</span>
+                                <span class="weather-legend__swatch tone-good">≤{windWarningThresholdLabel}</span>
+                                <span class="weather-legend__swatch tone-warning">&gt;{windWarningThresholdLabel}–{windDangerThresholdLabel}</span>
+                                <span class="weather-legend__swatch tone-danger">&gt;{windDangerThresholdLabel}</span>
                             </div>
-                            <p>{text.weatherLegend.windSpeedDescription}</p>
+                            <p>{text.weatherLegend.windSpeedDescription(
+                                windWarningThresholdLabel,
+                                windDangerThresholdLabel,
+                                windLegendUnit,
+                                units.wind === 'bft',
+                            )}</p>
                         </section>
 
                         <section class="weather-legend__section">
@@ -914,13 +927,13 @@
                         <section class="weather-legend__section">
                             <h4>{text.weatherLegend.visibility}</h4>
                             <div class="weather-legend__scale">
-                                <span class="weather-legend__swatch tone-danger">0.8</span>
-                                <span class="weather-legend__swatch tone-orange">1.5</span>
-                                <span class="weather-legend__swatch tone-warning">3.5</span>
-                                <span class="weather-legend__swatch tone-mild">7</span>
-                                <span class="weather-legend__swatch tone-good">12</span>
+                                <span class="weather-legend__swatch tone-danger">{visibilityLegendValues[0]}</span>
+                                <span class="weather-legend__swatch tone-orange">{visibilityLegendValues[1]}</span>
+                                <span class="weather-legend__swatch tone-warning">{visibilityLegendValues[2]}</span>
+                                <span class="weather-legend__swatch tone-mild">{visibilityLegendValues[3]}</span>
+                                <span class="weather-legend__swatch tone-good">{visibilityLegendValues[4]}</span>
                             </div>
-                            <p>{text.weatherLegend.visibilityDescription}</p>
+                            <p>{text.weatherLegend.visibilityDescription(units.distance)}</p>
                             <p class="weather-legend__sources">
                                 <a href={OPEN_METEO_URL} target="_blank" rel="noreferrer">Open-Meteo</a>
                             </p>
@@ -1124,13 +1137,13 @@
                     </div>
                     <label class="settings-toggle">
                         <span class="settings-toggle__copy">
-                            <strong>{text.show600Label}</strong>
-                            <span>{text.show600Description}</span>
+                            <strong>{text.show600Label(formatDistanceLabel(600, units.distance))}</strong>
+                            <span>{text.show600Description(formatDistanceLabel(600, units.distance))}</span>
                         </span>
                         <input
                             type="checkbox"
                             checked={showExtendedDistanceMarker}
-                            aria-label={text.show600Label}
+                            aria-label={text.show600Label(formatDistanceLabel(600, units.distance))}
                             on:change={toggleExtendedDistanceMarker}
                         />
                         <span class="settings-toggle__control" aria-hidden="true"></span>
@@ -1282,6 +1295,7 @@
                 {selectedDate}
                 dataKey={weatherRequestKey}
                 location={selectedLocation}
+                {units}
                 on:modelchange={handleWeatherModelChange}
                 on:retry={retryWeather}
                 on:atmosphereretry={retryAtmosphere}
@@ -1426,6 +1440,24 @@
         type UpdateNoteKind,
         writePluginUpdateReminderSeenVersion,
     } from './pluginUpdate';
+    import {
+        currentUnitPreferences,
+        formatDistanceKm,
+        formatElevationM,
+        formatPrecipitationMm,
+        formatPrecipitationRangeMm,
+        formatTemperatureC,
+        formatVisibilityKm,
+        formatVisibilityRangeKm,
+        formatWindThreshold,
+        resolveUnitPreferencesChange,
+        windThresholdUnit,
+        type DistanceUnit,
+        type PrecipitationUnit,
+        type TemperatureUnit,
+        type UnitPreferences,
+        type WindUnit,
+    } from './unitPreferences';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
 
     import type { LatLon } from '@windy/interfaces.d';
@@ -1470,7 +1502,7 @@
         expandCompactPanelLabel: string;
         expandPanelLabel: string;
         restorePanelLabel: string;
-        fitDirectionLinesLabel: (distanceKm: number) => string;
+        fitDirectionLinesLabel: (distance: string) => string;
         restoreSearchZoomLabel: string;
         enableRadarOverlayLabel: string;
         disableRadarOverlayLabel: string;
@@ -1551,8 +1583,8 @@
         radarOpacityDescription: string;
         lineOpacityLabel: string;
         lineOpacityDescription: string;
-        show600Label: string;
-        show600Description: string;
+        show600Label: (distance: string) => string;
+        show600Description: (distance: string) => string;
         hideLocationSearchLabel: string;
         hideLocationSearchDescription: string;
         locationApiKeyLabel: string;
@@ -1596,25 +1628,35 @@
             | 'cloud'
             | 'cloudDescription'
             | 'temperature'
-            | 'temperatureDescription'
             | 'dewPoint'
-            | 'dewPointDescription'
             | 'humidity'
             | 'humidityDescription'
             | 'precipitation'
-            | 'precipitationDescription'
             | 'windSpeed'
-            | 'windSpeedDescription'
             | 'windDirection'
             | 'windDirectionDescription'
             | 'visibility'
-            | 'visibilityDescription'
             | 'aerosolAod'
             | 'aerosolAodDescription'
             | 'celestialEvents'
             | 'celestialEventsDescription',
             string
-        >;
+        > & {
+            temperatureDescription: (unit: TemperatureUnit) => string;
+            dewPointDescription: (unit: TemperatureUnit) => string;
+            precipitationDescription: (
+                warning: string,
+                danger: string,
+                unit: PrecipitationUnit,
+            ) => string;
+            windSpeedDescription: (
+                warning: string,
+                danger: string,
+                unit: WindUnit,
+                beaufort: boolean,
+            ) => string;
+            visibilityDescription: (unit: DistanceUnit) => string;
+        };
         events: Record<DirectionEvent, string>;
         timeline: Record<string, string>;
         intervals: Record<AstronomyInterval['kind'], string>;
@@ -1636,7 +1678,7 @@
             expandCompactPanelLabel: '展开面板',
             expandPanelLabel: '全屏显示',
             restorePanelLabel: '恢复小窗口',
-            fitDirectionLinesLabel: distanceKm => `完整显示 ${distanceKm} km 方位线`,
+            fitDirectionLinesLabel: distance => `完整显示 ${distance} 方位线`,
             restoreSearchZoomLabel: '回到搜索定位缩放',
             enableRadarOverlayLabel: '开启气象雷达叠加',
             disableRadarOverlayLabel: '关闭气象雷达叠加',
@@ -1750,8 +1792,8 @@
             radarOpacityDescription: '实时调整第三方雷达图层的显示强度。0% 为完全透明，100% 为完全不透明。设置会保存在当前浏览器。',
             lineOpacityLabel: '方位线透明度',
             lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
-            show600Label: '显示 600 km 点',
-            show600Description: '开启后事件方向线会延伸到 600 km，并在该距离增加一个参考点。设置会保存在当前浏览器。',
+            show600Label: distance => `显示 ${distance} 点`,
+            show600Description: distance => `开启后事件方向线会延伸到 ${distance}，并在该距离增加一个参考点。设置会保存在当前浏览器。`,
             hideLocationSearchLabel: '隐藏地点搜索框',
             hideLocationSearchDescription: '开启后不再显示面板顶部的名称和经纬度搜索；已保存的地图 API Key 不会清除。设置会保存在当前浏览器。',
             locationApiKeyLabel: '国内地址搜索 API Key',
@@ -1811,19 +1853,21 @@
                 cloud: '云量',
                 cloudDescription: '白色填充越高，云量越多；综合云量表示整体遮挡，高、中、低云表示云层高度。',
                 temperature: '气温',
-                temperatureDescription: '颜色从低温到高温变化，数字单位为 °C。',
+                temperatureDescription: unit => `颜色从低温到高温变化，数字单位为 ${unit}。`,
                 dewPoint: '露点',
-                dewPointDescription: '绿色不易结露，黄色需要留意，红色容易结露；数字单位为 °C。',
+                dewPointDescription: unit => `绿色不易结露，黄色需要留意，红色容易结露；数字单位为 ${unit}。`,
                 humidity: '湿度',
                 humidityDescription: '湿度越高，越需要留意结露。',
                 precipitation: '降水量',
-                precipitationDescription: '黄色小于 1 mm，橙色为 1–2.5 mm，红色超过 2.5 mm。',
+                precipitationDescription: (warning, danger, unit) =>
+                    `黄色低于 ${warning} ${unit}，橙色为 ${warning}–${danger} ${unit}，红色高于 ${danger} ${unit}。`,
                 windSpeed: '风速',
-                windSpeedDescription: '绿色不超过 16 km/h，黄色为 17–32 km/h，红色超过 32 km/h。',
+                windSpeedDescription: (warning, danger, unit, beaufort) =>
+                    `绿色不超过 ${warning} ${unit}，黄色为高于 ${warning} 至 ${danger} ${unit}，红色高于 ${danger} ${unit}。${beaufort ? 'Windy 使用 bft 时，单元格同时显示 bft/m/s，颜色按精确 m/s 判断。' : ''}`,
                 windDirection: '风向',
                 windDirectionDescription: '箭头指向风的来向。',
                 visibility: '能见度',
-                visibilityDescription: '示例数字的单位为千米。数值越大，远处空气通常越通透。',
+                visibilityDescription: unit => `示例数字的单位为 ${unit}。数值越大，远处空气通常越通透。`,
                 aerosolAod: '气溶胶 AOD',
                 aerosolAodDescription: 'AOD 为 550 nm 全大气柱气溶胶光学厚度；从左到右依次为很低、较低、偏高、较高。数值越低，气溶胶对光的衰减通常越弱，但不能直接换算为能见度。两项由 Open-Meteo 提供，其中 AOD 使用 CAMS 数据，不随 EC、GFS 或 ICON 切换。',
                 celestialEvents: '日月升落时间',
@@ -1875,7 +1919,7 @@
             expandCompactPanelLabel: 'Expand panel',
             expandPanelLabel: 'Show fullscreen',
             restorePanelLabel: 'Restore compact window',
-            fitDirectionLinesLabel: distanceKm => `Fit ${distanceKm} km direction lines`,
+            fitDirectionLinesLabel: distance => `Fit ${distance} direction lines`,
             restoreSearchZoomLabel: 'Restore search-location zoom',
             enableRadarOverlayLabel: 'Enable radar overlay',
             disableRadarOverlayLabel: 'Disable radar overlay',
@@ -1989,8 +2033,8 @@
             radarOpacityDescription: 'Adjust the third-party radar layer immediately. 0% is fully transparent and 100% is fully opaque. This setting is saved in this browser.',
             lineOpacityLabel: 'Direction line opacity',
             lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
-            show600Label: 'Show 600 km point',
-            show600Description: 'When enabled, event direction lines extend to 600 km and add a reference point there. This setting is saved in this browser.',
+            show600Label: distance => `Show ${distance} point`,
+            show600Description: distance => `When enabled, event direction lines extend to ${distance} and add a reference point there. This setting is saved in this browser.`,
             hideLocationSearchLabel: 'Hide location search',
             hideLocationSearchDescription: 'Hide place-name and coordinate search without removing saved map API keys. This setting is saved in this browser.',
             locationApiKeyLabel: 'Domestic location search API keys',
@@ -2050,19 +2094,21 @@
                 cloud: 'Cloud cover',
                 cloudDescription: 'More white fill means more cloud. Total cover shows overall obstruction; high, medium, and low show cloud-layer height.',
                 temperature: 'Temperature',
-                temperatureDescription: 'Colors progress from colder to hotter. Values are in °C.',
+                temperatureDescription: unit => `Colors progress from colder to hotter. Values are in ${unit}.`,
                 dewPoint: 'Dew point',
-                dewPointDescription: 'Green means lower condensation risk, yellow needs attention, and red means condensation is likely. Values are in °C.',
+                dewPointDescription: unit => `Green means lower condensation risk, yellow needs attention, and red means condensation is likely. Values are in ${unit}.`,
                 humidity: 'Humidity',
                 humidityDescription: 'Higher humidity means a greater need to watch for condensation.',
                 precipitation: 'Precipitation',
-                precipitationDescription: 'Yellow is below 1 mm, orange is 1–2.5 mm, and red is above 2.5 mm.',
+                precipitationDescription: (warning, danger, unit) =>
+                    `Yellow is below ${warning} ${unit}, orange is ${warning}–${danger} ${unit}, and red is above ${danger} ${unit}.`,
                 windSpeed: 'Wind speed',
-                windSpeedDescription: 'Green is up to 16 km/h, yellow is 17–32 km/h, and red is above 32 km/h.',
+                windSpeedDescription: (warning, danger, unit, beaufort) =>
+                    `Green is up to ${warning} ${unit}, yellow is above ${warning} through ${danger} ${unit}, and red is above ${danger} ${unit}.${beaufort ? ' When Windy uses bft, cells show bft/m/s together and colors use exact m/s.' : ''}`,
                 windDirection: 'Wind direction',
                 windDirectionDescription: 'The arrow points toward the direction the wind comes from.',
                 visibility: 'Visibility',
-                visibilityDescription: 'Sample values are in kilometres. Higher values usually mean clearer air over longer distances.',
+                visibilityDescription: unit => `Sample values are in ${unit}. Higher values usually mean clearer air over longer distances.`,
                 aerosolAod: 'Aerosol AOD',
                 aerosolAodDescription: 'AOD is total-column aerosol optical depth at 550 nm. From left to right, the samples mean very low, low, elevated, and high. Lower values usually mean less light attenuation by aerosols, but AOD cannot be converted directly into visibility. Open-Meteo provides both fields, with AOD sourced from CAMS independently of the EC, GFS, or ICON selection.',
                 celestialEvents: 'Sun and moon rise/set times',
@@ -2260,6 +2306,7 @@
     let locationSearchProvider: LocationProvider = 'amap';
     let locationApiKeys: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
     let locationApiKeyDrafts: LocationProviderApiKeys = { amap: '', baidu: '', tencent: '' };
+    let units: UnitPreferences = currentUnitPreferences();
     let savedApiKeyProvider: LocationProvider | null = null;
     let observationWindows: ObservationWindow[] = [];
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
@@ -2286,6 +2333,30 @@
     let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
+    $: windWarningThresholdLabel = formatWindThreshold(4.5, units.wind);
+    $: windDangerThresholdLabel = formatWindThreshold(9, units.wind);
+    $: windLegendUnit = windThresholdUnit(units.wind);
+    $: temperatureLegendValues = [0, 5, 12, 18, 24, 30, 36, 38]
+        .map(value => formatTemperatureC(value, units.temperature));
+    $: dewPointLegendValues = [33, 34, 35, 36]
+        .map(value => formatTemperatureC(value, units.temperature));
+    $: precipitationLegendValues = [1, 2.5]
+        .map(value => formatPrecipitationMm(value, units.precipitation));
+    $: visibilityLegendValues = [0.8, 1.5, 3.5, 7, 12]
+        .map(value => formatVisibilityKm(value, units.distance));
+
+    /** Mirror Windy's global units without mutating the host preferences. */
+    const handleMetricChange = (ident?: string, unit?: string) => {
+        // Windy broadcasts the new unit before every consumer can safely reread
+        // the metric object, so prefer the event payload for immediate rendering.
+        const nextUnits = resolveUnitPreferencesChange(units, ident, unit, currentUnitPreferences);
+        const distanceChanged = nextUnits.distance !== units.distance;
+        units = nextUnits;
+        if (distanceChanged && isMounted && solarPaths.length > 0) {
+            renderMapFeatures(selectedMapPaths());
+        }
+    };
+
     $: latestPluginVersion = pluginUpdateResult
         ? selectPluginLinkVersion(pluginVersion, pluginUpdateResult)
         : '';
@@ -2336,7 +2407,7 @@
     $: locationKey = buildWeatherLocationKey(selectedLocation);
 
     $: locationElevationText = elevationLocationKey === locationKey
-        ? `${Math.round(elevationM)} m`
+        ? formatElevationLabel(elevationM, units.elevation)
         : '--';
 
     $: weatherRequestKey = buildWeatherRequestKey(weatherModel, locationKey, currentInstant.getTime());
@@ -3102,6 +3173,7 @@
             opacityPercent: directionLineOpacityPercent,
             originLabel: text.legend.origin,
             eventNames: text.events,
+            formatDistance: distanceKm => formatDistanceLabel(distanceKm, units.distance),
         });
     };
 
@@ -3827,23 +3899,37 @@
         return minimum === maximum ? minimum : `${minimum}–${maximum}`;
     };
 
+    const formatDistanceLabel = (distanceKm: number, unit: DistanceUnit): string =>
+        `${formatDistanceKm(distanceKm, unit)} ${unit}`;
+
+    const formatElevationLabel = (valueM: number, unit: UnitPreferences['elevation']): string =>
+        `${formatElevationM(valueM, unit)} ${unit}`;
+
     const formatObservationMeasurement = (
         range: ObservationMetricRange | null,
         maximumFractionDigits: number,
-        unit: '%' | 'km',
+        unit: '%',
     ): string => range
-        ? `${formatObservationRange(range, maximumFractionDigits)}${unit === '%' ? '' : ' '}${unit}`
+        ? `${formatObservationRange(range, maximumFractionDigits)}${unit}`
         : '--';
 
-    const formatObservationPrecipitation = (range: ObservationMetricRange | null): string => {
+    const formatObservationPrecipitation = (
+        range: ObservationMetricRange | null,
+        unit: PrecipitationUnit,
+    ): string => {
         if (!range) {
             return '--';
         }
         if (range.maximum === 0) {
-            return '0 mm';
+            return `0 ${unit}`;
         }
-        return `${formatObservationRange(range, 1)} mm`;
+        return formatPrecipitationRangeMm(range, unit);
     };
+
+    const formatObservationDistance = (
+        range: ObservationMetricRange | null,
+        unit: DistanceUnit,
+    ): string => range ? formatVisibilityRangeKm(range, unit) : '--';
 
     const formatDateControlLabel = (dateInput: string): string => {
         const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
@@ -4018,6 +4104,7 @@
             }
             singleclick.off(name, setLocationFromMapClick);
             bcast.off('back2home', handleBackToHome);
+            bcast.off('metricChanged', handleMetricChange);
             map.off('dragstart', handleMapDragStart);
             map.off('moveend', handleMapMoveEnd);
             document.removeEventListener('click', handleHomeButtonClick, true);
@@ -4033,6 +4120,7 @@
             : null;
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
         uiLanguage = loadLanguagePreference();
+        units = currentUnitPreferences();
         mobilePanelMode = isMobileOrTablet ? loadMobilePanelModePreference() : 'compact';
         lastMobileNonFullscreenMode = mobilePanelMode;
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
@@ -4053,6 +4141,7 @@
         void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
         bcast.on('back2home', handleBackToHome);
+        bcast.on('metricChanged', handleMetricChange);
         map.on('dragstart', handleMapDragStart);
         map.on('moveend', handleMapMoveEnd);
         document.addEventListener('click', handleHomeButtonClick, true);

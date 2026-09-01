@@ -6,8 +6,10 @@ import locationSearchSource from './LocationSearch.svelte?raw';
 import pluginConfigSource from './pluginConfig.ts?raw';
 import pluginSource from './plugin.svelte?raw';
 import radarFrameTimeLabelSource from './radarFrameTimeLabel.ts?raw';
+import weatherSource from './weather.ts?raw';
 import weatherMetricIconSource from './WeatherMetricIcon.svelte?raw';
 import weatherTableSource from './WeatherTable.svelte?raw';
+import unitPreferencesSource from './unitPreferences.ts?raw';
 
 describe('plugin astronomy loading presentation', () => {
     it('places moonless and Milky Way windows in the comparison table without a separate timeline', () => {
@@ -155,7 +157,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('<path d="M7 12h10M12 7v10"></path>');
         expect(pluginSource).toContain('disabled={!canFitDirectionLines}');
         expect(pluginSource).toContain('paths: selectObservationPaths(solarPaths, selectedEvent)');
-        expect(pluginSource).toContain('aria-label={text.fitDirectionLinesLabel(showExtendedDistanceMarker ? 600 : 400)}');
+        expect(pluginSource).toContain(
+            'aria-label={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}',
+        );
         expect(pluginSource).toContain('aria-label={text.restoreSearchZoomLabel}');
         expect(pluginSource).toContain('paddingBottomRight: visibleViewport.fitPaddingBottomRight');
         expect(pluginSource).toContain('duration: 0.45');
@@ -169,7 +173,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('paddingLeft: visibleViewport.centerPaddingLeft');
         expect(pluginSource).toContain('MOBILE_MAP_RECENTER_DELAY_MS');
         expect(pluginSource).toContain('clearTimeout(mapDetailRecenterTimer)');
-        expect(pluginSource).toContain("fitDirectionLinesLabel: distanceKm => `完整显示 ${distanceKm} km 方位线`");
+        expect(pluginSource).toContain("fitDirectionLinesLabel: distance => `完整显示 ${distance} 方位线`");
         expect(pluginSource).toContain("restoreSearchZoomLabel: 'Restore search-location zoom'");
     });
 
@@ -467,6 +471,49 @@ describe('plugin astronomy loading presentation', () => {
         expect(cleanupSource).toContain('radarOverlayController.destroy();');
         expect(cleanupSource).toContain('store.off(radarTimestampSubscriptionId);');
         expect(pluginSource).not.toContain('<RadarTimeline');
+    });
+
+    it('follows Windy units while preserving canonical weather and location data', () => {
+        expect(weatherSource).toContain('windMs: wind === null ? null : roundTo(Math.max(0, wind), 1)');
+        expect(weatherSource).not.toContain('Math.max(0, wind) * 3.6');
+        expect(unitPreferencesSource).toContain('metrics.wind.convertNumber(windMs, forcedPrecision, unit)');
+        expect(unitPreferencesSource).toContain('metrics.temp.convertNumber(temperatureC + 273.15');
+        expect(unitPreferencesSource).toContain('metrics.rain.convertNumber(precipitationMm');
+        expect(unitPreferencesSource).toContain('metrics.distance.convertNumber(distanceKm * 1_000');
+        expect(unitPreferencesSource).toContain('metrics.elevation.convertNumber(elevationM');
+        expect(unitPreferencesSource).toContain("unit === 'bft' ? 'bft/m/s' : unit");
+        expect(unitPreferencesSource).not.toContain('setMetric(');
+        expect(weatherTableSource).toContain('export let units: UnitPreferences;');
+        expect(weatherTableSource).toContain('metricValueText(metric, value, units)');
+        expect(weatherTableSource).toContain('formatWindSpeed(value, selectedUnits.wind)');
+        expect(weatherTableSource).toContain('formatTemperatureC(value, selectedUnits.temperature)');
+        expect(weatherTableSource).toContain('formatPrecipitationMm(value, selectedUnits.precipitation)');
+        expect(weatherTableSource).toContain('formatVisibilityKm(value, selectedUnits.distance)');
+        expect(favoriteComparisonSource).toContain('metric.evidenceField,\n                                            units,');
+        expect(favoriteComparisonSource).toContain('formatWindSpeedRange(range, selectedUnits.wind)');
+        expect(favoriteComparisonSource).toContain('formatTemperatureRangeC(range, selectedUnits.temperature)');
+        expect(favoriteComparisonSource).toContain('formatPrecipitationRangeMm(range, selectedUnits.precipitation)');
+        expect(favoriteComparisonSource).toContain('formatVisibilityRangeKm(range, selectedUnits.distance)');
+        expect(favoriteLocationsSource).toContain('export let units: UnitPreferences;');
+        expect(favoriteLocationsSource).toContain('formatDistanceKm(item.distanceKm, selectedUnits.distance)');
+        expect(favoriteLocationsSource).toContain('formatElevationM(value, selectedUnits.elevation)');
+        expect(locationSearchSource).toContain('export let units: UnitPreferences;');
+        expect(locationSearchSource).toContain('formatDistanceKm(distanceKm, selectedUnits.distance)');
+        expect(locationSearchSource).toContain('formatElevationM(elevationM as number, selectedUnits.elevation)');
+        expect(pluginSource).toContain('formatDistance: distanceKm => formatDistanceLabel(distanceKm, units.distance)');
+        expect(pluginSource).toContain(
+            'openUpward={isMobileCollapsed}\n        {units}\n        on:back={handleFavoriteComparisonBack}',
+        );
+        expect(pluginSource).not.toContain(
+            'openUpward={isMobileCollapsed}\n        {units}\n        on:select={handleFavoriteLocationSelect}',
+        );
+        expect(pluginSource).toContain('units = currentUnitPreferences();');
+        expect(pluginSource).toContain(
+            'const nextUnits = resolveUnitPreferencesChange(units, ident, unit, currentUnitPreferences);',
+        );
+        expect(pluginSource).toContain("bcast.on('metricChanged', handleMetricChange);");
+        expect(pluginSource).toContain("bcast.off('metricChanged', handleMetricChange);");
+        expect(pluginSource).not.toContain('metrics.wind.setMetric');
     });
 
     it('mounts the actual provider frame time above Windy’s native timecode and removes it on close', () => {
@@ -793,7 +840,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(providerCheckStyle).toContain('justify-self: center;');
         expect(providerCheckStyle).not.toContain('right:');
         expect(locationSearchSource).toContain('export let mobile = false;');
-        expect(pluginSource).toContain('mobile={isMobileOrTablet}\n                provider={locationSearchProvider}');
+        expect(pluginSource).toContain('mobile={isMobileOrTablet}');
+        expect(pluginSource).toContain('provider={locationSearchProvider}');
+        expect(pluginSource).toContain('<LocationSearch');
         expect(locationSearchSource).toContain('focusOption = false');
         expect(locationSearchSource).toContain('if (focusOption) {');
         expect(locationSearchSource).toContain('const keyboardActivated = event.detail === 0;');

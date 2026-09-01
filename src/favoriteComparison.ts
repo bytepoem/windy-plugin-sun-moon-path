@@ -170,7 +170,7 @@ const atmosphereOnlyWeatherPoint = (point: OpenMeteoAtmospherePoint): WeatherPoi
     dewPointC: null,
     humidityPercent: null,
     precipMm: null,
-    windKmh: null,
+    windMs: null,
     windDirectionDeg: null,
     aod550: point.aod550,
     visibilityKm: point.visibilityKm,

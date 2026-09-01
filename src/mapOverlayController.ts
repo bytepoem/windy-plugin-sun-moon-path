@@ -30,6 +30,7 @@ export type MapOverlayRenderState = {
     opacityPercent: number;
     originLabel: string;
     eventNames: Record<SolarEvent, string>;
+    formatDistance: (distanceKm: number) => string;
 };
 
 export type MapOverlayCurrentState = Pick<
@@ -182,7 +183,7 @@ export const createMapOverlayController = (
                     runtime.createMarker(toLatLng(markerInput.point), {
                         icon: markerIcon(runtime, markerInput.kind),
                     }).addTo(layerGroup).bindTooltip(
-                        `${state.eventNames[path.event]} · ${sample.label} · ${markerInput.distance} km`,
+                        `${state.eventNames[path.event]} · ${sample.label} · ${state.formatDistance(markerInput.distance)}`,
                         { direction: 'top', offset: [0, -6] },
                     );
                 }

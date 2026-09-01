@@ -20,6 +20,14 @@
         type WeatherPoint,
     } from './weather';
 
+    import {
+        formatPrecipitationMm,
+        formatTemperatureC,
+        formatVisibilityKm,
+        formatWindSpeed,
+        windDisplayUnit,
+        type UnitPreferences,
+    } from './unitPreferences';
     import type { Coordinates } from './solar';
 
     export let points: WeatherPoint[] = [];
@@ -34,6 +42,7 @@
     export let selectedDate = '';
     export let dataKey = '';
     export let location: Coordinates;
+    export let units: UnitPreferences;
 
     const dispatch = createEventDispatcher<{
         modelchange: WeatherModel;
@@ -54,7 +63,7 @@
         'dewPointC',
         'humidityPercent',
         'precipMm',
-        'windKmh',
+        'windMs',
         'windDirectionDeg',
         'visibilityKm',
         'aod550',
@@ -86,13 +95,13 @@
                 highCloudPercent: ['高云', '%'],
                 mediumCloudPercent: ['中云', '%'],
                 lowCloudPercent: ['低云', '%'],
-                temperatureC: ['气温', '°C'],
-                dewPointC: ['露点', '°C'],
+                temperatureC: ['气温', ''],
+                dewPointC: ['露点', ''],
                 humidityPercent: ['湿度', '%'],
                 aod550: ['AOD', 'OM · 550nm'],
-                visibilityKm: ['能见度', 'OM · km'],
-                precipMm: ['降水', 'mm'],
-                windKmh: ['风速', 'km/h'],
+                visibilityKm: ['能见度', 'OM'],
+                precipMm: ['降水', ''],
+                windMs: ['风速', ''],
                 windDirectionDeg: ['风向', ''],
             },
         },
@@ -121,13 +130,13 @@
                 highCloudPercent: ['High', '%'],
                 mediumCloudPercent: ['Medium', '%'],
                 lowCloudPercent: ['Low', '%'],
-                temperatureC: ['Temp.', '°C'],
-                dewPointC: ['Dew point', '°C'],
+                temperatureC: ['Temp.', ''],
+                dewPointC: ['Dew point', ''],
                 humidityPercent: ['Humidity', '%'],
                 aod550: ['AOD', 'OM · 550nm'],
-                visibilityKm: ['Visibility', 'OM · km'],
-                precipMm: ['Precip.', 'mm'],
-                windKmh: ['Wind', 'km/h'],
+                visibilityKm: ['Visibility', 'OM'],
+                precipMm: ['Precip.', ''],
+                windMs: ['Wind', ''],
                 windDirectionDeg: ['Direction', ''],
             },
         },
@@ -232,34 +241,59 @@
         tableScroller.scrollBy({ left: direction * distance, behavior: 'smooth' });
     };
 
-    const metricValueText = (metric: WeatherMetric, value: number | null): string => {
+    const metricValueText = (
+        metric: WeatherMetric,
+        value: number | null,
+        selectedUnits: UnitPreferences,
+    ): string => {
         if (value === null || (metric === 'precipMm' && value === 0)) {
             return '-';
         }
         if (metric === 'precipMm') {
-            return value.toFixed(1);
+            return formatPrecipitationMm(value, selectedUnits.precipitation);
         }
         if (metric === 'aod550') {
             return value.toFixed(2);
         }
         if (metric === 'visibilityKm') {
-            return value.toFixed(1);
+            return formatVisibilityKm(value, selectedUnits.distance);
+        }
+        if (metric === 'windMs') {
+            return formatWindSpeed(value, selectedUnits.wind);
+        }
+        if (metric === 'temperatureC' || metric === 'dewPointC') {
+            return formatTemperatureC(value, selectedUnits.temperature);
         }
         return String(Math.round(value));
     };
 
-    const metricAriaLabel = (metric: WeatherMetric): string => {
+    const metricUnit = (metric: WeatherMetric, selectedUnits: UnitPreferences): string => {
+        if (metric === 'windMs') {
+            return windDisplayUnit(selectedUnits.wind);
+        }
+        if (metric === 'temperatureC' || metric === 'dewPointC') {
+            return selectedUnits.temperature;
+        }
+        if (metric === 'precipMm') {
+            return selectedUnits.precipitation;
+        }
+        if (metric === 'visibilityKm') {
+            return `OM · ${selectedUnits.distance}`;
+        }
+        return text.metrics[metric][1];
+    };
+
+    const metricAriaLabel = (metric: WeatherMetric, selectedUnits: UnitPreferences): string => {
         if (metric === 'aod550') {
             return language === 'zh'
                 ? 'AOD 550 纳米，Open-Meteo，数据源 CAMS'
                 : 'AOD at 550 nanometres, Open-Meteo, sourced from CAMS';
         }
         if (metric === 'visibilityKm') {
-            return language === 'zh'
-                ? '能见度，单位千米，Open-Meteo'
-                : 'Visibility in kilometres, Open-Meteo';
+            return `${text.metrics[metric][0]} ${selectedUnits.distance}, Open-Meteo`;
         }
-        return `${text.metrics[metric][0]}${text.metrics[metric][1] ? ` ${text.metrics[metric][1]}` : ''}`;
+        const unit = metricUnit(metric, selectedUnits);
+        return `${text.metrics[metric][0]}${unit ? ` ${unit}` : ''}`;
     };
 
     const cloudBarStyle = (metric: WeatherMetric, value: number | null): string =>
@@ -421,14 +455,14 @@
                         <div
                             class="weather-cell weather-label weather-metric-label"
                             role="rowheader"
-                            aria-label={metricAriaLabel(metric)}
+                            aria-label={metricAriaLabel(metric, units)}
                         >
                             <span class="weather-metric-label__name">
                                 <WeatherMetricIcon {metric} size={10} />
                                 <span>{text.metrics[metric][0]}</span>
                             </span>
-                            {#if text.metrics[metric][1]}
-                                <small>{text.metrics[metric][1]}</small>
+                            {#if metricUnit(metric, units)}
+                                <small>{metricUnit(metric, units)}</small>
                             {/if}
                         </div>
                         {#each points as point, index}
@@ -462,7 +496,7 @@
                                         <path d="M12 2 18 20 12 16 6 20Z"></path>
                                     </svg>
                                 {:else}
-                                    <span>{metricValueText(metric, value)}</span>
+                                    <span>{metricValueText(metric, value, units)}</span>
                                 {/if}
                             </div>
                         {/each}

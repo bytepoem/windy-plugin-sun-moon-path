@@ -19,6 +19,13 @@
     } from './weather';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import {
+        formatPrecipitationRangeMm,
+        formatTemperatureRangeC,
+        formatVisibilityRangeKm,
+        formatWindSpeedRange,
+        type UnitPreferences,
+    } from './unitPreferences';
+    import {
         calculateCurrentMoonInfo,
         dateInputForInstant,
         type AstronomyIntervalKind,
@@ -33,6 +40,7 @@
     export let mobile = false;
     export let fullscreen = false;
     export let openUpward = false;
+    export let units: UnitPreferences;
     export let returnFocus: HTMLElement | null = null;
 
     const dispatch = createEventDispatcher<{
@@ -116,10 +124,10 @@
     type ComparisonMetric = {
         label: string;
         metric: 'totalCloudPercent' | 'highCloudPercent' | 'mediumCloudPercent' | 'lowCloudPercent'
-            | 'temperatureC' | 'dewPointC' | 'precipMm' | 'windKmh' | 'humidityPercent'
+            | 'temperatureC' | 'dewPointC' | 'precipMm' | 'windMs' | 'humidityPercent'
             | 'visibilityKm' | 'aod550';
         evidenceField: 'totalCloudPercent' | 'highCloudPercent' | 'mediumCloudPercent' | 'lowCloudPercent'
-            | 'temperatureC' | 'dewPointC' | 'precipitationMm' | 'windKmh' | 'humidityPercent'
+            | 'temperatureC' | 'dewPointC' | 'precipitationMm' | 'windMs' | 'humidityPercent'
             | 'visibilityKm' | 'aod550';
     };
     const windowKinds: AstronomyIntervalKind[] = ['moonless-night', 'milky-way'];
@@ -177,7 +185,7 @@
         { label: text.dewPoint, metric: 'dewPointC', evidenceField: 'dewPointC' },
         { label: text.humidity, metric: 'humidityPercent', evidenceField: 'humidityPercent' },
         { label: text.precipitation, metric: 'precipMm', evidenceField: 'precipitationMm' },
-        { label: text.wind, metric: 'windKmh', evidenceField: 'windKmh' },
+        { label: text.wind, metric: 'windMs', evidenceField: 'windMs' },
         { label: text.visibility, metric: 'visibilityKm', evidenceField: 'visibilityKm' },
         { label: text.aod, metric: 'aod550', evidenceField: 'aod550' },
     ];
@@ -365,8 +373,9 @@
     const rangeLabel = (
         result: FavoriteComparisonResult,
         field: 'totalCloudPercent' | 'highCloudPercent' | 'mediumCloudPercent' | 'lowCloudPercent'
-            | 'temperatureC' | 'dewPointC' | 'precipitationMm' | 'windKmh' | 'humidityPercent'
+            | 'temperatureC' | 'dewPointC' | 'precipitationMm' | 'windMs' | 'humidityPercent'
             | 'visibilityKm' | 'aod550',
+        selectedUnits: UnitPreferences,
     ): string => {
         // 无月与银河窗口合并展示后，条件表同步统计两个有效窗口的完整范围。
         const ranges = result.windows.flatMap(window => {
@@ -389,6 +398,18 @@
             }
             return '--';
         }
+        if (field === 'windMs') {
+            return formatWindSpeedRange(range, selectedUnits.wind);
+        }
+        if (field === 'precipitationMm') {
+            return formatPrecipitationRangeMm(range, selectedUnits.precipitation);
+        }
+        if (field === 'visibilityKm') {
+            return formatVisibilityRangeKm(range, selectedUnits.distance);
+        }
+        if (field === 'temperatureC' || field === 'dewPointC') {
+            return formatTemperatureRangeC(range, selectedUnits.temperature);
+        }
         const format = (value: number) => {
             if (field === 'precipitationMm') {
                 return value.toFixed(value === Math.round(value) ? 0 : 1);
@@ -401,18 +422,6 @@
         const formattedRange = range.minimum === range.maximum
             ? format(range.minimum)
             : `${format(range.minimum)}–${format(range.maximum)}`;
-        if (field === 'precipitationMm') {
-            return `${formattedRange} mm`;
-        }
-        if (field === 'windKmh') {
-            return `${formattedRange} km/h`;
-        }
-        if (field === 'visibilityKm') {
-            return `${formattedRange} km`;
-        }
-        if (field === 'temperatureC' || field === 'dewPointC') {
-            return `${formattedRange} °C`;
-        }
         if (field === 'aod550') {
             return formattedRange;
         }
@@ -638,6 +647,7 @@
                                         <td class={`column-${index + 1}`}>{rangeLabel(
                                             result,
                                             metric.evidenceField,
+                                            units,
                                         )}</td>
                                     {/each}
                                 </tr>

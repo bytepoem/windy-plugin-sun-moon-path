@@ -11,7 +11,7 @@ export type WeatherMetric =
     | 'dewPointC'
     | 'humidityPercent'
     | 'precipMm'
-    | 'windKmh'
+    | 'windMs'
     | 'windDirectionDeg'
     | 'aod550'
     | 'visibilityKm';
@@ -64,7 +64,7 @@ export interface WeatherPoint {
     dewPointC: number | null;
     humidityPercent: number | null;
     precipMm: number | null;
-    windKmh: number | null;
+    windMs: number | null;
     windDirectionDeg: number | null;
     aod550: number | null;
     visibilityKm: number | null;
@@ -272,7 +272,9 @@ export const transformWeatherPayload = (
                 dewPointC: kelvinToCelsius(dewPoint),
                 humidityPercent: normalizePercent(humidity),
                 precipMm: precipAmount === null ? null : roundTo(Math.max(0, precipAmount), 1),
-                windKmh: wind === null ? null : Math.round(Math.max(0, wind) * 3.6),
+                // Windy's point forecast already returns metres per second. Normalize once
+                // to the table's 0.1 m/s precision so values, thresholds, and colors agree.
+                windMs: wind === null ? null : roundTo(Math.max(0, wind), 1),
                 windDirectionDeg: normalizeDirection(finiteNumber(payload.data.windDir[dataIndex])),
                 aod550: null,
                 visibilityKm: null,
@@ -422,8 +424,8 @@ export const weatherMetricTone = (metric: WeatherMetric, value: number | null): 
     if (metric === 'precipMm') {
         return value > 2.5 ? 'danger' : value >= 1 ? 'orange' : value > 0 ? 'warning' : 'neutral';
     }
-    if (metric === 'windKmh') {
-        return value > 32.4 ? 'danger' : value > 16.2 ? 'warning' : 'good';
+    if (metric === 'windMs') {
+        return value > 9 ? 'danger' : value > 4.5 ? 'warning' : 'good';
     }
     if (metric === 'visibilityKm') {
         return value < 1

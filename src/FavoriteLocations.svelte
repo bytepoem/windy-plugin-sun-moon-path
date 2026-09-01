@@ -12,7 +12,6 @@
         type FavoriteMetricUpdate,
     } from './favoriteMetrics';
     import {
-        favoriteDistanceLabel,
         filterFavoritePlaceItems,
         favoriteLightPollutionLevel,
         favoriteLocationSelection,
@@ -30,6 +29,11 @@
         type LightPollutionPoint,
     } from './lightPollution';
     import { compactLocationLabel } from './location';
+    import {
+        formatDistanceKm,
+        formatElevationM,
+        type UnitPreferences,
+    } from './unitPreferences';
     import {
         FAVORITE_COMPARISON_MAX_TARGETS,
         type FavoriteComparisonTarget,
@@ -52,6 +56,7 @@
     export let currentActionDisabled = true;
     export let currentElevationM: number | null = null;
     export let currentLightPollution: LightPollutionPoint | null = null;
+    export let units: UnitPreferences;
 
     const dispatch = createEventDispatcher<{
         select: LocationSearchSelection;
@@ -219,10 +224,15 @@
         }
     }
 
-    const localizedDistance = (item: FavoritePlaceItem, currentLabel: string): string => {
-        const label = favoriteDistanceLabel(item.distanceKm, item.isCurrent);
-        return label === 'current' ? currentLabel : label;
-    };
+    const localizedDistance = (
+        item: FavoritePlaceItem,
+        currentLabel: string,
+        selectedUnits: UnitPreferences,
+    ): string => item.isCurrent
+        ? currentLabel
+        : item.distanceKm === null
+            ? '--'
+            : `${formatDistanceKm(item.distanceKm, selectedUnits.distance)} ${selectedUnits.distance}`;
 
     const metricViewFor = (favorite: LocationFavorite): FavoriteMetricUpdate =>
         metricsByLocation[favoriteMetricsLocationKey(favorite)] || {};
@@ -236,11 +246,16 @@
             : {}),
     });
 
-    const elevationLabel = (value: number | null | undefined): string => {
+    const elevationLabel = (
+        value: number | null | undefined,
+        selectedUnits: UnitPreferences,
+    ): string => {
         if (value === undefined) {
             return '…';
         }
-        return value === null ? '--' : `${Math.round(value)} m`;
+        return value === null
+            ? '--'
+            : `${formatElevationM(value, selectedUnits.elevation)} ${selectedUnits.elevation}`;
     };
 
     const bortleLabel = (point: LightPollutionPoint | null | undefined): string => {
@@ -257,10 +272,14 @@
         return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
     };
 
-    const favoriteButtonLabel = (item: FavoritePlaceItem, metrics: FavoriteMetricUpdate): string => [
+    const favoriteButtonLabel = (
+        item: FavoritePlaceItem,
+        metrics: FavoriteMetricUpdate,
+        selectedUnits: UnitPreferences,
+    ): string => [
         item.favorite.title,
-        localizedDistance(item, text.current),
-        `${text.elevation} ${elevationLabel(metrics.elevationM)}`,
+        localizedDistance(item, text.current, selectedUnits),
+        `${text.elevation} ${elevationLabel(metrics.elevationM, selectedUnits)}`,
         `${text.bortle} ${bortleLabel(metrics.lightPollution)}`,
     ].join(', ');
 
@@ -760,7 +779,7 @@
                         type="button"
                         aria-current={item.isCurrent ? 'location' : undefined}
                         aria-pressed={comparisonMode ? comparisonIds.includes(item.favorite.id) : undefined}
-                        aria-label={favoriteButtonLabel(item, metrics)}
+                        aria-label={favoriteButtonLabel(item, metrics, units)}
                         class:current={item.isCurrent}
                         class:comparison-selected={comparisonIds.includes(item.favorite.id)}
                         class:comparison-disabled={comparisonMode
@@ -779,7 +798,7 @@
                             <span class="favorite-locations__metrics" aria-hidden="true">
                                 <span class="favorite-locations__metric-icon">▲</span>
                                 <span class="favorite-locations__elevation-value">
-                                    {elevationLabel(metrics.elevationM)}
+                                    {elevationLabel(metrics.elevationM, units)}
                                 </span>
                                 <span class="favorite-locations__metric-label">{text.bortle}</span>
                                 <span class="favorite-locations__bortle-value">
@@ -787,7 +806,7 @@
                                 </span>
                             </span>
                         </span>
-                        <span class="favorite-locations__distance">{localizedDistance(item, text.current)}</span>
+                        <span class="favorite-locations__distance">{localizedDistance(item, text.current, units)}</span>
                         <svg class="favorite-locations__selected" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             {#if comparisonMode}
                                 <rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect>

@@ -88,7 +88,11 @@ export const fetchOpenMeteoAtmosphere = async ({
         ),
     ]);
     const aodByTimestamp = seriesByTimestamp(airQuality, 'aerosol_optical_depth', value => value);
-    const visibilityByTimestamp = seriesByTimestamp(forecast, 'visibility', value => value / 1000);
+    const visibilityByTimestamp = seriesByTimestamp(
+        forecast,
+        'visibility',
+        value => Math.round(value / 100) / 10,
+    );
     const timestamps = [...new Set([...aodByTimestamp.keys(), ...visibilityByTimestamp.keys()])]
         .sort((left, right) => left - right);
 

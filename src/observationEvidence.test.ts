@@ -15,7 +15,7 @@ const completeEvidence = (overrides: Partial<ObservationWindowEvidence> = {}): O
     temperatureC: { minimum: 18, maximum: 20 },
     dewPointC: { minimum: 14, maximum: 15 },
     precipitationMm: { minimum: 0, maximum: 0 },
-    windKmh: { minimum: 7, maximum: 12 },
+    windMs: { minimum: 7, maximum: 12 },
     humidityPercent: { minimum: 63, maximum: 78 },
     visibilityKm: { minimum: 8, maximum: 12 },
     aod550: null,

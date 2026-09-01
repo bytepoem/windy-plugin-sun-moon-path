@@ -78,6 +78,7 @@ describe('map overlay controller', () => {
                 moonrise: 'Moonrise',
                 moonset: 'Moonset',
             },
+            formatDistance: value => `${value} km`,
         });
 
         expect(groups).toHaveLength(1);
@@ -110,6 +111,7 @@ describe('map overlay controller', () => {
             opacityPercent: 100,
             originLabel: 'Observer',
             eventNames: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset' },
+            formatDistance: value => `${value} km`,
         });
         const eventLines = lines.slice(0, 3);
         const previousCurrentLine = lines[3];
@@ -142,6 +144,7 @@ describe('map overlay controller', () => {
             opacityPercent: 100,
             originLabel: 'Observer',
             eventNames: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset' },
+            formatDistance: value => `${value} km`,
         });
         controller.setOpacity(50);
         controller.destroy();

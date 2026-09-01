@@ -24,7 +24,7 @@ const weatherPoint = (timestamp: number): WeatherPoint => ({
     dewPointC: 10,
     humidityPercent: 50,
     precipMm: 0,
-    windKmh: 5,
+    windMs: 5,
     windDirectionDeg: 180,
     aod550: null,
     visibilityKm: null,
@@ -87,7 +87,7 @@ describe('Open-Meteo atmosphere data', () => {
         })).resolves.toEqual([
             { timestamp: startSeconds * 1000, aod550: 0.12, visibilityKm: null },
             { timestamp: (startSeconds + 3600) * 1000, aod550: null, visibilityKm: 8.4 },
-            { timestamp: (startSeconds + 7200) * 1000, aod550: null, visibilityKm: 12.15 },
+            { timestamp: (startSeconds + 7200) * 1000, aod550: null, visibilityKm: 12.2 },
         ]);
     });
 
