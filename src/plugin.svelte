@@ -38,8 +38,8 @@
                 <button
                     type="button"
                     class="desktop-map-control desktop-map-fit-control"
-                    aria-label={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
-                    title={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
+                    aria-label={fitMapControlLabel}
+                    title={fitMapControlLabel}
                     disabled={!canFitDirectionLines}
                     on:click|stopPropagation={fitVisibleDirectionLines}
                 >
@@ -50,8 +50,8 @@
                 <button
                     type="button"
                     class="desktop-map-control desktop-map-detail-control"
-                    aria-label={text.restoreSearchZoomLabel}
-                    title={text.restoreSearchZoomLabel}
+                    aria-label={detailMapControlLabel}
+                    title={detailMapControlLabel}
                     on:click|stopPropagation={restoreSearchLocationZoom}
                 >
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -88,8 +88,8 @@
             <button
                 type="button"
                 class="mobile-window-control mobile-map-fit-toggle"
-                aria-label={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
-                title={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}
+                aria-label={fitMapControlLabel}
+                title={fitMapControlLabel}
                 disabled={!canFitDirectionLines}
                 on:click={fitVisibleDirectionLines}
             >
@@ -103,8 +103,8 @@
             <button
                 type="button"
                 class="mobile-window-control mobile-map-detail-toggle"
-                aria-label={text.restoreSearchZoomLabel}
-                title={text.restoreSearchZoomLabel}
+                aria-label={detailMapControlLabel}
+                title={detailMapControlLabel}
                 on:click={restoreSearchLocationZoom}
             >
                 <span class="mobile-window-control__icon" aria-hidden="true">
@@ -377,6 +377,7 @@
             {#if isMobileOrTablet && !isMobileFullscreen}
                 <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => (summaryTab = 'weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
             {/if}
+            <button id="summary-tab-clouds" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'clouds'} aria-selected={summaryTab === 'clouds'} tabindex={summaryTab === 'clouds' ? 0 : -1} on:click={() => (summaryTab = 'clouds')} on:keydown={event => handleSummaryTabKeydown(event, 'clouds')}>{uiLanguage === 'zh' ? '云层遮挡' : 'Clouds'}</button>
             <button id="summary-tab-guide" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'guide'} aria-selected={summaryTab === 'guide'} tabindex={summaryTab === 'guide' ? 0 : -1} on:click={() => (summaryTab = 'guide')} on:keydown={event => handleSummaryTabKeydown(event, 'guide')}>{text.guideTab}</button>
             <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => (summaryTab = 'settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
             <button
@@ -412,6 +413,7 @@
             id="summary-panel"
             class="summary-panel-frame"
             class:summary-panel-frame--events={summaryTab === 'events'}
+            class:summary-panel-frame--clouds={summaryTab === 'clouds'}
             role={isMobileCollapsed ? 'region' : 'tabpanel'}
             aria-label={isMobileCollapsed ? text.eventTab : undefined}
             aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
@@ -432,17 +434,14 @@
                                 type="button"
                                 class="astronomy-location__button"
                                 class:scrolling={locationNameOverflows}
-                                aria-label={text.locationFavoritesLabel(
+                                aria-label={text.locationCopyLabel(
                                     locationDisplayName || text.locationResolvingLabel,
                                 )}
-                                title={text.locationFavoritesLabel(
+                                title={text.locationCopyLabel(
                                     locationDisplayName || text.locationResolvingLabel,
                                 )}
-                                aria-haspopup="dialog"
-                                aria-controls={favoritesOpen ? 'favorite-locations-panel' : undefined}
-                                aria-expanded={favoritesOpen}
                                 use:observeLocationNameOverflow={eventLocationDisplayName || text.locationResolvingLabel}
-                                on:click={openFavoriteLocations}
+                                on:click={copyLocationCoordinates}
                             >
                                 <span class="astronomy-location__copy">
                                     <span class="astronomy-location__name-line">
@@ -458,9 +457,6 @@
                                                 {/if}
                                             </span>
                                         </span>
-                                        <svg class="astronomy-location__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                                            <path d="m6 3 5 5-5 5"></path>
-                                        </svg>
                                     </span>
                                     <span
                                         class="astronomy-location__metrics"
@@ -481,6 +477,7 @@
                                 </span>
                             </button>
                             <span class="astronomy-location__actions">
+                                <span class="coordinate-copy-toast" class:visible={coordinateCopyStatus !== 'idle'} aria-live="polite" aria-atomic="true">{coordinateCopyStatus === 'copied' ? (uiLanguage === 'zh' ? '经纬度已复制' : 'Coordinates copied') : coordinateCopyStatus === 'error' ? (uiLanguage === 'zh' ? '复制失败，请重试' : 'Copy failed. Try again') : ''}</span>
                                 <button
                                     type="button"
                                     class="astronomy-location__favorite"
@@ -713,6 +710,25 @@
                     on:modelchange={handleWeatherModelChange}
                     on:retry={retryWeather}
                     on:atmosphereretry={retryAtmosphere}
+                />
+            {:else if summaryTab === 'clouds'}
+                <CloudObstruction
+                    bind:selectedSunEvent={cloudSunEvent}
+                    bind:cloudBounds
+                    bind:cloudDetailBounds
+                    location={selectedLocation}
+                    sunEvents={solarPaths.flatMap(path => path.status === 'ok' && (path.event === 'sunrise' || path.event === 'sunset')
+                        ? [{ type: path.event, timestamp: path.eventTime.getTime() }] : [])}
+                    forecast={weatherLoadedKey === weatherRequestKey ? cloudWeatherPayload : null}
+                    status={weatherStatus}
+                    model={weatherModel}
+                    {selectedDate}
+                    {timeZone}
+                    language={uiLanguage}
+                    {units}
+                    bind:settings={cloudSettings}
+                    on:modelchange={handleWeatherModelChange}
+                    on:retry={retryWeather}
                 />
             {:else if summaryTab === 'guide'}
                 <section class="module-about module-guide" aria-label={text.guideHeading}>
@@ -1325,6 +1341,8 @@
 
     import config, { currentVersionReleasedAt } from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
+    import CloudObstruction from './CloudObstruction.svelte';
+    import { createCloudSettings } from './cloudProfile';
     import FavoriteComparison from './FavoriteComparison.svelte';
     import FavoriteLocations from './FavoriteLocations.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
@@ -1479,12 +1497,12 @@
         }
     })();
     type DirectionEvent = ObservationEvent;
-    type SummaryTab = 'events' | 'weather' | 'guide' | 'settings' | 'about';
+    type SummaryTab = 'events' | 'weather' | 'clouds' | 'guide' | 'settings' | 'about';
     type UiLanguage = 'zh' | 'en';
     type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
     type MobilePanelMode = MobileNonFullscreenPanelMode | 'fullscreen';
-    const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'guide', 'settings', 'about'];
-    const desktopSummaryTabOrder: SummaryTab[] = ['events', 'guide', 'settings', 'about'];
+    const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'clouds', 'guide', 'settings', 'about'];
+    const desktopSummaryTabOrder: SummaryTab[] = ['events', 'clouds', 'guide', 'settings', 'about'];
     const timelineSkeletonSlots = Array.from({ length: 7 }, (_, index) => index);
     const eventOptions: { value: DirectionEvent }[] = [
         { value: 'all' },
@@ -1523,7 +1541,7 @@
         mapLegendLabel: string;
         eventDirectionLinesLabel: (event: string) => string;
         favoriteLocationsLabel: string;
-        locationFavoritesLabel: (location: string) => string;
+        locationCopyLabel: (location: string) => string;
         favoriteLocationsCountLabel: (count: number) => string;
         saveCurrentLocationFavoriteLabel: string;
         removeCurrentLocationFavoriteLabel: string;
@@ -1703,7 +1721,7 @@
             mapLegendLabel: '地图图例',
             eventDirectionLinesLabel: event => `${event}方向线数据`,
             favoriteLocationsLabel: '收藏地点',
-            locationFavoritesLabel: location => `${location}，打开收藏地点`,
+            locationCopyLabel: location => `${location}，复制经纬度`,
             favoriteLocationsCountLabel: count => `打开收藏地点，共 ${count} 个`,
             saveCurrentLocationFavoriteLabel: '收藏当前地点',
             removeCurrentLocationFavoriteLabel: '取消收藏当前地点',
@@ -1944,7 +1962,7 @@
             mapLegendLabel: 'Map legend',
             eventDirectionLinesLabel: event => `${event} direction-line data`,
             favoriteLocationsLabel: 'Favorite locations',
-            locationFavoritesLabel: location => `${location}. Open favorite locations`,
+            locationCopyLabel: location => `${location}. Copy coordinates`,
             favoriteLocationsCountLabel: count => `Open ${count} favorite locations`,
             saveCurrentLocationFavoriteLabel: 'Save current location',
             removeCurrentLocationFavoriteLabel: 'Remove current location from favorites',
@@ -2253,10 +2271,18 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let cloudSettings = createCloudSettings();
+    let cloudWeatherPayload: WeatherForecastPayload | null = null;
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
     let pluginUpdateResult: PluginUpdateResult | null = null;
     let pluginUpdateNotesRetrying = false;
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
+    let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
+    let cloudSunEvent: 'sunrise' | 'sunset' = 'sunset';
+    let cloudBounds: [[number, number], [number, number]] | null = null;
+    let cloudDetailBounds: [[number, number], [number, number]] | null = null;
+    let coordinateCopyTimer: ReturnType<typeof setTimeout> | null = null;
+    $: if (locationKey) { coordinateCopyStatus = 'idle'; }
     let latestPluginVersion = '';
     let latestPluginUrl = '';
     let pluginUpdateReminderSeenVersion = readPluginUpdateReminderSeenVersion({
@@ -2386,8 +2412,14 @@
 
     // Observation evidence belongs to the Events view, so both compact data
     // views must trigger the same weather and atmosphere requests on mobile.
-    $: shouldLoadVisibleWeatherData = !isMobileCollapsed
-        && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather');
+    // A collapsed cloud panel still owns a live map overlay and needs new-location forecasts.
+    $: shouldLoadVisibleWeatherData = summaryTab === 'clouds' || (!isMobileCollapsed
+        && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather'));
+
+    // Event and current bearings remain visible alongside the cloud planning overlay.
+    $: if (isMounted && summaryTab) {
+        renderMapFeatures(selectObservationPaths(solarPaths, summaryTab === 'clouds' ? cloudSunEvent : selectedEvent));
+    }
 
     $: if (mobilePluginRoot) {
         mobilePluginRoot.classList.toggle(
@@ -2588,7 +2620,7 @@
             clearTimeout(mapDetailRecenterTimer);
             mapDetailRecenterTimer = null;
         }
-        if (value === 'collapsed') {
+        if (value === 'collapsed' && summaryTab !== 'clouds') {
             summaryTab = 'events';
         }
         if (value === 'fullscreen' && summaryTab === 'weather') {
@@ -2610,7 +2642,7 @@
         }
         favoritesOpen = false;
         favoriteReturnFocus = null;
-        if (value === 'collapsed') {
+        if (value === 'collapsed' && summaryTab !== 'clouds') {
             suspendMobileDetailRequests();
         }
         mobilePanelMode = value;
@@ -2732,9 +2764,14 @@
     };
 
     const selectedMapPaths = (paths = solarPaths): SolarPath[] =>
-        selectObservationPaths(paths, selectedEvent);
+        selectObservationPaths(paths, summaryTab === 'clouds' ? cloudSunEvent : selectedEvent);
 
-    $: canFitDirectionLines = buildDirectionLineFitBounds({
+    $: fitMapControlLabel = summaryTab === 'clouds' ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
+        : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
+    $: detailMapControlLabel = summaryTab === 'clouds' ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
+        : text.restoreSearchZoomLabel;
+
+    $: canFitDirectionLines = summaryTab === 'clouds' ? cloudBounds !== null : buildDirectionLineFitBounds({
         location: selectedLocation,
         // Keep the reactive inputs explicit: Svelte cannot infer state read
         // from inside selectedMapPaths(), so an async path refresh would
@@ -2767,8 +2804,8 @@
     };
 
     /** Fits the currently rendered 400/600 km event lines into the unobscured map area. */
-    const fitVisibleDirectionLines = () => {
-        const bounds = buildDirectionLineFitBounds({
+    const fitVisibleDirectionLines = (detail: boolean | MouseEvent = false) => {
+        const bounds = summaryTab === 'clouds' ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
             location: selectedLocation,
             paths: selectedMapPaths(),
             showExtendedDistanceMarker,
@@ -2822,6 +2859,7 @@
 
     /** Restores the selected location to the exact zoom used after a search result is chosen. */
     const restoreSearchLocationZoom = () => {
+        if (summaryTab === 'clouds') {fitVisibleDirectionLines(true); return;}
         recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
@@ -3107,11 +3145,23 @@
         }
     };
 
-    const openFavoriteLocations = (event: MouseEvent) => {
-        favoriteReturnFocus = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-        favoriteComparisonOpen = false;
-        favoritesOpen = true;
-        void refreshFavoriteDistanceOrigin();
+    /** Copy the selected point; a location change or unmount invalidates its async feedback. */
+    const copyLocationCoordinates = async () => {
+        const key = locationKey;
+        coordinateCopyStatus = 'idle';
+        try {
+            await navigator.clipboard.writeText(`${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lon.toFixed(6)}`);
+            if (isMounted && key === locationKey) { coordinateCopyStatus = 'copied'; }
+        } catch {
+            if (isMounted && key === locationKey) { coordinateCopyStatus = 'error'; }
+        }
+        if (isMounted && key === locationKey) {
+            if (coordinateCopyTimer) { clearTimeout(coordinateCopyTimer); }
+            coordinateCopyTimer = setTimeout(() => {
+                coordinateCopyStatus = 'idle';
+                coordinateCopyTimer = null;
+            }, 2000);
+        }
     };
 
     const toggleFavoriteLocations = (event: MouseEvent) => {
@@ -3231,7 +3281,7 @@
             elevationM = plan.elevationM;
             solarPaths = plan.paths;
             astronomyTimeline = plan.timeline;
-            const selectedPaths = selectObservationPaths(plan.paths, selectedEvent);
+            const selectedPaths = selectedMapPaths(plan.paths);
             status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
             renderMapFeatures(selectedPaths);
         } catch (error) {
@@ -3263,6 +3313,7 @@
         weatherStatus = 'loading';
         weatherErrorMessage = '';
         baseWeatherPoints = [];
+        cloudWeatherPayload = null;
 
         try {
             const result = await getPointForecastData(
@@ -3296,6 +3347,7 @@
                 result.data as WeatherForecastPayload,
                 requestedAt,
             );
+            cloudWeatherPayload = result.data as WeatherForecastPayload;
             baseWeatherPoints = nextPoints;
             weatherStatus = nextPoints.length > 0 ? 'ready' : 'empty';
             weatherLoadedKey = key;
@@ -4086,6 +4138,10 @@
                 clearInterval(currentDirectionTimer);
                 currentDirectionTimer = null;
             }
+            if (coordinateCopyTimer) {
+                clearTimeout(coordinateCopyTimer);
+                coordinateCopyTimer = null;
+            }
             if (locationSyncTimer) {
                 clearTimeout(locationSyncTimer);
                 locationSyncTimer = null;
@@ -4520,7 +4576,7 @@
     }
 
     .sun-path-panel.mobile_ui .summary-tabs {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
@@ -4612,7 +4668,7 @@
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
     .panel-intro,
@@ -4652,6 +4708,23 @@
         min-height: 36px;
         padding: 0 3px;
         font-size: 13px;
+        white-space: nowrap;
+        min-width: 0;
+    }
+
+    .sun-path-panel.mobile_ui #summary-tab-about {
+        position: relative;
+        flex-direction: column;
+        gap: 1px;
+        line-height: 1.2;
+    }
+
+    .sun-path-panel.mobile_ui .summary-tab__badge {
+        flex-shrink: 0;
+        min-width: 0;
+        height: 10px;
+        padding: 0 3px;
+        font-size: 7px;
     }
 
     .sun-path-panel.mobile_ui .module-about {
@@ -5483,7 +5556,7 @@
 
     .summary-tabs {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         border-bottom: 1px solid var(--panel-border);
         background: rgba(255, 255, 255, 0.04);
     }
@@ -5502,6 +5575,7 @@
         font: inherit;
         font-size: 15px;
         cursor: pointer;
+        overflow-wrap: anywhere;
     }
 
     .summary-tab__badge {
@@ -5551,6 +5625,18 @@
         height: var(--events-summary-panel-height);
     }
 
+    .sun-path-panel.mobile_collapsed .summary-panel-frame--clouds { display: none; }
+
+    .summary-panel-frame--clouds {
+        height: 440px;
+        max-height: 65dvh;
+    }
+
+    .sun-path-panel.mobile_ui:not(.mobile_fullscreen) .summary-panel-frame--clouds {
+        height: var(--summary-panel-height);
+        max-height: none;
+    }
+
     .desktop-weather-module {
         flex: 0 0 auto;
         height: var(--desktop-weather-panel-height);
@@ -5593,12 +5679,34 @@
     }
 
     .astronomy-location {
+        position: relative;
         display: flex;
         column-gap: 2px;
         align-items: center;
         min-width: 0;
         text-align: left;
     }
+
+    .coordinate-copy-toast {
+        position: absolute;
+        left: 0;
+        top: 100%;
+        z-index: 20;
+        width: max-content;
+        max-width: 240px;
+        padding: 6px 10px;
+        border-radius: 4px;
+        background: #111;
+        color: #fff;
+        box-shadow: 0 2px 8px #0006;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: normal;
+        pointer-events: none;
+        visibility: hidden;
+    }
+
+    .coordinate-copy-toast.visible { visibility: visible; }
 
     .astronomy-location__button {
         display: grid;
@@ -5764,16 +5872,6 @@
         flex: none;
         overflow: visible;
         text-overflow: clip;
-    }
-
-    .astronomy-location__chevron {
-        width: 11px;
-        height: 11px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.7;
-        stroke-linecap: round;
-        stroke-linejoin: round;
     }
 
     @keyframes location-name-scroll {

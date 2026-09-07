@@ -32,6 +32,7 @@ export type WeatherTone =
 type NumericArray = (number | null | undefined)[];
 
 export interface WeatherForecastPayload {
+    header?: { elevation: number; modelElevation?: number };
     data: {
         ts: number[];
         icon: NumericArray;

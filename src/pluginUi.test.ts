@@ -158,9 +158,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('disabled={!canFitDirectionLines}');
         expect(pluginSource).toContain('paths: selectObservationPaths(solarPaths, selectedEvent)');
         expect(pluginSource).toContain(
-            'aria-label={text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance))}',
+            'aria-label={fitMapControlLabel}',
         );
-        expect(pluginSource).toContain('aria-label={text.restoreSearchZoomLabel}');
+        expect(pluginSource).toContain('aria-label={detailMapControlLabel}');
         expect(pluginSource).toContain('paddingBottomRight: visibleViewport.fitPaddingBottomRight');
         expect(pluginSource).toContain('duration: 0.45');
         expect(pluginSource).toContain('--mobile-window-control-width: 36px;');
@@ -210,7 +210,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('title={text.eventButtonTitles[option.value]}');
         expect(pluginSource).toContain('title={text.languageToggleLabel}');
         expect(pluginSource).toContain(
-            'title={text.locationFavoritesLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
+            'title={text.locationCopyLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
         );
         expect(pluginSource).toContain("all: '显示全部日月事件方位线'");
         expect(pluginSource).toContain("moonset: 'Show only moonset direction lines'");
@@ -358,7 +358,7 @@ describe('plugin astronomy loading presentation', () => {
             /\.sun-path-panel\.mobile_ui\.mobile_compact \.astronomy-panel\s*{[\s\S]*?overflow-y: clip;[\s\S]*?overscroll-behavior-y: none;[\s\S]*?touch-action: none;/,
         );
         expect(pluginSource).toMatch(
-            /\.sun-path-panel\.mobile_ui \.summary-tabs\s*{[\s\S]*?grid-template-columns: repeat\(5, minmax\(0, 1fr\)\);/,
+            /\.sun-path-panel\.mobile_ui \.summary-tabs\s*{[\s\S]*?grid-template-columns: repeat\(6, minmax\(0, 1fr\)\);/,
         );
         expect(pluginSource).not.toContain('@media (orientation: portrait)');
         expect(pluginSource).not.toContain('sun-path-mobile-events');

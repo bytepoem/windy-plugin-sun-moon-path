@@ -804,6 +804,9 @@
                                 <span class="favorite-locations__bortle-value">
                                     {bortleLabel(metrics.lightPollution)}
                                 </span>
+                                <span class="favorite-locations__coordinates">
+                                    {item.favorite.lat.toFixed(6)}°, {item.favorite.lon.toFixed(6)}°
+                                </span>
                             </span>
                         </span>
                         <span class="favorite-locations__distance">{localizedDistance(item, text.current, units)}</span>
@@ -1151,7 +1154,7 @@
     .favorite-locations__list button {
         display: grid;
         grid-template-columns: 18px minmax(0, 1fr) auto 18px;
-        gap: 8px;
+        gap: 2px 8px;
         align-items: center;
         width: 100%;
         min-height: 50px;
@@ -1191,6 +1194,8 @@
     }
 
     .favorite-locations__name {
+        grid-column: 2;
+        grid-row: 1;
         display: block;
         min-width: 0;
         overflow: hidden;
@@ -1201,14 +1206,22 @@
     }
 
     .favorite-locations__identity {
-        display: grid;
-        gap: 2px;
-        min-width: 0;
+        display: contents;
+    }
+
+    .favorite-locations__coordinates {
+        color: var(--panel-muted);
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
     }
 
     .favorite-locations__metrics {
         display: grid;
-        grid-template-columns: 12px 7ch max-content 3ch;
+        grid-column-start: 2;
+        grid-column-end: -1;
+        grid-row: 2;
+        grid-template-columns: 12px max-content max-content max-content max-content;
         column-gap: 5px;
         align-items: center;
         width: max-content;
@@ -1243,6 +1256,8 @@
     }
 
     .favorite-locations__distance {
+        grid-column: 3;
+        grid-row: 1;
         color: var(--panel-muted);
         font-size: 11px;
         font-variant-numeric: tabular-nums;
@@ -1250,7 +1265,15 @@
     }
 
     .favorite-locations__selected {
+        grid-column: 4;
+        grid-row: 1;
         visibility: hidden;
+    }
+
+    .favorite-locations__pin {
+        grid-column: 1;
+        grid-row-start: 1;
+        grid-row-end: 3;
     }
 
     .favorite-locations__list button.current .favorite-locations__selected,
