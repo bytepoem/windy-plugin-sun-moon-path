@@ -4386,7 +4386,7 @@
 
     .sun-path-panel.mobile_ui {
         --summary-panel-height: 250px;
-        --events-summary-panel-height: 250px;
+        --events-summary-panel-height: 290px;
 
         display: flex;
         flex-direction: column;
@@ -6260,7 +6260,7 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 8px;
+        gap: 4px;
         margin-top: 1px;
         padding-top: 3px;
         border-top: 1px solid rgba(153, 181, 235, 0.16);
@@ -6268,6 +6268,7 @@
 
     .night-window__body span.night-window__metric {
         display: inline-flex;
+        flex-shrink: 0;
         align-items: center;
         gap: 3px;
         color: #c4d5ee;
@@ -7598,7 +7599,7 @@
     @media (orientation: landscape) {
         .sun-path-panel.mobile_ui {
             --summary-panel-height: 256px;
-            --events-summary-panel-height: 256px;
+            --events-summary-panel-height: 296px;
         }
     }
 

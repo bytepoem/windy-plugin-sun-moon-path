@@ -24,6 +24,7 @@ const createRuntime = () => {
         createMarker: () => {
             const marker = {
                 tooltip: '',
+                on: vi.fn(), off: vi.fn(), closeTooltip: vi.fn(), unbindTooltip: vi.fn(),
                 addTo: vi.fn(function addTo() {
                     return marker;
                 }),

@@ -1,3 +1,4 @@
+import { manageMarkerTooltip } from './markerTooltip';
 import { cloudArc, cloudSightDistance, cloudTwilightDistances } from './cloudGeometry';
 import { destinationPoint, splitPolylineAtDateLine, type Coordinates } from './solar';
 import { formatDistanceKm, formatElevationM, type UnitPreferences } from './unitPreferences';
@@ -26,7 +27,7 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
 }) => {
     let group: L.LayerGroup | null = null;
     let redrawOnZoom: (() => void) | null = null;
-    const markers: { marker: L.Marker; close: () => void }[] = [];
+    const markers: { marker: L.Marker; release: () => void }[] = [];
     const tooltipCloseEvents = ['movestart', 'zoomstart', 'click'] as const;
     const closeTooltips = () => markers.forEach(({ marker }) => marker.closeTooltip());
     const destroy = () => {
@@ -35,11 +36,7 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
             tooltipCloseEvents.forEach(event => map.off(event, closeTooltips));
         }
         redrawOnZoom = null;
-        markers.splice(0).forEach(({ marker, close }) => {
-            marker.off('mouseout', close);
-            marker.closeTooltip();
-            marker.unbindTooltip();
-        });
+        markers.splice(0).forEach(({ release }) => release());
         group?.remove();
         group = null;
     };
@@ -66,9 +63,7 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
                     iconSize: dot ? [12, 12] : [110, 24], iconAnchor: dot ? [6, 6] : [55, inline ? 12 : 30],
                 }),
             }).addTo(group!).bindTooltip(title);
-            const close = () => marker.closeTooltip();
-            marker.on('mouseout', close);
-            markers.push({ marker, close });
+            markers.push({ marker, release: manageMarkerTooltip(marker) });
             return marker.getElement()?.querySelector('span')?.getBoundingClientRect().width ?? 0;
         };
         const distanceLabel = (value: number) => `${formatDistanceKm(value, state.units.distance)} ${state.units.distance}`;

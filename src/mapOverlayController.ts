@@ -1,3 +1,4 @@
+import { manageMarkerTooltip } from './markerTooltip';
 import {
     CURRENT_DIRECTION_COLOR,
     CURRENT_MOON_DIRECTION_COLOR,
@@ -74,6 +75,7 @@ export const createMapOverlayController = (
     map: L.LeafletGlMap,
     runtime: MapOverlayRuntime = browserRuntime,
 ): MapOverlayController => {
+    const releaseTooltips: (() => void)[] = [];
     let layerGroup: L.LayerGroup | null = null;
     let eventLines: { line: L.Polyline; baseOpacity: number }[] = [];
     let currentLines: { line: L.Polyline; baseOpacity: number }[] = [];
@@ -90,6 +92,7 @@ export const createMapOverlayController = (
     };
 
     const destroy = () => {
+        releaseTooltips.splice(0).forEach(release => release());
         layerGroup?.remove();
         layerGroup = null;
         eventLines = [];
@@ -146,9 +149,10 @@ export const createMapOverlayController = (
         }
 
         layerGroup = runtime.createLayerGroup(map);
-        runtime.createMarker(toLatLng(state.location), {
+        const origin = runtime.createMarker(toLatLng(state.location), {
             icon: markerIcon(runtime, 'origin'),
         }).addTo(layerGroup).bindTooltip(state.originLabel, { direction: 'top', offset: [0, -8] });
+        releaseTooltips.push(manageMarkerTooltip(origin));
 
         for (const path of availablePaths) {
             const isMoonEvent = path.event === 'moonrise' || path.event === 'moonset';
@@ -180,12 +184,13 @@ export const createMapOverlayController = (
                         : []),
                 ];
                 for (const markerInput of markerInputs) {
-                    runtime.createMarker(toLatLng(markerInput.point), {
+                    const marker = runtime.createMarker(toLatLng(markerInput.point), {
                         icon: markerIcon(runtime, markerInput.kind),
                     }).addTo(layerGroup).bindTooltip(
                         `${state.eventNames[path.event]} · ${sample.label} · ${state.formatDistance(markerInput.distance)}`,
                         { direction: 'top', offset: [0, -6] },
                     );
+                    releaseTooltips.push(manageMarkerTooltip(marker));
                 }
             }
         }

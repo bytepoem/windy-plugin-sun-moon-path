@@ -3,6 +3,8 @@ import type { WeatherForecastPayload } from './weather';
 export type CloudBand = 'low' | 'medium' | 'high';
 export const CLOUD_BANDS: CloudBand[] = ['low', 'medium', 'high'];
 export type CloudSettings = {
+    view: 'single' | 'layers';
+    single: { mode: 'auto' | 'manual'; heightM: number | undefined };
     clock: string;
     body: 'sun' | 'moon';
     threshold: number;
@@ -14,6 +16,7 @@ export type CloudSettings = {
     layers: Record<CloudBand, { enabled: boolean; mode: 'auto' | 'manual'; heightM: number | undefined }>;
 };
 export const createCloudSettings = (): CloudSettings => ({
+    view: 'single', single: { mode: 'auto', heightM: undefined },
     clock: '', body: 'sun', threshold: 10, twilight: true, opacity: 85, syncMap: true, cameraOffsetM: 0, overlay: 'clouds',
     layers: {
         low: { enabled: true, mode: 'auto', heightM: undefined },
