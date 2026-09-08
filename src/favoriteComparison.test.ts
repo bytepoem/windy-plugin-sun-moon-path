@@ -79,6 +79,16 @@ const createPort = (): FavoriteComparisonPlannerPort => ({
 });
 
 describe('favorite comparison planner', () => {
+    it('carries the provider to each target and never overwrites missing model visibility', async () => {
+        const port = createPort();
+        const signal = new AbortController().signal;
+        const requestedAt = Date.UTC(2026, 7, 27, 17);
+        const session = await createFavoriteComparisonPlanner(port).prepare({ targets, dateInput: '2026-08-28', requestedAt, signal, source: 'open-meteo' });
+        const results = await session.loadModel('icon', signal);
+        expect(port.getWeather).toHaveBeenCalledWith(targets[0].location, 'icon', requestedAt, signal, 'open-meteo');
+        expect(port.getAtmosphere).toHaveBeenCalledWith(targets[0].location, requestedAt, signal, 'open-meteo');
+        expect(results.flatMap(result => result.windows).every(window => window.evidence.visibilityKm === null)).toBe(true);
+    });
     it('prepares fixed context once and only reloads Windy data when the model changes', async () => {
         const port = createPort();
         const planner = createFavoriteComparisonPlanner(port);

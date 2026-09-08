@@ -41,19 +41,15 @@ relative to a point on the Windy map.
 - Shows SQM, estimated equivalent Bortle level, and ideal-condition observing
   references from the David Lorenz 2025 light-pollution atlas.
 - Adds a location forecast table spanning the available past 6 hours through the
-  next 5 days, with EC, GFS, and ICON model switching and EC selected by default.
+  next 5 days, with Windy / Open-Meteo source selection and EC, GFS, and ICON model switching. Windy + EC is the default. Source selection lasts for the plugin session and also applies to observing windows and favorite comparisons.
 - Shows weather, combined/high/medium/low cloud cover, temperature, dew point,
   humidity, AOD at 550 nm, visibility, precipitation, wind speed, and wind direction.
-  Cloud coverage is aggregated from the model pressure levels.
-- AOD and visibility require no API key and are provided by Open-Meteo. AOD is
-  sourced from CAMS, and neither field changes with the EC, GFS, or ICON selection.
-  Open-Meteo's global AOD data is typically native 3-hourly at about 45 km, with
-  hourly data at about 11 km available over Europe.
+  Windy cloud coverage is aggregated from pressure levels; Open-Meteo uses the selected global model's cloud-cover fields. Cloud-band definitions can differ.
+- AOD remains CAMS data supplied through Open-Meteo, independent of the weather model. Windy visibility uses a separate Open-Meteo supplement. Open-Meteo visibility follows the selected model; missing values remain unavailable and are never filled from another model. Cloud base, vertical cloud layers, and map clouds remain Windy data with a separate source label.
 - Draws the above-horizon sun and moon curves on the same time axis and labels
   rise/set times for the selected location. These curves are calculated locally
   and are not EC/ICON/GFS model fields.
-- Uses the time steps returned by Windy without inventing missing hours. Past
-  timestamps remain model output rather than historical observations.
+- Uses actual Windy time steps or Open-Meteo's hourly series, which may contain server-side interpolation. Open-Meteo precipitation is the preceding-hour accumulation; observing windows show the range of overlapping hourly amounts, not a window total. Past timestamps remain model output rather than observations. Failed requests can be retried without automatically switching sources.
 - Provides English and Chinese UI text and persists the language choice in the
   current browser.
 - On desktop, keeps **Weather** permanently visible below the original four tabs

@@ -10,12 +10,13 @@
     } from './favoriteComparison';
     import { fetchLightPollutionPoint } from './lightPollution';
     import { compactLocationLabel } from './location';
-    import { fetchOpenMeteoAtmosphere } from './openMeteo';
+    import { fetchOpenMeteoAtmosphere, fetchOpenMeteoWeather } from './openMeteo';
     import {
         transformWeatherPayload,
         weatherConditionLabel,
         type WeatherForecastPayload,
         type WeatherModel,
+        type WeatherSource,
     } from './weather';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import {
@@ -36,6 +37,7 @@
     export let selectedDate = '';
     export let currentInstant: Date;
     export let initialModel: WeatherModel = 'ecmwf';
+    export let source: WeatherSource = 'windy';
     export let language: 'zh' | 'en' = 'zh';
     export let mobile = false;
     export let fullscreen = false;
@@ -136,9 +138,12 @@
         getElevation: async (location, signal) => (
             await getElevation(location.lat, location.lon, { abortSignal: signal })
         ).data,
-        getAtmosphere: (location, _requestedAt, signal) => fetchOpenMeteoAtmosphere({ location, signal }),
+        getAtmosphere: (location, _requestedAt, signal, source) => fetchOpenMeteoAtmosphere({ location, signal, includeVisibility: source === 'windy' }),
         getLightPollution: (location, signal) => fetchLightPollutionPoint(location, signal),
-        getWeather: async (location, weatherModel, requestedAt, signal) => {
+        getWeather: async (location, weatherModel, requestedAt, signal, source) => {
+            if (source === 'open-meteo') {
+                return fetchOpenMeteoWeather({ location, model: weatherModel, requestedAt, signal });
+            }
             const response = await getPointForecastData(
                 weatherModel,
                 {
@@ -162,6 +167,7 @@
     let text = labels.zh;
     let previousOpen = false;
     let previousSelectedDate = selectedDate;
+    let previousSource = source;
     let panelElement: HTMLElement | null = null;
     let model: WeatherModel = 'ecmwf';
     let session: FavoriteComparisonSession | null = null;
@@ -201,8 +207,10 @@
     }
     $: if (!open) {
         previousSelectedDate = selectedDate;
-    } else if (selectedDate !== previousSelectedDate) {
+        previousSource = source;
+    } else if (selectedDate !== previousSelectedDate || source !== previousSource) {
         previousSelectedDate = selectedDate;
+        previousSource = source;
         void prepareComparison();
     }
 
@@ -256,6 +264,7 @@
         session = null;
         try {
             const nextSession = await comparisonPlanner.prepare({
+                source,
                 targets,
                 dateInput: selectedDate,
                 requestedAt: Date.now(),
@@ -389,8 +398,8 @@
             }
             : null;
         if (!range) {
-            const openMeteoField = field === 'visibilityKm' || field === 'aod550';
-            if (result.weatherStatus === 'error' && !openMeteoField) {
+            const independentField = field === 'aod550' || (source === 'windy' && field === 'visibilityKm');
+            if (result.weatherStatus === 'error' && !independentField) {
                 return text.weatherError;
             }
             if (result.dateSelection.coverage !== 'covered') {
@@ -544,6 +553,13 @@
             </button>
         </header>
 
+        <label class="favorite-comparison__source">
+            {language === 'zh' ? '天气数据源' : 'Weather source'}
+            <select bind:value={source}>
+                <option value="windy">Windy</option>
+                <option value="open-meteo">Open-Meteo</option>
+            </select>
+        </label>
         {#if prepareStatus === 'loading'}
             <div class="favorite-comparison__message" role="status">
                 <span class="favorite-comparison__spinner" aria-hidden="true"></span>
@@ -675,6 +691,22 @@
 {/if}
 
 <style lang="less">
+    .favorite-comparison__source {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    .favorite-comparison__source select {
+        color: inherit;
+        background: var(--panel-bg, #1d263d);
+        border: 1px solid var(--panel-border);
+        border-radius: 4px;
+        padding: 4px 8px;
+        font: inherit;
+    }
+    .favorite-comparison__source select:focus-visible { outline: 2px solid #8ac8ff; outline-offset: 2px; }
     .favorite-comparison {
         position: absolute;
         z-index: 25;

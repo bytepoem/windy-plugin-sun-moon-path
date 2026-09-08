@@ -17,6 +17,7 @@
         type WeatherLoadStatus,
         type WeatherMetric,
         type WeatherModel,
+        type WeatherSource,
         type WeatherPoint,
     } from './weather';
 
@@ -32,6 +33,7 @@
 
     export let points: WeatherPoint[] = [];
     export let model: WeatherModel = 'ecmwf';
+    export let source: WeatherSource = 'windy';
     export let status: WeatherLoadStatus = 'idle';
     export let errorMessage = '';
     export let atmosphereStatus: WeatherLoadStatus = 'idle';
@@ -46,11 +48,13 @@
 
     const dispatch = createEventDispatcher<{
         modelchange: WeatherModel;
+        sourcechange: WeatherSource;
         retry: void;
         atmosphereretry: void;
     }>();
 
     const LABEL_WIDTH = 64;
+    const sourceOptions: WeatherSource[] = ['windy', 'open-meteo'];
     const COLUMN_WIDTH = 36;
     const CELESTIAL_CHART_HEIGHT = 72;
     const CELESTIAL_HORIZON_Y = 64;
@@ -72,21 +76,16 @@
     const translations = {
         zh: {
             modelLabel: '预报模型',
-            rangeLabel: '模式预报 · 前6小时至未来5天',
             date: '日期',
             time: '时间',
             weather: '天气',
             loading: '正在加载天气模式数据…',
-            updating: '正在更新',
             empty: '当前模式没有返回可用天气数据。',
             retry: '重试',
             now: '当前时间',
             sun: '太阳',
             moon: '月亮',
             celestialCurve: '太阳和月亮升起降落曲线',
-            pointCount: '个时次',
-            hourStep: '小时间隔',
-            openMeteoUpdating: 'Open-Meteo 更新中',
             openMeteoRetry: 'Open-Meteo · 重试',
             selectedDateOutsideRange: (date: string) => `所选日期 ${date} 不在当前五天预报范围内，表格仍显示当前预报。`,
             selectedDateMissing: (date: string) => `所选日期 ${date} 暂无可用预报时次，表格仍显示当前预报。`,
@@ -107,21 +106,16 @@
         },
         en: {
             modelLabel: 'Forecast model',
-            rangeLabel: 'Model forecast · past 6h to next 5d',
             date: 'Date',
             time: 'Time',
             weather: 'Weather',
             loading: 'Loading forecast data…',
-            updating: 'Updating',
             empty: 'No weather data is available for this model.',
             retry: 'Retry',
             now: 'Current time',
             sun: 'Sun',
             moon: 'Moon',
             celestialCurve: 'Sun and moon rise and set curves',
-            pointCount: 'steps',
-            hourStep: 'hour interval',
-            openMeteoUpdating: 'Updating Open-Meteo',
             openMeteoRetry: 'Open-Meteo · Retry',
             selectedDateOutsideRange: (date: string) => `Selected date ${date} is outside the current five-day forecast. The table still shows the current forecast.`,
             selectedDateMissing: (date: string) => `No forecast steps are available for selected date ${date}. The table still shows the current forecast.`,
@@ -155,13 +149,6 @@
     $: celestialChartWidth = points.length * COLUMN_WIDTH;
     $: nowPosition = findCurrentTimePosition(points, currentTimestamp);
     $: nowLineLeft = nowPosition === null ? null : LABEL_WIDTH + (nowPosition + 0.5) * COLUMN_WIDTH;
-    $: stepValues = points
-        .slice(1)
-        .map((point, index) => Math.round((point.timestamp - points[index].timestamp) / 3_600_000))
-        .filter(step => step > 0);
-    $: stepRange = stepValues.length > 0
-        ? `${Math.min(...stepValues)}${Math.min(...stepValues) === Math.max(...stepValues) ? '' : `-${Math.max(...stepValues)}`}`
-        : '';
     $: selectedDateLabel = formatSelectedDateLabel(selectedDate);
     $: selectedDateNotice = selectedDateSelection.coverage === 'before-range'
         || selectedDateSelection.coverage === 'after-range'
@@ -284,6 +271,9 @@
     };
 
     const metricAriaLabel = (metric: WeatherMetric, selectedUnits: UnitPreferences): string => {
+        if (metric === 'precipMm' && source === 'open-meteo') {
+            return language === 'zh' ? '前一小时降水量' : 'Precipitation in the preceding hour';
+        }
         if (metric === 'aod550') {
             return language === 'zh'
                 ? 'AOD 550 纳米，Open-Meteo，数据源 CAMS'
@@ -322,6 +312,13 @@
 
 <section class="weather-panel" aria-label={language === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
     <header class="weather-toolbar">
+        <div class="weather-model-control weather-source-control" role="group" aria-label={language === 'zh' ? '天气数据源' : 'Weather source'}>
+            {#each sourceOptions as provider}
+                <button type="button" class:active={source === provider} aria-pressed={source === provider}
+                    on:click={() => { if (source !== provider) dispatch('sourcechange', provider); }}
+                >{provider === 'windy' ? 'Windy' : 'Open-Meteo'}</button>
+            {/each}
+        </div>
         <div class="weather-model-control" role="group" aria-label={text.modelLabel}>
             <button
                 type="button"
@@ -348,28 +345,18 @@
                 ICON
             </button>
         </div>
-        <div class="weather-meta" aria-live="polite">
-            <strong>{text.rangeLabel}</strong>
-            {#if atmosphereStatus === 'error'}
-                <button
-                    type="button"
-                    class="weather-source-retry"
-                    title={atmosphereErrorMessage}
-                    aria-label={`${atmosphereErrorMessage} ${text.openMeteoRetry}`}
-                    on:click={() => dispatch('atmosphereretry')}
-                >{text.openMeteoRetry}</button>
-            {:else if points.length > 0}
-                <span>
-                    {points.length} {text.pointCount}{stepRange ? ` · ${stepRange} ${text.hourStep}` : ''}{atmosphereStatus === 'loading' ? ` · ${text.openMeteoUpdating}` : ''}
-                </span>
-            {:else if atmosphereStatus === 'loading'}
-                <span>{text.openMeteoUpdating}</span>
-            {/if}
-        </div>
-        {#if status === 'loading' && points.length > 0}
-            <span class="weather-updating">{text.updating}</span>
-        {/if}
     </header>
+    {#if atmosphereStatus === 'error'}
+        <div class="weather-date-notice" role="status">
+            <button
+                type="button"
+                class="weather-source-retry"
+                title={atmosphereErrorMessage}
+                aria-label={`${atmosphereErrorMessage} ${text.openMeteoRetry}`}
+                on:click={() => dispatch('atmosphereretry')}
+            >{text.openMeteoRetry}</button>
+        </div>
+    {/if}
 
     {#if selectedDateNotice && points.length > 0}
         <div class="weather-date-notice" role="status">{selectedDateNotice}</div>
@@ -585,6 +572,7 @@
 </section>
 
 <style>
+    .weather-model-control.weather-source-control { grid-template-columns: repeat(2, auto); }
     .weather-panel {
         display: flex;
         flex-direction: column;
@@ -597,7 +585,9 @@
 
     .weather-toolbar {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        flex-shrink: 0;
+        grid-template-columns: auto auto;
+        justify-content: start;
         align-items: center;
         gap: 8px;
         min-height: 36px;
@@ -646,29 +636,6 @@
         outline-offset: -2px;
     }
 
-    .weather-meta {
-        display: grid;
-        align-content: center;
-        min-width: 0;
-        min-height: 28px;
-        line-height: 1.2;
-    }
-
-    .weather-meta strong {
-        overflow: hidden;
-        color: #eef4fb;
-        font-size: 10.8px;
-        font-weight: 650;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .weather-meta span,
-    .weather-updating {
-        color: #aeb9c9;
-        font-size: 10px;
-    }
-
     .weather-source-retry {
         overflow: hidden;
         min-width: 0;
@@ -682,10 +649,6 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         cursor: pointer;
-    }
-
-    .weather-updating {
-        white-space: nowrap;
     }
 
     .weather-date-notice {
@@ -1096,7 +1059,7 @@
         }
 
         .weather-toolbar {
-            grid-template-columns: auto minmax(0, 1fr);
+            grid-template-columns: auto auto;
             gap: 8px;
             min-height: 36px;
             padding: 4px 6px;
@@ -1104,14 +1067,6 @@
 
         .weather-model-control {
             grid-template-columns: repeat(3, 44px);
-        }
-
-        .weather-updating {
-            display: none;
-        }
-
-        .weather-meta strong {
-            font-size: 10.8px;
         }
 
         .weather-grid {

@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
     buildOpenMeteoRequestKey,
     fetchOpenMeteoAtmosphere,
+    fetchOpenMeteoWeather,
+    wmoWeatherIcon,
     mergeOpenMeteoAtmosphere,
 } from './openMeteo';
 import type { WeatherPoint } from './weather';
@@ -31,6 +33,46 @@ const weatherPoint = (timestamp: number): WeatherPoint => ({
 });
 
 describe('Open-Meteo atmosphere data', () => {
+    it('keeps model visibility, including null, when only enriching AOD', () => {
+        const points = [weatherPoint(1), { ...weatherPoint(2), visibilityKm: 8 }];
+        const supplement = points.map(point => ({ timestamp: point.timestamp, aod550: 0.1, visibilityKm: 99 }));
+        expect(mergeOpenMeteoAtmosphere(points, supplement, false).map(point => point.visibilityKm)).toEqual([null, 8]);
+    });
+
+    it('only calls CAMS when the selected weather model owns visibility', async () => {
+        const fetcher = vi.fn().mockResolvedValue(response({ hourly: { time: [1], aerosol_optical_depth: [0.2] } }));
+        const points = await fetchOpenMeteoAtmosphere({ location: { lat: 1, lon: 2 }, fetcher, includeVisibility: false });
+        expect(fetcher).toHaveBeenCalledOnce();
+        expect(String(fetcher.mock.calls[0][0])).toContain('air-quality-api');
+        expect(points).toEqual([{ timestamp: 1000, aod550: 0.2, visibilityKm: null }]);
+    });
+
+    it.each([['ecmwf', 'ecmwf_ifs'], ['gfs', 'gfs_global'], ['icon', 'icon_global']] as const)(
+        'loads %s hourly data with explicit units, preserving missing fields', async (model, modelId) => {
+            const now = Date.UTC(2026, 8, 8);
+            const fetcher = vi.fn().mockResolvedValue(response({ hourly: {
+                time: [now / 1000, now / 1000 + 3600], temperature_2m: [12.5, null],
+                cloud_cover: [35, 0], cloud_cover_low: [10, 0], cloud_cover_mid: [20, 0], cloud_cover_high: [30, 0],
+                visibility: [null, 12300], wind_speed_10m: [2.5, 0], weather_code: [0, 95], is_day: [1, 0], precipitation: [0, 2],
+            } }));
+            const signal = new AbortController().signal;
+            const points = await fetchOpenMeteoWeather({ location: { lat: 1, lon: 2 }, model, requestedAt: now, signal, fetcher });
+            const url = new URL(String(fetcher.mock.calls[0][0]));
+            expect(url.searchParams.get('models')).toBe(modelId);
+            expect(url.searchParams.get('wind_speed_unit')).toBe('ms');
+            expect(fetcher.mock.calls[0][1]).toEqual({ signal });
+            expect(points[0]).toMatchObject({ timestamp: now, temperatureC: 12.5, totalCloudPercent: 35, windMs: 2.5, visibilityKm: null, iconCode: 1, precipMm: 0, precipitationPeriodMs: 3600000 });
+            expect(points[1]).toMatchObject({ timestamp: now + 3600000, temperatureC: null, visibilityKm: 12.3, iconCode: 14, isDay: false });
+        },
+    );
+
+    it('rejects failed model requests without another provider request', async () => {
+        const fetcher = vi.fn().mockResolvedValue(response({}, 429));
+        await expect(fetchOpenMeteoWeather({ location: { lat: 1, lon: 2 }, model: 'icon', fetcher })).rejects.toThrow('429');
+        expect(fetcher).toHaveBeenCalledOnce();
+        expect(wmoWeatherIcon(999)).toBeNull();
+        expect(wmoWeatherIcon(null)).toBeNull();
+    });
     it('requests AOD550 and visibility with the plugin forecast window', async () => {
         const requestedUrls: URL[] = [];
         const fetcher = vi.fn(async (input: RequestInfo | URL) => {

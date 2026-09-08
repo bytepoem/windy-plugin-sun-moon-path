@@ -13,6 +13,7 @@ import {
     findWeatherDateSelection,
     type WeatherDateSelection,
     type WeatherModel,
+    type WeatherSource,
     type WeatherPoint,
 } from './weather';
 import type { OpenMeteoAtmospherePoint } from './openMeteo';
@@ -62,6 +63,7 @@ export type FavoriteComparisonPlannerPort = {
         location: Coordinates,
         requestedAt: number,
         signal: AbortSignal,
+        source?: WeatherSource,
     ) => Promise<OpenMeteoAtmospherePoint[]>;
     getLightPollution: (location: Coordinates, signal: AbortSignal) => Promise<LightPollutionPoint>;
     getWeather: (
@@ -69,6 +71,7 @@ export type FavoriteComparisonPlannerPort = {
         model: WeatherModel,
         requestedAt: number,
         signal: AbortSignal,
+        source?: WeatherSource,
     ) => Promise<WeatherPoint[]>;
 };
 
@@ -81,6 +84,7 @@ export type FavoriteComparisonSession = {
 
 export type FavoriteComparisonPlanner = {
     prepare: (input: {
+        source?: WeatherSource;
         targets: FavoriteComparisonTarget[];
         dateInput: string;
         requestedAt: number;
@@ -176,10 +180,11 @@ const atmosphereOnlyWeatherPoint = (point: OpenMeteoAtmospherePoint): WeatherPoi
     visibilityKm: point.visibilityKm,
 });
 
-/** Keeps Open-Meteo evidence available even when a Windy model request fails. */
+/** Keep independent atmosphere evidence when weather fails; never replace model-owned visibility. */
 const mergeComparisonWeather = (
     weatherPoints: WeatherPoint[],
     atmospherePoints: OpenMeteoAtmospherePoint[],
+    source: WeatherSource,
 ): WeatherPoint[] => {
     const pointsByTimestamp = new Map(weatherPoints.map(point => [point.timestamp, point]));
     for (const atmospherePoint of atmospherePoints) {
@@ -190,9 +195,9 @@ const mergeComparisonWeather = (
                 ? {
                     ...weatherPoint,
                     aod550: atmospherePoint.aod550,
-                    visibilityKm: atmospherePoint.visibilityKm,
+                    visibilityKm: source === 'windy' ? atmospherePoint.visibilityKm : weatherPoint.visibilityKm,
                 }
-                : atmosphereOnlyWeatherPoint(atmospherePoint),
+                : atmosphereOnlyWeatherPoint({ ...atmospherePoint, visibilityKm: source === 'windy' ? atmospherePoint.visibilityKm : null }),
         );
     }
     return [...pointsByTimestamp.values()].sort((left, right) => left.timestamp - right.timestamp);
@@ -200,14 +205,15 @@ const mergeComparisonWeather = (
 
 /**
  * Builds one comparison session in two phases. Location, astronomy and Open-Meteo
- * context are prepared once; subsequent model changes only call the Windy forecast port.
+ * context are prepared once; model changes call the selected provider's forecast port.
+ * The provider is captured for the session so all locations use one consistent source.
  */
 export const createFavoriteComparisonPlanner = (
     port: FavoriteComparisonPlannerPort,
 ): FavoriteComparisonPlanner => {
     const runTargetTask = createTargetTaskRunner();
     return ({
-        prepare: async ({ targets, dateInput, requestedAt, signal }) => {
+        prepare: async ({ targets, dateInput, requestedAt, signal, source = 'windy' }) => {
             if (
                 targets.length < FAVORITE_COMPARISON_MIN_TARGETS
                 || targets.length > FAVORITE_COMPARISON_MAX_TARGETS
@@ -231,7 +237,7 @@ export const createFavoriteComparisonPlanner = (
                         target.knownElevationM === undefined
                             ? port.getElevation(target.location, signal)
                             : Promise.resolve(target.knownElevationM),
-                        port.getAtmosphere(target.location, requestedAt, signal),
+                        port.getAtmosphere(target.location, requestedAt, signal, source),
                         target.knownLightPollution === undefined
                             ? port.getLightPollution(target.location, signal)
                             : Promise.resolve(target.knownLightPollution),
@@ -312,11 +318,13 @@ export const createFavoriteComparisonPlanner = (
                                     model,
                                     requestedAt,
                                     modelSignal,
+                                    source,
                                 );
                                 assertActive(modelSignal);
                                 const weatherPoints = mergeComparisonWeather(
                                     baseWeatherPoints,
                                     prepared.atmospherePoints,
+                                    source,
                                 );
                                 const dateSelection = findWeatherDateSelection(
                                     weatherPoints,
@@ -350,6 +358,7 @@ export const createFavoriteComparisonPlanner = (
                                 const atmosphereOnlyPoints = mergeComparisonWeather(
                                     [],
                                     prepared.atmospherePoints,
+                                    source,
                                 );
                                 const dateSelection = findWeatherDateSelection(
                                     atmosphereOnlyPoints,

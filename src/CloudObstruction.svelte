@@ -189,6 +189,7 @@
 </script>
 
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
+    <small>{zh ? '云层预报与地图：Windy' : 'Cloud forecast and map: Windy'}</small>
     <div class="cloud-controls">
     <div class="cloud-toolbar">
         <select class="cloud-target" value="sun" aria-label={zh ? '遮蔽类型' : 'Obstruction target'}>

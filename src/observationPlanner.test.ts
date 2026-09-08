@@ -31,6 +31,15 @@ const weatherPoint = (timestamp: number, overrides: Partial<WeatherPoint> = {}):
 });
 
 describe('observation planner', () => {
+    it('matches hourly rain against its preceding interval, excluding touching boundaries', () => {
+        const hour = 3_600_000;
+        const start = Date.UTC(2026, 8, 8, 10);
+        const timeline = { intervals: [{ kind: 'moonless-night', start: new Date(start), end: new Date(start + hour) }], moonIllumination: { fraction: 0.2 } } as AstronomyTimeline;
+        const points = [0, 1, 2].map((offset, index) => weatherPoint(start + offset * hour, {
+            precipitationPeriodMs: hour, precipMm: [8, 2, 9][index],
+        }));
+        expect(buildObservationWindows({ timeline, weatherPoints: points, lightPollution: null, referenceTime: start })[0].evidence.precipitationMm).toEqual({ minimum: 2, maximum: 2 });
+    });
     it('reuses location context across dates and computes all events once per plan', async () => {
         const getTimeZone = vi.fn().mockResolvedValue('Asia/Shanghai');
         const getElevation = vi.fn().mockResolvedValue(12);

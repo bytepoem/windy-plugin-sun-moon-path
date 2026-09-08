@@ -303,6 +303,12 @@ export const buildObservationWindows = ({
             ? weatherEvidenceForInterval(weatherPoints, interval)
             : { samples: [], coverage: 'none' as const };
         const { samples } = weatherEvidence;
+        // Hourly precipitation is an accumulation ending at the timestamp, not an instant sample.
+        const precipitationSamples = interval && weatherPoints.some(point => point.precipitationPeriodMs)
+            ? weatherPoints.filter(point => point.precipitationPeriodMs
+                && point.timestamp > interval.start.getTime()
+                && point.timestamp - point.precipitationPeriodMs < interval.end.getTime())
+            : samples;
         return {
             kind,
             interval,
@@ -316,7 +322,7 @@ export const buildObservationWindows = ({
                 lowCloudPercent: metricRange(samples, 'lowCloudPercent'),
                 temperatureC: metricRange(samples, 'temperatureC'),
                 dewPointC: metricRange(samples, 'dewPointC'),
-                precipitationMm: metricRange(samples, 'precipMm'),
+                precipitationMm: metricRange(precipitationSamples, 'precipMm'),
                 windMs: metricRange(samples, 'windMs'),
                 humidityPercent: metricRange(samples, 'humidityPercent'),
                 visibilityKm: metricRange(samples, 'visibilityKm'),

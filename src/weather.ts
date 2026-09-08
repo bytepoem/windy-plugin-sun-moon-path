@@ -1,4 +1,5 @@
 export type WeatherModel = 'ecmwf' | 'gfs' | 'icon';
+export type WeatherSource = 'windy' | 'open-meteo';
 
 export type WeatherLoadStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 
@@ -54,6 +55,8 @@ export interface WeatherForecastPayload {
 }
 
 export interface WeatherPoint {
+    /** Accumulations end at timestamp; omitted for legacy Windy forecast steps. */
+    precipitationPeriodMs?: number;
     timestamp: number;
     iconCode: number | null;
     isDay: boolean;
@@ -114,7 +117,8 @@ export const buildWeatherRequestKey = (
     model: WeatherModel,
     locationKey: string,
     timestamp: number,
-): string => `${model}|${locationKey}|${Math.floor(timestamp / 3_600_000)}`;
+    source: WeatherSource = 'windy',
+): string => `${source}|${model}|${locationKey}|${Math.floor(timestamp / 3_600_000)}`;
 
 export const shouldLoadWeather = (decision: WeatherLoadDecision): boolean =>
     decision.isMounted

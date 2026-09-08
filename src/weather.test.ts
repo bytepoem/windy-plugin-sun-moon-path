@@ -244,6 +244,9 @@ describe('weather forecast transformation', () => {
         expect(buildWeatherRequestKey('ecmwf', locationKey, now)).not.toBe(
             buildWeatherRequestKey('icon', locationKey, now),
         );
+        expect(buildWeatherRequestKey('ecmwf', locationKey, now, 'windy')).not.toBe(
+            buildWeatherRequestKey('ecmwf', locationKey, now, 'open-meteo'),
+        );
         expect(buildWeatherRequestKey('ecmwf', locationKey, now)).not.toBe(
             buildWeatherRequestKey('gfs', locationKey, now),
         );

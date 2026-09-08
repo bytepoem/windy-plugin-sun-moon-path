@@ -302,6 +302,7 @@
         currentInstant={currentInstant}
         targets={favoriteComparisonTargets}
         initialModel={weatherModel}
+        bind:source={weatherSource}
         language={uiLanguage}
         mobile={isMobileOrTablet}
         fullscreen={isMobileFullscreen}
@@ -696,6 +697,7 @@
                 <WeatherTable
                     points={weatherPoints}
                     model={weatherModel}
+                    source={weatherSource}
                     status={weatherStatus}
                     errorMessage={weatherErrorMessage}
                     {atmosphereStatus}
@@ -708,6 +710,7 @@
                     location={selectedLocation}
                     {units}
                     on:modelchange={handleWeatherModelChange}
+                    on:sourcechange={handleWeatherSourceChange}
                     on:retry={retryWeather}
                     on:atmosphereretry={retryAtmosphere}
                 />
@@ -719,8 +722,10 @@
                     location={selectedLocation}
                     sunEvents={solarPaths.flatMap(path => path.status === 'ok' && (path.event === 'sunrise' || path.event === 'sunset')
                         ? [{ type: path.event, timestamp: path.eventTime.getTime() }] : [])}
-                    forecast={weatherLoadedKey === weatherRequestKey ? cloudWeatherPayload : null}
-                    status={weatherStatus}
+                    forecast={weatherSource === 'windy'
+                        ? (weatherLoadedKey === weatherRequestKey ? cloudWeatherPayload : null)
+                        : (cloudLoadedKey === weatherRequestKey ? independentCloudPayload : null)}
+                    status={weatherSource === 'windy' ? weatherStatus : cloudStatus}
                     model={weatherModel}
                     {selectedDate}
                     {timeZone}
@@ -728,7 +733,7 @@
                     {units}
                     bind:settings={cloudSettings}
                     on:modelchange={handleWeatherModelChange}
-                    on:retry={retryWeather}
+                    on:retry={retryCloudWeather}
                 />
             {:else if summaryTab === 'guide'}
                 <section class="module-about module-guide" aria-label={text.guideHeading}>
@@ -1301,6 +1306,7 @@
             <WeatherTable
                 points={weatherPoints}
                 model={weatherModel}
+                source={weatherSource}
                 status={weatherStatus}
                 errorMessage={weatherErrorMessage}
                 {atmosphereStatus}
@@ -1313,6 +1319,7 @@
                 location={selectedLocation}
                 {units}
                 on:modelchange={handleWeatherModelChange}
+                on:sourcechange={handleWeatherSourceChange}
                 on:retry={retryWeather}
                 on:atmosphereretry={retryAtmosphere}
             />
@@ -1359,6 +1366,7 @@
     import {
         buildOpenMeteoRequestKey,
         fetchOpenMeteoAtmosphere,
+        fetchOpenMeteoWeather,
         mergeOpenMeteoAtmosphere,
         type OpenMeteoAtmospherePoint,
     } from './openMeteo';
@@ -1432,6 +1440,7 @@
         type WeatherForecastPayload,
         type WeatherLoadStatus,
         type WeatherModel,
+        type WeatherSource,
         type WeatherPoint,
     } from './weather';
     import {
@@ -1862,7 +1871,7 @@
                 fixed: '修复',
             },
             weatherLoadError: '无法取得天气模式数据，请稍后重试。',
-            atmosphereLoadError: '无法取得 Open-Meteo 的 AOD 和能见度数据。',
+            atmosphereLoadError: '无法取得 Open-Meteo 补充大气数据。',
             timeZoneLoadError: '无法取得观察点时区，请稍后重试。',
             timeZoneInvalidError: 'Windy 返回的观察点时区无效，请稍后重试。',
             astronomyLoadError: '日月方位计算失败，请稍后重试。',
@@ -2103,7 +2112,7 @@
                 fixed: 'Fixed',
             },
             weatherLoadError: 'Unable to load weather model data. Please try again.',
-            atmosphereLoadError: 'Unable to load AOD and visibility data from Open-Meteo.',
+            atmosphereLoadError: 'Unable to load supplementary atmosphere data from Open-Meteo.',
             timeZoneLoadError: 'Unable to load the observer time zone. Please try again.',
             timeZoneInvalidError: 'Windy returned an invalid observer time zone. Please try again.',
             astronomyLoadError: 'Unable to calculate sun and moon directions. Please try again.',
@@ -2294,6 +2303,12 @@
     let pluginUpdateAbortController: AbortController | null = null;
     let latestPluginUpdateRequestId = 0;
     let weatherModel: WeatherModel = 'ecmwf';
+    let weatherSource: WeatherSource = 'windy';
+    let cloudStatus: WeatherLoadStatus = 'idle';
+    let cloudLoadedKey = '';
+    let cloudLoadingKey = '';
+    let cloudAbortController: AbortController | null = null;
+    let independentCloudPayload: WeatherForecastPayload | null = null;
     let baseWeatherPoints: WeatherPoint[] = [];
     let weatherPoints: WeatherPoint[] = [];
     let weatherStatus: WeatherLoadStatus = 'idle';
@@ -2442,11 +2457,27 @@
         ? formatElevationLabel(elevationM, units.elevation)
         : '--';
 
-    $: weatherRequestKey = buildWeatherRequestKey(weatherModel, locationKey, currentInstant.getTime());
+    $: weatherRequestKey = buildWeatherRequestKey(weatherModel, locationKey, currentInstant.getTime(), weatherSource);
 
-    $: atmosphereRequestKey = buildOpenMeteoRequestKey(locationKey, currentInstant.getTime());
+    $: atmosphereRequestKey = `${weatherSource}|${buildOpenMeteoRequestKey(locationKey, currentInstant.getTime())}`;
 
-    $: weatherPoints = mergeOpenMeteoAtmosphere(baseWeatherPoints, atmospherePoints);
+    $: weatherPoints = weatherLoadedKey === weatherRequestKey
+        ? mergeOpenMeteoAtmosphere(baseWeatherPoints, atmosphereLoadedKey === atmosphereRequestKey ? atmospherePoints : [], weatherSource === 'windy')
+        : [];
+
+    // Cloud geometry always belongs to Windy. In Windy mode the main request already supplies it.
+    $: if (cloudLoadingKey && cloudLoadingKey !== weatherRequestKey) {
+        cloudAbortController?.abort();
+        cloudLoadingKey = '';
+    }
+    $: if (shouldLoadWeather({
+        isMounted,
+        isWeatherTabActive: weatherSource === 'open-meteo' && summaryTab === 'clouds',
+        locationKey, resolvedContextLocationKey,
+        requestKey: weatherRequestKey, loadedKey: cloudLoadedKey, loadingKey: cloudLoadingKey,
+    })) {
+        void refreshCloudWeather(weatherRequestKey);
+    }
 
     $: selectedWeatherDate = findWeatherDateSelection(weatherPoints, timeZone, selectedDate);
 
@@ -3306,6 +3337,7 @@
         weatherAbortController = abortController;
         const requestId = ++latestWeatherRequestId;
         const requestModel = weatherModel;
+        const requestSource = weatherSource;
         const requestLocation = { ...selectedLocation };
         const requestedAt = Date.now();
 
@@ -3313,9 +3345,22 @@
         weatherStatus = 'loading';
         weatherErrorMessage = '';
         baseWeatherPoints = [];
-        cloudWeatherPayload = null;
+        if (requestSource === 'windy') { cloudWeatherPayload = null; }
 
         try {
+            if (requestSource === 'open-meteo') {
+                const nextPoints = await fetchOpenMeteoWeather({
+                    location: requestLocation, model: requestModel, requestedAt, signal: abortController.signal,
+                });
+                if (!isWeatherResponseCurrent({
+                    aborted: abortController.signal.aborted, requestId, latestRequestId: latestWeatherRequestId,
+                    requestKey: key, currentRequestKey: weatherRequestKey,
+                })) { return; }
+                baseWeatherPoints = nextPoints;
+                weatherStatus = nextPoints.length ? 'ready' : 'empty';
+                weatherLoadedKey = key;
+                return;
+            }
             const result = await getPointForecastData(
                 requestModel,
                 {
@@ -3389,6 +3434,7 @@
             const nextPoints = await fetchOpenMeteoAtmosphere({
                 location: requestLocation,
                 signal: abortController.signal,
+                includeVisibility: weatherSource === 'windy',
             });
             if (!isWeatherResponseCurrent({
                 aborted: abortController.signal.aborted,
@@ -3486,6 +3532,47 @@
     const handleWeatherModelChange = (event: CustomEvent<WeatherModel>) => {
         weatherModel = event.detail;
         weatherLoadedKey = '';
+    };
+
+    const handleWeatherSourceChange = (event: CustomEvent<WeatherSource>) => {
+        weatherAbortController?.abort();
+        atmosphereAbortController?.abort();
+        cloudAbortController?.abort();
+        cloudLoadingKey = '';
+        weatherSource = event.detail;
+        weatherLoadedKey = '';
+        cloudLoadedKey = '';
+    };
+
+    /** A failed cloud request never changes the selected weather provider or its status. */
+    const refreshCloudWeather = async (key: string) => {
+        cloudAbortController?.abort();
+        const controller = new AbortController();
+        cloudAbortController = controller;
+        cloudLoadingKey = key;
+        cloudStatus = 'loading';
+        independentCloudPayload = null;
+        try {
+            const result = await getPointForecastData(weatherModel,
+                { ...selectedLocation, days: 5, step: 1, source: 'detail' },
+                { header: true, meteogram: true, sounding: true },
+                { abortSignal: controller.signal });
+            if (controller.signal.aborted || !isMounted || key !== weatherRequestKey) { return; }
+            independentCloudPayload = result.data as WeatherForecastPayload;
+            cloudStatus = 'ready';
+            cloudLoadedKey = key;
+        } catch {
+            if (controller.signal.aborted || !isMounted || key !== weatherRequestKey) { return; }
+            cloudStatus = 'error';
+            cloudLoadedKey = key;
+        } finally {
+            if (cloudAbortController === controller) { cloudLoadingKey = ''; }
+        }
+    };
+
+    const retryCloudWeather = () => {
+        if (weatherSource === 'windy') { retryWeather(); }
+        else { void refreshCloudWeather(weatherRequestKey); }
     };
 
     const retryWeather = () => {
@@ -4128,6 +4215,8 @@
             locationNameRequestId += 1;
             weatherAbortController?.abort();
             weatherAbortController = null;
+            cloudAbortController?.abort();
+            cloudAbortController = null;
             atmosphereAbortController?.abort();
             atmosphereAbortController = null;
             lightPollutionAbortController?.abort();
