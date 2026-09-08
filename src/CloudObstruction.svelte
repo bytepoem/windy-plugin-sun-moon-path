@@ -29,6 +29,7 @@
     const overlay = createCloudOverlayController(map);
     export let selectedSunEvent: 'sunrise' | 'sunset' = 'sunset';
     let manualClock: string | null = null;
+    export let cloudDirectionRangeKm = 0;
     export let cloudBounds: [[number, number], [number, number]] | null = null;
     export let cloudDetailBounds: [[number, number], [number, number]] | null = null;
     let mounted = false;
@@ -59,6 +60,8 @@
             layers: single ? resolveSingleLayer(settings.single, base) : resolveLayers(settings, profile?.layers || []) };
     });
     $: layers = scenarios.flatMap(event => event.layers);
+    // Share the outermost cloud distance with event rays, including a small visual overrun.
+    $: cloudDirectionRangeKm = Math.max(0, ...layers.map(layer => cloudTwilightDistances(layer.heightM)?.clearKm ?? 0)) * 1.05;
     $: timestamp = scenarios[0]?.timestamp ?? null;
     $: cloudBounds = planningBounds(scenarios, false);
     $: cloudDetailBounds = planningBounds(scenarios, true);
@@ -108,7 +111,12 @@
     // clearing an active input must leave it empty until the user fills it again.
     const changeHeightMode = (band: CloudBand, event: Event) => {
         const mode = (event.currentTarget as HTMLSelectElement).value as 'auto' | 'manual';
-        if (single) { settings.single = { ...settings.single, mode }; settings = { ...settings }; return; }
+        if (single) {
+            settings.single = { ...settings.single, mode,
+                heightM: mode === 'manual' && settings.single.heightM === undefined ? 2000 : settings.single.heightM };
+            settings = { ...settings };
+            return;
+        }
         const row = settings.layers[band];
         settings.layers[band] = { ...row, mode,
             heightM: mode === 'manual' && row.heightM === undefined
@@ -189,7 +197,6 @@
 </script>
 
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
-    <small>{zh ? '云层预报与地图：Windy' : 'Cloud forecast and map: Windy'}</small>
     <div class="cloud-controls">
     <div class="cloud-toolbar">
         <select class="cloud-target" value="sun" aria-label={zh ? '遮蔽类型' : 'Obstruction target'}>
@@ -237,7 +244,7 @@
         {#if !single}<label class="cloud-threshold">{zh ? '检出云量 ≥' : 'Cloud cover ≥'} <input type="number" min="1" max="100" step="1" bind:value={settings.threshold} /> %</label>{/if}
     </div>
     </div>
-    <p class="cloud-muted">{single ? (heightMode === 'auto' ? (zh ? '预报云底 · 一层参考不代表天空只有一层云' : 'Forecast cloud base · One reference does not describe every cloud layer') : (zh ? '手动高度 · 输入所关注云层的海拔高度' : 'Manual height · Enter the target cloud altitude AMSL')) : (zh ? '剖面采样云高 · 仅使用实际检出的云层' : 'Profile sample heights · Only detected layers are used')}</p>
+    <p class="cloud-muted cloud-height-description">{single ? (heightMode === 'auto' ? (zh ? '预报云底 · 一层参考不代表天空只有一层云' : 'Forecast cloud base · One reference does not describe every cloud layer') : (zh ? '手动高度 · 输入所关注云层的海拔高度' : 'Manual height · Enter the target cloud altitude AMSL')) : (zh ? '剖面采样云高 · 仅使用实际检出的云层' : 'Profile sample heights · Only detected layers are used')}</p>
     {#if !scenarios.length}
         <p class="cloud-error" role="status">{manualClock !== null ? (zh ? '请输入有效的当地时间' : 'Enter a valid local time') : (zh ? '该日暂无所选升落时刻' : 'Selected rise/set time unavailable for this date')}</p>
     {/if}
@@ -390,8 +397,9 @@
     .cloud-event-arrow--down { transform: rotate(180deg); }
     .cloud-panel .cloud-clock { width: 94px; padding: 0 4px; font-size: 12px; }
     .cloud-muted { color: #b9c2ce; font-size: 11px; overflow-wrap: anywhere; }
+    .cloud-height-description { margin: 4px 0 0; }
     .cloud-data-status { margin-left: auto; text-align: right; font-size: 11px; color: #b9c2ce; white-space: nowrap; flex-shrink: 0; }
-    .cloud-table-scroll { overflow-x: auto; margin: 8px 0; }
+    .cloud-table-scroll { overflow-x: auto; margin: 2px 0 8px; }
     .cloud-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; font-variant-numeric: tabular-nums; }
     .cloud-heading-line { display: block; white-space: nowrap; }
     .cloud-heading-compact { display: none; }

@@ -735,10 +735,10 @@ describe('plugin astronomy loading presentation', () => {
             '--summary-panel-height: 268px;\n        --events-summary-panel-height: 280px;',
         );
         expect(pluginSource).toContain(
-            '--summary-panel-height: 250px;\n        --events-summary-panel-height: 290px;',
+            '--summary-panel-height: 250px;\n        --events-summary-panel-height: 270px;',
         );
         expect(landscapeSource).toContain('--summary-panel-height: 256px;');
-        expect(landscapeSource).toContain('--events-summary-panel-height: 296px;');
+        expect(landscapeSource).toContain('--events-summary-panel-height: 276px;');
         expect(pluginSource).toContain('height: var(--events-summary-panel-height);');
         expect(pluginSource).toContain('column-gap: 0.5ch;');
         expect(desktopMetricRule).toContain('grid-template-columns: 7ch 4.4ch 5.1ch;');

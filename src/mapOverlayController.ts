@@ -1,5 +1,6 @@
 import { manageMarkerTooltip } from './markerTooltip';
 import {
+    destinationPoint,
     CURRENT_DIRECTION_COLOR,
     CURRENT_MOON_DIRECTION_COLOR,
     LINE_COLORS,
@@ -28,6 +29,8 @@ export type MapOverlayRenderState = {
     currentSun: SolarDirection | null;
     currentMoon: CurrentMoonInfo | null;
     showExtendedDistanceMarker: boolean;
+    showDistanceMarkers: boolean;
+    directionRangeKm: number | null;
     opacityPercent: number;
     originLabel: string;
     eventNames: Record<SolarEvent, string>;
@@ -158,7 +161,12 @@ export const createMapOverlayController = (
             const isMoonEvent = path.event === 'moonrise' || path.event === 'moonset';
             const baseOpacity = isMoonEvent ? 0.82 : 0.95;
             for (const sample of path.samples) {
-                const points = [
+                // Sample extended cloud rays on the sphere to match cloud arcs in Mercator.
+                const rangeKm = Math.max(state.showExtendedDistanceMarker ? 600 : 400, state.directionRangeKm ?? 0);
+                const points = state.directionRangeKm !== null
+                    ? Array.from({ length: Math.ceil(rangeKm / 25) + 1 }, (_, index) =>
+                        destinationPoint(state.location, sample.azimuth, rangeKm * index / Math.ceil(rangeKm / 25)))
+                    : [
                     state.location,
                     sample.point200,
                     sample.point400,
@@ -176,6 +184,8 @@ export const createMapOverlayController = (
                     eventLines.push({ line, baseOpacity });
                 }
 
+                // Cloud geometry replaces fixed-distance reference dots, but keeps the event rays.
+                if (!state.showDistanceMarkers) {continue;}
                 const markerInputs: { kind: MarkerKind; point: Coordinates; distance: number }[] = [
                     { kind: 'inner', point: sample.point200, distance: 200 },
                     { kind: 'outer', point: sample.point400, distance: 400 },

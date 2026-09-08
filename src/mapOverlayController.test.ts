@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createMapOverlayController, type MapOverlayRuntime } from './mapOverlayController';
-import { calculateCurrentMoonInfo, calculateCurrentSolarDirection, calculateSolarPath } from './solar';
+import { destinationPoint, calculateCurrentMoonInfo, calculateCurrentSolarDirection, calculateSolarPath } from './solar';
 
 const location = { lat: 23.1291, lon: 113.2644 };
 
@@ -9,6 +9,7 @@ const createRuntime = () => {
     const groups: { remove: ReturnType<typeof vi.fn> }[] = [];
     const markers: { tooltip: string; addTo: ReturnType<typeof vi.fn>; bindTooltip: ReturnType<typeof vi.fn> }[] = [];
     const lines: {
+        points: [number, number][];
         options: L.PolylineOptions;
         addTo: ReturnType<typeof vi.fn>;
         remove: ReturnType<typeof vi.fn>;
@@ -36,8 +37,9 @@ const createRuntime = () => {
             markers.push(marker);
             return marker as unknown as L.Marker;
         },
-        createPolyline: (_latLngs, options) => {
+        createPolyline: (latLngs, options) => {
             const line = {
+                points: latLngs,
                 options,
                 addTo: vi.fn(function addTo() {
                     return line;
@@ -53,7 +55,7 @@ const createRuntime = () => {
 };
 
 describe('map overlay controller', () => {
-    it('renders event markers and current directions behind one interface', () => {
+    it.each([true, false])('renders event rays with distance markers enabled=%s', showDistanceMarkers => {
         const { runtime, groups, markers, lines } = createRuntime();
         const controller = createMapOverlayController({} as L.LeafletGlMap, runtime);
         const eventDate = new Date('2026-08-24T04:00:00Z');
@@ -71,6 +73,8 @@ describe('map overlay controller', () => {
             currentSun: calculateCurrentSolarDirection({ date: eventDate, location }),
             currentMoon: calculateCurrentMoonInfo({ date: eventDate, location }),
             showExtendedDistanceMarker: true,
+            showDistanceMarkers,
+            directionRangeKm: showDistanceMarkers ? null : 900,
             opacityPercent: 80,
             originLabel: 'Observer',
             eventNames: {
@@ -82,8 +86,15 @@ describe('map overlay controller', () => {
             formatDistance: value => `${value} km`,
         });
 
+        if (!showDistanceMarkers && path.status === 'ok') {
+            path.samples.forEach((sample, index) => {
+                const endpoint = destinationPoint(location, sample.azimuth, 900);
+                expect(lines[index].points.at(-1)).toEqual([endpoint.lat, endpoint.lon]);
+                expect(lines[index].points.length).toBeGreaterThan(3);
+            });
+        }
         expect(groups).toHaveLength(1);
-        expect(markers).toHaveLength(10);
+        expect(markers).toHaveLength(showDistanceMarkers ? 10 : 1);
         expect(markers[0].tooltip).toBe('Observer');
         expect(lines).toHaveLength(5);
         expect(lines[0].options.opacity).toBeCloseTo(0.76);
@@ -109,6 +120,8 @@ describe('map overlay controller', () => {
             currentSun,
             currentMoon: null,
             showExtendedDistanceMarker: false,
+            showDistanceMarkers: true,
+            directionRangeKm: null,
             opacityPercent: 100,
             originLabel: 'Observer',
             eventNames: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset' },
@@ -142,6 +155,8 @@ describe('map overlay controller', () => {
             currentSun: null,
             currentMoon: null,
             showExtendedDistanceMarker: false,
+            showDistanceMarkers: true,
+            directionRangeKm: null,
             opacityPercent: 100,
             originLabel: 'Observer',
             eventNames: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset' },

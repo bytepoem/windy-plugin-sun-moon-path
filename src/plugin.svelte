@@ -717,6 +717,7 @@
             {:else if summaryTab === 'clouds'}
                 <CloudObstruction
                     bind:selectedSunEvent={cloudSunEvent}
+                    bind:cloudDirectionRangeKm
                     bind:cloudBounds
                     bind:cloudDetailBounds
                     location={selectedLocation}
@@ -2288,6 +2289,7 @@
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let cloudSunEvent: 'sunrise' | 'sunset' = 'sunset';
+    let cloudDirectionRangeKm = 0;
     let cloudBounds: [[number, number], [number, number]] | null = null;
     let cloudDetailBounds: [[number, number], [number, number]] | null = null;
     let coordinateCopyTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2433,7 +2435,8 @@
 
     // Event and current bearings remain visible alongside the cloud planning overlay.
     $: if (isMounted && summaryTab) {
-        renderMapFeatures(selectObservationPaths(solarPaths, summaryTab === 'clouds' ? cloudSunEvent : selectedEvent));
+        renderMapFeatures(selectObservationPaths(solarPaths, summaryTab === 'clouds' ? cloudSunEvent : selectedEvent),
+            summaryTab === 'clouds' ? cloudDirectionRangeKm : null);
     }
 
     $: if (mobilePluginRoot) {
@@ -3244,7 +3247,7 @@
         return labels[Math.round(((azimuth % 360) + 360) % 360 / 45) % labels.length];
     };
 
-    const renderMapFeatures = (paths: SolarPath[]) => {
+    const renderMapFeatures = (paths: SolarPath[], directionRangeKm = summaryTab === 'clouds' ? cloudDirectionRangeKm : null) => {
         mapOverlayController.render({
             location: selectedLocation,
             paths,
@@ -3252,6 +3255,8 @@
             currentMoon: currentMoonInfo,
             showExtendedDistanceMarker,
             opacityPercent: directionLineOpacityPercent,
+            showDistanceMarkers: summaryTab !== 'clouds',
+            directionRangeKm,
             originLabel: text.legend.origin,
             eventNames: text.events,
             formatDistance: distanceKm => formatDistanceLabel(distanceKm, units.distance),
@@ -4475,7 +4480,7 @@
 
     .sun-path-panel.mobile_ui {
         --summary-panel-height: 250px;
-        --events-summary-panel-height: 290px;
+        --events-summary-panel-height: 270px;
 
         display: flex;
         flex-direction: column;
@@ -5721,8 +5726,15 @@
         max-height: 65dvh;
     }
 
-    .sun-path-panel.mobile_ui:not(.mobile_fullscreen) .summary-panel-frame--clouds {
-        height: var(--summary-panel-height);
+    /* Desktop summary Tabs share the event height; the standalone weather module has its own frame. */
+    .sun-path-panel:not(.mobile_ui) .summary-panel-frame {
+        height: var(--events-summary-panel-height);
+        max-height: none;
+    }
+
+    /* All expanded mobile Tabs share the event frame; collapsed mode keeps its content-sized summary. */
+    .sun-path-panel.mobile_ui:not(.mobile_collapsed) .summary-panel-frame {
+        height: var(--events-summary-panel-height);
         max-height: none;
     }
 
@@ -7688,7 +7700,7 @@
     @media (orientation: landscape) {
         .sun-path-panel.mobile_ui {
             --summary-panel-height: 256px;
-            --events-summary-panel-height: 296px;
+            --events-summary-panel-height: 276px;
         }
     }
 
