@@ -150,8 +150,8 @@ const ASTRONOMICAL_NIGHT_ALTITUDE = -18;
 // Use the apparent horizon: refraction keeps a low-altitude star visible after its
 // geometric altitude has dropped slightly below 0 degrees.
 const MILKY_WAY_CENTER_ALTITUDE = -0.5;
-const GALACTIC_CENTER_RIGHT_ASCENSION_DEG = 266.405;
-const GALACTIC_CENTER_DECLINATION_DEG = -28.9361111111111;
+export const GALACTIC_CENTER_RIGHT_ASCENSION_DEG = 266.405;
+export const GALACTIC_CENTER_DECLINATION_DEG = -28.9361111111111;
 const REFERENCE_SIDEREAL_BASE_DEG = 280.16;
 const REFERENCE_SIDEREAL_RATE_DEG_PER_DAY = 360.9856235;
 

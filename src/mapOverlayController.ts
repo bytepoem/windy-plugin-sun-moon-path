@@ -7,8 +7,6 @@ import {
     MOON_LINE_COLORS,
     splitPolylineAtDateLine,
     type Coordinates,
-    type CurrentMoonInfo,
-    type SolarDirection,
     type SolarEvent,
     type SolarPath,
     type SolarSampleKind,
@@ -23,11 +21,15 @@ export type MapOverlayRuntime = {
     createPolyline: (latLngs: [number, number][], options: L.PolylineOptions) => L.Polyline;
 };
 
+/** Optional sampled path is used by cloud planning; ordinary live bearings retain their endpoints. */
+type MapBearing = { endpoint: Coordinates; points?: Coordinates[] };
+
 export type MapOverlayRenderState = {
     location: Coordinates;
     paths: SolarPath[];
-    currentSun: SolarDirection | null;
-    currentMoon: CurrentMoonInfo | null;
+    currentSun: MapBearing | null;
+    currentMoon: MapBearing | null;
+    currentGalacticCenter?: MapBearing | null;
     showExtendedDistanceMarker: boolean;
     showDistanceMarkers: boolean;
     directionRangeKm: number | null;
@@ -39,7 +41,7 @@ export type MapOverlayRenderState = {
 
 export type MapOverlayCurrentState = Pick<
     MapOverlayRenderState,
-    'location' | 'currentSun' | 'currentMoon' | 'opacityPercent'
+    'location' | 'currentSun' | 'currentMoon' | 'currentGalacticCenter' | 'opacityPercent'
 >;
 
 export type MapOverlayController = {
@@ -104,14 +106,14 @@ export const createMapOverlayController = (
 
     const drawCurrentDirection = (
         location: Coordinates,
-        endpoint: Coordinates,
+        direction: MapBearing,
         color: string,
         options: L.PolylineOptions = {},
     ) => {
         if (!layerGroup) {
             return;
         }
-        for (const segment of splitPolylineAtDateLine([location, endpoint])) {
+        for (const segment of splitPolylineAtDateLine(direction.points ?? [location, direction.endpoint])) {
             const baseOpacity = 0.95;
             const line = runtime.createPolyline(segment.map(toLatLng), {
                 color,
@@ -119,6 +121,7 @@ export const createMapOverlayController = (
                 opacity: scaledOpacity(baseOpacity),
                 lineCap: 'round',
                 lineJoin: 'round',
+                ...(direction.points ? { smoothFactor: 0 } : {}),
                 ...options,
             }).addTo(layerGroup);
             currentLines.push({ line, baseOpacity });
@@ -129,15 +132,18 @@ export const createMapOverlayController = (
         opacityPercent = state.opacityPercent;
         removeCurrentLines();
         if (state.currentSun) {
-            drawCurrentDirection(state.location, state.currentSun.endpoint, CURRENT_DIRECTION_COLOR);
+            drawCurrentDirection(state.location, state.currentSun, CURRENT_DIRECTION_COLOR);
         }
         if (state.currentMoon) {
             drawCurrentDirection(
                 state.location,
-                state.currentMoon.endpoint,
+                state.currentMoon,
                 CURRENT_MOON_DIRECTION_COLOR,
                 { dashArray: '7 6' },
             );
+        }
+        if (state.currentGalacticCenter) {
+            drawCurrentDirection(state.location, state.currentGalacticCenter, '#9de0b7');
         }
     };
 
@@ -147,7 +153,8 @@ export const createMapOverlayController = (
         const availablePaths = state.paths.filter(
             (path): path is Extract<SolarPath, { status: 'ok' }> => path.status === 'ok',
         );
-        if (availablePaths.length === 0) {
+        // A galactic bearing has no solar/lunar event ray, but is independently drawable.
+        if (availablePaths.length === 0 && !state.currentSun && !state.currentMoon && !state.currentGalacticCenter) {
             return;
         }
 

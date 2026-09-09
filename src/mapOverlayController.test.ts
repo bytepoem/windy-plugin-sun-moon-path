@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { cloudMapDirections } from './cloudGeometry';
 import { createMapOverlayController, type MapOverlayRuntime } from './mapOverlayController';
 import { destinationPoint, calculateCurrentMoonInfo, calculateCurrentSolarDirection, calculateSolarPath } from './solar';
 
@@ -168,4 +169,27 @@ describe('map overlay controller', () => {
         expect(lines[0].setStyle).toHaveBeenCalledWith({ opacity: 0.41 });
         expect(groups[0].remove).toHaveBeenCalledOnce();
     });
+});
+
+
+it('draws the sampled galactic bearing without a solar or lunar event path', () => {
+    const { runtime, groups, lines } = createRuntime();
+    const controller = createMapOverlayController({} as L.LeafletGlMap, runtime);
+    const directions = cloudMapDirections(Date.parse('2026-09-09T12:07:00Z'), location, 'milkyway');
+    controller.render({
+        location, paths: [], ...directions,
+        showExtendedDistanceMarker: false, showDistanceMarkers: false, directionRangeKm: 500,
+        opacityPercent: 50, originLabel: 'Observer',
+        eventNames: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset' },
+        formatDistance: value => `${value} km`,
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0].options.color).toBe('#9de0b7');
+    expect(lines[0].options.smoothFactor).toBe(0);
+    expect(lines[0].points).toEqual(directions.currentGalacticCenter!.points.map(point => [point.lat, point.lon]));
+    controller.updateCurrent({ location, ...directions, opacityPercent: 50 });
+    expect(lines[0].remove).toHaveBeenCalledOnce();
+    expect(lines).toHaveLength(2);
+    controller.destroy();
+    expect(groups[0].remove).toHaveBeenCalledOnce();
 });

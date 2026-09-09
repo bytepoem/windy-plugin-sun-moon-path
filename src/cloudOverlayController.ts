@@ -1,5 +1,5 @@
 import { manageMarkerTooltip } from './markerTooltip';
-import { cloudArc, cloudSightDistance, cloudTwilightDistances } from './cloudGeometry';
+import { cloudArc, cloudBearingPath, cloudSightDistance, cloudTwilightDistances } from './cloudGeometry';
 import { destinationPoint, splitPolylineAtDateLine, type Coordinates } from './solar';
 import { formatDistanceKm, formatElevationM, type UnitPreferences } from './unitPreferences';
 import type { CloudLayer } from './cloudProfile';
@@ -73,8 +73,7 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
         label(state.location, '', '#6ed9ee', state.language === 'zh' ? '机位' : 'Camera', true);
         // Sample the bearing ray as a geodesic; two endpoints alone distort long lines in Mercator.
         if (state.position.sightlineAvailable) {
-            line(Array.from({ length: 41 }, (_, i) =>
-                destinationPoint(state.location, state.position.azimuth, range * i / 40)),
+            line(cloudBearingPath(state.location, state.position.azimuth, range),
             { color: '#6ed9ee', dashArray: '8 5', weight: 2 });
         }
         for (const layer of state.layers) {

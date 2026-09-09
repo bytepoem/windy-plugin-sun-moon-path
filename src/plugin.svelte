@@ -718,6 +718,8 @@
                 <CloudObstruction
                     bind:selectedCloudEvent={cloudEvent}
                     bind:cloudMapEvent
+                    bind:cloudPlanningBody
+                    bind:cloudPlanningTimestamp
                     bind:cloudDirectionRangeKm
                     bind:cloudBounds
                     bind:cloudDetailBounds
@@ -734,6 +736,7 @@
                     language={uiLanguage}
                     {units}
                     bind:settings={cloudSettings}
+                    lineOpacity={directionLineOpacityPercent}
                     on:modelchange={handleWeatherModelChange}
                     on:retry={retryCloudWeather}
                 />
@@ -1335,6 +1338,7 @@
 </section>
 
 <script lang="ts">
+    import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import bcast from '@windy/broadcast';
     import { getElevation, getPointForecastData, getTimezoneInfo } from '@windy/fetch';
     import { getGPSlocation, getMyLatestPos } from '@windy/geolocation';
@@ -1819,8 +1823,8 @@
             rainViewerDescription: 'RainViewer 使用无需 Key 的公共接口并按中央气象台色阶显示；拖动 Windy 底部时间条可切换可用历史帧。',
             radarOpacityLabel: '雷达图层透明度',
             radarOpacityDescription: '实时调整第三方雷达图层的显示强度。0% 为完全透明，100% 为完全不透明。设置会保存在当前浏览器。',
-            lineOpacityLabel: '方位线透明度',
-            lineOpacityDescription: '调整地图上全部太阳和月亮方位线的显示强度。设置会保存在当前浏览器。',
+            lineOpacityLabel: '线条透明度',
+            lineOpacityDescription: '调整地图上全部日月方位线、银心视线及云层参考线的显示强度。设置会保存在当前浏览器。',
             show600Label: distance => `显示 ${distance} 点`,
             show600Description: distance => `开启后事件方向线会延伸到 ${distance}，并在该距离增加一个参考点。设置会保存在当前浏览器。`,
             hideLocationSearchLabel: '隐藏地点搜索框',
@@ -2060,8 +2064,8 @@
             rainViewerDescription: 'RainViewer uses its keyless public API and the NMC color scale. Drag Windy’s bottom timeline to switch between available historical frames.',
             radarOpacityLabel: 'Radar overlay opacity',
             radarOpacityDescription: 'Adjust the third-party radar layer immediately. 0% is fully transparent and 100% is fully opaque. This setting is saved in this browser.',
-            lineOpacityLabel: 'Direction line opacity',
-            lineOpacityDescription: 'Adjust all sun and moon direction lines on the map. This setting is saved in this browser.',
+            lineOpacityLabel: 'Line opacity',
+            lineOpacityDescription: 'Adjust all sun/moon bearings, galactic centre sightlines and cloud reference lines on the map. This setting is saved in this browser.',
             show600Label: distance => `Show ${distance} point`,
             show600Description: distance => `When enabled, event direction lines extend to ${distance} and add a reference point there. This setting is saved in this browser.`,
             hideLocationSearchLabel: 'Hide location search',
@@ -2290,7 +2294,9 @@
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let cloudEvent: SolarEvent = 'sunset';
-    let cloudMapEvent: SolarEvent = 'sunset';
+    let cloudMapEvent: SolarEvent | null = 'sunset';
+    let cloudPlanningBody: CloudDirectionBody = 'sun';
+    let cloudPlanningTimestamp: number | null = null;
     let cloudDirectionRangeKm = 0;
     let cloudBounds: [[number, number], [number, number]] | null = null;
     let cloudDetailBounds: [[number, number], [number, number]] | null = null;
@@ -2435,10 +2441,11 @@
     $: shouldLoadVisibleWeatherData = summaryTab === 'clouds' || (!isMobileCollapsed
         && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather'));
 
-    // Event and current bearings remain visible alongside the cloud planning overlay.
+    // The galactic overlay owns its direction; do not pair it with a solar/lunar event ray.
     $: if (isMounted && summaryTab) {
-        renderMapFeatures(selectObservationPaths(solarPaths, summaryTab === 'clouds' ? cloudMapEvent : selectedEvent),
-            summaryTab === 'clouds' ? cloudDirectionRangeKm : null);
+        const mapEvent = summaryTab === 'clouds' ? cloudMapEvent : selectedEvent;
+        renderMapFeatures(mapEvent === null ? [] : selectObservationPaths(solarPaths, mapEvent),
+            summaryTab === 'clouds' ? cloudDirectionRangeKm : null, cloudPlanningTimestamp, cloudPlanningBody);
     }
 
     $: if (mobilePluginRoot) {
@@ -2799,8 +2806,10 @@
         document.getElementById(`summary-tab-${nextTab}`)?.focus();
     };
 
-    const selectedMapPaths = (paths = solarPaths): SolarPath[] =>
-        selectObservationPaths(paths, summaryTab === 'clouds' ? cloudMapEvent : selectedEvent);
+    const selectedMapPaths = (paths = solarPaths): SolarPath[] => {
+        const mapEvent = summaryTab === 'clouds' ? cloudMapEvent : selectedEvent;
+        return mapEvent === null ? [] : selectObservationPaths(paths, mapEvent);
+    };
 
     $: fitMapControlLabel = summaryTab === 'clouds' ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
@@ -3249,12 +3258,17 @@
         return labels[Math.round(((azimuth % 360) + 360) % 360 / 45) % labels.length];
     };
 
-    const renderMapFeatures = (paths: SolarPath[], directionRangeKm = summaryTab === 'clouds' ? cloudDirectionRangeKm : null) => {
+    /** Both full redraws and the periodic refresh honour the cloud preview instant. */
+    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => summaryTab === 'clouds'
+        ? cloudMapDirections(planningTimestamp, selectedLocation, planningBody)
+        : { currentSun: currentSolarDirection, currentMoon: currentMoonInfo };
+
+    const renderMapFeatures = (paths: SolarPath[], directionRangeKm = summaryTab === 'clouds' ? cloudDirectionRangeKm : null,
+        planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => {
         mapOverlayController.render({
             location: selectedLocation,
             paths,
-            currentSun: currentSolarDirection,
-            currentMoon: currentMoonInfo,
+            ...mapCurrentDirections(planningTimestamp, planningBody),
             showExtendedDistanceMarker,
             opacityPercent: directionLineOpacityPercent,
             showDistanceMarkers: summaryTab !== 'clouds',
@@ -3286,8 +3300,7 @@
         refreshCurrentDirectionValues();
         mapOverlayController.updateCurrent({
             location: selectedLocation,
-            currentSun: currentSolarDirection,
-            currentMoon: currentMoonInfo,
+            ...mapCurrentDirections(),
             opacityPercent: directionLineOpacityPercent,
         });
     };

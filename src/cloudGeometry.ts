@@ -1,5 +1,6 @@
 import { Body, Equator, Horizon, KM_PER_AU, Observer } from 'astronomy-engine';
-import { EARTH_RADIUS_KM, destinationPoint, type Coordinates } from './solar';
+import { EARTH_RADIUS_KM, GALACTIC_CENTER_RIGHT_ASCENSION_DEG, GALACTIC_CENTER_DECLINATION_DEG,
+    CURRENT_DIRECTION_LENGTH_KM, destinationPoint, type Coordinates } from './solar';
 
 const RAD = Math.PI / 180;
 
@@ -24,15 +25,36 @@ export const cloudBodyPosition = (body: 'sun' | 'moon', timestamp: number, locat
         sightlineAvailable: Number.isFinite(apparent.altitude) && Math.abs(apparent.altitude) <= 90 };
 };
 
-/** Resolve auto from the calculation instant, never from the forecast step or device clock.
- * Solar twilight retains its geometric references; a below-horizon Moon has no blocking sightline.
+/** Fixed equatorial Milky Way photography reference shared with the visibility planner.
+ * Use its RA/Dec directly with the date's sidereal rotation (no J2000 precession),
+ * matching the PlanIt screenshot convention. This is a photographic band reference,
+ * not an astrometric Sgr A* position. Keep true and refracted altitudes separate.
  */
-export const cloudTargetPosition = (target: 'auto' | 'sun' | 'moon', timestamp: number, location: Coordinates) => {
+export const cloudGalacticCenterPosition = (timestamp: number, location: Coordinates) => {
+    const date = new Date(timestamp);
+    const observer = new Observer(location.lat, location.lon, 0);
+    const equatorial = { ra: GALACTIC_CENTER_RIGHT_ASCENSION_DEG / 15, dec: GALACTIC_CENTER_DECLINATION_DEG };
+    const geometric = Horizon(date, observer, equatorial.ra, equatorial.dec);
+    const apparent = Horizon(date, observer, equatorial.ra, equatorial.dec, 'normal');
+    return { azimuth: apparent.azimuth, altitude: apparent.altitude, geometricAltitude: geometric.altitude,
+        moonUpperLimbAltitude: null,
+        sightlineAvailable: Number.isFinite(apparent.altitude) && apparent.altitude >= 0 && apparent.altitude <= 90 };
+};
+
+/** Resolve auto from the calculation instant, never from the forecast step or device clock.
+ * Solar blocking requires its apparent centre above the horizon; lunar visibility
+ * continues to include the upper limb. Height-only twilight references are independent.
+ */
+export const cloudTargetPosition = (target: 'auto' | 'sun' | 'moon' | 'milkyway', timestamp: number, location: Coordinates) => {
+    if (target === 'milkyway') {
+        return { body: target, position: cloudGalacticCenterPosition(timestamp, location) };
+    }
     const sun = cloudBodyPosition('sun', timestamp, location);
     const body = target === 'auto' ? (sun.altitude >= 0 ? 'sun' : 'moon') : target;
     const position = body === 'sun' ? sun : cloudBodyPosition('moon', timestamp, location);
     return { body, position: { ...position,
-        sightlineAvailable: position.sightlineAvailable && (body === 'sun' || (position.moonUpperLimbAltitude ?? -90) >= 0) } };
+        sightlineAvailable: position.sightlineAvailable && (body === 'sun'
+            ? position.altitude >= 0 : (position.moonUpperLimbAltitude ?? -90) >= 0) } };
 };
 
 /** Apparent-direction reference intersection, not a refracted physical ray trace.
@@ -103,4 +125,30 @@ export const cloudTimeInstant = (date: string, clock: string, timeZone: string):
         return naive - (Date.parse(`${local(probe)}:00Z`) - probe);
     }).filter(value => local(value) === `${date}T${clock}`);
     return candidates.length ? Math.min(...candidates) : null;
+};
+
+/** Map live-bearing layers use the same planning instant as cloud intersections.
+ * An unavailable planning time must clear these lines, never fall back to now.
+ */
+export type CloudDirectionBody = 'sun' | 'moon' | 'milkyway';
+
+export const cloudMapDirections = (timestamp: number | null, location: Coordinates, body: CloudDirectionBody) => {
+    const empty = { currentSun: null, currentMoon: null, currentGalacticCenter: null };
+    if (timestamp === null) {return empty;}
+    const position = cloudTargetPosition(body, timestamp, location).position;
+    const points = cloudBearingPath(location, position.azimuth, CURRENT_DIRECTION_LENGTH_KM);
+    const direction = { azimuth: position.azimuth, altitude: position.altitude, endpoint: points[points.length - 1], points };
+    if (body === 'sun') {return { ...empty, currentSun: direction };}
+    if (body === 'moon') {return { ...empty, currentMoon: direction };}
+    return { ...empty, currentGalacticCenter: direction };
+};
+
+/** Shared geodesic ray with fixed distance steps: overlapping rays have identical
+ * vertices even when their total lengths differ. Mercator must not join only the endpoints.
+ */
+export const cloudBearingPath = (location: Coordinates, azimuth: number, distanceKm: number): Coordinates[] => {
+    const points = Array.from({ length: Math.ceil(distanceKm / 2) }, (_, index) =>
+        destinationPoint(location, azimuth, index * 2));
+    points.push(destinationPoint(location, azimuth, distanceKm));
+    return points;
 };

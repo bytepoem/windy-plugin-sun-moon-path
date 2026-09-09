@@ -6,10 +6,9 @@ export type CloudSettings = {
     view: 'single' | 'layers';
     single: { mode: 'auto' | 'manual'; heightM: number | undefined };
     clock: string;
-    body: 'auto' | 'sun' | 'moon';
+    body: 'auto' | 'sun' | 'moon' | 'milkyway';
     threshold: number;
     twilight: boolean;
-    opacity: number;
     syncMap: boolean;
     cameraOffsetM: number | undefined;
     overlay: 'clouds' | 'lclouds' | 'mclouds' | 'hclouds' | 'cbase';
@@ -17,7 +16,7 @@ export type CloudSettings = {
 };
 export const createCloudSettings = (): CloudSettings => ({
     view: 'single', single: { mode: 'auto', heightM: undefined },
-    clock: '', body: 'sun', threshold: 10, twilight: true, opacity: 85, syncMap: true, cameraOffsetM: 0, overlay: 'clouds',
+    clock: '', body: 'sun', threshold: 10, twilight: true, syncMap: true, cameraOffsetM: 0, overlay: 'clouds',
     layers: {
         low: { enabled: true, mode: 'auto', heightM: undefined },
         medium: { enabled: true, mode: 'auto', heightM: undefined },

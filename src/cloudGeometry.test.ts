@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloudArc, cloudBodyPosition, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances } from './cloudGeometry';
+import { cloudArc, cloudBearingPath, cloudMapDirections, cloudBodyPosition, cloudGalacticCenterPosition, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances } from './cloudGeometry';
 import { distanceKm, splitPolylineAtDateLine } from './solar';
 
 describe('cloud geometry', () => {
@@ -176,5 +176,102 @@ describe('cloud obstruction targets', () => {
         const pole = { lat: 80, lon: 0 };
         expect(cloudTargetPosition('auto', Date.parse('2026-06-21T00:00:00Z'), pole).body).toBe('sun');
         expect(cloudTargetPosition('auto', Date.parse('2026-12-21T12:00:00Z'), pole).body).toBe('moon');
+    });
+});
+
+
+describe('galactic centre cloud obstruction', () => {
+    it.each([[2000, 2.9520506], [4000, 5.9002339], [6000, 8.8445602]])(
+        'checks the screenshot displayed altitude at %i m without tuning the ephemeris', (height, expected) => {
+            expect(cloudSightDistance(height, 34.1)).toBeCloseTo(expected, 6);
+        },
+    );
+
+    it('uses the galactic direction and changes it with time and location', () => {
+        const instant = Date.parse('2026-09-08T12:07:00Z');
+        const location = { lat: 24.918759, lon: 112.658726 };
+        const target = cloudTargetPosition('milkyway', instant, location);
+        expect(target.body).toBe('milkyway');
+        expect(target.position).toEqual(cloudGalacticCenterPosition(instant, location));
+        expect(target.position.altitude).toBeGreaterThan(34);
+        expect(target.position.altitude).toBeLessThan(34.3);
+        expect(target.position.azimuth).toBeGreaterThan(196.4);
+        expect(target.position.azimuth).toBeLessThan(196.6);
+        expect(target.position.sightlineAvailable).toBe(true);
+        expect(target.position.altitude.toFixed(1)).toBe('34.1');
+        expect(target.position.azimuth.toFixed(1)).toBe('196.5');
+        [2000, 4000, 6000].forEach((height, index) => {
+            expect(cloudSightDistance(height, target.position.altitude)!.toFixed(2)).toBe(['2.95', '5.89', '8.84'][index]);
+        });
+        expect(target.position.altitude).toBeGreaterThan(target.position.geometricAltitude);
+        expect(cloudTargetPosition('sun', instant, location).position.altitude).toBeLessThan(0);
+        expect(cloudGalacticCenterPosition(instant + 3600_000, location).azimuth).toBeGreaterThan(target.position.azimuth);
+        expect(cloudGalacticCenterPosition(instant, { ...location, lat: 35 }).altitude).toBeLessThan(target.position.altitude);
+    });
+
+    it('has no below-horizon intersection and never auto-selects the galactic centre', () => {
+        const instant = Date.parse('2026-09-08T00:07:00Z');
+        const location = { lat: 24.918759, lon: 112.658726 };
+        const target = cloudTargetPosition('milkyway', instant, location);
+        expect(target.body).toBe('milkyway');
+        expect(target.position.altitude).toBeLessThan(0);
+        expect(target.position.sightlineAvailable).toBe(false);
+        expect(cloudTargetPosition('auto', instant, location).body).toBe('sun');
+        expect(cloudTargetPosition('milkyway', instant, { lat: 80, lon: 0 }).position.sightlineAvailable).toBe(false);
+    });
+});
+
+
+describe('cloud planning map bearings', () => {
+    const location = { lat: 24.918759, lon: 112.658726 };
+    it.each(['sun', 'moon', 'milkyway'] as const)('shows only the selected %s bearing and moves it with time', body => {
+        const first = cloudMapDirections(Date.parse('2026-09-08T08:00:00Z'), location, body);
+        const second = cloudMapDirections(Date.parse('2026-09-08T12:07:00Z'), location, body);
+        const firstLines = Object.values(first).filter(line => line !== null);
+        const secondLines = Object.values(second).filter(line => line !== null);
+        expect(firstLines).toHaveLength(1);
+        expect(secondLines).toHaveLength(1);
+        expect(distanceKm(firstLines[0]!.endpoint, secondLines[0]!.endpoint)).toBeGreaterThan(10);
+        const field = body === 'sun' ? 'currentSun' : body === 'moon' ? 'currentMoon' : 'currentGalacticCenter';
+        expect(second[field]).not.toBeNull();
+        expect(Object.values(cloudMapDirections(null, location, body)).every(line => line === null)).toBe(true);
+    });
+});
+
+
+describe('solar obstruction horizon visibility', () => {
+    const location = { lat: 23.1291, lon: 113.2644 };
+    it.each(['2026-09-09T10:59:00Z', '2026-09-09T16:00:00Z'])(
+        'hides solar blocking below the apparent horizon at %s', time => {
+            const result = cloudTargetPosition('sun', Date.parse(time), location);
+            expect(result.body).toBe('sun');
+            expect(result.position.altitude).toBeLessThan(0);
+            expect(result.position.sightlineAvailable).toBe(false);
+            const reference = cloudTwilightDistances(2000)!;
+            expect(Math.round(reference.horizonKm)).toBe(160);
+            expect(Math.round(reference.tangentKm)).toBe(319);
+            expect(Math.round(reference.clearKm)).toBe(479);
+        },
+    );
+    it('restores solar blocking above the horizon', () => {
+        const result = cloudTargetPosition('sun', Date.parse('2026-09-09T04:00:00Z'), location);
+        expect(result.position.altitude).toBeGreaterThan(0);
+        expect(result.position.sightlineAvailable).toBe(true);
+    });
+});
+
+
+describe('shared obstruction and bearing direction', () => {
+    it.each(['sun', 'moon', 'milkyway'] as const)('uses identical ephemeris and overlapping vertices for %s', body => {
+        const location = { lat: 23.1291, lon: 113.2644 };
+        for (const clock of ['2026-09-09T03:15:00Z', '2026-09-09T12:07:00Z']) {
+            const time = Date.parse(clock);
+            const target = cloudTargetPosition(body, time, location).position;
+            const bearing = Object.values(cloudMapDirections(time, location, body)).find(value => value !== null)!;
+            expect(bearing.azimuth).toBe(target.azimuth);
+            expect(bearing.altitude).toBe(target.altitude);
+            const obstructionPath = cloudBearingPath(location, target.azimuth, 479.25);
+            expect(bearing.points.slice(0, obstructionPath.length - 1)).toEqual(obstructionPath.slice(0, -1));
+        }
     });
 });

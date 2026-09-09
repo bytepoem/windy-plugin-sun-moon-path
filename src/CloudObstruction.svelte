@@ -3,7 +3,9 @@
     import { map } from '@windy/map';
     import store from '@windy/store';
     import metrics from '@windy/metrics';
-    import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances } from './cloudGeometry';
+    import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances, type CloudDirectionBody } from './cloudGeometry';
+    import CloudTimeline from './CloudTimeline.svelte';
+    import { galacticCenterEvents, cloudEventBody, cloudTimelineLabel, type CloudTimelineEventType } from './cloudTimeline';
     import { selectCloudBase, resolveSingleLayer } from './cloudBase';
     import { CLOUD_BAND_COLORS, createCloudOverlayController } from './cloudOverlayController';
     import {
@@ -24,12 +26,18 @@
     export let language: 'zh' | 'en';
     export let units: UnitPreferences;
     export let settings: CloudSettings;
+    export let lineOpacity: number;
 
     const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void }>();
     const overlay = createCloudOverlayController(map);
     export let selectedCloudEvent: SolarEvent = 'sunset';
-    export let cloudMapEvent: SolarEvent = 'sunset';
+    export let cloudMapEvent: SolarEvent | null = 'sunset';
     let manualClock: string | null = null;
+    let timelineEvent: CloudTimelineEventType | null = null;
+    let previewingTime = false;
+    let showThresholdHelp = false;
+    export let cloudPlanningBody: CloudDirectionBody = 'sun';
+    export let cloudPlanningTimestamp: number | null = null;
     export let cloudDirectionRangeKm = 0;
     export let cloudBounds: [[number, number], [number, number]] | null = null;
     export let cloudDetailBounds: [[number, number], [number, number]] | null = null;
@@ -44,12 +52,16 @@
     const changeModel = (event: Event) => dispatch('modelchange', (event.currentTarget as HTMLSelectElement).value as WeatherModel);
 
     $: zh = language === 'zh';
+    $: thresholdHelpText = zh
+        ? '自动识别云层时，忽略云量低于此值的高度层。调低可纳入更稀疏的云层；此数值不代表遮挡概率或云层厚度。'
+        : 'Automatic cloud detection ignores altitude levels with cloud cover below this value. Lower values include sparser clouds; this is not a blocking probability or cloud thickness.';
     $: single = settings.view === 'single';
     $: visibleBands = single ? ['low'] as CloudBand[] : CLOUD_BANDS;
     $: heightMode = single ? settings.single.mode : settings.layers.low.mode;
     // Profile extraction is only needed when the user requests the multi-layer view.
     $: cloudForecast = single ? { profiles: [], modelElevationM: null } : extractCloudForecast(forecast, settings.threshold);
-    $: automaticEvent = celestialEvents.find(event => event.type === selectedCloudEvent);
+    $: timelineEvents = [...celestialEvents, ...galacticCenterEvents(selectedDate, timeZone, location)];
+    $: automaticEvent = timelineEvents.find(event => event.type === (timelineEvent ?? selectedCloudEvent));
     $: manualTimestamp = manualClock === null ? null : cloudTimeInstant(selectedDate, manualClock, timeZone);
     $: planningEvents = manualClock === null ? (automaticEvent ? [automaticEvent] : [])
         : manualTimestamp === null ? [] : [{ type: selectedCloudEvent, timestamp: manualTimestamp }];
@@ -60,16 +72,13 @@
         return { ...event, profile, base, ...cloudTargetPosition(settings.body, event.timestamp, location),
             layers: single ? resolveSingleLayer(settings.single, base) : resolveLayers(settings, profile?.layers || []) };
     });
-    $: activeBody = scenarios[0]?.body ?? (settings.body === 'moon'
+    $: activeBody = scenarios[0]?.body ?? (settings.body === 'milkyway' ? 'milkyway' : settings.body === 'moon'
         || (settings.body === 'auto' && selectedCloudEvent.startsWith('moon')) ? 'moon' : 'sun');
-    $: cloudMapEvent = `${activeBody}${selectedCloudEvent.endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
-    $: solarReference = activeBody === 'sun';
-    $: presetEvents = (solarReference ? ['sunrise', 'sunset'] : ['moonrise', 'moonset']) as SolarEvent[];
-    $: bodyName = solarReference ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon');
-    $: eventName = (event: SolarEvent) => ({
-        sunrise: zh ? '日出' : 'Sunrise', sunset: zh ? '日落' : 'Sunset',
-        moonrise: zh ? '月出' : 'Moonrise', moonset: zh ? '月落' : 'Moonset',
-    })[event];
+    $: cloudPlanningBody = activeBody;
+    $: cloudMapEvent = activeBody === 'milkyway' ? null : `${activeBody}${(timelineEvent ?? selectedCloudEvent).endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
+    $: bodyName = activeBody === 'milkyway' ? (zh ? '银心' : 'Galactic centre')
+        : activeBody === 'sun' ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon');
+    $: eventName = (event: CloudTimelineEventType) => cloudTimelineLabel(event, zh);
     $: layers = scenarios.flatMap(event => event.layers);
     // Share the outermost cloud distance with event rays, including a small visual overrun.
     $: cloudDirectionRangeKm = Math.max(0, ...scenarios.flatMap(event => event.layers.map(layer => Math.max(
@@ -77,16 +86,17 @@
         event.position.sightlineAvailable ? cloudSightDistance(layer.heightM, event.position.altitude) ?? 0 : 0,
     )))) * 1.05;
     $: timestamp = scenarios[0]?.timestamp ?? null;
+    $: cloudPlanningTimestamp = timestamp;
     $: cloudBounds = planningBounds(scenarios, false);
     $: cloudDetailBounds = planningBounds(scenarios, true);
     $: if (mounted) {
         overlay.destroy();
         scenarios.forEach(event => {
             overlay.render({ location, position: event.position, sunAzimuth: event.position.azimuth,
-                layers: event.layers, twilight: true, opacity: settings.opacity, language, units });
+                layers: event.layers, twilight: true, opacity: lineOpacity, language, units });
         });
     }
-    $: if (mounted) {
+    $: if (mounted && !previewingTime) {
         const key = `${model}|${timestamp}|${settings.overlay}|${settings.syncMap}`;
         if ((!settings.syncMap || timestamp === null) && key !== lastSyncKey) {
             lastSyncKey = key;
@@ -176,17 +186,29 @@
         return [[Math.max(-85, Math.min(...points.map(point => point.lat))), Math.min(...lons)],
             [Math.min(85, Math.max(...points.map(point => point.lat))), Math.max(...lons)]];
     };
-    /** Explicit body changes select the matching rise/set event; manual wall time stays fixed. */
+    /** Keep the displayed time when changing body; the old event shortcut is no longer selected. */
     const changeTarget = (event: Event) => {
-        const body = (event.currentTarget as HTMLSelectElement).value as CloudSettings['body'];
-        settings = { ...settings, body };
-        if (body !== 'auto') {
-            selectedCloudEvent = `${body}${selectedCloudEvent.endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
-        }
+        manualClock = displayedClock;
+        previewingTime = false;
+        settings = { ...settings, body: (event.currentTarget as HTMLSelectElement).value as CloudSettings['body'] };
     };
-    const fitMap = () => {
-        if (cloudBounds) {map.fitBounds(cloudBounds, { padding: [30, 30] });}
+    /** Preview locally; invalidate outstanding map writes until the user commits the slider. */
+    const previewTime = (clock: string) => {
+        previewingTime = true;
+        lastSyncKey = '';
+        syncRevision += 1;
+        syncing = false;
+        manualClock = clock;
+        // The explicit target remains selected when moving away from an event.
     };
+    const jumpTime = (type: CloudTimelineEventType) => {
+        settings = { ...settings, body: cloudEventBody(type) };
+        timelineEvent = type;
+        manualClock = null;
+        previewingTime = false;
+        if (type !== 'milkywayrise' && type !== 'milkywayset') {selectedCloudEvent = type;}
+    };
+
 
     onMount(() => {
         mounted = true;
@@ -218,38 +240,33 @@
 </script>
 
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
-    <div class="cloud-controls">
-    <div class="cloud-toolbar">
-        <select class="cloud-target" value={settings.body} on:change={changeTarget} aria-label={zh ? '遮蔽类型' : 'Obstruction target'}>
+    <CloudTimeline events={timelineEvents} clock={displayedClock} selected={manualClock === null ? (timelineEvent ?? selectedCloudEvent) : null}
+        {timeZone} {zh} on:preview={event => previewTime(event.detail)}
+        on:commit={() => { previewingTime = false; }} on:jump={event => jumpTime(event.detail)}>
+        <select slot="target" class="cloud-target" value={settings.body} on:change={changeTarget} aria-label={zh ? '遮蔽类型' : 'Obstruction target'}>
             <option value="auto">{zh ? '自动' : 'Auto'}</option>
             <option value="sun">{zh ? '遮蔽太阳' : 'Blocking Sun'}</option>
             <option value="moon">{zh ? '遮蔽月亮' : 'Blocking Moon'}</option>
-            <option value="milkyway" disabled>{zh ? '遮蔽银河（暂未开放）' : 'Milky Way (coming soon)'}</option>
+            <option value="milkyway">{zh ? '遮蔽银心' : 'Galactic centre'}</option>
         </select>
-        <div class="cloud-presets" role="group" aria-label={zh ? '升落时刻' : 'Rise or set'}>
-            {#each presetEvents as event}
-                <button type="button" class="cloud-event" class:active={manualClock === null && selectedCloudEvent === event}
-                    aria-label={eventName(event)}
-                    title={eventName(event)}
-                    aria-pressed={manualClock === null && selectedCloudEvent === event}
-                    on:click={() => { manualClock = null; selectedCloudEvent = event; }}>
-                    <svg class="cloud-event-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        {#if solarReference}<circle cx="12" cy="12" r="4.2"></circle>
-                        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"></path>
-                        {:else}<path d="M17 3a9 9 0 1 0 4 14A8 8 0 0 1 17 3Z" style="fill:#bcd5ff;stroke:#bcd5ff"></path>{/if}
-                    </svg>
-                    <svg class="cloud-event-arrow" class:cloud-event-arrow--down={event.endsWith('set')} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                        <path d="M8 13V3M4.2 6.8 8 3l3.8 3.8"></path>
-                    </svg>
-                </button>
-            {/each}
-            <input class="cloud-clock" type="time" step="60" value={displayedClock}
-                aria-label={zh ? '当地计算时间' : 'Local calculation time'}
-                title={zh ? '手动输入当地时间；点击升落按钮恢复对应时刻' : 'Enter local time; rise/set buttons restore the event time'}
-                on:input={event => { manualClock = event.currentTarget.value; }} />
-
-        </div>
-    </div>
+    </CloudTimeline>
+    <p class="cloud-muted cloud-height-description">{single ? (heightMode === 'auto' ? (zh ? '预报云底 · 一层参考不代表天空只有一层云' : 'Forecast cloud base · One reference does not describe every cloud layer') : (zh ? '手动高度 · 输入所关注云层的海拔高度' : 'Manual height · Enter the target cloud altitude AMSL')) : (zh ? '剖面采样云高 · 仅使用实际检出的云层' : 'Profile sample heights · Only detected layers are used')}</p>
+    {#if settings.body === 'auto' && scenarios.length}
+        <p class="cloud-muted" role="status">{zh ? `自动：遮蔽${bodyName} · 太阳中心在地平线上时选太阳，否则选月亮` : `Auto: Blocking ${bodyName} · Sun when its centre is above the horizon, otherwise Moon`}</p>
+    {/if}
+    {#if activeBody === 'milkyway'}
+        {#if scenarios[0]}
+            <p class="cloud-muted">{zh ? '高度角' : 'Altitude'} {scenarios[0].position.altitude.toFixed(1)}° · {zh ? '方位角' : 'Azimuth'} {scenarios[0].position.azimuth.toFixed(1)}°</p>
+        {/if}
+    {/if}
+    {#if scenarios[0] && !scenarios[0].position.sightlineAvailable}
+        <p class="cloud-error" role="status">{zh ? `${bodyName}${activeBody === 'sun' ? '中心' : ''}在地平线下，不显示遮蔽${bodyName}云距` : `${bodyName} is below the horizon and not visible; blocking distance is unavailable`}</p>
+    {:else if scenarios[0]?.position.altitude < 0}
+        <p class="cloud-error" role="status">{zh ? `${bodyName}中心在地平线下，遮蔽云距仅为几何参考` : `${bodyName} centre is below the horizon; blocking distance is a geometric reference only`}</p>
+    {/if}
+    {#if !scenarios.length}
+        <p class="cloud-error" role="status">{manualClock !== null ? (zh ? '请输入有效的当地时间' : 'Enter a valid local time') : (zh ? '该日暂无所选升落时刻' : 'Selected rise/set time unavailable for this date')}</p>
+    {/if}
     <div class="cloud-forecast-controls">
         <div class="cloud-model-mode">
         <label class="cloud-model"><span>{zh ? '模型' : 'Model'}</span>
@@ -263,20 +280,32 @@
             <option value="layers">{zh ? '分层' : 'Layered'}</option>
         </select>
         </div>
-        {#if !single}<label class="cloud-threshold">{zh ? '检出云量 ≥' : 'Cloud cover ≥'} <input type="number" min="1" max="100" step="1" bind:value={settings.threshold} /> %</label>{/if}
+        <div class="cloud-data-status" role="status" title={zh ? '预报时次' : 'Forecast step'}>
+        {#if status === 'loading' || status === 'idle'}
+            {zh ? '正在读取云层预报…' : 'Loading…'}
+        {:else if status === 'error'}
+            {zh ? '云层预报加载失败' : 'Failed'} <button type="button" on:click={() => dispatch('retry')}>{zh ? '重试' : 'Retry'}</button>
+        {:else}
+            {#each scenarios as event}{@const step = single ? event.base : event.profile}<div>{#if step}<span class="cloud-forecast-label">{zh ? '预报时次' : 'Forecast step'} </span>{formatLocalClock(new Date(step.timestamp), timeZone)}{:else}{zh ? '所选时间无可用预报' : 'No forecast'}{/if}</div>{/each}
+        {/if}
     </div>
     </div>
-    <p class="cloud-muted cloud-height-description">{single ? (heightMode === 'auto' ? (zh ? '预报云底 · 一层参考不代表天空只有一层云' : 'Forecast cloud base · One reference does not describe every cloud layer') : (zh ? '手动高度 · 输入所关注云层的海拔高度' : 'Manual height · Enter the target cloud altitude AMSL')) : (zh ? '剖面采样云高 · 仅使用实际检出的云层' : 'Profile sample heights · Only detected layers are used')}</p>
-    {#if settings.body === 'auto' && scenarios.length}
-        <p class="cloud-muted" role="status">{zh ? `自动：遮蔽${bodyName} · 太阳中心在地平线上时选太阳，否则选月亮` : `Auto: Blocking ${bodyName} · Sun when its centre is above the horizon, otherwise Moon`}</p>
-    {/if}
-    {#if activeBody === 'moon' && scenarios[0] && !scenarios[0].position.sightlineAvailable}
-        <p class="cloud-error" role="status">{zh ? '月亮在地平线下，当前不可见，无法计算遮蔽月亮云距' : 'Moon is below the horizon and not visible; blocking distance is unavailable'}</p>
-    {:else if scenarios[0]?.position.altitude < 0}
-        <p class="cloud-error" role="status">{zh ? `${bodyName}中心在地平线下，遮蔽云距仅为几何参考` : `${bodyName} centre is below the horizon; blocking distance is a geometric reference only`}</p>
-    {/if}
-    {#if !scenarios.length}
-        <p class="cloud-error" role="status">{manualClock !== null ? (zh ? '请输入有效的当地时间' : 'Enter a valid local time') : (zh ? '该日暂无所选升落时刻' : 'Selected rise/set time unavailable for this date')}</p>
+    {#if !single && heightMode === 'auto'}
+        <div class="cloud-threshold-row">
+            <label class="cloud-threshold">{zh ? '仅考虑云量 ≥' : 'Only include cloud cover ≥'}
+                <input type="number" min="1" max="100" step="1" bind:value={settings.threshold}
+                    aria-describedby={showThresholdHelp ? 'cloud-threshold-help' : undefined} /> %
+            </label>
+            <button class="cloud-threshold-help" type="button" title={thresholdHelpText}
+                aria-label={zh ? '云量筛选说明' : 'Cloud cover filter explanation'} aria-expanded={showThresholdHelp}
+                on:click={event => {
+                    showThresholdHelp = !showThresholdHelp;
+                    // Pointer activation can retain a focus ring on touch browsers.
+                    // Keep keyboard focus (detail === 0) so the button remains navigable.
+                    if (!showThresholdHelp && event.detail > 0) {event.currentTarget.blur();}
+                }}>ⓘ</button>
+        </div>
+        {#if showThresholdHelp}<p id="cloud-threshold-help" class="cloud-muted">{thresholdHelpText}</p>{/if}
     {/if}
     <div class="cloud-table-scroll" tabindex="0" role="region" aria-label={zh ? '云层距离表' : 'Cloud distance table'}>
     <table class="cloud-table">
@@ -355,35 +384,27 @@
     </table>
     </div>
     <div class="cloud-map-options">
-        <div class="cloud-map-row" tabindex="0" role="region" aria-label={zh ? '云图与预报时次' : 'Cloud map and forecast step'}>
+        <div class="cloud-map-row" tabindex="0" role="region" aria-label={zh ? '云图设置' : 'Cloud map settings'}>
         <label title={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'}><input type="checkbox" bind:checked={settings.syncMap} aria-label={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'} /> {zh ? '同步 Windy 模型与时间' : 'Sync Windy'}</label>
         <label><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
             <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
             <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>
             <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
         </select></label>
-        <div class="cloud-data-status" role="status" title={zh ? '预报时次' : 'Forecast step'}>
-        {#if status === 'loading' || status === 'idle'}
-            {zh ? '正在读取云层预报…' : 'Loading…'}
-        {:else if status === 'error'}
-            {zh ? '云层预报加载失败' : 'Failed'} <button type="button" on:click={() => dispatch('retry')}>{zh ? '重试' : 'Retry'}</button>
-        {:else}
-            {#each scenarios as event}{@const step = single ? event.base : event.profile}<div>{#if step}<span class="cloud-forecast-label">{zh ? '预报时次' : 'Forecast step'} </span>{formatLocalClock(new Date(step.timestamp), timeZone)}{:else}{zh ? '所选时间无可用预报' : 'No forecast'}{/if}</div>{/each}
-        {/if}
-    </div>
+
         </div>
-        {#if !settings.syncMap || syncError || syncing}<div class="cloud-sync-status">
+        {#if !settings.syncMap || syncError || syncing || previewingTime}<div class="cloud-sync-status">
     {#if !settings.syncMap}
         <p class="cloud-error" role="status">{zh ? '独立几何规划 · 底图天气未同步' : 'Independent geometry · Map weather is not synchronized'}</p>
+    {:else if previewingTime}
+        <p class="cloud-muted" role="status">{zh ? '时间预览 · 松开后同步底图' : 'Time preview · Release to sync the map'}</p>
     {:else if syncError}
-        <p class="cloud-error" role="status">{zh ? '底图模型或时刻未同步，参考线仍对应所选计算时刻' : 'Map model or time differs; reference lines retain the selected calculation time'}
-            <button type="button" on:click={() => { lastSyncKey = ''; }}>{zh ? '重新同步' : 'Sync again'}</button></p>
+        <p class="cloud-error" role="status">{zh ? '底图模型或时刻未同步，参考线仍对应所选计算时刻' : 'Map model or time differs; reference lines retain the selected calculation time'}</p>
+        <button class="cloud-resync" type="button" on:click={() => { lastSyncKey = ''; }}>{zh ? '重新同步' : 'Sync again'}</button>
     {:else if syncing}
         <p class="cloud-muted" role="status">{zh ? '正在同步云图…' : 'Synchronizing cloud map…'}</p>
     {/if}
         </div>{/if}
-        <label class="cloud-opacity">{zh ? '线条' : 'Opacity'} <input type="range" min="10" max="100" step="5" bind:value={settings.opacity} />{settings.opacity}%</label>
-        <button type="button" disabled={!layers.length} on:click={fitMap}>{zh ? '显示全部云距' : 'Fit cloud distances'}</button>
     </div>
     <div class="cloud-legend">
         {#each visibleBands as band}<span><i style={`border-color:${CLOUD_BAND_COLORS[band]}`}></i>{single ? (zh ? '参考云层' : 'Reference layer') : bandName(band)}</span>{/each}
@@ -396,15 +417,16 @@
 </section>
 
 <style>
-    .cloud-panel { box-sizing: border-box; container-type: inline-size; height: 100%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 12px; color: var(--panel-text, #f2f4fa); font-size: 12px; line-height: 1.5; }
+    .cloud-panel { --cloud-row-gap: 6px; display: flex; flex-direction: column; gap: var(--cloud-row-gap); box-sizing: border-box; container-type: inline-size; height: 100%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 12px; color: var(--panel-text, #f2f4fa); font-size: 12px; line-height: 1.5; }
+    .cloud-panel > * { flex-shrink: 0; }
+    .cloud-panel p { margin: 0; }
     .cloud-model-mode { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; }
     .cloud-panel * { box-sizing: border-box; letter-spacing: 0; }
-    .cloud-toolbar, .cloud-forecast-controls, .cloud-map-options { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-    .cloud-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
-    .cloud-controls > div { flex: 1 1 auto; justify-content: space-between; }
-    .cloud-controls > .cloud-toolbar { align-items: flex-start; }
-    .cloud-controls > .cloud-forecast-controls { flex-basis: 100%; gap: 8px; }
-    .cloud-threshold { margin-left: auto; }
+    .cloud-forecast-controls, .cloud-map-options { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .cloud-forecast-controls { flex-wrap: nowrap; }
+    .cloud-threshold { margin: 0; }
+    .cloud-threshold-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .cloud-panel .cloud-threshold-help { min-height: 24px; width: 24px; padding: 0; border: 0; background: transparent; color: #6ed9ee; font-size: 16px; }
     .cloud-forecast-controls label { white-space: nowrap; }
     .cloud-panel .cloud-threshold input { width: 54px; flex: 0 0 54px; padding: 0 6px; appearance: textfield; font-variant-numeric: tabular-nums; }
     .cloud-threshold input::-webkit-inner-spin-button, .cloud-threshold input::-webkit-outer-spin-button { appearance: none; margin: 0; }
@@ -412,30 +434,20 @@
     .cloud-panel button, .cloud-panel select, .cloud-panel input { font: inherit; color: inherit; }
     .cloud-panel select, .cloud-panel input[type=number], .cloud-panel input[type=time] { height: 30px; border: 1px solid var(--panel-border); border-radius: 6px; background: rgba(8, 15, 27, .68); padding: 0 8px; min-width: 0; color-scheme: dark; font-size: 13px; }
     .cloud-panel button { min-height: 30px; border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px 8px; background: rgba(255, 255, 255, .06); cursor: pointer; }
-    .cloud-panel button:hover, .cloud-panel button.active { background: #254754; border-color: #6ed9ee; }
+    .cloud-panel button:hover:not(.cloud-threshold-help), .cloud-panel button.active { background: #254754; border-color: #6ed9ee; }
+    .cloud-panel .cloud-threshold-help[aria-expanded="true"] { background: #254754; }
     .cloud-panel button:disabled { opacity: .45; cursor: default; }
     .cloud-panel :is(button, input, select):focus-visible { outline: 2px solid #6ed9ee; outline-offset: 2px; }
     .cloud-panel input[type=checkbox] { accent-color: #6ed9ee; width: 17px; height: 17px; }
-    .cloud-panel input[type=range] { appearance: none; -webkit-appearance: none; background: transparent; border: 0; padding: 0; min-width: 0; height: 30px; }
-    .cloud-panel input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: #607587; }
-    .cloud-panel input[type=range]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border: 2px solid #17212a; border-radius: 50%; background: #6ed9ee; }
-    .cloud-panel input[type=range]::-moz-range-track { height: 4px; background: #607587; }
-    .cloud-panel input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border: 2px solid #17212a; border-radius: 50%; background: #6ed9ee; }
-    .cloud-target { width: 132px; }
-    .cloud-presets { display: flex; align-items: center; gap: 4px; }
-    .cloud-event { display: flex; align-items: center; justify-content: center; gap: 3px; }
-    .cloud-event-sun { width: 16px; height: 16px; fill: #ffb347; stroke: #ffb347; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-    .cloud-event-arrow { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .cloud-event-arrow--down { transform: rotate(180deg); }
-    .cloud-panel .cloud-clock { width: 94px; padding: 0 4px; font-size: 12px; }
+    .cloud-target { width: 100%; padding: 0 4px !important; }
     .cloud-muted { color: #b9c2ce; font-size: 11px; overflow-wrap: anywhere; }
-    .cloud-height-description { margin: 4px 0 0; }
-    .cloud-data-status { margin-left: auto; text-align: right; font-size: 11px; color: #b9c2ce; white-space: nowrap; flex-shrink: 0; }
-    .cloud-table-scroll { overflow-x: auto; margin: 2px 0 8px; }
+    .cloud-height-description { margin: 0; }
+    .cloud-data-status { margin-left: auto; text-align: right; font-size: 11px; color: #b9c2ce; white-space: normal; min-width: 0; flex: 1; }
+    .cloud-table-scroll { overflow-x: auto; margin: 0; }
     .cloud-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; font-variant-numeric: tabular-nums; }
     .cloud-heading-line { display: block; white-space: nowrap; }
     .cloud-heading-compact { display: none; }
-    .cloud-table th, .cloud-table td { padding: 5px 0; text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
+    .cloud-table th, .cloud-table td { padding: 4px 0; text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
     .cloud-table thead { color: #b9c2ce; font-size: 11px; }
     .cloud-table thead th { font-weight: 500; overflow-wrap: anywhere; }
     .cloud-table th:first-child { width: 106px; }
@@ -449,7 +461,7 @@
     .cloud-table small { display: block; font-size: 10px; font-weight: 400; }
     .cloud-table tbody { border-top: 1px solid var(--panel-border); }
     .cloud-table tbody td:not(.cloud-height-cell) { font-weight: 600; }
-    .cloud-table .cloud-detail td { padding: 0 4px 6px; text-align: left; color: #b9c2ce; font-size: 11px; font-weight: 400; overflow-wrap: anywhere; }
+    .cloud-table .cloud-detail td { padding: 0 4px 4px; text-align: left; color: #b9c2ce; font-size: 11px; font-weight: 400; overflow-wrap: anywhere; }
     .cloud-height-controls { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 2px; min-width: 0; }
     .cloud-mode-size { position: relative; display: table; margin: 2px auto 0; font-size: 11px; font-weight: 400; }
     .cloud-mode-size > span { display: block; visibility: hidden; padding: 0 24px 0 6px; height: 24px; white-space: nowrap; }
@@ -467,22 +479,21 @@
     .cloud-height input::-webkit-inner-spin-button, .cloud-height input::-webkit-outer-spin-button { appearance: none; margin: 0; }
     .cloud-panel .cloud-clear { position: absolute; right: 1px; top: 1px; width: 16px; min-height: 28px; height: calc(100% - 2px); padding: 0; border: 0; background: transparent; font-size: 16px; }
     .cloud-sight { color: #6ed9ee; }
-    .cloud-map-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; width: 100%; overflow-x: auto; white-space: nowrap; }
+    .cloud-map-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; width: 100%; white-space: nowrap; }
     .cloud-sync-status { width: 100%; }
     .cloud-sync-status p { margin: 0; }
+    .cloud-resync { display: block; margin: 6px 0 0; }
     .cloud-map-row > label { flex-shrink: 0; }
-    .cloud-map-options { border-top: 1px solid #485364; padding-top: 10px; }
-    .cloud-opacity { flex: 1; min-width: 180px; }
-    .cloud-opacity input { flex: 1; width: 70px; }
-    .cloud-legend { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 12px; font-size: 11px; }
+    .cloud-map-options { border-top: 1px solid #485364; padding-top: 6px; }
+    .cloud-legend { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 0; font-size: 11px; }
     .cloud-legend span { display: flex; gap: 5px; align-items: center; }
     .cloud-legend i { width: 18px; height: 0; border-top: 2px solid; }
     .cloud-legend .sight { border-color: #6ed9ee; }
     .cloud-legend .horizon { border-color: #fff; }
     .cloud-legend .tangent { border-color: #b9c2ce; border-top-style: dashed; }
     .cloud-legend .far { border-color: #b9c2ce; }
-    .cloud-error { color: #ffb8ba; font-size: 12px; margin: 6px 0; }
-    .cloud-limit { color: #b9c2ce; font-size: 11px; margin: 8px 0 0; }
+    .cloud-error { color: #ffb8ba; font-size: 12px; margin: 0; }
+    .cloud-limit { color: #b9c2ce; font-size: 11px; margin: 0; }
     :global(.cloud-planning-marker) { background: transparent; border: 0; text-align: center; }
     :global(.cloud-planning-marker span) { display: inline-block; padding: 0; border: 0; background: transparent; font: 600 12px/24px sans-serif; text-shadow: 0 1px 2px #17212a, 0 0 3px #17212a; text-align: center; white-space: nowrap; }
     :global(.cloud-planning-point span) { display: block; width: 12px; height: 12px; border: 2px solid #6ed9ee; border-radius: 50%; background: #17212a; }
@@ -500,7 +511,6 @@
         .cloud-forecast-controls { gap: 6px; font-size: 11px; }
         .cloud-forecast-controls label { gap: 3px; }
         .cloud-forecast-controls select { padding: 0 4px; font-size: 12px; }
-        .cloud-presets button { padding: 4px 6px; }
         .cloud-legend { gap: 4px 8px; }
     }
 </style>
