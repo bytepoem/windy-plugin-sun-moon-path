@@ -281,6 +281,11 @@
             <option value="single">{zh ? '单层' : 'Single'}</option>
             <option value="layers">{zh ? '分层' : 'Layered'}</option>
         </select>
+        <label class="cloud-map-select"><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
+            <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
+            <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>
+            <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
+        </select></label>
         </div>
         <div class="cloud-data-status" role="status" title={zh ? '预报时次' : 'Forecast step'}>
         {#if status === 'loading' || status === 'idle'}
@@ -395,12 +400,9 @@
     <div class="cloud-map-options">
         <div class="cloud-map-row" tabindex="0" role="region" aria-label={zh ? '云图设置' : 'Cloud map settings'}>
         <label title={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'}><input type="checkbox" bind:checked={settings.syncMap} aria-label={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'} /> {zh ? '同步 Windy 模型与时间' : 'Sync Windy'}</label>
-        <label><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
-            <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
-            <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>
-            <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
-        </select></label>
-
+        {#if settings.syncMap && syncError && !previewingTime}
+        <button class="cloud-resync" type="button" on:click={() => { lastSyncKey = ''; }}>{zh ? '重新同步' : 'Sync again'}</button>
+        {/if}
         </div>
         {#if !settings.syncMap || syncError || syncing || previewingTime}<div class="cloud-sync-status">
     {#if !settings.syncMap}
@@ -409,7 +411,6 @@
         <p class="cloud-muted" role="status">{zh ? '时间预览 · 松开后同步底图' : 'Time preview · Release to sync the map'}</p>
     {:else if syncError}
         <p class="cloud-error" role="status">{zh ? '底图模型或时刻未同步，参考线仍对应所选计算时刻' : 'Map model or time differs; reference lines retain the selected calculation time'}</p>
-        <button class="cloud-resync" type="button" on:click={() => { lastSyncKey = ''; }}>{zh ? '重新同步' : 'Sync again'}</button>
     {:else if syncing}
         <p class="cloud-muted" role="status">{zh ? '正在同步云图…' : 'Synchronizing cloud map…'}</p>
     {/if}
@@ -434,7 +435,10 @@
     .cloud-panel { --cloud-row-gap: 6px; display: flex; flex-direction: column; gap: var(--cloud-row-gap); box-sizing: border-box; container-type: inline-size; height: 100%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 12px; color: var(--panel-text, #f2f4fa); font-size: 12px; line-height: 1.5; }
     .cloud-panel > * { flex-shrink: 0; }
     .cloud-panel p { margin: 0; }
-    .cloud-model-mode { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; }
+    .cloud-model-mode { display: flex; align-items: center; flex-wrap: nowrap; gap: 4px; flex: 1 1 0; min-width: 0; }
+    .cloud-model-mode > select, .cloud-model-mode > label { flex: 1 1 0; min-width: 0; }
+    .cloud-model-mode label select { width: 100%; }
+    .cloud-model > span, .cloud-map-label { display: none; }
     .cloud-panel * { box-sizing: border-box; letter-spacing: 0; }
     .cloud-forecast-controls, .cloud-map-options { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
     .cloud-forecast-controls { flex-wrap: nowrap; }
@@ -456,7 +460,8 @@
     .cloud-target { width: 100%; padding: 0 4px !important; }
     .cloud-muted { color: #b9c2ce; font-size: 11px; overflow-wrap: anywhere; }
     .cloud-height-description { margin: 0; }
-    .cloud-data-status { margin-left: auto; text-align: right; font-size: 11px; color: #b9c2ce; white-space: normal; min-width: 0; flex: 1; }
+    .cloud-data-status { margin-left: auto; text-align: right; font-size: 11px; color: #b9c2ce; white-space: nowrap; flex: 0 0 auto; }
+    .cloud-model-mode select { padding-inline: 3px; font-size: 12px; }
     .cloud-table-scroll { overflow-x: auto; margin: 0; }
     .cloud-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; font-variant-numeric: tabular-nums; }
     .cloud-heading-line { display: block; white-space: nowrap; }
@@ -496,7 +501,7 @@
     .cloud-map-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; width: 100%; white-space: nowrap; }
     .cloud-sync-status { width: 100%; }
     .cloud-sync-status p { margin: 0; }
-    .cloud-resync { display: block; margin: 6px 0 0; }
+    .cloud-resync { flex-shrink: 0; }
     .cloud-map-row > label { flex-shrink: 0; }
     .cloud-map-options { border-top: 1px solid #485364; padding-top: 6px; }
     .cloud-legend { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 0; font-size: 11px; }
@@ -512,19 +517,31 @@
     :global(.cloud-planning-marker span) { display: inline-block; padding: 0; border: 0; background: transparent; font: 600 12px/24px sans-serif; text-shadow: 0 1px 2px #17212a, 0 0 3px #17212a; text-align: center; white-space: nowrap; }
     :global(.cloud-planning-point span) { display: block; width: 12px; height: 12px; border: 2px solid #6ed9ee; border-radius: 50%; background: #17212a; }
     @container (max-width: 380px) {
+        /* Reserve the forecast label; compact the selects and their arrow insets instead. */
+        .cloud-model-mode { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .72fr) minmax(0, 1.08fr); gap: 4px; }
+        .cloud-model-mode > select { width: 100%; }
+        .cloud-model-mode select {
+            appearance: none;
+            padding: 0 14px 0 4px;
+            font-size: 11px;
+            background-image: linear-gradient(45deg, transparent 50%, #b9c2ce 50%), linear-gradient(135deg, #b9c2ce 50%, transparent 50%);
+            background-position: right 7px center, right 3px center;
+            background-size: 4px 4px;
+            background-repeat: no-repeat;
+        }
         .cloud-panel--english .cloud-map-row { gap: 2px; font-size: 10px; }
         .cloud-panel--english .cloud-data-status { font-size: 10px; }
         .cloud-panel--english .cloud-map-row label { gap: 3px; }
-        .cloud-panel--english .cloud-map-row select { padding: 0 2px; font-size: 11px; }
+
         .cloud-heading-wide { display: none; }
         .cloud-heading-compact { display: inline; }
         .cloud-table thead { font-size: 10px; }
         .cloud-table th:first-child, .cloud-panel--english .cloud-table th:first-child { width: 100px; }
         .cloud-panel--english .cloud-table thead th:nth-child(n+2) { width: auto; overflow-wrap: anywhere; }
         .cloud-height-controls { grid-template-columns: 30px minmax(0, 1fr); }
-        .cloud-forecast-controls { gap: 6px; font-size: 11px; }
+        .cloud-forecast-controls { gap: 4px; font-size: 11px; }
         .cloud-forecast-controls label { gap: 3px; }
-        .cloud-forecast-controls select { padding: 0 4px; font-size: 12px; }
+
         .cloud-legend { gap: 4px 8px; }
     }
 </style>

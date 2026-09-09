@@ -1368,6 +1368,7 @@
     import CelestialIcon from './CelestialIcon.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
     import { createCloudSettings } from './cloudProfile';
+    import { loadCloudPreferences, saveCloudPreferences } from './cloudPreferences';
     import FavoriteComparison from './FavoriteComparison.svelte';
     import FavoriteLocations from './FavoriteLocations.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
@@ -2327,6 +2328,7 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let tabBeforeCollapse: SummaryTab = 'events';
     let cloudSettings = createCloudSettings();
     let cloudWeatherPayload: WeatherForecastPayload | null = null;
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
@@ -2689,6 +2691,10 @@
         }
     };
 
+    $: if (isMounted) {
+        try { saveCloudPreferences(localStorage, cloudSettings); } catch { /* Keep preferences for this session. */ }
+    }
+
     const toggleLanguage = () => {
         favoritesOpen = false;
         favoriteReturnFocus = null;
@@ -2704,8 +2710,12 @@
             clearTimeout(mapDetailRecenterTimer);
             mapDetailRecenterTimer = null;
         }
-        if (value === 'collapsed' && summaryTab !== 'clouds') {
+        // Collapsed mode shows the shared event summary; expanding restores the user's tab.
+        if (value === 'collapsed' && mobilePanelMode !== 'collapsed') {
+            tabBeforeCollapse = summaryTab;
             summaryTab = 'events';
+        } else if (value !== 'collapsed' && mobilePanelMode === 'collapsed') {
+            summaryTab = tabBeforeCollapse;
         }
         if (value === 'fullscreen' && summaryTab === 'weather') {
             summaryTab = 'events';
@@ -2726,7 +2736,7 @@
         }
         favoritesOpen = false;
         favoriteReturnFocus = null;
-        if (value === 'collapsed' && summaryTab !== 'clouds') {
+        if (value === 'collapsed') {
             suspendMobileDetailRequests();
         }
         mobilePanelMode = value;
@@ -4327,6 +4337,7 @@
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
         uiLanguage = loadLanguagePreference();
         units = currentUnitPreferences();
+        try { cloudSettings = loadCloudPreferences(localStorage); } catch { /* Storage access may be blocked. */ }
         mobilePanelMode = isMobileOrTablet ? loadMobilePanelModePreference() : 'compact';
         lastMobileNonFullscreenMode = mobilePanelMode;
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
@@ -5774,8 +5785,6 @@
     .summary-panel-frame--events {
         height: var(--events-summary-panel-height);
     }
-
-    .sun-path-panel.mobile_collapsed .summary-panel-frame--clouds { display: none; }
 
     .summary-panel-frame--clouds {
         height: 440px;
