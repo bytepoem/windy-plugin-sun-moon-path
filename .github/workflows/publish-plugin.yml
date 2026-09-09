@@ -12,6 +12,9 @@ jobs:
             WINDY_API_KEY: '${{ secrets.WINDY_API_KEY }}'
         steps:
             - uses: actions/checkout@v7
+            # npm 10.9.8 crashes while resolving the current Vitest peer dependency tree.
+            - name: Set up npm
+              run: npm install --global npm@11.12.1
             - name: Build
               run: |
                   npm install
