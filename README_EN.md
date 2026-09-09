@@ -1,226 +1,62 @@
-# Windy Sun & Moon Path
+# Sun & Moon Path for Windy
 
 [中文](README.md) · **English**
 
-Windy Sun & Moon Path is a Windy.com external plugin that draws sunrise,
-sunset, moonrise, moonset, and live celestial direction lines for a selected
-location and date.
+Plan sunrise, sunset, Moon and Milky Way photography on Windy with celestial directions, cloud-distance references, weather and observing conditions at saved locations. Available in Chinese and English on desktop and mobile.
 
-The plugin is designed for photographers, hikers, weather watchers, and anyone
-who needs to understand where the sun or moon will rise, set, or currently sit
-relative to a point on the Windy map.
+![Plugin interface](src/screenshot.jpg)
+
+## Install and use
+
+Current version: **0.10.1** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.1)
+
+Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
+
+```text
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.1/plugin.min.js
+```
+
+1. Click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own Amap, Baidu or Tencent Maps API Key in Settings.
+2. Choose a date. Events shows celestial rise/set times, live directions, Moon phase, moonless-night and Milky Way observing windows.
+3. In Clouds, select a target and cloud height, then use rise/set shortcuts, local time or the minute slider to plan a shooting time.
+4. Check the weather below or compare 2–5 favorite locations for the same date. Mobile supports collapsed, compact and fullscreen modes.
 
 ## Features
 
-- Draws sun and moon event directions on the Windy map.
-- Supports sunrise, sunset, moonrise, moonset, or all events at once.
-- Shows event-time lines plus 30-minute before and after samples.
-- Marks the observer location and 200 km / 400 km direction points.
-- Displays current sun and moon azimuth, altitude, moon phase, and illumination.
-- Includes an astronomy timeline for dawn, sunrise, moonrise, sunset, dusk, and
-  moonset.
-- Supports date switching, map single-click location updates, and Windy context
-  menu opening.
-- Reuses Windy favorites to save or remove the current observing location, search
-  saved names, and sort by distance, recency, elevation, or light pollution.
-- Compares 2–5 favorite locations for the same date across astronomy events,
-  observing windows, weather, elevation, and light pollution, with EC/GFS/ICON switching.
-- Searches domestic places and addresses in the Chinese UI with the user's own Amap,
-  Baidu, or Tencent Maps API Key and switches providers from the unified search menu.
-- Overlays RainViewer live radar on any Windy layer using its keyless public API
-  and a GPU mapping to the NMC color scale.
-- Locates exact coordinates in both languages by selecting WGS84 or GCJ-02 and entering
-  latitude and longitude in separate fields. GCJ-02 input is converted to Windy's WGS84.
-- Sorts results by straight-line distance from the observer and displays city,
-  district, direct distance, and elevation.
-- Converts Amap/Tencent GCJ-02 or Baidu BD-09 coordinates to the WGS84 coordinates
-  used by Windy before moving the map.
-- Handles unavailable polar-day, polar-night, and missing moon event cases.
-- Presents moonless-night and Milky Way observing windows with weather, moonlight,
-  and target-visibility evidence, while keeping the panel stable during location/date loading.
-- Shows SQM, estimated equivalent Bortle level, and ideal-condition observing
-  references from the David Lorenz 2025 light-pollution atlas.
-- Adds a location forecast table spanning the available past 6 hours through the
-  next 5 days, with Windy / Open-Meteo source selection and EC, GFS, and ICON model switching. Windy + EC is the default. Source selection lasts for the plugin session and also applies to observing windows and favorite comparisons.
-- Shows weather, combined/high/medium/low cloud cover, temperature, dew point,
-  humidity, AOD at 550 nm, visibility, precipitation, wind speed, and wind direction.
-  Windy cloud coverage is aggregated from pressure levels; Open-Meteo uses the selected global model's cloud-cover fields. Cloud-band definitions can differ.
-- AOD remains CAMS data supplied through Open-Meteo, independent of the weather model. Windy visibility uses a separate Open-Meteo supplement. Open-Meteo visibility follows the selected model; missing values remain unavailable and are never filled from another model. Cloud base, vertical cloud layers, and map clouds remain Windy data with a separate source label.
-- Draws the above-horizon sun and moon curves on the same time axis and labels
-  rise/set times for the selected location. These curves are calculated locally
-  and are not EC/ICON/GFS model fields.
-- Uses actual Windy time steps or Open-Meteo's hourly series, which may contain server-side interpolation. Open-Meteo precipitation is the preceding-hour accumulation; observing windows show the range of overlapping hourly amounts, not a window total. Past timestamps remain model output rather than observations. Failed requests can be retried without automatically switching sources.
-- Provides English and Chinese UI text and persists the language choice in the
-  current browser.
-- On desktop, keeps **Weather** permanently visible below the original four tabs
-  so the astronomy summary and forecast usually fit in one viewport; vertical
-  scrolling remains available for shorter windows. Mobile provides direction-line,
-  compact, and fullscreen modes. Direction-line mode keeps location search,
-  date and event controls, the selected place and live directions, and the daily event
-  times; its favorites panel opens upward. Compact mode keeps five tabs, **Events**,
-  **Weather**, **Guide**, **Settings**, and **About**, while fullscreen places the
-  weather table below the events module. The direction-line or compact choice is
-  saved in the current browser:
-  - **Events** shows event times, directions, and the daily astronomy timeline.
-  - **Weather** provides a horizontally scrollable EC, GFS, or ICON five-day forecast.
-  - **Guide** explains the map legend, weather color scales, wind symbol, and data.
-  - **Settings** selects the startup Windy layer, configures the RainViewer radar
-    overlay, controls location-search visibility, line opacity, and the optional
-    600 km reference point. Switch to the Chinese UI to configure Amap, Baidu, or Tencent Maps API Keys.
-  - **About** links to the repository and Issues, identifies the author and
-    current version, previews `release-notes/beta.json` in local Developer mode,
-    or reads the formal version recorded on GitHub `main` in production and shows
-    user-facing notes pinned to that release, with a GitHub Star entry point.
+| Feature | Purpose |
+| --- | --- |
+| Sun and Moon directions | Rise/set rays sampled 30 minutes before and after each event, live directions, 200 / 400 km reference points and an optional 600 km marker |
+| Cloud planning | Sun, Moon, Galactic Center and Auto targets; automatic or manual single/layered cloud heights, mapped sightline intersections and distance envelopes, with a bilingual illustrated guide |
+| Weather and observing | Windy / Open-Meteo sources and EC / GFS / ICON models, spanning available data from the past 6 hours to the next 5 days; weather, moonlight and target visibility inform observing windows |
+| Favorite comparisons | Reuse Windy favorites, search and sort locations, and compare weather, astronomy, elevation and David Lorenz 2025 light-pollution data |
+| Radar overlay | Keyless RainViewer radar over Windy layers, following the host timeline and showing the actual radar frame time |
+| Units and help | Follow Windy temperature, wind, precipitation, distance and elevation units; Guide explains usage and limits, while About shows version information and release notes |
 
-## Requirements
+## Data limits
 
-- Node.js 18 or newer is recommended.
-- A Windy account that can load external plugins during development or
-  publication.
+- **Cloud distances are geometric references.** Local cloud heights do not describe distant cloud regions. The plugin does not sample weather, terrain, cloud thickness or extinction along the light path, and cannot guarantee visibility or colorful twilight. Auto selects the Sun when its center is above the horizon, otherwise the Moon. Above-ground cloud base and altitude above sea level are labeled separately. See the [cloud calculation notes in Chinese](docs/cloud-obstruction.md).
+- **Weather sources differ.** Weather, observing windows and favorite comparisons share the selected source. Cloud base, vertical cloud heights and map clouds always use Windy. Cloud-band definitions may differ; missing values remain empty and failed requests do not switch sources automatically.
+- **AOD and visibility.** AOD always comes from CAMS via Open-Meteo. Windy visibility uses an independent Open-Meteo supplement; Open-Meteo mode uses visibility from the selected model.
+- **Time and precipitation.** Windy uses native time steps. Open-Meteo hourly data may include server-side interpolation, with precipitation accumulated over the preceding hour. Observing windows show the range of matched precipitation values, not a window total. Past timestamps are model output, not observations.
 
-## Plugin URL
+## Local development
 
-Current formal version: `0.10.0`
-
-Current loadable plugin bundle:
-
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.0/plugin.min.js)
-
-Project links:
-
-- GitHub repository: [bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
-- Issues: [report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- Formal release: [0.10.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.0)
-- Author: [bytepoem](https://github.com/bytepoem)
-
-## Development
-
-Install dependencies:
+Publishing uses npm **11.12.1**. Node.js must meet dependency requirements (current CI uses 22.23.2).
 
 ```sh
-npm install
-```
-
-Run tests:
-
-```sh
+npm exec --yes --package=npm@11.12.1 -- npm install
 npm test
-```
-
-Start the local Windy plugin development server:
-
-```sh
 npm start
 ```
 
-The dev server serves the plugin bundle from `https://localhost:9999/`.
-
-Build the production bundle:
+Open [Windy Developer mode](https://www.windy.com/developer-mode) and load `https://localhost:9999/plugin.js`. Local preview reads bilingual notes from `release-notes/`.
 
 ```sh
 npm run build
 ```
 
-The build output is written to `dist/` and includes `plugin.js`,
-`plugin.min.js`, source maps, and the plugin `package.json` copy.
+Output in `dist/` includes scripts, `plugin.json` and `screenshot.jpg`. Formal release history is read from one snapshot at the latest tag for the entire minor series and must pass regression tests using the production parser.
 
-## Usage
+## Feedback and license
 
-### Load the plugin
-
-1. Open the Windy entry that supports loading external plugins.
-2. Paste the plugin bundle URL above.
-3. After the plugin is loaded, open **Sun & Moon Path** from the Windy plugin
-   menu or map context menu.
-
-### Use the plugin
-
-After the plugin is open:
-
-1. To use domestic place-name search, switch to the Chinese UI, then save an Amap,
-   Baidu, or Tencent Maps API Key under **Settings**.
-2. To add third-party radar, use the radar shortcut in the homepage map controls,
-   or select **RainViewer** under **Settings → Radar data overlay**. On desktop the
-   shortcut is beside the title-bar map zoom controls; on mobile it is in the map-control
-   group above the plugin window. Radar opacity appears above the provider selector.
-   The overlay follows Windy’s native bottom
-   timeline, and a label above it shows the actual third-party radar frame in use.
-   Windy’s dragging and play/pause controls drive the third-party radar directly.
-   The dedicated opacity slider updates the layer immediately.
-   RainViewer needs no key.
-3. In the Chinese UI, select Amap, Baidu, or Tencent from the search menu, enter a
-   domestic place or address, and choose a distance-sorted autocomplete result. Each
-   row includes its city, district, direct distance, and elevation.
-4. In either language, select **WGS84** or **GCJ-02** from the same search menu and
-   enter latitude and longitude in their separate fields. The English menu contains
-   only these two coordinate choices.
-5. Select a date.
-6. Choose **All**, **Sunrise**, **Sunset**, **Moonrise**, or **Moonset**.
-7. Check the map direction lines and the event time, azimuth, and compass
-   direction in the panel.
-8. Use the favorite control beside the place name to save the current observing point.
-   Open favorites to search, sort, switch locations, or compare 2–5 places for the same date.
-9. You can also click the map to recalculate directions for another location, and use
-   the `−` / `+` controls in the panel header to adjust the map zoom.
-10. On desktop, switch between **Events**, **Guide**, **Settings**, and **About**
-   while using the always-visible forecast below. On mobile, use the panel controls
-   to collapse into direction-line mode, restore the compact window, or enter
-   fullscreen. Direction-line mode keeps search, the primary controls, and two compact
-   astronomy rows; enable **Hide location search** in **Settings** when search is not needed.
-11. In the forecast table, select **EC**, **GFS**, or **ICON** and scroll from the available past
-   6 hours through the next 5 days.
-
-Rows marked **OM** are provided by [Open-Meteo](https://open-meteo.com/). The AOD
-field is sourced from the [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/).
-
-Map API Keys are stored only in the current browser's local storage. Domestic GCJ-02
-or BD-09 results are converted to WGS84 so the selected observer location does not shift on Windy.
-
-The radar-provider choice and opacity remain only in the current browser. Opacity
-defaults to 90% and updates immediately across the 0–100% range. The plugin listens
-to Windy’s native timeline timestamp and selects the nearest RainViewer frame from
-its public manifest. When Windy selects a time outside the available data range, the
-plugin hides that radar layer instead of presenting a mismatched timestamp. RainViewer
-automatically checks for its latest frame, retains its
-required data-source link, and uses a Windy GPU shader to map Universal Blue into
-the NMC reflectivity colors. RainViewer collapses 65–74 dBZ into one white source
-color and 75 dBZ and above into one green source color, so those extreme ranges can
-only be assigned to the nearest recoverable NMC classes.
-
-Direction lines start at the selected observer location. Each sampled line uses
-the calculated azimuth for that event time and extends through 200 km and
-400 km points. When enabled in settings, the line also shows a 600 km point.
-
-## Project Structure
-
-- `src/plugin.svelte` - Windy plugin UI, state orchestration, and lifecycle integration.
-- `src/mapOverlayController.ts` - map direction lines, distance markers, live directions, and cleanup.
-- `src/radarOverlay.ts` - RainViewer radar tiles, historical-frame matching, refresh timers, and cleanup.
-- `src/radarFrameTimeLabel.ts` - actual third-party frame label above Windy’s native timecode and host-layout tracking.
-- `src/radarPalette.ts` - CPU reference and GPU shader for mapping RainViewer Universal Blue to NMC dBZ colors.
-- `src/observationPlanner.ts` - location-context caching, astronomy planning, and observing-window evidence.
-- `src/LocationSearch.svelte` - multi-provider autocomplete, result list, and keyboard interaction.
-- `src/amap.ts` - Amap Web Service requests, result parsing, and GCJ-02/WGS84 conversion.
-- `src/baidu.ts` - Baidu JSAPI place search and BD-09/WGS84 conversion.
-- `src/tencent.ts` - Tencent place suggestions and GCJ-02/WGS84 conversion.
-- `src/WeatherTable.svelte` - EC/ICON/GFS forecast table, scrolling, and current-time marker.
-- `src/WeatherIcon.svelte` - vector weather-condition icons.
-- `src/weather.ts` - forecast transformation, cloud aggregation, and time grouping.
-- `src/openMeteo.ts` - Open-Meteo AOD/visibility requests, parsing, and timeline merging.
-- `src/lightPollution.ts` - atlas tile loading, SQM conversion, and estimated observing conditions.
-- `src/celestialCurve.ts` - sun/moon altitude curves and horizon events aligned with forecast columns.
-- `src/solar.ts` - astronomy, azimuth, distance, timeline, and geometry logic.
-- `src/overlayOwner.ts` - map overlay ownership across Windy panel remounts.
-- `src/pluginUpdate.ts` - GitHub Raw version checks, SemVer comparison,
-  session caching, and user-facing update-note loading.
-- `src/pluginConfig.ts` - Windy external plugin metadata.
-- `src/*.test.ts` - Vitest coverage for geometry, solar/moon calculations,
-  weather transformation, and overlay ownership.
-- `release-notes/beta.json` - bilingual beta notes previewed by local Developer mode before release.
-- `release-notes/<version>.json` - bilingual user-facing notes pinned to a formal
-  release tag, without build, commit, or other developer-log details.
-- `docs/` - local development notes and validation checklist.
-
-## License
-
-This project is open source under the MIT License. See [LICENSE](LICENSE).
+[Report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [MIT License](LICENSE)

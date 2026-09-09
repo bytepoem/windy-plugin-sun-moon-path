@@ -760,6 +760,18 @@
                                 <dd>{text.featureGuide.mapControls.description}</dd>
                             </div>
                             <div>
+                                <dt>{text.featureGuide.cloudPlanning.title}</dt>
+                                <dd>{text.featureGuide.cloudPlanning.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.weatherSources.title}</dt>
+                                <dd>{text.featureGuide.weatherSources.description}</dd>
+                            </div>
+                            <div>
+                                <dt>{text.featureGuide.units.title}</dt>
+                                <dd>{text.featureGuide.units.description}</dd>
+                            </div>
+                            <div>
                                 <dt>{text.featureGuide.radarOverlay.title}</dt>
                                 <dd>{text.featureGuide.radarOverlay.description}</dd>
                             </div>
@@ -1599,7 +1611,10 @@
             | 'observationEvidence'
             | 'mobileMode'
             | 'mapControls'
-            | 'radarOverlay',
+            | 'radarOverlay'
+            | 'cloudPlanning'
+            | 'weatherSources'
+            | 'units',
             { title: string; description: string }
         >;
         settingsGuideHeading: string;
@@ -1773,6 +1788,19 @@
             buttonHintsHeading: '按钮提示',
             buttonHintsDescription: '将鼠标停留在图标或紧凑型按钮上片刻，可查看该按钮的功能说明；按钮的键盘和屏幕阅读器名称保持一致。',
             featureGuide: {
+                cloudPlanning: {
+                    title: '云层遮挡与时间规划',
+                    description: '选择太阳、月亮、银心或自动目标，再用升落按钮、当地时间输入或分钟滑条调整时刻。自动模式在太阳中心位于地平线上时选择太阳，否则选择月亮。单层读取预报云底，分层按阈值检出云层，也可手动输入目标云层海拔。表格与地图同步展示遮蔽交点和云距参考；“图解”解释各项距离。当前点云高不代表远处云区，几何参考不包含沿途地形、云厚和消光，不能保证可见或出现朝晚霞。',
+                },
+                weatherSources: {
+                    title: '天气数据源与模型',
+                    description: '天气表格可选 Windy / Open-Meteo 和 EC、GFS、ICON；观测时段与收藏对比同步使用所选来源。云底、分层云高和地图云图始终使用 Windy。AOD 来自 CAMS；Windy 的能见度由 Open-Meteo 补充，Open-Meteo 模式的能见度跟随所选模型。不同来源的云层划分与时间步长可能不同；缺测保留空值，失败可重试，不自动换源。',
+                },
+                units: {
+                    title: '显示单位',
+                    description: '温度、风速、降水、距离和海拔跟随 Windy 单位设置。手动云高输入使用当前海拔单位；离地云底与计算海拔分别标注，不能混用。',
+                },
+
                 favorites: {
                     title: '收藏地点',
                     description: '使用书签按钮收藏或取消收藏当前地点；列表显示距离、海拔和光污染，并支持按距离、收藏时间、海拔或光污染排序。',
@@ -1787,7 +1815,7 @@
                 },
                 observationEvidence: {
                     title: '观测时段证据',
-                    description: '无月和银河时段同步显示综合云量、降水和能见度，用当前选择的预报模型补充观测条件依据。',
+                    description: '无月和银河时段同步显示综合云量、降水和能见度，用当前选择的数据源和预报模型补充观测条件依据。',
                 },
                 mobileMode: {
                     title: '移动端方位线模式',
@@ -1795,7 +1823,7 @@
                 },
                 mapControls: {
                     title: '地图视图按钮',
-                    description: '标题栏或移动端窗口上方的“−”用于缩放到完整方位线范围，“+”用于恢复搜索地点的详细缩放级别。',
+                    description: '标题栏或移动端窗口上方的“−”用于缩放到完整方位线范围，“+”用于恢复搜索地点的详细缩放级别；在云层 Tab 中分别显示全部参考线或聚焦地平线与遮蔽交点。',
                 },
                 radarOverlay: {
                     title: '气象雷达叠加',
@@ -2014,6 +2042,19 @@
             buttonHintsHeading: 'Button hints',
             buttonHintsDescription: 'Pause the pointer over an icon or compact control to see what it does. The same name is also exposed to keyboard and screen-reader users.',
             featureGuide: {
+                cloudPlanning: {
+                    title: 'Cloud planning and time controls',
+                    description: 'Choose the Sun, Moon, Galactic Center or Auto, then select a rise/set event, enter local time or drag the minute slider. Auto selects the Sun when its center is above the horizon, otherwise the Moon. Use the forecast cloud base, detected profile layers or a manually entered cloud altitude. The table and map share sightline intersections and distance references; open the illustrated guide to understand them. Local cloud heights do not describe distant clouds. Geometry excludes intervening terrain, cloud thickness and extinction, and cannot guarantee visibility or colorful twilight.',
+                },
+                weatherSources: {
+                    title: 'Weather sources and models',
+                    description: 'Select Windy / Open-Meteo and EC, GFS or ICON for the weather table, observing windows and favorite comparisons. Cloud heights and map clouds always use Windy. AOD comes from CAMS. Windy visibility uses an Open-Meteo supplement; Open-Meteo visibility follows the selected model. Cloud bands and time steps can differ. Missing values stay empty; failed requests can be retried without switching sources automatically.',
+                },
+                units: {
+                    title: 'Display units',
+                    description: 'Temperature, wind, precipitation, distance and elevation follow Windy preferences. Manual cloud heights use the current elevation unit. Cloud base above ground and cloud altitude above sea level are labeled separately and must not be confused.',
+                },
+
                 favorites: {
                     title: 'Favorite locations',
                     description: 'Use the bookmark button to save or remove the current location. The list shows distance, elevation, and light pollution, with sorting by distance, recency, elevation, or light pollution.',
@@ -2028,7 +2069,7 @@
                 },
                 observationEvidence: {
                     title: 'Observing-window evidence',
-                    description: 'Moonless and Milky Way windows now show total cloud cover, precipitation, and visibility from the selected forecast model.',
+                    description: 'Moonless and Milky Way windows now show total cloud cover, precipitation, and visibility from the selected weather source and forecast model.',
                 },
                 mobileMode: {
                     title: 'Mobile direction-line mode',
@@ -2036,7 +2077,7 @@
                 },
                 mapControls: {
                     title: 'Map view controls',
-                    description: 'Use “−” in the title bar or above the mobile window to fit the full direction-line range, and “+” to restore the detailed search-location zoom.',
+                    description: 'Use “−” in the title bar or above the mobile window to fit the full direction-line range, and “+” to restore the detailed search-location zoom. In Clouds, these controls fit all cloud references or focus on the horizon and intersections.',
                 },
                 radarOverlay: {
                     title: 'Weather radar overlay',
@@ -2143,7 +2184,7 @@
                 visibility: 'Visibility',
                 visibilityDescription: unit => `Sample values are in ${unit}. Higher values usually mean clearer air over longer distances.`,
                 aerosolAod: 'Aerosol AOD',
-                aerosolAodDescription: 'AOD is total-column aerosol optical depth at 550 nm. From left to right, the samples mean very low, low, elevated, and high. Lower values usually mean less light attenuation by aerosols, but AOD cannot be converted directly into visibility. Open-Meteo provides both fields, with AOD sourced from CAMS independently of the EC, GFS, or ICON selection.',
+                aerosolAodDescription: 'AOD is total-column aerosol optical depth at 550 nm. From left to right, the samples mean very low, low, elevated, and high. Lower values usually mean less light attenuation by aerosols, but AOD cannot be converted directly into visibility. AOD is supplied by Open-Meteo from CAMS independently of the EC, GFS, or ICON selection. Visibility follows the selected weather source as described above.',
                 celestialEvents: 'Sun and moon rise/set times',
                 celestialEventsDescription: 'Sun and moon icons identify the celestial body; ↑ means rise and ↓ means set. Times use the observer location\'s local time.',
             },

@@ -200,6 +200,7 @@ describe('checkPluginUpdate', () => {
             notesStatus: 'loaded',
         });
         expect(fetchImpl).toHaveBeenCalledTimes(2);
+        expect(fetchImpl).toHaveBeenNthCalledWith(2, 'https://localhost:9999/release-notes/0.9.0.json', { signal: undefined });
     });
 
     it('reads the latest version from the raw main package without using the rate-limited GitHub API', async () => {
@@ -393,7 +394,7 @@ describe('checkPluginUpdate', () => {
         });
         expect(fetchImpl).toHaveBeenNthCalledWith(
             3,
-            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/0.9.0/release-notes/0.9.0.json',
+            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/0.9.1/release-notes/0.9.0.json',
             { signal: undefined },
         );
         expect(fetchImpl).toHaveBeenCalledTimes(3);
@@ -541,7 +542,7 @@ describe('checkPluginUpdate', () => {
     });
 
     it('ignores malformed cached notes instead of rendering unvalidated session data', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v7:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v8:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({
@@ -567,7 +568,7 @@ describe('checkPluginUpdate', () => {
     });
 
     it('ignores a cached release link outside the configured GitHub repository', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v7:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v8:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({
@@ -593,7 +594,7 @@ describe('checkPluginUpdate', () => {
     });
 
     it('ignores a cached release link whose tag does not match the cached version', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v7:0.8.1';
+        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v8:0.8.1';
         const sessionCache = {
             getItem: (key: string) => key === cacheKey
                 ? JSON.stringify({

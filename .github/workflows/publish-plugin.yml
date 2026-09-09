@@ -16,6 +16,7 @@ jobs:
               run: |
                   # npm 10.9.8 crashes while resolving the current Vitest peer dependency tree.
                   npm exec --yes --package=npm@11.12.1 -- npm install
+                  npm test
                   npm run build
             - name: Publish Plugin
               run: |

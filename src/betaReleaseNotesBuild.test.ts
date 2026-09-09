@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import formalNotesSource from '../release-notes/0.10.0.json?raw';
+import { checkPluginUpdate } from './pluginUpdate';
+
+import formalNotesSource from '../release-notes/0.10.1.json?raw';
 import betaNotesSource from '../release-notes/beta.json?raw';
 import packageSource from '../package.json?raw';
 import pluginSource from './plugin.svelte?raw';
@@ -16,7 +18,7 @@ describe('beta release notes development asset', () => {
         };
         const formalNotes = JSON.parse(formalNotesSource) as typeof notes;
 
-        expect(notes.version).toBe('0.10.0');
+        expect(notes.version).toBe('0.10.1');
         expect(notes.releasedAt).toBe('2026-09-09');
         expect(formalNotes).toEqual(notes);
         expect(notes.zh.items.length).toBeGreaterThan(0);
@@ -31,4 +33,51 @@ describe('beta release notes development asset', () => {
         expect(rollupSource).toContain('if (!serveBuild) {');
         expect(packageSource).toContain('set \\"SERVE=false\\" && rollup -c');
     });
+});
+
+/** Exercise real release files through the same parser used by installed plugins. */
+describe('release note publishing contract', () => {
+    const sources = import.meta.glob('../release-notes/*.json', { query: '?raw', import: 'default', eager: true });
+    it.each(['0.9.1', '0.10.1'])('loads the full current snapshot for installed %s', async currentVersion => {
+        const manifest = JSON.parse(packageSource);
+        const requested: string[] = [];
+        const base = `https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/${manifest.version}/release-notes/`;
+        const result = await checkPluginUpdate({
+            currentVersion,
+            repositoryUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
+            sessionCache: null,
+            fetchImpl: async url => {
+                const address = String(url);
+                requested.push(address);
+                if (address.endsWith('/main/package.json')) {
+                    return new Response(packageSource, { status: 200 });
+                }
+                const source = address.startsWith(base)
+                    ? sources[`../release-notes/${address.slice(base.length)}`]
+                    : undefined;
+                return new Response((source as string | undefined) ?? '', { status: source ? 200 : 404 });
+            },
+        });
+        expect(result.status).toBe(currentVersion === manifest.version ? 'current' : 'available');
+        expect(result.notesStatus).toBe('loaded');
+        expect(result.seriesNotes.map(note => note.version)).toEqual(['0.10.1', '0.10.0']);
+        expect(requested.slice(1)).toEqual([`${base}0.10.1.json`, `${base}0.10.0.json`]);
+    });
+
+    for (const [path, source] of Object.entries(sources)) {
+        it(`loads ${path} through the production parser`, async () => {
+            const notes = JSON.parse(source as string);
+            const result = await checkPluginUpdate({
+                currentVersion: notes.version,
+                repositoryUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
+                betaNotesUrl: 'https://localhost:9999/release-notes/beta.json',
+                sessionCache: null,
+                fetchImpl: async url => String(url).endsWith('/beta.json')
+                    ? new Response(JSON.stringify(notes), { status: 200 })
+                    : new Response('', { status: 404 }),
+            });
+            expect(result.notesStatus).toBe('loaded');
+            expect(result.notes).toEqual(notes);
+        });
+    }
 });

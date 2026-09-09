@@ -298,22 +298,14 @@ const buildGithubReleaseUrl = (
     version: string,
 ): string => `https://github.com/${owner}/${repository}/releases/tag/${version}`;
 
-const buildGithubReleaseNotesUrl = (
-    owner: string,
-    repository: string,
-    version: string,
-): string => `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/${encodeURIComponent(version)}/release-notes/${encodeURIComponent(version)}.json`;
-
 const loadReleaseNoteSeries = async ({
-    owner,
-    repository,
+    notesBaseUrl,
     versions,
     requiredVersion,
     signal,
     fetchImpl,
 }: {
-    owner: string;
-    repository: string;
+    notesBaseUrl: string;
     versions: string[];
     requiredVersion?: string;
     signal?: AbortSignal;
@@ -323,7 +315,7 @@ const loadReleaseNoteSeries = async ({
     let encounteredError = false;
     for (const version of versions) {
         try {
-            const response = await fetchImpl(buildGithubReleaseNotesUrl(owner, repository, version), { signal });
+            const response = await fetchImpl(new URL(`${encodeURIComponent(version)}.json`, notesBaseUrl).href, { signal });
             if (response.ok) {
                 const parsed = parseUserFacingReleaseNotes(await response.json(), version);
                 if (parsed) {
@@ -569,8 +561,7 @@ export const checkPluginUpdate = async ({
             throw new Error('Beta release notes are invalid');
         }
         const previousSeries = await loadReleaseNoteSeries({
-            owner,
-            repository,
+            notesBaseUrl: new URL('./', betaNotesUrl).href,
             versions: releaseSeriesVersions(betaValue.version, false),
             signal,
             fetchImpl,
@@ -587,7 +578,7 @@ export const checkPluginUpdate = async ({
         };
     }
 
-    const cacheKey = `github:${owner}/${repository}:update-check:v7:${normalizedCurrentVersion}`;
+    const cacheKey = `github:${owner}/${repository}:update-check:v8:${normalizedCurrentVersion}`;
     const cachedResult = readCachedResult(
         sessionCache,
         cacheKey,
@@ -614,8 +605,8 @@ export const checkPluginUpdate = async ({
     const latestVersion = parseSemanticVersion(manifestValue.version).raw;
     const releaseUrl = buildGithubReleaseUrl(owner, repository, latestVersion);
     const noteSeries = await loadReleaseNoteSeries({
-        owner,
-        repository,
+        // One immutable snapshot includes corrections to earlier notes without rewriting old tags.
+        notesBaseUrl: `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/${encodeURIComponent(latestVersion)}/release-notes/`,
         versions: releaseSeriesVersions(latestVersion),
         requiredVersion: latestVersion,
         signal,

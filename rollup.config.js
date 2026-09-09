@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import terser from '@rollup/plugin-terser';
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import serve from 'rollup-plugin-serve';
@@ -37,9 +37,13 @@ const betaReleaseNotesPlugin = () => ({
         if (!serveBuild) {
             return;
         }
-        this.addWatchFile(betaReleaseNotesSource);
+        // Preview the same local release-note snapshot, including corrected series history.
         mkdirSync(dirname(betaReleaseNotesTarget), { recursive: true });
-        copyFileSync(betaReleaseNotesSource, betaReleaseNotesTarget);
+        for (const file of readdirSync(dirname(betaReleaseNotesSource)).filter(file => file.endsWith('.json'))) {
+            const source = `release-notes/${file}`;
+            this.addWatchFile(source);
+            copyFileSync(source, `dist/release-notes/${file}`);
+        }
     },
 });
 

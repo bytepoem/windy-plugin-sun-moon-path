@@ -5,7 +5,7 @@ export const currentVersionReleasedAt = '2026-09-09';
 
 const config: ExternalPluginConfig = {
     name: 'windy-plugin-sun-moon-path',
-    version: '0.10.0',
+    version: '0.10.1',
     icon: '☀️',
     title: 'Sun & Moon Path',
     description: 'Show sunrise, sunset, moonrise, moonset and live celestial directions on Windy.',

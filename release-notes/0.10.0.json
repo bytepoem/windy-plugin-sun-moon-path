@@ -6,19 +6,19 @@
     "summary": "新增太阳、月亮和银心云层几何规划，完善天气来源、单位与地图交互。",
     "items": [
       {
-        "type": "added",
+        "type": "new",
         "text": "新增云层遮挡规划，支持太阳、月亮、银心与自动目标，提供单层云底及分层云高的自动读取和手动输入。"
       },
       {
-        "type": "added",
+        "type": "new",
         "text": "新增遮蔽云距、地平线云距、擦地云距与最远无云距的球面几何参考，以及地图视线、交点与距离弧线。"
       },
       {
-        "type": "added",
+        "type": "new",
         "text": "新增分钟级时间条、六个天体升落快捷入口、中英文云层图解及云底高度图层选项。"
       },
       {
-        "type": "added",
+        "type": "new",
         "text": "天气表格支持切换 Windy / Open-Meteo 数据源，观测时段与收藏地点对比同步使用所选来源。"
       },
       {
@@ -36,19 +36,19 @@
     "summary": "Plan cloud geometry for the Sun, Moon and Galactic Center with improved weather sources, units and map interaction.",
     "items": [
       {
-        "type": "added",
+        "type": "new",
         "text": "Added cloud-obstruction planning for the Sun, Moon, Galactic Center and automatic target selection, with automatic or manual single-layer and layered cloud heights."
       },
       {
-        "type": "added",
+        "type": "new",
         "text": "Added spherical-geometry references for sightline intersections, horizon distance, grazing distance and far-clear distance, with corresponding map rays, markers and arcs."
       },
       {
-        "type": "added",
+        "type": "new",
         "text": "Added a minute timeline, six celestial rise/set shortcuts, bilingual cloud diagrams and a cloud-base overlay option."
       },
       {
-        "type": "added",
+        "type": "new",
         "text": "Added Windy / Open-Meteo weather-source switching, shared by observation windows and favorite-location comparisons."
       },
       {

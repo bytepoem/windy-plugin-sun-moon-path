@@ -1,157 +1,62 @@
-# Windy Sun & Moon Path
+# Sun & Moon Path for Windy
 
 **中文** · [English](README_EN.md)
 
-Windy Sun & Moon Path 是一个 Windy.com 外部插件，用于在 Windy 地图上显示指定位置、
-指定日期的日出、日落、月升、月落方向线，以及当前太阳和月亮方位。
+在 Windy 地图上规划日出、日落、月亮和银河拍摄：查看天体方向、云层距离参考、天气和收藏机位的观测条件。支持中英文、桌面端与移动端。
 
-它适合摄影、户外、观星、天气观察等场景：用户可以在地图上选择一个观察点，插件会计算
-日月事件发生时的方位角，并在地图上画出 200 km 和 400 km 方向参考点，帮助判断太阳或
-月亮会从哪个方向升起、落下，或者当前位于哪个方向。
+![插件界面](src/screenshot.jpg)
 
-## 功能
+## 安装与使用
 
-- 在 Windy 地图上绘制太阳和月亮事件方向线。
-- 支持日出、日落、月升、月落，也可以一次显示全部事件。
-- 每个事件显示事件前 30 分钟、事件时刻、事件后 30 分钟三条采样方向线。
-- 标记观察点，以及每条方向线上距离观察点 200 km 和 400 km 的参考点。
-- 显示当前太阳和月亮的方位角、高度角、月相和月亮照明比例。
-- 提供当天的黎明、日出、月升、日落、黄昏、月落时间轴。
-- 支持切换日期、单击地图重新选择位置、从 Windy 右键菜单打开。
-- 复用 Windy 收藏地点：可收藏或取消收藏当前观测点，按距离、最近收藏、海拔或光污染排序，并搜索收藏名称。
-- 支持选择 2–5 个收藏地点，对比同一日期下的天文事件、观测时段、天气、海拔和光污染条件，并切换 EC、GFS、ICON 模式。
-- 中文界面支持配置用户自己的高德、百度或腾讯地图 API Key，并从统一搜索下拉中选择名称搜索提供商。
-- 可在任意 Windy 图层上叠加 RainViewer 实时雷达；公共接口无需 Key，并通过 GPU 按中央气象台色阶重映射。
-- 中英文界面均支持从搜索下拉选择 WGS84 或 GCJ-02，分别填写纬度和经度后精确定位；GCJ-02 会转换为 Windy 使用的 WGS84。
-- 地址结果按与当前观察点的直线距离排序，并显示城市、区县、直线距离和海拔。
-- 自动将高德/腾讯的 GCJ-02 或百度的 BD-09 坐标转换为 Windy 使用的 WGS84 坐标后定位。
-- 对极昼、极夜、当天无月升/月落等情况给出明确状态。
-- 以天气、月光和目标可见性证据展示无月黑夜、银河等观测时段；地点或日期切换期间保留面板结构并明确显示加载状态。
-- 显示 David Lorenz 2025 光污染图集的 SQM、估算等效 Bortle 等级和理想条件下的观测参考。
-- 提供当前位置从过去 6 小时到未来 5 天的天气模式表格，可切换 Windy / Open-Meteo 数据源及 EC、GFS、ICON 模型，默认 Windy + EC；数据源选择在当前插件会话内生效，观测时段和收藏地点对比同步使用该来源。
-- 天气表格包含天气、综合云量、高中低云、气温、露点、湿度、AOD 550 nm、能见度、降水、风速和风向；Windy 云量由模式压力层聚合，Open-Meteo 使用所选全球模型的云量字段，两者的分层口径可能不同。
-- AOD 始终由 Open-Meteo 的 CAMS 数据提供，不随天气模型切换。Windy 模式的能见度使用独立 Open-Meteo 补充数据；Open-Meteo 模式的能见度跟随所选模型，缺失时显示空值，不跨模型补齐。云底、分层云高度及地图云图始终使用 Windy，并单独标注来源。
-- 天气表格底部按同一时间轴绘制当前定位的太阳、月亮地平线以上曲线，并标注升起和降落时间；曲线来自本地天文计算，不属于 EC/ICON/GFS 模式字段。
-- Windy 时间步长以实际返回结果为准；Open-Meteo 提供统一逐小时序列，可能包含服务端插值，降水表示时间标签之前一小时的累计量，观测时段显示匹配小时的降水范围而非窗口累计量。过去时段均是模式结果，不是历史观测。数据源请求失败可重试，不自动切换来源。
-- 插件界面支持中文和英文，语言选择会保存在当前浏览器。
-- 桌面端将 **天气** 表格常驻在原有四个标签下方，尽量在一屏内同时展示天文摘要和天气；窗口高度不足时仍可纵向滚动。移动端支持方位线模式、小窗口和全屏三种状态：方位线模式保留地点搜索、日期与事件控制、地点与实时日月方位、当天事件时间，收藏列表向上展开；小窗口保留 **事件**、**天气**、**说明**、**设置**、**关于** 五个标签，全屏时将天气表格放在事件模块下方；方位线模式和小窗口的选择会保存在当前浏览器：
-  - **事件**：查看日月事件时间、方向和当天时间轴。
-  - **天气**：横向查看 EC、GFS 或 ICON 模式的五天天气时间序列。
-  - **说明**：查看地图图例、天气色阶、风向符号和数据说明。
-  - **设置**：选择打开插件时的 Windy 图层，配置 RainViewer 雷达叠加，填写高德、百度或腾讯地图 API Key，选择是否隐藏整个地点搜索框，并控制方位线透明度和是否显示 600 km 参考点；设置会保存在当前浏览器。
-  - **关于**：查看仓库、Issues、作者和当前版本；本地 Developer mode 会直接展示 `release-notes/beta.json` 测试版日志，正式插件会读取 GitHub `main` 分支记录的正式版本，并展示与对应 tag 绑定的用户更新说明，同时提供 GitHub Star 入口。
+当前版本：**0.10.1** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.1)
 
-## 环境要求
+将以下地址填入 Windy 的外部插件加载入口，加载后打开 **Sun & Moon Path**：
 
-- 建议使用 Node.js 18 或更新版本。
-- 需要可以加载外部插件的 Windy 账号或发布环境。
+```text
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.1/plugin.min.js
+```
 
-## 插件链接
+1. 单击地图选点，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写高德、百度或腾讯地图 API Key。
+2. 选择日期，在「事件」查看日月升落、实时方位、月相、无月和银河观测时段。
+3. 在「云层遮挡」选择目标与云高，通过升落快捷按钮、当地时间或分钟滑条规划拍摄时刻。
+4. 查看下方天气，或选择 2–5 个收藏地点比较同一天的观测条件。移动端支持收起、小窗口与全屏。
 
-当前正式版本：`0.10.0`
+## 主要功能
 
-当前可加载的插件 bundle：
+| 功能 | 用途 |
+| --- | --- |
+| 日月方向 | 显示升落前后 30 分钟的方向线、实时日月方向，以及 200 / 400 km 参考点；可启用 600 km 标记 |
+| 云层规划 | 支持太阳、月亮、银心和自动目标；自动或手动单层／分层云高，地图展示视线交点和云距包络，配有中英文图解 |
+| 天气与观测 | Windy / Open-Meteo 数据源和 EC / GFS / ICON 模型，覆盖可用的过去 6 小时至未来 5 天，结合天气、月光与目标可见性展示观测时段 |
+| 收藏对比 | 复用 Windy 收藏，可搜索、排序，比较天气、天文事件、海拔与 David Lorenz 2025 光污染数据 |
+| 雷达叠加 | RainViewer 无需 Key，可叠加到 Windy 图层并跟随宿主时间条，显示实际雷达时次 |
+| 单位与说明 | 跟随 Windy 温度、风速、降水、距离及海拔单位；「说明」提供图例与使用边界，「关于」显示版本及更新日志 |
 
-[https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.0/plugin.min.js](https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.0/plugin.min.js)
+## 数据边界
 
-项目链接：
-
-- GitHub 仓库：[bytepoem/windy-plugin-sun-moon-path](https://github.com/bytepoem/windy-plugin-sun-moon-path)
-- Issues：[提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues)
-- 正式版发布页：[0.10.0](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.0)
-- 作者：[bytepoem](https://github.com/bytepoem)
+- **云层距离是几何参考。** 当前点云高不代表远方云区；不沿光路采样天气、地形、云厚或消光，不保证目标可见或出现朝晚霞。自动目标在太阳中心位于地平线上时选择太阳，否则选择月亮。云底离地高度与计算海拔分别标注。详见[云层计算说明](docs/cloud-obstruction.md)。
+- **天气来源有区别。** 天气表格、观测时段和收藏对比共用所选来源；云底、分层云高及地图云图始终使用 Windy。不同来源的云层划分可能不同，缺测保留空值，请求失败不自动换源。
+- **AOD 与能见度。** AOD 始终来自 Open-Meteo 提供的 CAMS 数据；Windy 的能见度由独立 Open-Meteo 数据补充，Open-Meteo 模式则使用所选模型的能见度。
+- **时间与降水。** Windy 使用原始时间步长；Open-Meteo 逐小时序列可能含服务端插值，降水为标签前一小时累计量。观测时段显示匹配时次的降水范围，不是窗口累计量；过去时段是模式结果，不是实况。
 
 ## 本地开发
 
-安装依赖：
+发布工作流使用 npm **11.12.1**；Node.js 需满足依赖要求（当前 CI 为 22.23.2）。
 
 ```sh
-npm install
-```
-
-运行测试：
-
-```sh
+npm exec --yes --package=npm@11.12.1 -- npm install
 npm test
-```
-
-启动本地 Windy 插件开发服务：
-
-```sh
 npm start
 ```
 
-开发服务会通过 `https://localhost:9999/` 提供插件 bundle。
-
-构建生产版本：
+打开 [Windy Developer mode](https://www.windy.com/developer-mode)，加载 `https://localhost:9999/plugin.js`。本地预览从 `release-notes/` 读取双语日志。
 
 ```sh
 npm run build
 ```
 
-构建产物会输出到 `dist/`，包括 `plugin.js`、`plugin.min.js`、source map 和插件
-`package.json` 副本。
+产物位于 `dist/`，包括脚本、`plugin.json` 和 `screenshot.jpg`。正式更新日志从最新 tag 的同一快照读取整个 minor 系列，必须通过生产解析器的回归测试。
 
-## 使用方式
+## 反馈与许可
 
-### 加载插件
-
-1. 打开 Windy 支持外部插件加载的入口。
-2. 填入上面的插件 bundle 链接。
-3. 加载成功后，在 Windy 插件菜单或地图右键菜单中打开 **Sun & Moon Path**。
-
-### 使用插件
-
-插件打开后：
-
-1. 如需中文名称搜索，在 **设置** 中填写并保存高德、百度或腾讯地图对应的 API Key。
-2. 如需第三方雷达叠加，可直接使用首页地图控制区的雷达按钮开启或关闭，也可以在 **设置 → 叠加雷达数据** 中选择 **RainViewer**。桌面端按钮位于标题栏的地图缩放按钮旁，移动端位于窗口上方的地图控制按钮组。雷达透明度位于设置中的数据源选择上方；雷达会跟随 Windy 底部自带时间条切换时次，时间条上方会显示实际命中的雷达帧时间，Windy 的播放、暂停和拖动操作会直接驱动雷达。RainViewer 无需 Key。
-3. 中文界面下，可从搜索下拉选择高德、百度或腾讯，输入国内地点或地址并从按直线距离排序的联想列表中选择结果；列表同时显示城市、区县、直线距离和海拔。
-4. 中英文界面均可从同一搜索下拉选择 **WGS84** 或 **GCJ-02**，分别填写纬度和经度后定位；英文界面只提供这两个坐标选项。
-5. 选择日期。
-6. 选择 **All**、**Sunrise**、**Sunset**、**Moonrise** 或 **Moonset**。
-7. 查看地图上的方向线和面板中的事件时间、方位角、方向名称。
-8. 使用地点旁的收藏按钮保存当前观测点；打开收藏列表后可搜索、排序、切换地点，或选择 2–5 个地点进行同日观测条件对比。
-9. 也可以单击地图上的任意位置，插件会重新计算该观察点的方向线；面板顶部的 `−`、`+` 按钮可直接调整地图缩放。
-10. 桌面端在 **事件**、**说明**、**设置**、**关于** 四个视图之间切换，并直接使用下方常驻天气表格；移动端可通过面板顶部按钮收起为方位线模式、恢复小窗口或进入全屏。方位线模式保留搜索、核心控制和两行天文摘要；如不需要搜索，可在 **设置** 中开启 **隐藏地点搜索框**。
-11. 在天气表格中选择 **EC**、**GFS** 或 **ICON**，横向滑动查看过去 6 小时到未来 5 天的模式预报。
-
-AOD 和能见度行标记为 **OM**，表示数据由 [Open-Meteo](https://open-meteo.com/) 提供；AOD 的底层数据来自 [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/)。
-
-地图 API Key 只保存在当前浏览器的本地存储中。国内搜索结果会从 GCJ-02 或 BD-09 转换为 WGS84，避免观察点在 Windy 地图上发生偏移。
-
-雷达来源和透明度只保存在当前浏览器；透明度默认为 90%，可以在 0–100% 之间实时调整。插件监听 Windy 自带时间条的时间戳，并从 RainViewer 公共清单中选择最接近的历史帧。若 Windy 选中的时间超出数据范围，插件会隐藏雷达，避免用错误时次冒充所选时间。RainViewer 自动检查最新雷达帧，并通过 Windy GPU shader 将 Universal Blue 重映射为中央气象台色阶。RainViewer 源图把 65–74 dBZ 合并为同一个白色、75 dBZ 以上合并为同一个绿色，因此这两个极高反射率区间只能映射到最接近的中央气象台色级。
-
-方向线从选中的观察点出发，按照对应事件时刻的方位角延伸，并标出 200 km 和 400 km
-参考点；开启设置后会额外显示 600 km 参考点。
-
-## 项目结构
-
-- `src/plugin.svelte` - Windy 插件界面、状态编排和生命周期集成。
-- `src/mapOverlayController.ts` - 地图方向线、参考点、实时方向和图层销毁。
-- `src/radarOverlay.ts` - RainViewer 雷达瓦片、历史帧匹配、定时刷新和统一清理。
-- `src/radarFrameTimeLabel.ts` - Windy 原生时间条上方的第三方雷达实际帧时间标签及宿主布局跟随。
-- `src/radarPalette.ts` - RainViewer Universal Blue 到中央气象台 dBZ 色阶的 CPU 参考与 GPU shader。
-- `src/observationPlanner.ts` - 地点上下文缓存、天文事件规划和观测窗口证据聚合。
-- `src/LocationSearch.svelte` - 多地图地点联想、搜索结果列表和键盘交互。
-- `src/amap.ts` - 高德 Web 服务调用、结果解析和 GCJ-02/WGS84 坐标转换。
-- `src/baidu.ts` - 百度 JSAPI 地点搜索和 BD-09/WGS84 坐标转换。
-- `src/tencent.ts` - 腾讯地点联想和 GCJ-02/WGS84 坐标转换。
-- `src/WeatherTable.svelte` - EC/ICON/GFS 天气表格、滚动和当前时间标记。
-- `src/WeatherIcon.svelte` - 天气状态矢量图标。
-- `src/weather.ts` - 天气时间序列转换、云层聚合和时间分组。
-- `src/openMeteo.ts` - Open-Meteo AOD、能见度请求、解析和时间轴合并。
-- `src/lightPollution.ts` - 光污染图集瓦片读取、SQM 和估算观测条件。
-- `src/celestialCurve.ts` - 与天气列对齐的日月高度曲线和地平线事件计算。
-- `src/solar.ts` - 日月计算、方位角、距离、时间轴和几何计算逻辑。
-- `src/overlayOwner.ts` - 处理 Windy 面板重新挂载时的地图覆盖物归属。
-- `src/pluginUpdate.ts` - GitHub Raw 版本检测、SemVer 比较、会话缓存和用户更新说明加载。
-- `src/pluginConfig.ts` - Windy 外部插件元数据。
-- `src/*.test.ts` - 几何计算、日月计算、天气转换和覆盖物归属的 Vitest 测试。
-- `release-notes/beta.json` - 本地 Developer mode 使用的测试版中英文更新说明，可在正式发布前预览。
-- `release-notes/<version>.json` - 与正式版 tag 绑定的中英文用户更新说明，不包含构建、提交等开发日志。
-- `docs/` - 本地开发记录和验证清单。
-
-## 开源协议
-
-本项目基于 MIT License 开源。详见 [LICENSE](LICENSE)。
+[提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [作者 bytepoem](https://github.com/bytepoem) · [MIT License](LICENSE)
