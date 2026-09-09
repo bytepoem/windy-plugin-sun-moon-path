@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import formalNotesSource from '../release-notes/0.9.1.json?raw';
+import formalNotesSource from '../release-notes/0.10.0.json?raw';
 import betaNotesSource from '../release-notes/beta.json?raw';
 import packageSource from '../package.json?raw';
 import pluginSource from './plugin.svelte?raw';
@@ -16,8 +16,8 @@ describe('beta release notes development asset', () => {
         };
         const formalNotes = JSON.parse(formalNotesSource) as typeof notes;
 
-        expect(notes.version).toBe('0.9.1');
-        expect(notes.releasedAt).toBe('2026-08-31');
+        expect(notes.version).toBe('0.10.0');
+        expect(notes.releasedAt).toBe('2026-09-09');
         expect(formalNotes).toEqual(notes);
         expect(notes.zh.items.length).toBeGreaterThan(0);
         expect(notes.en.items.length).toBeGreaterThan(0);
