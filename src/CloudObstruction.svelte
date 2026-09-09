@@ -5,6 +5,7 @@
     import metrics from '@windy/metrics';
     import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances, type CloudDirectionBody } from './cloudGeometry';
     import CloudTimeline from './CloudTimeline.svelte';
+    import CloudHelp from './CloudHelp.svelte';
     import { galacticCenterEvents, cloudEventBody, cloudTimelineLabel, type CloudTimelineEventType } from './cloudTimeline';
     import { selectCloudBase, resolveSingleLayer } from './cloudBase';
     import { CLOUD_BAND_COLORS, createCloudOverlayController } from './cloudOverlayController';
@@ -36,6 +37,7 @@
     let timelineEvent: CloudTimelineEventType | null = null;
     let previewingTime = false;
     let showThresholdHelp = false;
+    let showHelp = false;
     export let cloudPlanningBody: CloudDirectionBody = 'sun';
     export let cloudPlanningTimestamp: number | null = null;
     export let cloudDirectionRangeKm = 0;
@@ -311,12 +313,19 @@
     <table class="cloud-table">
         <thead><tr>
             <th scope="col" title={zh ? '云层海拔高度' : 'Clouds Height AMSL'}>{zh ? '云层高度' : 'Clouds Height'} ({units.elevation})
+                <div class="cloud-height-heading-controls">
                 <span class="cloud-mode-size">
                 <span aria-hidden="true">{heightMode === 'auto' ? (zh ? '自动' : 'Auto') : (zh ? '手动' : 'Manual')}</span>
                 <select class="cloud-mode" value={heightMode} on:change={event => visibleBands.forEach(band => changeHeightMode(band, event))} aria-label={zh ? '云层高度来源' : 'Cloud height source'}>
                     <option value="auto">{zh ? '自动' : 'Auto'}</option><option value="manual">{zh ? '手动' : 'Manual'}</option>
                 </select>
                 </span>
+                <button class="cloud-help-trigger" type="button" aria-haspopup="dialog"
+                    aria-label={zh ? '云层距离图解' : 'Cloud distance guide'} title={zh ? '云层距离图解' : 'Cloud distance guide'}
+                    on:click={() => { showHelp = true; }}>
+                    <span aria-hidden="true">ⓘ</span> {zh ? '图解' : 'Guide'}
+                </button>
+                </div>
             </th>
             <th scope="col" title={zh ? `遮蔽${bodyName}云距` : `Blocking ${bodyName}`}><span class="cloud-heading-line">{zh ? `遮蔽${bodyName}` : 'Blocking'}</span><span class="cloud-heading-line">{zh ? '云距' : bodyName}</span><small>({units.distance})</small></th>
             <th scope="col" title={zh ? '地平线云距' : 'Clouds at Horizon'}><span class="cloud-heading-line">{#if zh}地平线{:else}<span class="cloud-heading-wide">Clouds at</span><span class="cloud-heading-compact">Clouds</span>{/if}</span><span class="cloud-heading-line">{zh ? '云距' : 'Horizon'}</span><small>({units.distance})</small></th>
@@ -416,7 +425,12 @@
     <p class="cloud-limit">{zh ? '云距采用零高度基准，不扣除机位海拔；未校验沿途云况、地形或消光' : 'Cloud distances use a zero-height reference without subtracting camera elevation; path clouds, terrain and extinction unverified'}</p>
 </section>
 
+{#if showHelp}<CloudHelp {zh} on:close={() => { showHelp = false; }} />{/if}
+
 <style>
+    .cloud-height-heading-controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 2px 4px; margin-top: 2px; }
+    .cloud-height-heading-controls .cloud-mode-size { margin: 0; }
+    .cloud-panel .cloud-help-trigger { display: inline-flex; align-items: center; gap: 3px; min-height: 24px; padding: 0 2px; border-color: transparent; color: #6ed9ee; background: transparent; font-size: 11px; white-space: nowrap; }
     .cloud-panel { --cloud-row-gap: 6px; display: flex; flex-direction: column; gap: var(--cloud-row-gap); box-sizing: border-box; container-type: inline-size; height: 100%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 12px; color: var(--panel-text, #f2f4fa); font-size: 12px; line-height: 1.5; }
     .cloud-panel > * { flex-shrink: 0; }
     .cloud-panel p { margin: 0; }
