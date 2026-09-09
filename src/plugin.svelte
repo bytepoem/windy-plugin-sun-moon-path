@@ -717,6 +717,7 @@
             {:else if summaryTab === 'clouds'}
                 <CloudObstruction
                     bind:selectedCloudEvent={cloudEvent}
+                    bind:timelineEvent={cloudTimelineEvent}
                     bind:cloudMapEvent
                     bind:cloudPlanningBody
                     bind:cloudPlanningTimestamp
@@ -1367,6 +1368,7 @@
     import config, { currentVersionReleasedAt } from './pluginConfig';
     import CelestialIcon from './CelestialIcon.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
+    import type { CloudTimelineEventType } from './cloudTimeline';
     import { createCloudSettings } from './cloudProfile';
     import { loadCloudPreferences, saveCloudPreferences } from './cloudPreferences';
     import FavoriteComparison from './FavoriteComparison.svelte';
@@ -1791,7 +1793,7 @@
             featureGuide: {
                 cloudPlanning: {
                     title: '云层遮挡与时间规划',
-                    description: '选择太阳、月亮、银心或自动目标，再用升落按钮、当地时间输入或分钟滑条调整时刻。自动模式在太阳中心位于地平线上时选择太阳，否则选择月亮。单层读取预报云底，分层按阈值检出云层，也可手动输入目标云层海拔。表格与地图同步展示遮蔽交点和云距参考；“图解”解释各项距离。当前点云高不代表远处云区，几何参考不包含沿途地形、云厚和消光，不能保证可见或出现朝晚霞。',
+                    description: '通过六个升落按钮选择太阳、月亮或银心及事件时刻，再用当地时间输入或分钟滑条调整时刻；调整时间时保持已选天体。按钮右侧可切换预报云图或卫星云图，预报时次与时间输入、滑条同排。卫星影像使用独立的实况时间，不与未来预报同步。单层和分层均可选择 Windy 预报云底、云量剖面、温湿剖面或手动海拔。单层取最低检出层；分层按离地高度归类，预报云底只填入对应的一层。温湿剖面按可调温度与露点温差估算候选云层，不等同实测云底。表格与地图同步展示遮蔽交点和云距参考；“图解”解释各项距离。当前点云高不代表远处云区，几何参考不包含沿途地形、云厚和消光，不能保证可见或出现朝晚霞。',
                 },
                 weatherSources: {
                     title: '天气数据源与模型',
@@ -2045,7 +2047,7 @@
             featureGuide: {
                 cloudPlanning: {
                     title: 'Cloud planning and time controls',
-                    description: 'Choose the Sun, Moon, Galactic Center or Auto, then select a rise/set event, enter local time or drag the minute slider. Auto selects the Sun when its center is above the horizon, otherwise the Moon. Use the forecast cloud base, detected profile layers or a manually entered cloud altitude. The table and map share sightline intersections and distance references; open the illustrated guide to understand them. Local cloud heights do not describe distant clouds. Geometry excludes intervening terrain, cloud thickness and extinction, and cannot guarantee visibility or colorful twilight.',
+                    description: 'Use the six rise/set buttons to select the Sun, Moon or Galactic Center and its event time. Enter local time or drag the minute slider while keeping the selected body. The map selector sits beside the buttons; forecast step, time input and slider share the next row. Satellite imagery uses its own observation time, independently of future forecasts. Both views support Windy forecast base, cloud-cover profile, temperature/dew-point profile or manual altitude. Single view uses the lowest detected layer. Layered view classifies by height above model terrain; a forecast base fills only one band. Temperature/dew-point thresholds estimate candidate layers, not measured bases. The table and map share sightline intersections and distance references; open the illustrated guide to understand them. Local cloud heights do not describe distant clouds. Geometry excludes intervening terrain, cloud thickness and extinction, and cannot guarantee visibility or colorful twilight.',
                 },
                 weatherSources: {
                     title: 'Weather sources and models',
@@ -2337,6 +2339,7 @@
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let cloudEvent: SolarEvent = 'sunset';
+    let cloudTimelineEvent: CloudTimelineEventType | null = null;
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
     let cloudPlanningTimestamp: number | null = null;

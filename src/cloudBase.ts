@@ -1,4 +1,4 @@
-import type { CloudLayer, CloudSettings } from './cloudProfile';
+import { bandFor, CLOUD_BANDS, type CloudLayer, type CloudProfile, type CloudSettings } from './cloudProfile';
 import type { WeatherForecastPayload } from './weather';
 
 export type CloudBaseSample = {
@@ -25,8 +25,8 @@ export const selectCloudBase = (payload: WeatherForecastPayload | null, timestam
     const heightM = heightAglM !== null && finite(terrain) ? terrain + heightAglM : null;
     const layer: CloudLayer | null = validReferenceHeight(heightM) ? {
         heightM, topM: heightM, baseMinimumM: null, cloudPercent: 0,
-        // Single-reference rendering uses one consistent color; this is not a low-cloud classification.
-        band: 'low',
+        // Classification uses AGL, while geometry retains AMSL. One base fills exactly one band.
+        band: bandFor(heightAglM as number),
     } : null;
     return { timestamp: selected, heightAglM, layer };
 };
@@ -37,4 +37,27 @@ export const resolveSingleLayer = (settings: CloudSettings['single'], sample: Cl
     const heightM = settings.heightM;
     return validReferenceHeight(heightM)
         ? [{ heightM, topM: heightM, baseMinimumM: null, cloudPercent: 0, band: 'low' }] : [];
+};
+
+/** Resolve one selected source without fallbacks. Disabled bands never promote a higher single layer. */
+export const resolveCloudLayers = (
+    settings: CloudSettings, base: CloudBaseSample | null, profile: CloudProfile | null,
+): CloudLayer[] => {
+    const single = settings.view === 'single';
+    const source = single ? settings.singleSource : settings.layeredSource;
+    const automatic = source === 'base' ? (base?.layer ? [base.layer] : []) : profile?.layers ?? [];
+    if (single) {
+        if (settings.single.mode === 'manual') { return resolveSingleLayer(settings.single, null); }
+        const lowest = automatic.reduce<CloudLayer | null>((best, layer) =>
+            !best || layer.heightM < best.heightM ? layer : best, null);
+        // Single-reference table and map deliberately share one color, regardless of category.
+        return lowest ? [{ ...lowest, band: 'low' }] : [];
+    }
+    return CLOUD_BANDS.flatMap(band => {
+        const row = settings.layers[band];
+        if (!row.enabled) { return []; }
+        if (row.mode === 'auto') { return automatic.filter(layer => layer.band === band); }
+        return validReferenceHeight(row.heightM)
+            ? [{ band, heightM: row.heightM, topM: row.heightM, baseMinimumM: null, cloudPercent: 0 }] : [];
+    });
 };

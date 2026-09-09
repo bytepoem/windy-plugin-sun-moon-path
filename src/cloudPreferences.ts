@@ -11,12 +11,17 @@ const height = (value: unknown): number | undefined =>
 export const restoreCloudPreferences = (value: unknown): CloudSettings => {
     const source = record(value);
     const result = createCloudSettings();
+    for (const key of ['singleSource', 'layeredSource'] as const) {
+        if (source[key] === 'base' || source[key] === 'cloud' || source[key] === 'dewpoint') { result[key] = source[key]; }
+    }
+    if (typeof source.dewPointSpreadC === 'number' && Number.isFinite(source.dewPointSpreadC)
+        && source.dewPointSpreadC >= 0 && source.dewPointSpreadC <= 10) { result.dewPointSpreadC = source.dewPointSpreadC; }
     if (source.view === 'single' || source.view === 'layers') { result.view = source.view; }
     if (source.body === 'auto' || source.body === 'sun' || source.body === 'moon' || source.body === 'milkyway') {
         result.body = source.body;
     }
     if (source.overlay === 'clouds' || source.overlay === 'lclouds' || source.overlay === 'mclouds'
-        || source.overlay === 'hclouds' || source.overlay === 'cbase') { result.overlay = source.overlay; }
+        || source.overlay === 'hclouds' || source.overlay === 'cbase' || source.overlay === 'satellite') { result.overlay = source.overlay; }
     if (typeof source.threshold === 'number' && Number.isFinite(source.threshold)
         && source.threshold >= 1 && source.threshold <= 100) { result.threshold = source.threshold; }
     if (typeof source.syncMap === 'boolean') { result.syncMap = source.syncMap; }
@@ -43,9 +48,9 @@ export const loadCloudPreferences = (storage: StorageAccess): CloudSettings => {
 
 /** Persist canonical metres, never the current display unit or automatically detected cloud heights. */
 export const saveCloudPreferences = (storage: StorageAccess, settings: CloudSettings): void => {
-    const { view, body, overlay, threshold, syncMap, single, layers } = restoreCloudPreferences(settings);
+    const { view, body, overlay, threshold, dewPointSpreadC, singleSource, layeredSource, syncMap, single, layers } = restoreCloudPreferences(settings);
     try {
-        storage.setItem(STORAGE_KEY, JSON.stringify({ view, body, overlay, threshold, syncMap, single, layers }));
+        storage.setItem(STORAGE_KEY, JSON.stringify({ view, body, overlay, threshold, dewPointSpreadC, singleSource, layeredSource, syncMap, single, layers }));
     } catch {
         // Browser storage can be unavailable; in-memory controls remain usable.
     }

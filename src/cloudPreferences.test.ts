@@ -9,8 +9,11 @@ describe('cloud preferences', () => {
         const settings = createCloudSettings();
         settings.view = 'layers';
         settings.body = 'milkyway';
-        settings.overlay = 'cbase';
+        settings.overlay = 'satellite';
         settings.threshold = 35;
+        settings.singleSource = 'dewpoint';
+        settings.layeredSource = 'base';
+        settings.dewPointSpreadC = 1.5;
         settings.syncMap = false;
         settings.single = { mode: 'manual', heightM: 1234.5 };
         settings.layers.high = { enabled: false, mode: 'manual', heightM: 9000 };
@@ -24,11 +27,15 @@ describe('cloud preferences', () => {
 
     it('rejects corrupt values without losing independent valid preferences', () => {
         const restored = restoreCloudPreferences({
+            singleSource: 'om', layeredSource: 'unknown', dewPointSpreadC: -1,
             view: 'unknown', body: 'moon', threshold: 101, syncMap: 'false',
             single: { mode: 'manual', heightM: -1 },
             layers: { low: null, medium: { heightM: 30001 }, high: { enabled: false, heightM: 6000 } },
         });
         expect(restored.view).toBe('single');
+        expect(restored.singleSource).toBe('base');
+        expect(restored.layeredSource).toBe('cloud');
+        expect(restored.dewPointSpreadC).toBe(2);
         expect(restored.body).toBe('moon');
         expect(restored.threshold).toBe(10);
         expect(restored.syncMap).toBe(true);

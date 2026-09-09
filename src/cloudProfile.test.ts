@@ -108,3 +108,57 @@ describe('cloud profile time selection', () => {
         expect(selectCloudProfile(forecast, 6 * hour)).toBeNull();
     });
 });
+
+describe('temperature/dew-point cloud estimates', () => {
+    const sounding = () => {
+        const payload = fixture();
+        for (const key of Object.keys(payload.sounding!).filter(key => key.startsWith('gh-'))) {
+            const level = key.slice(3);
+            payload.sounding![`temp-${level}`] = [270, 270];
+            payload.sounding![`dewPoint-${level}`] = [260, 260];
+        }
+        for (const level of ['950h', '925h', '850h', '300h']) {
+            payload.sounding![`dewPoint-${level}`] = [269, 269];
+        }
+        return payload;
+    };
+
+    it('finds separate moist layers from paired Kelvin values without using cloud cover', () => {
+        const payload = sounding();
+        const layers = extractCloudForecast(payload, 2, 'dewpoint').profiles[0].layers;
+        expect(layers.map(layer => layer.heightM)).toEqual([500, 1500, 9000]);
+        expect(layers[0]).toMatchObject({ baseMinimumM: 200, topM: 750, dewPointSpreadC: 1 });
+        expect(layers[2].band).toBe('high');
+        expect(extractCloudForecast(payload, 0, 'dewpoint').profiles[0].layers).toEqual([]);
+    });
+
+    it('breaks continuity at missing temperature, dew point or height without fabricating a lower bound', () => {
+        for (const key of ['temp-925h', 'dewPoint-925h', 'gh-925h']) {
+            const payload = sounding();
+            payload.sounding![key] = [null, null];
+            payload.sounding!['dewPoint-900h'] = [269, 269];
+            const layers = extractCloudForecast(payload, 2, 'dewpoint').profiles[0].layers;
+            expect(layers[0].topM).toBe(500);
+            expect(layers[1]).toMatchObject({ heightM: 1000, baseMinimumM: null });
+        }
+    });
+
+    it('keeps absent height fields as gaps and includes an exact decimal threshold', () => {
+        const payload = sounding();
+        delete payload.sounding!['gh-925h'];
+        payload.sounding!['dewPoint-900h'] = [269.9, 269.9];
+        const layers = extractCloudForecast(payload, 1, 'dewpoint').profiles[0].layers;
+        expect(layers[0].topM).toBe(500);
+        expect(layers[1]).toMatchObject({ heightM: 1000, baseMinimumM: null });
+        expect(extractCloudForecast(payload, 0.1, 'dewpoint').profiles[0].layers[0].heightM).toBe(1000);
+    });
+
+    it('never substitutes cloud cover for unavailable thermodynamic fields', () => {
+        const profile = extractCloudForecast(fixture(), 2, 'dewpoint').profiles[0];
+        expect(profile.layers).toEqual([]);
+        expect(profile.coverage).toEqual({ low: 'missing', medium: 'missing', high: 'missing' });
+        for (const value of [NaN, -1, 10.1, Infinity]) {
+            expect(extractCloudForecast(sounding(), value, 'dewpoint').profiles).toEqual([]);
+        }
+    });
+});

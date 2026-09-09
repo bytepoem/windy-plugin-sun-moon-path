@@ -62,8 +62,15 @@
             </div>
             <!-- Keyboard users need a focusable scroll region for the enlarged image. -->
             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-            <div class="image-scroll" tabindex="0" role="region" aria-label={zh ? '可滚动图解' : 'Scrollable diagram'}>
-                {#if imageState === 'loading'}<p role="status">{zh ? '正在加载图解…' : 'Loading diagram…'}</p>{/if}
+            <div class="image-scroll" class:image-pending={imageState !== 'ready'} tabindex="0" role="region"
+                aria-busy={imageState === 'loading'} aria-label={zh ? '可滚动图解' : 'Scrollable diagram'}>
+                {#if imageState === 'loading'}
+                    <div class="image-loading" role="status">
+                        <span class="loading-spinner" aria-hidden="true"></span>
+                        <p class="loading-title">{zh ? '正在加载图解' : 'Loading diagram'}</p>
+                        <p class="loading-hint">{zh ? '图片加载后可放大查看' : 'Zoom in to explore once the image is ready'}</p>
+                    </div>
+                {/if}
                 {#if imageState === 'error'}
                     <div class="image-error" role="status">
                         <p>{zh ? '图解加载失败，请重试或打开原图。' : 'Could not load the diagram. Retry or open the image directly.'}</p>
@@ -100,6 +107,15 @@
     .image-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 20px; font-size: 12px; color: #b9c2ce; }
     .image-actions { display: flex; align-items: center; gap: 14px; }
     .image-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y pinch-zoom; padding: 12px; }
+    /* Reserve the same viewing area during loading and failure; the toolbar never moves. */
+    .image-pending { display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(110, 217, 238, .045), transparent 65%); }
+    .image-loading { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 20px; text-align: center; }
+    .image-loading p { margin: 0; }
+    .loading-spinner { display: block; box-sizing: border-box; width: 36px; height: 36px; margin-bottom: 6px; border: 3px solid rgba(110, 217, 238, .15); border-top-color: #6ed9ee; border-radius: 50%; animation: loading-spin 1s linear infinite; }
+    .loading-title { color: #edf2f7; font-size: 14px; font-weight: 600; }
+    .loading-hint { color: #aab8c9; font-size: 12px; }
+    @keyframes loading-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } }
     img { display: block; width: 100%; max-width: none; height: auto; }
     img.zoomed { width: 1800px; }
     .image-error { padding: 24px; text-align: center; }

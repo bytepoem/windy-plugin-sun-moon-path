@@ -15,7 +15,6 @@
 
 <div class="cloud-timeline" aria-label={zh ? '当地时间与天体升落' : 'Local time and celestial events'}>
     <div class="target-events">
-        <slot name="target" />
         <div class="event-buttons">
             {#each kinds as kind}
                 {@const event = events.find(item => item.type === kind)}
@@ -43,6 +42,7 @@
                 </button>
             {/each}
         </div>
+        <slot name="map" />
     </div>
     <div class="time-row">
         <input class="time-entry" type="time" step="60" value={clock}
@@ -57,17 +57,19 @@
                 on:change={() => dispatch('commit')} on:pointercancel={() => dispatch('commit')} on:blur={() => dispatch('commit')} />
             <div class="time-ticks" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
         </div>
+        <slot name="forecast" />
     </div>
 
 </div>
 
 <style>
     .cloud-timeline { width:100%; min-width:0; color:#b9c2ce; font-size:11px; }
-    .target-events { display:grid; grid-template-columns:minmax(84px,28%) minmax(0,1fr); gap:6px; align-items:center; margin-bottom:6px; }
-    .time-row { display:flex; align-items:center; gap:10px; margin-bottom:0; }
-    .time-track { flex:1; min-width:0; }
-    .time-entry { box-sizing:border-box; width:96px; height:28px; flex-shrink:0; min-width:0; padding:0 5px; border:1px solid var(--panel-border,#485364); border-radius:5px; background:rgba(8,15,27,.5); color:#f2f4fa; color-scheme:dark; font:600 13px/1.2 monospace; }
+    .target-events { display:grid; grid-template-columns:minmax(0,1fr) minmax(86px,auto); gap:6px; align-items:center; margin-bottom:6px; }
+    .time-row { display:flex; align-items:center; gap:6px; margin-bottom:0; }
+    .time-track { flex:1 1 0; min-width:0; }
+    .time-entry { box-sizing:border-box; width:82px; height:28px; flex-shrink:0; min-width:0; padding:0 5px; border:1px solid var(--panel-border,#485364); border-radius:5px; background:rgba(8,15,27,.5); color:#f2f4fa; color-scheme:dark; font:600 13px/1.2 monospace; }
     .time-entry::-webkit-datetime-edit { padding:0; }
+    .time-entry::-webkit-calendar-picker-indicator { width:14px; margin:0; padding:0; flex-shrink:0; }
     button { color:inherit; font:inherit; background:rgba(8,15,27,.5); border:1px solid var(--panel-border,#485364); border-radius:5px; cursor:pointer; }
     button:hover, button.active { background:#254754; border-color:#6ed9ee; }
     button:disabled { opacity:.45; cursor:default; }
@@ -81,7 +83,7 @@
     .sun .event-symbol { fill:#ffb347; stroke:#ffb347; }
     .moon .event-symbol { fill:#f5efcf; stroke:#f5efcf; }
     .milkyway .event-symbol { fill:none; stroke:#9de0b7; }
-    .event-buttons { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:3px; }
+    .event-buttons { display:grid; width:100%; max-width:300px; grid-template-columns:repeat(6,minmax(0,1fr)); gap:3px; }
     .event-buttons button { box-sizing:border-box; display:flex; align-items:center; justify-content:center; height:30px; min-height:30px; padding:3px 0; min-width:0; white-space:nowrap; }
     .event-symbol { display:block; width:16px; height:16px; flex-shrink:0; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
     .event-arrow { display:block; width:12px; height:12px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }

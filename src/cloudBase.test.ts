@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveSingleLayer, selectCloudBase } from './cloudBase';
+import { resolveCloudLayers, resolveSingleLayer, selectCloudBase } from './cloudBase';
 import { createCloudSettings } from './cloudProfile';
 import type { WeatherForecastPayload } from './weather';
 
@@ -59,5 +59,53 @@ describe('single forecast cloud base', () => {
         settings.single.heightM = undefined;
         expect(resolveSingleLayer(settings.single, selectCloudBase(payload(), 0))).toEqual([]);
         expect(settings.layers.low.heightM).toBe(1000);
+    });
+});
+
+
+describe('cloud height source selection', () => {
+    it('assigns a forecast base to exactly one band using AGL, including boundary heights', () => {
+        for (const [agl, band] of [[0, 'low'], [1999, 'low'], [2000, 'medium'], [5999, 'medium'], [6000, 'high']] as const) {
+            const p = payload();
+            p.meteogram!.cloudBase[0] = agl;
+            const settings = createCloudSettings();
+            settings.view = 'layers';
+            settings.layeredSource = 'base';
+            const base = selectCloudBase(p, 0);
+            expect(resolveCloudLayers(settings, base, null)).toMatchObject([{ band, heightM: 4163 + agl }]);
+            settings.layers[band].enabled = false;
+            expect(resolveCloudLayers(settings, base, null)).toEqual([]);
+        }
+    });
+
+    it('uses the lowest profile layer in single view and all layers in layered view', () => {
+        const settings = createCloudSettings();
+        const profile = { timestamp: 0, coverage: { low: 'missing', medium: 'sampled', high: 'sampled' } as const,
+            layers: [9000, 3500].map(heightM => ({ heightM, topM: heightM, band: 'high' as const, cloudPercent: 50, baseMinimumM: null })) };
+        for (const source of ['cloud', 'dewpoint'] as const) {
+            settings.view = 'single';
+            settings.singleSource = source;
+            expect(resolveCloudLayers(settings, selectCloudBase(payload(), 0), profile)).toMatchObject([{ heightM: 3500 }]);
+            expect(resolveCloudLayers(settings, selectCloudBase(payload(), 0), null)).toEqual([]);
+            settings.view = 'layers';
+            settings.layeredSource = source;
+            expect(resolveCloudLayers(settings, null, profile)).toHaveLength(2);
+        }
+        settings.layeredSource = 'base';
+        expect(resolveCloudLayers(settings, null, profile)).toEqual([]);
+    });
+
+    it('preserves manual heights and disabled bands independently of failed forecasts', () => {
+        const settings = createCloudSettings();
+        settings.single.mode = 'manual';
+        settings.single.heightM = 2300;
+        settings.singleSource = 'dewpoint';
+        expect(resolveCloudLayers(settings, null, null)).toMatchObject([{ heightM: 2300 }]);
+        settings.view = 'layers';
+        settings.layers.medium = { mode: 'manual', heightM: 4500, enabled: true };
+        expect(resolveCloudLayers(settings, null, null)).toMatchObject([{ heightM: 4500, band: 'medium' }]);
+        settings.layers.medium.enabled = false;
+        expect(resolveCloudLayers(settings, null, null)).toEqual([]);
+        expect(settings.single.heightM).toBe(2300);
     });
 });
