@@ -182,7 +182,7 @@
         }));
         listeners.push(store.on('overlay', value => {
             if (!mounted || !settings.syncMap || syncing) {return;}
-            if (['clouds', 'lclouds', 'mclouds', 'hclouds'].includes(value)) {
+            if (['clouds', 'lclouds', 'mclouds', 'hclouds', 'cbase'].includes(value)) {
                 settings = { ...settings, overlay: value as CloudSettings['overlay'] };
             } else { syncError = true; }
         }));
@@ -329,6 +329,7 @@
         <label><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
             <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
             <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>
+            <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
         </select></label>
         <div class="cloud-data-status" role="status" title={zh ? '预报时次' : 'Forecast step'}>
         {#if status === 'loading' || status === 'idle'}

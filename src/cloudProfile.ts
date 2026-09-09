@@ -12,7 +12,7 @@ export type CloudSettings = {
     opacity: number;
     syncMap: boolean;
     cameraOffsetM: number | undefined;
-    overlay: 'clouds' | 'lclouds' | 'mclouds' | 'hclouds';
+    overlay: 'clouds' | 'lclouds' | 'mclouds' | 'hclouds' | 'cbase';
     layers: Record<CloudBand, { enabled: boolean; mode: 'auto' | 'manual'; heightM: number | undefined }>;
 };
 export const createCloudSettings = (): CloudSettings => ({
