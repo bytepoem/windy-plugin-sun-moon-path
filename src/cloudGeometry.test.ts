@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloudArc, cloudBodyPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances } from './cloudGeometry';
+import { cloudArc, cloudBodyPosition, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances } from './cloudGeometry';
 import { distanceKm, splitPolylineAtDateLine } from './solar';
 
 describe('cloud geometry', () => {
@@ -125,5 +125,56 @@ describe('cloud planning time', () => {
         expect(cloudTimeInstant('2026-02-30', '12:00', 'UTC')).toBeNull();
         expect(cloudTimeInstant('2026-09-05', '', 'UTC')).toBeNull();
         expect(cloudTimeInstant('2026-09-05', '24:00', 'UTC')).toBeNull();
+    });
+});
+
+describe('cloud obstruction targets', () => {
+    const location = { lat: 23.1291, lon: 113.2644 };
+
+    it.each([
+        ['2026-09-09T04:00:00Z', 'sun'],
+        ['2026-09-09T16:00:00Z', 'moon'],
+    ] as const)('selects %s by its calculation time', (clock, body) => {
+        const instant = Date.parse(clock);
+        const target = cloudTargetPosition('auto', instant, location);
+        expect(target.body).toBe(body);
+        const position = cloudBodyPosition(body, instant, location);
+        expect(target.position).toEqual({ ...position,
+            sightlineAvailable: body === 'sun' || (position.moonUpperLimbAltitude ?? -90) >= 0 });
+    });
+
+    it('honours explicit moon selection even in daylight and uses the lunar sightline', () => {
+        const instant = Date.parse('2026-09-09T04:00:00Z');
+        const moon = cloudTargetPosition('moon', instant, location);
+        const sun = cloudTargetPosition('sun', instant, location);
+        expect(moon.body).toBe('moon');
+        expect(moon.position).toEqual(cloudBodyPosition('moon', instant, location));
+        expect(cloudSightDistance(2000, moon.position.altitude)).not.toBeCloseTo(
+            cloudSightDistance(2000, sun.position.altitude)!, 3);
+        expect(cloudTargetPosition('sun', Date.parse('2026-09-09T16:00:00Z'), location).body).toBe('sun');
+    });
+
+    it('keeps a moonrise intersection when its upper limb is above the horizon', () => {
+        // Find the centre crossing for this day without depending on a second ephemeris.
+        const start = Date.parse('2026-09-08T18:00:00Z');
+        const nearHorizon = Array.from({ length: 240 }, (_, minute) =>
+            cloudTargetPosition('moon', start + minute * 60_000, location))
+            .find(target => target.position.altitude < 0 && target.position.moonUpperLimbAltitude! > 0);
+        expect(nearHorizon).toBeDefined();
+        expect(nearHorizon!.position.sightlineAvailable).toBe(true);
+        expect(cloudSightDistance(2000, nearHorizon!.position.altitude)).toBeGreaterThan(0);
+    });
+
+    it('marks a Moon below the horizon unavailable without switching an explicit target', () => {
+        const moon = cloudTargetPosition('moon', Date.parse('2026-09-09T16:00:00Z'), location);
+        expect(moon.body).toBe('moon');
+        expect(moon.position.altitude).toBeLessThan(0);
+        expect(moon.position.sightlineAvailable).toBe(false);
+    });
+
+    it('uses solar altitude rather than fixed clock hours in polar day and night', () => {
+        const pole = { lat: 80, lon: 0 };
+        expect(cloudTargetPosition('auto', Date.parse('2026-06-21T00:00:00Z'), pole).body).toBe('sun');
+        expect(cloudTargetPosition('auto', Date.parse('2026-12-21T12:00:00Z'), pole).body).toBe('moon');
     });
 });

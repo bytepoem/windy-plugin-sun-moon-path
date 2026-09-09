@@ -6,7 +6,7 @@ export type CloudSettings = {
     view: 'single' | 'layers';
     single: { mode: 'auto' | 'manual'; heightM: number | undefined };
     clock: string;
-    body: 'sun' | 'moon';
+    body: 'auto' | 'sun' | 'moon';
     threshold: number;
     twilight: boolean;
     opacity: number;

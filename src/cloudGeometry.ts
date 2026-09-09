@@ -1,4 +1,4 @@
-import { Body, Equator, Horizon, Observer } from 'astronomy-engine';
+import { Body, Equator, Horizon, KM_PER_AU, Observer } from 'astronomy-engine';
 import { EARTH_RADIUS_KM, destinationPoint, type Coordinates } from './solar';
 
 const RAD = Math.PI / 180;
@@ -15,8 +15,24 @@ export const cloudBodyPosition = (body: 'sun' | 'moon', timestamp: number, locat
     const apparent = Horizon(date, observer, equatorial.ra, equatorial.dec, 'normal');
     // Normal refraction already tapers below -1 degrees. Elevated-observer
     // sunsets can occur there; keep their zero-height reference intersection.
+    // Match Astronomy Engine's lunar equatorial radius. The upper limb can be
+    // visible while the centre is below zero at moonrise/moonset.
+    const moonUpperLimbAltitude = body === 'moon'
+        ? apparent.altitude + Math.asin(1738.1 / (equatorial.dist * KM_PER_AU)) / RAD : null;
     return { azimuth: apparent.azimuth, altitude: apparent.altitude, geometricAltitude: geometric.altitude,
+        moonUpperLimbAltitude,
         sightlineAvailable: Number.isFinite(apparent.altitude) && Math.abs(apparent.altitude) <= 90 };
+};
+
+/** Resolve auto from the calculation instant, never from the forecast step or device clock.
+ * Solar twilight retains its geometric references; a below-horizon Moon has no blocking sightline.
+ */
+export const cloudTargetPosition = (target: 'auto' | 'sun' | 'moon', timestamp: number, location: Coordinates) => {
+    const sun = cloudBodyPosition('sun', timestamp, location);
+    const body = target === 'auto' ? (sun.altitude >= 0 ? 'sun' : 'moon') : target;
+    const position = body === 'sun' ? sun : cloudBodyPosition('moon', timestamp, location);
+    return { body, position: { ...position,
+        sightlineAvailable: position.sightlineAvailable && (body === 'sun' || (position.moonUpperLimbAltitude ?? -90) >= 0) } };
 };
 
 /** Apparent-direction reference intersection, not a refracted physical ray trace.

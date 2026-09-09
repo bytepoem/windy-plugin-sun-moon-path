@@ -716,12 +716,13 @@
                 />
             {:else if summaryTab === 'clouds'}
                 <CloudObstruction
-                    bind:selectedSunEvent={cloudSunEvent}
+                    bind:selectedCloudEvent={cloudEvent}
+                    bind:cloudMapEvent
                     bind:cloudDirectionRangeKm
                     bind:cloudBounds
                     bind:cloudDetailBounds
                     location={selectedLocation}
-                    sunEvents={solarPaths.flatMap(path => path.status === 'ok' && (path.event === 'sunrise' || path.event === 'sunset')
+                    celestialEvents={solarPaths.flatMap(path => path.status === 'ok'
                         ? [{ type: path.event, timestamp: path.eventTime.getTime() }] : [])}
                     forecast={weatherSource === 'windy'
                         ? (weatherLoadedKey === weatherRequestKey ? cloudWeatherPayload : null)
@@ -2288,7 +2289,8 @@
     let pluginUpdateNotesRetrying = false;
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
-    let cloudSunEvent: 'sunrise' | 'sunset' = 'sunset';
+    let cloudEvent: SolarEvent = 'sunset';
+    let cloudMapEvent: SolarEvent = 'sunset';
     let cloudDirectionRangeKm = 0;
     let cloudBounds: [[number, number], [number, number]] | null = null;
     let cloudDetailBounds: [[number, number], [number, number]] | null = null;
@@ -2435,7 +2437,7 @@
 
     // Event and current bearings remain visible alongside the cloud planning overlay.
     $: if (isMounted && summaryTab) {
-        renderMapFeatures(selectObservationPaths(solarPaths, summaryTab === 'clouds' ? cloudSunEvent : selectedEvent),
+        renderMapFeatures(selectObservationPaths(solarPaths, summaryTab === 'clouds' ? cloudMapEvent : selectedEvent),
             summaryTab === 'clouds' ? cloudDirectionRangeKm : null);
     }
 
@@ -2798,7 +2800,7 @@
     };
 
     const selectedMapPaths = (paths = solarPaths): SolarPath[] =>
-        selectObservationPaths(paths, summaryTab === 'clouds' ? cloudSunEvent : selectedEvent);
+        selectObservationPaths(paths, summaryTab === 'clouds' ? cloudMapEvent : selectedEvent);
 
     $: fitMapControlLabel = summaryTab === 'clouds' ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));

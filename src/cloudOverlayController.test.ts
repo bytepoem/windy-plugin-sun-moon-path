@@ -48,13 +48,19 @@ describe('cloud map ownership', () => {
         expect(lines.every(line => line.opacity === 0.85)).toBe(true);
         controller.render({ ...state, twilight: false });
         expect(groups[0].remove).toHaveBeenCalledOnce();
-        expect(lines).toHaveLength(5);
+        expect(lines).toHaveLength(6);
+        // Disabling reference envelopes keeps the sightline and horizon.
+        expect(lines.slice(4).map(line => line.color)).toEqual(['#6ed9ee', '#ffffff']);
+        controller.render({ ...state, twilight: false,
+            position: { ...state.position, altitude: -10, sightlineAvailable: false } });
+        expect(lines).toHaveLength(7);
+        expect(lines[6].color).toBe('#ffffff');
         controller.render({ ...state, layers: [] });
-        expect(groups).toHaveLength(2);
-        expect(groups[1].remove).toHaveBeenCalledOnce();
+        expect(groups).toHaveLength(3);
+        expect(groups[2].remove).toHaveBeenCalledOnce();
         controller.destroy();
-        expect(groups[1].remove).toHaveBeenCalledOnce();
-        expect(map.off).toHaveBeenCalledTimes(8);
+        expect(groups[2].remove).toHaveBeenCalledOnce();
+        expect(map.off).toHaveBeenCalledTimes(12);
         expect(map.off.mock.calls[0]).toEqual(['zoomend', map.on.mock.calls[0][1]]);
         expect(node.unbindTooltip).toHaveBeenCalled();
         expect(node.off).toHaveBeenCalledWith('mouseout', mouseOut);

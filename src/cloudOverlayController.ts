@@ -68,7 +68,8 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
         };
         const distanceLabel = (value: number) => `${formatDistanceKm(value, state.units.distance)} ${state.units.distance}`;
         const range = Math.max(10, ...state.layers.map(layer =>
-            cloudTwilightDistances(layer.heightM)?.clearKm || 0));
+            Math.max(cloudTwilightDistances(layer.heightM)?.[state.twilight ? 'clearKm' : 'horizonKm'] ?? 0,
+                state.position.sightlineAvailable ? cloudSightDistance(layer.heightM, state.position.altitude) ?? 0 : 0)));
         label(state.location, '', '#6ed9ee', state.language === 'zh' ? '机位' : 'Camera', true);
         // Sample the bearing ray as a geodesic; two endpoints alone distort long lines in Mercator.
         if (state.position.sightlineAvailable) {
@@ -87,7 +88,6 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
                 label(point, '', '#6ed9ee',
                     `${height} · ${state.language === 'zh' ? '视线与云层交点' : 'Sightline intersection'} · ${distanceLabel(distance)}`, true);
             }
-            if (!state.twilight) {continue;}
             const top = destinationPoint(state.location, 0, geometry.horizonKm);
             const labelWidth = label(top, formatDistanceKm(geometry.horizonKm, state.units.distance), '#ffffff',
                 `${height} · ${state.language === 'zh' ? '地平线云距' : 'Horizon distance'} · ${distanceLabel(geometry.horizonKm)}`, false, true);
@@ -97,6 +97,7 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
             const radiusPixels = geometry.horizonKm * 1000 / metresPerPixel;
             const gap = Math.min(160, 2 * Math.asin(Math.min(1, (labelWidth / 2 + 3) / radiusPixels)) * 180 / Math.PI);
             line(cloudArc(state.location, geometry.horizonKm, 180, 360 - gap), { color: '#ffffff' });
+            if (!state.twilight) {continue;}
             const bandColor = CLOUD_BAND_COLORS[layer.band];
             line(cloudArc(state.location, geometry.tangentKm, state.sunAzimuth, 12), { color: bandColor, dashArray: '4 4', weight: 3 });
             const farArc = cloudArc(state.location, geometry.clearKm, state.sunAzimuth, 36);

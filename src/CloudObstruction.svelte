@@ -3,19 +3,19 @@
     import { map } from '@windy/map';
     import store from '@windy/store';
     import metrics from '@windy/metrics';
-    import { cloudArc, cloudBodyPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances } from './cloudGeometry';
+    import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances } from './cloudGeometry';
     import { selectCloudBase, resolveSingleLayer } from './cloudBase';
     import { CLOUD_BAND_COLORS, createCloudOverlayController } from './cloudOverlayController';
     import {
         CLOUD_BANDS, extractCloudForecast, selectCloudProfile,
         type CloudBand, type CloudLayer, type CloudSettings,
     } from './cloudProfile';
-    import { formatLocalClock, type Coordinates } from './solar';
+    import { formatLocalClock, type Coordinates, type SolarEvent } from './solar';
     import { formatDistanceKm, formatElevationM, type UnitPreferences } from './unitPreferences';
     import type { WeatherForecastPayload, WeatherLoadStatus, WeatherModel } from './weather';
 
     export let location: Coordinates;
-    export let sunEvents: { type: 'sunrise' | 'sunset'; timestamp: number }[];
+    export let celestialEvents: { type: SolarEvent; timestamp: number }[];
     export let forecast: WeatherForecastPayload | null;
     export let status: WeatherLoadStatus;
     export let model: WeatherModel;
@@ -27,7 +27,8 @@
 
     const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void }>();
     const overlay = createCloudOverlayController(map);
-    export let selectedSunEvent: 'sunrise' | 'sunset' = 'sunset';
+    export let selectedCloudEvent: SolarEvent = 'sunset';
+    export let cloudMapEvent: SolarEvent = 'sunset';
     let manualClock: string | null = null;
     export let cloudDirectionRangeKm = 0;
     export let cloudBounds: [[number, number], [number, number]] | null = null;
@@ -48,20 +49,33 @@
     $: heightMode = single ? settings.single.mode : settings.layers.low.mode;
     // Profile extraction is only needed when the user requests the multi-layer view.
     $: cloudForecast = single ? { profiles: [], modelElevationM: null } : extractCloudForecast(forecast, settings.threshold);
-    $: automaticEvent = sunEvents.find(event => event.type === selectedSunEvent);
+    $: automaticEvent = celestialEvents.find(event => event.type === selectedCloudEvent);
     $: manualTimestamp = manualClock === null ? null : cloudTimeInstant(selectedDate, manualClock, timeZone);
     $: planningEvents = manualClock === null ? (automaticEvent ? [automaticEvent] : [])
-        : manualTimestamp === null ? [] : [{ type: selectedSunEvent, timestamp: manualTimestamp }];
+        : manualTimestamp === null ? [] : [{ type: selectedCloudEvent, timestamp: manualTimestamp }];
     $: displayedClock = manualClock ?? (automaticEvent ? formatLocalClock(new Date(automaticEvent.timestamp), timeZone) : '');
     $: scenarios = planningEvents.map(event => {
         const profile = selectCloudProfile(cloudForecast, event.timestamp);
         const base = single ? selectCloudBase(forecast, event.timestamp) : null;
-        return { ...event, profile, base, position: cloudBodyPosition('sun', event.timestamp, location),
+        return { ...event, profile, base, ...cloudTargetPosition(settings.body, event.timestamp, location),
             layers: single ? resolveSingleLayer(settings.single, base) : resolveLayers(settings, profile?.layers || []) };
     });
+    $: activeBody = scenarios[0]?.body ?? (settings.body === 'moon'
+        || (settings.body === 'auto' && selectedCloudEvent.startsWith('moon')) ? 'moon' : 'sun');
+    $: cloudMapEvent = `${activeBody}${selectedCloudEvent.endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
+    $: solarReference = activeBody === 'sun';
+    $: presetEvents = (solarReference ? ['sunrise', 'sunset'] : ['moonrise', 'moonset']) as SolarEvent[];
+    $: bodyName = solarReference ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon');
+    $: eventName = (event: SolarEvent) => ({
+        sunrise: zh ? '日出' : 'Sunrise', sunset: zh ? '日落' : 'Sunset',
+        moonrise: zh ? '月出' : 'Moonrise', moonset: zh ? '月落' : 'Moonset',
+    })[event];
     $: layers = scenarios.flatMap(event => event.layers);
     // Share the outermost cloud distance with event rays, including a small visual overrun.
-    $: cloudDirectionRangeKm = Math.max(0, ...layers.map(layer => cloudTwilightDistances(layer.heightM)?.clearKm ?? 0)) * 1.05;
+    $: cloudDirectionRangeKm = Math.max(0, ...scenarios.flatMap(event => event.layers.map(layer => Math.max(
+        cloudTwilightDistances(layer.heightM)?.clearKm ?? 0,
+        event.position.sightlineAvailable ? cloudSightDistance(layer.heightM, event.position.altitude) ?? 0 : 0,
+    )))) * 1.05;
     $: timestamp = scenarios[0]?.timestamp ?? null;
     $: cloudBounds = planningBounds(scenarios, false);
     $: cloudDetailBounds = planningBounds(scenarios, true);
@@ -162,12 +176,19 @@
         return [[Math.max(-85, Math.min(...points.map(point => point.lat))), Math.min(...lons)],
             [Math.min(85, Math.max(...points.map(point => point.lat))), Math.max(...lons)]];
     };
+    /** Explicit body changes select the matching rise/set event; manual wall time stays fixed. */
+    const changeTarget = (event: Event) => {
+        const body = (event.currentTarget as HTMLSelectElement).value as CloudSettings['body'];
+        settings = { ...settings, body };
+        if (body !== 'auto') {
+            selectedCloudEvent = `${body}${selectedCloudEvent.endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
+        }
+    };
     const fitMap = () => {
         if (cloudBounds) {map.fitBounds(cloudBounds, { padding: [30, 30] });}
     };
 
     onMount(() => {
-        settings.body = 'sun';
         mounted = true;
         listeners.push(store.on('timestamp', value => {
             if (mounted && settings.syncMap && !syncing && typeof value === 'number') {
@@ -199,31 +220,32 @@
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
     <div class="cloud-controls">
     <div class="cloud-toolbar">
-        <select class="cloud-target" value="sun" aria-label={zh ? '遮蔽类型' : 'Obstruction target'}>
-            <option value="auto" disabled>{zh ? '自动（暂未开放）' : 'Auto (coming soon)'}</option>
+        <select class="cloud-target" value={settings.body} on:change={changeTarget} aria-label={zh ? '遮蔽类型' : 'Obstruction target'}>
+            <option value="auto">{zh ? '自动' : 'Auto'}</option>
             <option value="sun">{zh ? '遮蔽太阳' : 'Blocking Sun'}</option>
-            <option value="moon" disabled>{zh ? '遮蔽月亮（暂未开放）' : 'Blocking Moon (coming soon)'}</option>
+            <option value="moon">{zh ? '遮蔽月亮' : 'Blocking Moon'}</option>
             <option value="milkyway" disabled>{zh ? '遮蔽银河（暂未开放）' : 'Milky Way (coming soon)'}</option>
         </select>
         <div class="cloud-presets" role="group" aria-label={zh ? '升落时刻' : 'Rise or set'}>
-            {#each ['sunrise', 'sunset'] as event}
-                <button type="button" class="cloud-event" class:active={manualClock === null && selectedSunEvent === event}
-                    aria-label={event === 'sunrise' ? (zh ? '日出' : 'Sunrise') : (zh ? '日落' : 'Sunset')}
-                    title={event === 'sunrise' ? (zh ? '日出' : 'Sunrise') : (zh ? '日落' : 'Sunset')}
-                    aria-pressed={manualClock === null && selectedSunEvent === event}
-                    on:click={() => { manualClock = null; selectedSunEvent = event === 'sunrise' ? 'sunrise' : 'sunset'; }}>
+            {#each presetEvents as event}
+                <button type="button" class="cloud-event" class:active={manualClock === null && selectedCloudEvent === event}
+                    aria-label={eventName(event)}
+                    title={eventName(event)}
+                    aria-pressed={manualClock === null && selectedCloudEvent === event}
+                    on:click={() => { manualClock = null; selectedCloudEvent = event; }}>
                     <svg class="cloud-event-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="12" cy="12" r="4.2"></circle>
+                        {#if solarReference}<circle cx="12" cy="12" r="4.2"></circle>
                         <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"></path>
+                        {:else}<path d="M17 3a9 9 0 1 0 4 14A8 8 0 0 1 17 3Z" style="fill:#bcd5ff;stroke:#bcd5ff"></path>{/if}
                     </svg>
-                    <svg class="cloud-event-arrow" class:cloud-event-arrow--down={event === 'sunset'} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                    <svg class="cloud-event-arrow" class:cloud-event-arrow--down={event.endsWith('set')} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                         <path d="M8 13V3M4.2 6.8 8 3l3.8 3.8"></path>
                     </svg>
                 </button>
             {/each}
             <input class="cloud-clock" type="time" step="60" value={displayedClock}
                 aria-label={zh ? '当地计算时间' : 'Local calculation time'}
-                title={zh ? '手动输入当地时间；点击日出或日落恢复自动时刻' : 'Enter local time; Sunrise or Sunset restores the event time'}
+                title={zh ? '手动输入当地时间；点击升落按钮恢复对应时刻' : 'Enter local time; rise/set buttons restore the event time'}
                 on:input={event => { manualClock = event.currentTarget.value; }} />
 
         </div>
@@ -245,6 +267,14 @@
     </div>
     </div>
     <p class="cloud-muted cloud-height-description">{single ? (heightMode === 'auto' ? (zh ? '预报云底 · 一层参考不代表天空只有一层云' : 'Forecast cloud base · One reference does not describe every cloud layer') : (zh ? '手动高度 · 输入所关注云层的海拔高度' : 'Manual height · Enter the target cloud altitude AMSL')) : (zh ? '剖面采样云高 · 仅使用实际检出的云层' : 'Profile sample heights · Only detected layers are used')}</p>
+    {#if settings.body === 'auto' && scenarios.length}
+        <p class="cloud-muted" role="status">{zh ? `自动：遮蔽${bodyName} · 太阳中心在地平线上时选太阳，否则选月亮` : `Auto: Blocking ${bodyName} · Sun when its centre is above the horizon, otherwise Moon`}</p>
+    {/if}
+    {#if activeBody === 'moon' && scenarios[0] && !scenarios[0].position.sightlineAvailable}
+        <p class="cloud-error" role="status">{zh ? '月亮在地平线下，当前不可见，无法计算遮蔽月亮云距' : 'Moon is below the horizon and not visible; blocking distance is unavailable'}</p>
+    {:else if scenarios[0]?.position.altitude < 0}
+        <p class="cloud-error" role="status">{zh ? `${bodyName}中心在地平线下，遮蔽云距仅为几何参考` : `${bodyName} centre is below the horizon; blocking distance is a geometric reference only`}</p>
+    {/if}
     {#if !scenarios.length}
         <p class="cloud-error" role="status">{manualClock !== null ? (zh ? '请输入有效的当地时间' : 'Enter a valid local time') : (zh ? '该日暂无所选升落时刻' : 'Selected rise/set time unavailable for this date')}</p>
     {/if}
@@ -259,8 +289,9 @@
                 </select>
                 </span>
             </th>
-            <th scope="col" title={zh ? '遮蔽太阳云距' : 'Blocking Sun'}><span class="cloud-heading-line">{zh ? '遮蔽太阳' : 'Blocking'}</span><span class="cloud-heading-line">{zh ? '云距' : 'Sun'}</span><small>({units.distance})</small></th>
+            <th scope="col" title={zh ? `遮蔽${bodyName}云距` : `Blocking ${bodyName}`}><span class="cloud-heading-line">{zh ? `遮蔽${bodyName}` : 'Blocking'}</span><span class="cloud-heading-line">{zh ? '云距' : bodyName}</span><small>({units.distance})</small></th>
             <th scope="col" title={zh ? '地平线云距' : 'Clouds at Horizon'}><span class="cloud-heading-line">{#if zh}地平线{:else}<span class="cloud-heading-wide">Clouds at</span><span class="cloud-heading-compact">Clouds</span>{/if}</span><span class="cloud-heading-line">{zh ? '云距' : 'Horizon'}</span><small>({units.distance})</small></th>
+            <!-- Height-derived solar reference columns remain available for both targets. -->
             <th scope="col" title={zh ? '擦地云距' : 'Tangent distance'}><span class="cloud-heading-line">{zh ? '擦地' : 'Tangent'}</span><span class="cloud-heading-line">{zh ? '云距' : 'distance'}</span><small>({units.distance})</small></th>
             <th scope="col" title={zh ? '最远无云距' : 'Furthest No Clouds'}><span class="cloud-heading-wide">{#if zh}最远无云<br />距{:else}Furthest No<br />Clouds{/if}</span><span class="cloud-heading-compact"><span class="cloud-heading-line">{zh ? '最远' : 'Furthest'}</span><span class="cloud-heading-line">{zh ? '无云距' : 'clear'}</span></span><small>({units.distance})</small></th>
             <th scope="col" title={zh ? '该云高对应的太阳最低高度角' : 'Minimum solar altitude for this cloud height'}><span class="cloud-heading-line"><span class="cloud-heading-wide">{zh ? '太阳高度角' : 'Sun Altitude'}</span><span class="cloud-heading-compact">{zh ? '太阳' : 'Sun'}<br />{zh ? '高度角' : 'Altitude'}</span></span><span class="cloud-heading-line">∠</span></th>
@@ -294,7 +325,7 @@
                         <span>{layer ? `${row.mode === 'auto' ? '≈ ' : ''}${formatElevationM(layer.heightM, units.elevation)}` : '--'}</span>
                     {/if}
                     </div></th>
-                    <td class="cloud-sight"><small>{manualClock !== null ? (zh ? '自选' : 'Custom') : item.event.type === 'sunrise' ? (zh ? '日出' : 'Sunrise') : (zh ? '日落' : 'Sunset')}</small>{obstruction === null ? '--' : metrics.distance.convertNumber(obstruction * 1000, 2, units.distance).toFixed(2)}</td>
+                    <td class="cloud-sight"><small>{manualClock !== null ? (zh ? '自选' : 'Custom') : eventName(item.event.type)}</small>{obstruction === null ? '--' : metrics.distance.convertNumber(obstruction * 1000, 2, units.distance).toFixed(2)}</td>
                     <td>{geometry ? formatDistanceKm(geometry.horizonKm, units.distance) : '--'}</td>
                     <td class="cloud-band-value">{geometry ? formatDistanceKm(geometry.tangentKm, units.distance) : '--'}</td>
                     <td class="cloud-band-value">{geometry ? formatDistanceKm(geometry.clearKm, units.distance) : '--'}</td>
@@ -356,7 +387,7 @@
     </div>
     <div class="cloud-legend">
         {#each visibleBands as band}<span><i style={`border-color:${CLOUD_BAND_COLORS[band]}`}></i>{single ? (zh ? '参考云层' : 'Reference layer') : bandName(band)}</span>{/each}
-        <span><i class="sight"></i>{zh ? '遮蔽太阳云距' : 'Blocking Sun'}</span>
+        <span><i class="sight"></i>{zh ? `遮蔽${bodyName}云距` : `Blocking ${bodyName}`}</span>
         <span><i class="horizon"></i>{zh ? '地平线云距' : 'Clouds at Horizon'}</span>
         <span><i class="tangent"></i>{zh ? '擦地云距' : 'Tangent'}</span>
         <span><i class="far"></i>{zh ? '最远无云距' : 'Furthest No Clouds'}</span>
