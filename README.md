@@ -8,12 +8,12 @@
 
 ## 安装与使用
 
-当前版本：**0.10.3** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.3)
+当前版本：**0.10.4** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.4)
 
 将以下地址填入 Windy 的外部插件加载入口，加载后打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.3/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.js
 ```
 
 1. 单击地图选点，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写高德、百度或腾讯地图 API Key。
@@ -56,7 +56,7 @@ npm start
 npm run build
 ```
 
-产物位于 `dist/`，包括脚本、`plugin.json` 和 `screenshot.jpg`。正式更新日志从最新 tag 的同一快照读取整个 minor 系列，必须通过生产解析器的回归测试。
+产物位于 `dist/`，包括脚本、`plugin.json` 和 `screenshot.jpg`。正式版本与更新日志从 Netlify 读取完整 minor 系列快照，发布时在 Windy 上传成功后自动同步，并通过生产解析器验证。配置与失败恢复见[更新托管说明](docs/update-hosting.md)。
 
 ## 反馈与许可
 

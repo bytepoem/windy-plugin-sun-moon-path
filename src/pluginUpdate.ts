@@ -48,9 +48,10 @@ export const selectPluginLinkVersion = (
     result: Pick<PluginUpdateResult, 'status' | 'latestVersion'>,
 ): string => result.status === 'current' ? currentVersion : result.latestVersion;
 
-interface GithubPackageManifest {
+interface UpdateManifest {
     name: string;
     version: string;
+    notesUrl: string;
 }
 
 interface ParsedSemanticVersion {
@@ -339,15 +340,52 @@ const loadReleaseNoteSeries = async ({
     };
 };
 
-const isGithubPackageManifest = (
+const isUpdateManifest = (
     value: unknown,
     repository: string,
-): value is GithubPackageManifest => {
+): value is UpdateManifest => {
     if (!value || typeof value !== 'object') {
         return false;
     }
-    const candidate = value as Partial<GithubPackageManifest>;
-    return candidate.name === repository && isNonEmptyString(candidate.version);
+    const candidate = value as Partial<UpdateManifest>;
+    return candidate.name === repository && isNonEmptyString(candidate.version) && isNonEmptyString(candidate.notesUrl);
+};
+
+export const updateManifestUrl = 'https://bytepoem-windy-updates.netlify.app/latest.json';
+
+/** Validate a whole release snapshot; missing, duplicate or mixed-series entries are errors. */
+export const parseUpdateSnapshot = (value: unknown, version: string): UserFacingReleaseNotes[] => {
+    const snapshot = value as { version?: unknown; seriesNotes?: unknown } | null;
+    if (!snapshot || snapshot.version !== version || parseSemanticVersion(version).prerelease.length) {
+        throw new Error('Invalid update snapshot version');
+    }
+    const notes = parseReleaseNoteSeries(snapshot.seriesNotes, version);
+    const expected = releaseSeriesVersions(version);
+    if (!notes || notes.length !== expected.length || notes.some((note, index) => note.version !== expected[index])) {
+        throw new Error('Incomplete or invalid update snapshot');
+    }
+    return notes;
+};
+
+/** Fetch a single immutable snapshot from the same trusted origin as the manifest. */
+const loadUpdateSnapshot = async (manifest: UpdateManifest, fetchImpl: typeof fetch, signal?: AbortSignal) => {
+    const url = new URL(manifest.notesUrl, updateManifestUrl);
+    if (url.origin !== new URL(updateManifestUrl).origin || url.username || url.password
+        || url.pathname !== `/${manifest.version}/notes.json` || url.search || url.hash) {
+        throw new Error('Invalid update notes URL');
+    }
+    try {
+        const response = await fetchImpl(url.href, { signal });
+        if (!response.ok) {
+            throw new Error(`Update notes request failed with ${response.status}`);
+        }
+        return { notes: parseUpdateSnapshot(await response.json(), manifest.version), status: 'loaded' as const };
+    } catch (error) {
+        if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+            throw error;
+        }
+        return { notes: [], status: 'error' as const };
+    }
 };
 
 const resolveSessionCache = (): SessionCache | null => {
@@ -439,7 +477,7 @@ const parseCachedResult = (
             if (currentCandidate.notesStatus !== 'loaded' && currentCandidate.notesStatus !== 'missing') {
                 return null;
             }
-            const seriesNotes = parseReleaseNoteSeries(currentCandidate.seriesNotes, candidate.latestVersion);
+            const seriesNotes = parseUpdateSnapshot({ version: candidate.latestVersion, seriesNotes: currentCandidate.seriesNotes }, candidate.latestVersion);
             const notes = currentCandidate.notes === null
                 ? null
                 : parseUserFacingReleaseNotes(currentCandidate.notes, candidate.latestVersion);
@@ -471,7 +509,7 @@ const parseCachedResult = (
             if (availableCandidate.notesStatus !== 'loaded' && availableCandidate.notesStatus !== 'missing') {
                 return null;
             }
-            const seriesNotes = parseReleaseNoteSeries(availableCandidate.seriesNotes, candidate.latestVersion);
+            const seriesNotes = parseUpdateSnapshot({ version: candidate.latestVersion, seriesNotes: availableCandidate.seriesNotes }, candidate.latestVersion);
             const notes = availableCandidate.notes === null
                 ? null
                 : parseUserFacingReleaseNotes(availableCandidate.notes, candidate.latestVersion);
@@ -538,8 +576,7 @@ const writeCachedResult = (cache: SessionCache | null, key: string, result: Plug
 
 /**
  * Preview the local beta notes when configured; otherwise read the version already
- * merged to the repository's main branch and load notes pinned to its matching tag.
- * GitHub Raw avoids the shared anonymous REST API rate limit without exposing a token.
+ * published on Netlify and its complete version-pinned snapshot. No GitHub request is needed.
  */
 export const checkPluginUpdate = async ({
     currentVersion,
@@ -578,7 +615,7 @@ export const checkPluginUpdate = async ({
         };
     }
 
-    const cacheKey = `github:${owner}/${repository}:update-check:v8:${normalizedCurrentVersion}`;
+    const cacheKey = `netlify:${owner}/${repository}:update-check:v1:${normalizedCurrentVersion}`;
     const cachedResult = readCachedResult(
         sessionCache,
         cacheKey,
@@ -591,27 +628,23 @@ export const checkPluginUpdate = async ({
     }
 
     const manifestResponse = await fetchImpl(
-        `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/main/package.json`,
+        updateManifestUrl,
         { signal },
     );
     if (!manifestResponse.ok) {
-        throw new Error(`GitHub version file request failed with ${manifestResponse.status}`);
+        throw new Error(`Update manifest request failed with ${manifestResponse.status}`);
     }
     const manifestValue: unknown = await manifestResponse.json();
-    if (!isGithubPackageManifest(manifestValue, repository)) {
-        throw new Error('GitHub version file is invalid');
+    if (!isUpdateManifest(manifestValue, repository)) {
+        throw new Error('Update manifest is invalid');
     }
 
     const latestVersion = parseSemanticVersion(manifestValue.version).raw;
     const releaseUrl = buildGithubReleaseUrl(owner, repository, latestVersion);
-    const noteSeries = await loadReleaseNoteSeries({
-        // One immutable snapshot includes corrections to earlier notes without rewriting old tags.
-        notesBaseUrl: `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/${encodeURIComponent(latestVersion)}/release-notes/`,
-        versions: releaseSeriesVersions(latestVersion),
-        requiredVersion: latestVersion,
-        signal,
-        fetchImpl,
-    });
+    if (parseSemanticVersion(latestVersion).prerelease.length || latestVersion !== manifestValue.version) {
+        throw new Error('Invalid formal update version');
+    }
+    const noteSeries = await loadUpdateSnapshot(manifestValue, fetchImpl, signal);
     const notes = noteSeries.notes.find(note => compareSemanticVersions(note.version, latestVersion) === 0) ?? null;
     const notesStatus = noteSeries.status;
 

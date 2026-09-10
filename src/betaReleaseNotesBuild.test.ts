@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { checkPluginUpdate } from './pluginUpdate';
 
-import formalNotesSource from '../release-notes/0.10.3.json?raw';
+import formalNotesSource from '../release-notes/0.10.4.json?raw';
 import betaNotesSource from '../release-notes/beta.json?raw';
 import packageSource from '../package.json?raw';
 import pluginSource from './plugin.svelte?raw';
@@ -18,7 +18,7 @@ describe('beta release notes development asset', () => {
         };
         const formalNotes = JSON.parse(formalNotesSource) as typeof notes;
 
-        expect(notes.version).toBe('0.10.3');
+        expect(notes.version).toBe('0.10.4');
         expect(notes.releasedAt).toBe('2026-09-10');
         expect(formalNotes).toEqual(notes);
         expect(notes.zh.items.length).toBeGreaterThan(0);
@@ -38,10 +38,10 @@ describe('beta release notes development asset', () => {
 /** Exercise real release files through the same parser used by installed plugins. */
 describe('release note publishing contract', () => {
     const sources = import.meta.glob('../release-notes/*.json', { query: '?raw', import: 'default', eager: true });
-    it.each(['0.9.1', '0.10.1', '0.10.2', '0.10.3'])('loads the full current snapshot for installed %s', async currentVersion => {
+    it.each(['0.9.1', '0.10.1', '0.10.2', '0.10.3', '0.10.4'])('loads the full current snapshot for installed %s', async currentVersion => {
         const manifest = JSON.parse(packageSource);
         const requested: string[] = [];
-        const base = `https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/${manifest.version}/release-notes/`;
+        const base = `https://bytepoem-windy-updates.netlify.app/${manifest.version}/`;
         const result = await checkPluginUpdate({
             currentVersion,
             repositoryUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
@@ -49,19 +49,17 @@ describe('release note publishing contract', () => {
             fetchImpl: async url => {
                 const address = String(url);
                 requested.push(address);
-                if (address.endsWith('/main/package.json')) {
-                    return new Response(packageSource, { status: 200 });
+                if (address.endsWith('/latest.json')) {
+                    return new Response(JSON.stringify({ ...manifest, notesUrl: `./${manifest.version}/notes.json` }), { status: 200 });
                 }
-                const source = address.startsWith(base)
-                    ? sources[`../release-notes/${address.slice(base.length)}`]
-                    : undefined;
-                return new Response((source as string | undefined) ?? '', { status: source ? 200 : 404 });
+                const seriesNotes = Object.entries(sources).filter(([path]) => /0\.10\.[0-4]\.json$/.test(path)).map(([, source]) => JSON.parse(source as string));
+                return new Response(JSON.stringify({ version: manifest.version, seriesNotes }));
             },
         });
         expect(result.status).toBe(currentVersion === manifest.version ? 'current' : 'available');
         expect(result.notesStatus).toBe('loaded');
-        expect(result.seriesNotes.map(note => note.version)).toEqual(['0.10.3', '0.10.2', '0.10.1', '0.10.0']);
-        expect(requested.slice(1)).toEqual([`${base}0.10.3.json`, `${base}0.10.2.json`, `${base}0.10.1.json`, `${base}0.10.0.json`]);
+        expect(result.seriesNotes.map(note => note.version)).toEqual(['0.10.4', '0.10.3', '0.10.2', '0.10.1', '0.10.0']);
+        expect(requested.slice(1)).toEqual([`${base}notes.json`]);
     });
 
     for (const [path, source] of Object.entries(sources)) {

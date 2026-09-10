@@ -203,430 +203,77 @@ describe('checkPluginUpdate', () => {
         expect(fetchImpl).toHaveBeenNthCalledWith(2, 'https://localhost:9999/release-notes/0.9.0.json', { signal: undefined });
     });
 
-    it('reads the latest version from the raw main package without using the rate-limited GitHub API', async () => {
-        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
-            name: 'windy-plugin-sun-moon-path',
-            version: '0.8.1',
-        }));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toMatchObject({ status: 'current', channel: 'formal', latestVersion: '0.8.1' });
-        expect(fetchImpl).toHaveBeenCalledWith(
-            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/main/package.json',
-            { signal: undefined },
-        );
-    });
-
-    it('loads the current version release notes when the installed version is already current', async () => {
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
-            .mockResolvedValueOnce(jsonResponse({}, 404));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toMatchObject({
-            status: 'current',
-            latestVersion: '0.8.1',
-            releasedAt: '2026-08-29',
-            notes: currentUserNotes,
-            notesStatus: 'loaded',
-        });
-        expect(fetchImpl).toHaveBeenNthCalledWith(
-            2,
-            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/0.8.1/release-notes/0.8.1.json',
-            { signal: undefined },
-        );
-    });
-
-    it('does not show notes from an older formal version to a newer installed prerelease', async () => {
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
-            .mockResolvedValueOnce(jsonResponse({}, 404));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.9.0-beta.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toMatchObject({
-            status: 'current',
-            latestVersion: '0.8.1',
-            releasedAt: null,
-            notes: null,
-            notesStatus: 'missing',
-        });
-    });
-
-    it('rechecks when main catches up instead of caching an older formal version for a newer install', async () => {
+    const manifest = (version = '0.9.1') => ({ ...latestPackage(version), notesUrl: `./${version}/notes.json` });
+    const snapshot = { version: '0.9.1', seriesNotes: [patchUserNotes, userNotes] };
+    const cache = () => {
         const values = new Map<string, string>();
-        const sessionCache = {
-            getItem: (key: string) => values.get(key) || null,
-            setItem: (key: string, value: string) => values.set(key, value),
-        };
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
-            .mockResolvedValueOnce(jsonResponse({}, 404))
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
-            .mockResolvedValueOnce(jsonResponse(userNotes));
+        return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) };
+    };
 
-        const aheadResult = await checkPluginUpdate({
-            currentVersion: '0.9.0',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        });
-        const caughtUpResult = await checkPluginUpdate({
-            currentVersion: '0.9.0',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        });
-
-        expect(aheadResult).toMatchObject({
-            status: 'current',
-            latestVersion: '0.8.1',
-            releaseUrl: null,
-            notes: null,
-            notesStatus: 'missing',
-        });
-        expect(caughtUpResult).toMatchObject({
-            status: 'current',
-            latestVersion: '0.9.0',
-            releaseUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.9.0',
-            notes: userNotes,
-            notesStatus: 'loaded',
-        });
-        expect(fetchImpl).toHaveBeenCalledTimes(5);
-        expect(values.size).toBe(1);
+    it.each(['0.8.1', '0.9.1', '0.10.0-beta.1'])('loads Netlify in two requests for %s without GitHub', async currentVersion => {
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest())).mockResolvedValueOnce(jsonResponse(snapshot));
+        const result = await checkPluginUpdate({ currentVersion, repositoryUrl, fetchImpl, sessionCache: null });
+        expect(result.status).toBe(currentVersion === '0.8.1' ? 'available' : 'current');
+        expect(result.notesStatus).toBe(currentVersion === '0.10.0-beta.1' ? 'missing' : 'loaded');
+        expect(result.seriesNotes).toEqual(currentVersion === '0.10.0-beta.1' ? [] : snapshot.seriesNotes);
+        expect(fetchImpl.mock.calls.map(call => call[0])).toEqual([
+            'https://bytepoem-windy-updates.netlify.app/latest.json',
+            'https://bytepoem-windy-updates.netlify.app/0.9.1/notes.json',
+        ]);
     });
 
-    it('retries transient current-version notes failures instead of caching the missing log', async () => {
-        const values = new Map<string, string>();
-        const sessionCache = {
-            getItem: (key: string) => values.get(key) || null,
-            setItem: (key: string, value: string) => values.set(key, value),
-        };
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockRejectedValueOnce(new TypeError('network unavailable'))
-            .mockResolvedValueOnce(jsonResponse({}, 404))
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
-            .mockResolvedValueOnce(jsonResponse({}, 404));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({
-            status: 'current',
-            notes: null,
-            notesStatus: 'error',
-        });
-        expect(values.size).toBe(0);
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({
-            status: 'current',
-            notes: currentUserNotes,
-            notesStatus: 'loaded',
-        });
-        expect(fetchImpl).toHaveBeenCalledTimes(6);
-        expect(values.size).toBe(1);
+    it.each([
+        { ...snapshot, version: '0.9.0' },
+        { ...snapshot, seriesNotes: [patchUserNotes] },
+        { ...snapshot, seriesNotes: [patchUserNotes, patchUserNotes] },
+        { ...snapshot, seriesNotes: [patchUserNotes, currentUserNotes] },
+        { ...snapshot, seriesNotes: [{ ...patchUserNotes, releasedAt: '2026-02-30' }, userNotes] },
+        { ...snapshot, seriesNotes: [{ ...patchUserNotes, zh: { ...userNotes.zh, items: [{ type: 'added', text: 'bad' }] } }, userNotes] },
+    ])('rejects invalid snapshot without caching it: %j', async invalid => {
+        const sessionCache = { getItem: () => null, setItem: vi.fn() };
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest())).mockResolvedValueOnce(jsonResponse(invalid));
+        const result = await checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache });
+        expect(result).toMatchObject({ status: 'available', notesStatus: 'error', seriesNotes: [] });
+        expect(sessionCache.setItem).not.toHaveBeenCalled();
     });
 
-    it('loads user-facing notes from the matching release tag', async () => {
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
-            .mockResolvedValueOnce(jsonResponse(userNotes));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toEqual(expect.objectContaining({
-            status: 'available',
-            latestVersion: '0.9.0',
-            releasedAt: '2026-08-31',
-            releaseUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.9.0',
-            notes: userNotes,
-            notesStatus: 'loaded',
-        }));
-        expect(fetchImpl).toHaveBeenNthCalledWith(
-            2,
-            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/0.9.0/release-notes/0.9.0.json',
-            { signal: undefined },
-        );
+    it.each(['https://evil.example/0.9.1/notes.json', './0.9.0/notes.json', './0.9.1/notes.json?wrong=1'])('rejects an untrusted snapshot URL %s', async notesUrl => {
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ ...manifest(), notesUrl }));
+        await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache: null })).rejects.toThrow('Invalid update notes URL');
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
     });
 
-    it('loads every release note in the latest minor series from newest to oldest', async () => {
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.1')))
-            .mockResolvedValueOnce(jsonResponse(patchUserNotes))
-            .mockResolvedValueOnce(jsonResponse(userNotes));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.9.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toMatchObject({
-            status: 'current',
-            latestVersion: '0.9.1',
-            seriesNotes: [patchUserNotes, userNotes],
-            notesStatus: 'loaded',
-        });
-        expect(fetchImpl).toHaveBeenNthCalledWith(
-            3,
-            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/0.9.1/release-notes/0.9.0.json',
-            { signal: undefined },
-        );
-        expect(fetchImpl).toHaveBeenCalledTimes(3);
+    it('propagates cancellation instead of showing a retryable notes error', async () => {
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest())).mockRejectedValueOnce(new DOMException('cancelled', 'AbortError'));
+        await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache: null })).rejects.toMatchObject({ name: 'AbortError' });
     });
 
-    it('keeps loaded series entries visible and marks the result retryable when one entry fails', async () => {
+    it('retries failed snapshots then reuses a successful result', async () => {
+        const sessionCache = cache();
         const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.1')))
-            .mockResolvedValueOnce(jsonResponse(patchUserNotes))
-            .mockRejectedValueOnce(new TypeError('network unavailable'));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.9.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toMatchObject({
-            status: 'current',
-            latestVersion: '0.9.1',
-            notes: patchUserNotes,
-            seriesNotes: [patchUserNotes],
-            notesStatus: 'error',
-        });
-    });
-
-    it('treats a missing latest release note as retryable even when an older series note loads', async () => {
-        const values = new Map<string, string>();
-        const sessionCache = {
-            getItem: (key: string) => values.get(key) || null,
-            setItem: (key: string, value: string) => values.set(key, value),
-        };
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.1')))
-            .mockResolvedValueOnce(jsonResponse({}, 404))
-            .mockResolvedValueOnce(jsonResponse(userNotes));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.9.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({
-            status: 'current',
-            latestVersion: '0.9.1',
-            notes: null,
-            seriesNotes: [userNotes],
-            notesStatus: 'error',
-        });
-        expect(values.size).toBe(0);
-    });
-
-    it('keeps the update visible and retryable when the latest notes file is unavailable', async () => {
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
-            .mockResolvedValueOnce(jsonResponse({}, 404));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toMatchObject({
-            status: 'available',
-            latestVersion: '0.9.0',
-            releasedAt: null,
-            notes: null,
-            notesStatus: 'error',
-        });
-    });
-
-    it('rejects an invalid release date instead of displaying untrusted metadata', async () => {
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
-            .mockResolvedValueOnce(jsonResponse({ ...userNotes, releasedAt: '2026-02-30' }));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).resolves.toMatchObject({
-            status: 'available',
-            latestVersion: '0.9.0',
-            releasedAt: null,
-            notes: null,
-            notesStatus: 'error',
-        });
-    });
-
-    it('does not cache a transient notes failure and loads the notes on retry', async () => {
-        const values = new Map<string, string>();
-        const sessionCache = {
-            getItem: (key: string) => values.get(key) || null,
-            setItem: (key: string, value: string) => values.set(key, value),
-        };
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
-            .mockRejectedValueOnce(new TypeError('network unavailable'))
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.9.0')))
-            .mockResolvedValueOnce(jsonResponse(userNotes));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({
-            status: 'available',
-            latestVersion: '0.9.0',
-            notes: null,
-            notesStatus: 'error',
-        });
-        expect(values.size).toBe(0);
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({
-            status: 'available',
-            latestVersion: '0.9.0',
-            notes: userNotes,
-            notesStatus: 'loaded',
-        });
+            .mockResolvedValueOnce(jsonResponse(manifest())).mockResolvedValueOnce(jsonResponse({}, 404))
+            .mockResolvedValueOnce(jsonResponse(manifest())).mockResolvedValueOnce(jsonResponse(snapshot));
+        const options = { currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache };
+        expect((await checkPluginUpdate(options)).notesStatus).toBe('error');
+        expect((await checkPluginUpdate(options)).notesStatus).toBe('loaded');
+        expect((await checkPluginUpdate(options)).notesStatus).toBe('loaded');
         expect(fetchImpl).toHaveBeenCalledTimes(4);
-        expect(values.size).toBe(1);
     });
 
-    it('reuses a successful result within the browser session', async () => {
-        const values = new Map<string, string>();
-        const sessionCache = {
-            getItem: (key: string) => values.get(key) || null,
-            setItem: (key: string, value: string) => values.set(key, value),
-        };
-        const fetchImpl = vi.fn<typeof fetch>()
-            .mockResolvedValueOnce(jsonResponse(latestPackage('0.8.1')))
-            .mockResolvedValueOnce(jsonResponse(currentUserNotes))
-            .mockResolvedValueOnce(jsonResponse({}, 404));
-
-        await checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache });
-        await checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache });
-
-        expect(fetchImpl).toHaveBeenCalledTimes(3);
+    it('does not cache an older manifest for a newer installed version', async () => {
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest())).mockResolvedValueOnce(jsonResponse(snapshot));
+        const sessionCache = { getItem: () => null, setItem: vi.fn() };
+        await checkPluginUpdate({ currentVersion: '0.10.0', repositoryUrl, fetchImpl, sessionCache });
+        expect(sessionCache.setItem).not.toHaveBeenCalled();
     });
 
-    it('ignores malformed cached notes instead of rendering unvalidated session data', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v8:0.8.1';
-        const sessionCache = {
-            getItem: (key: string) => key === cacheKey
-                ? JSON.stringify({
-                    status: 'available',
-                    channel: 'formal',
-                    latestVersion: '0.9.0',
-                    releaseUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.9.0',
-                    notes: { ...userNotes, zh: { ...userNotes.zh, items: [{ type: 'deploy', text: 'internal' }] } },
-                    notesStatus: 'loaded',
-                })
-                : null,
-            setItem: vi.fn(),
-        };
-        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(latestPackage('0.8.1')));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({ status: 'current', latestVersion: '0.8.1' });
-        expect(fetchImpl).toHaveBeenCalledTimes(3);
+    it.each([null, {}, { ...manifest(), name: 'other' }, manifest('0.9.1-beta.1')])('rejects invalid manifest %j', async value => {
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(value));
+        await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache: null })).rejects.toThrow();
     });
 
-    it('ignores a cached release link outside the configured GitHub repository', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v8:0.8.1';
-        const sessionCache = {
-            getItem: (key: string) => key === cacheKey
-                ? JSON.stringify({
-                    status: 'available',
-                    channel: 'formal',
-                    latestVersion: '0.9.0',
-                    releaseUrl: 'https://example.com/releases/tag/0.9.0',
-                    notes: userNotes,
-                    notesStatus: 'loaded',
-                })
-                : null,
-            setItem: vi.fn(),
-        };
-        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(latestPackage('0.8.1')));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({ status: 'current', latestVersion: '0.8.1' });
-        expect(fetchImpl).toHaveBeenCalledTimes(3);
-    });
-
-    it('ignores a cached release link whose tag does not match the cached version', async () => {
-        const cacheKey = 'github:bytepoem/windy-plugin-sun-moon-path:update-check:v8:0.8.1';
-        const sessionCache = {
-            getItem: (key: string) => key === cacheKey
-                ? JSON.stringify({
-                    status: 'available',
-                    channel: 'formal',
-                    latestVersion: '0.9.0',
-                    releaseUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/unrelated',
-                    notes: null,
-                    notesStatus: 'missing',
-                })
-                : null,
-            setItem: vi.fn(),
-        };
-        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(latestPackage('0.8.1')));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache,
-        })).resolves.toMatchObject({ status: 'current', latestVersion: '0.8.1' });
-        expect(fetchImpl).toHaveBeenCalledTimes(3);
-    });
-
-    it('rejects failed GitHub version-file requests so the UI can offer a retry', async () => {
+    it('reports manifest network errors to the UI', async () => {
         const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({}, 403));
-
-        await expect(checkPluginUpdate({
-            currentVersion: '0.8.1',
-            repositoryUrl,
-            fetchImpl,
-            sessionCache: null,
-        })).rejects.toThrow('GitHub version file request failed with 403');
+        await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache: null })).rejects.toThrow('Update manifest request failed with 403');
     });
 });

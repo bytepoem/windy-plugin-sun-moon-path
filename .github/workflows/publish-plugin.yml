@@ -3,6 +3,10 @@ name: publish-plugin
 on:
     workflow_dispatch:
 
+concurrency:
+    group: publish-plugin
+    cancel-in-progress: false
+
 jobs:
     publish-plugin:
         runs-on: ubuntu-latest
@@ -10,14 +14,27 @@ jobs:
             contents: read
         env:
             WINDY_API_KEY: '${{ secrets.WINDY_API_KEY }}'
+            NETLIFY_AUTH_TOKEN: '${{ secrets.NETLIFY_AUTH_TOKEN }}'
         steps:
             - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            - name: Check publishing credentials
+              run: |
+                  test -n "$WINDY_API_KEY" || { echo "Missing WINDY_API_KEY"; exit 1; }
+                  test -n "$NETLIFY_AUTH_TOKEN" || { echo "Missing NETLIFY_AUTH_TOKEN"; exit 1; }
             - name: Build
               run: |
                   # npm 10.9.8 crashes while resolving the current Vitest peer dependency tree.
                   npm exec --yes --package=npm@11.12.1 -- npm install
                   npm test
+                  python3 scripts/test_publish_update_site.py
                   npm run build
+                  node scripts/build-update-site.mjs "$RUNNER_TEMP/update-site"
+                  node scripts/verify-update-site.mjs "$RUNNER_TEMP/update-site"
             - name: Publish Plugin
               run: |
                   if [ -z "$WINDY_API_KEY" ]; then
@@ -43,3 +60,7 @@ jobs:
                   fi
                   echo "Publishing plugin..."
                   curl -s --fail-with-body -XPOST 'https://node.windy.com/plugins/v1.0/upload' -H "x-windy-api-key: ${WINDY_API_KEY}" -F "plugin_archive=@../plugin.tar"
+            - name: Publish update metadata after Windy succeeds
+              run: python3 scripts/publish-update-site.py "$RUNNER_TEMP/update-site"
+            - name: Verify live update metadata
+              run: node scripts/verify-update-site.mjs

@@ -8,12 +8,12 @@ Plan sunrise, sunset, Moon and Milky Way photography on Windy with celestial dir
 
 ## Install and use
 
-Current version: **0.10.3** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.3)
+Current version: **0.10.4** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.4)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.3/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.js
 ```
 
 1. Click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own Amap, Baidu or Tencent Maps API Key in Settings.
@@ -56,8 +56,10 @@ Open [Windy Developer mode](https://www.windy.com/developer-mode) and load `http
 npm run build
 ```
 
-Output in `dist/` includes scripts, `plugin.json` and `screenshot.jpg`. Formal release history is read from one snapshot at the latest tag for the entire minor series and must pass regression tests using the production parser.
+Output in `dist/` includes scripts, `plugin.json` and `screenshot.jpg`. Formal release history is read from a complete Netlify snapshot for the minor series and must pass regression tests using the production parser.
 
 ## Feedback and license
 
 [Report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [MIT License](LICENSE)
+
+Update metadata and complete minor-series notes are hosted on Netlify and synchronized only after a successful Windy upload. See [publishing and recovery](docs/update-hosting.md).
