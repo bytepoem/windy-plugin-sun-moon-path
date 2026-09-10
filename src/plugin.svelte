@@ -744,6 +744,7 @@
             {:else if summaryTab === 'guide'}
                 <section class="module-about module-guide" aria-label={text.guideHeading}>
                     <p>{text.aboutDescription}</p>
+                    <p>{text.supportGuideHint}</p>
 
                     <section class="feature-guide" aria-labelledby="feature-guide-heading">
                         <h3 id="feature-guide-heading">{text.featureGuideHeading}</h3>
@@ -1213,6 +1214,21 @@
                                 </div>
                             </dl>
                         </div>
+                        <div class="about-actions" aria-label={text.aboutLinksLabel}>
+                            <a class="about-actions__github" href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutGithubLabel}</a>
+                            <a class="about-actions__issues" href={issuesUrl} target="_blank" rel="noreferrer">{text.aboutIssuesLabel}</a>
+                            <a class="about-actions__star" href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutStarLabel}</a>
+                            <a class="about-actions__xiaohongshu" href="https://xhslink.cn/o/rXpBcBK0Qy" target="_blank" rel="noopener noreferrer" aria-label={text.aboutXiaohongshuHint} title={text.aboutXiaohongshuHint}>{text.aboutXiaohongshuLabel}</a>
+                            <a class="about-actions__support" href="https://afdian.com/a/bytepoem" target="_blank" rel="noopener noreferrer">
+                                <svg class="about-support-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M7 7 6 2l4 2 2-3 2 3 4-2-1 5M8 14c-5 2-4 9 4 9s9-7 4-9M7 17l-4-2m14 2 4-3M19 11h4l-2 5Z" fill="#fff" stroke="#c52b38" stroke-width="1.3" stroke-linejoin="round"></path>
+                                    <path d="M18 11c0-2 2-2 3-5 0 3 3 3 3 5ZM6 10a6 5 0 1 0 12 0 6 5 0 1 0-12 0" fill="#fff" stroke="#c52b38" stroke-width="1.3"></path>
+                                    <path d="M9 10h.1m5.8 0h.1M10 12q2 2 4 0m-5 4h6" fill="none" stroke="#c52b38" stroke-width="1.5" stroke-linecap="round"></path>
+                                </svg>
+                                <span>{text.aboutSupportLabel}</span>
+                            </a>
+                        </div>
+                        <p>{text.aboutStarHint}</p>
                         <div
                             class="about-update"
                             class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}
@@ -1307,12 +1323,7 @@
                                 <button type="button" on:click={retryPluginUpdate}>{text.aboutUpdateRetry}</button>
                             {/if}
                         </div>
-                        <div class="about-actions" aria-label={text.aboutLinksLabel}>
-                            <a href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutGithubLabel}</a>
-                            <a href={issuesUrl} target="_blank" rel="noreferrer">{text.aboutIssuesLabel}</a>
-                            <a class="about-actions__star" href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutStarLabel}</a>
-                        </div>
-                        <p>{text.aboutStarHint}</p>
+
                     </div>
                 </section>
             {/if}
@@ -1656,6 +1667,10 @@
         aboutIssuesLabel: string;
         aboutStarLabel: string;
         aboutStarHint: string;
+        aboutSupportLabel: string;
+        aboutXiaohongshuLabel: string;
+        aboutXiaohongshuHint: string;
+        supportGuideHint: string;
         aboutUpdateChecking: string;
         aboutUpdateCurrent: string;
         aboutUpdateAvailable: string;
@@ -1886,10 +1901,14 @@
             aboutVersionLabel: '版本',
             aboutCurrentVersionDateLabel: '更新日期',
             aboutLinksLabel: '项目链接',
-            aboutGithubLabel: 'GitHub 仓库',
+            aboutGithubLabel: 'GitHub',
             aboutIssuesLabel: 'Issues',
             aboutStarLabel: 'Star',
             aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
+            aboutSupportLabel: '喜欢的话，请作者喝杯蜜雪冰城',
+            aboutXiaohongshuLabel: '小红书',
+            aboutXiaohongshuHint: '在小红书关注我',
+            supportGuideHint: '如果插件对你有帮助，可在「关于」通过爱发电自愿打赏，支持后续开发与维护，也可通过小红书入口关注作者。',
             aboutUpdateChecking: '正在检查新版本…',
             aboutUpdateCurrent: '暂无新版本。',
             aboutUpdateAvailable: '发现新版本',
@@ -2140,10 +2159,14 @@
             aboutVersionLabel: 'Version',
             aboutCurrentVersionDateLabel: 'Updated',
             aboutLinksLabel: 'Project links',
-            aboutGithubLabel: 'GitHub repo',
+            aboutGithubLabel: 'GitHub',
             aboutIssuesLabel: 'Issues',
             aboutStarLabel: 'Star',
             aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
+            aboutSupportLabel: 'Like it? Treat the author to MIXUE',
+            aboutXiaohongshuLabel: 'RedNote',
+            aboutXiaohongshuHint: 'Follow me on Xiaohongshu (RedNote)',
+            supportGuideHint: 'If this plugin helps, you can support its development and maintenance through the optional Afdian link in About, or follow the author on RedNote.',
             aboutUpdateChecking: 'Checking for a new version…',
             aboutUpdateCurrent: 'No new version is available.',
             aboutUpdateAvailable: 'New version available',
@@ -7448,7 +7471,7 @@
 
     .about-actions {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 6px;
     }
 
@@ -7457,12 +7480,14 @@
         align-items: center;
         justify-content: center;
         min-width: 0;
-        min-height: 32px;
-        padding: 0 8px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 6px;
-        color: var(--panel-text) !important;
-        background: rgba(255, 255, 255, 0.07);
+        height: 36px;
+        box-sizing: border-box;
+        padding: 0 6px;
+        border: 1px solid var(--about-action-border, #bac6d8);
+        border-radius: 8px;
+        color: var(--about-action-text, #27354b) !important;
+        background: var(--about-action-bg, #e2e8f0) !important;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
         font-size: 12px;
         font-weight: 700;
         line-height: 1.15;
@@ -7473,8 +7498,11 @@
     }
 
     .about-actions a:hover {
-        border-color: rgba(255, 255, 255, 0.3);
-        background: rgba(255, 255, 255, 0.13);
+        filter: brightness(1.08);
+    }
+
+    .about-actions a:active {
+        filter: brightness(0.94);
     }
 
     .about-actions a:focus-visible {
@@ -7482,14 +7510,49 @@
         outline-offset: 2px;
     }
 
-    .about-actions__star {
-        border-color: rgba(250, 204, 21, 0.64) !important;
-        color: #171717 !important;
-        background: #facc15 !important;
+    .about-actions__issues {
+        --about-action-border: #90c4e8;
+        --about-action-text: #164c70;
+        --about-action-bg: #cce8fa;
     }
 
-    .about-actions__star:hover {
-        background: #fde047 !important;
+    .about-actions__star {
+        --about-action-border: #edc568;
+        --about-action-text: #694609;
+        --about-action-bg: #ffe49a;
+    }
+
+    .about-actions__xiaohongshu {
+        --about-action-border: #efacb8;
+        --about-action-text: #992c44;
+        --about-action-bg: #ffdae2;
+    }
+
+    /* Keep the bilingual support label readable without narrowing the project links. */
+    .about-actions a.about-actions__support {
+        grid-column-start: 1;
+        grid-column-end: -1;
+        gap: 8px;
+        padding: 0 12px;
+        border-color: #f5c478;
+        color: #64330d !important;
+        background: linear-gradient(110deg, #fff2cb, #ffd394) !important;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    .about-actions a.about-actions__support:hover {
+        border-color: #ffdfa0;
+        background: linear-gradient(110deg, #fff7df, #ffe1af) !important;
+    }
+
+    .about-actions a.about-actions__support:active {
+        background: #ffd394 !important;
+    }
+
+    .about-support-icon {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
     }
 
     .sun-path-legend {

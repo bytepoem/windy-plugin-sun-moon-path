@@ -8,12 +8,12 @@ Plan sunrise, sunset, Moon and Milky Way photography on Windy with celestial dir
 
 ## Install and use
 
-Current version: **0.10.2** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.2)
+Current version: **0.10.3** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.3)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.2/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.3/plugin.min.js
 ```
 
 1. Click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own Amap, Baidu or Tencent Maps API Key in Settings.
@@ -30,7 +30,7 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.2/plugin.min.
 | Weather and observing | Windy / Open-Meteo sources and EC / GFS / ICON models, spanning available data from the past 6 hours to the next 5 days; weather, moonlight and target visibility inform observing windows |
 | Favorite comparisons | Reuse Windy favorites, search and sort locations, and compare weather, astronomy, elevation and David Lorenz 2025 light-pollution data |
 | Radar overlay | Keyless RainViewer radar over Windy layers, following the host timeline and showing the actual radar frame time |
-| Units and help | Follow Windy temperature, wind, precipitation, distance and elevation units; Guide explains usage and limits, while About shows version information and release notes |
+| Units and help | Follow Windy temperature, wind, precipitation, distance and elevation units; Guide explains usage and limits, while About shows version information, release notes, a [RedNote profile link](https://xhslink.cn/o/rXpBcBK0Qy) and an optional [Afdian support link](https://afdian.com/a/bytepoem) |
 
 ## Data limits
 

@@ -8,12 +8,12 @@
 
 ## 安装与使用
 
-当前版本：**0.10.2** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.2)
+当前版本：**0.10.3** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.3)
 
 将以下地址填入 Windy 的外部插件加载入口，加载后打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.2/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.3/plugin.min.js
 ```
 
 1. 单击地图选点，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写高德、百度或腾讯地图 API Key。
@@ -30,7 +30,7 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.2/plugin.min.
 | 天气与观测 | Windy / Open-Meteo 数据源和 EC / GFS / ICON 模型，覆盖可用的过去 6 小时至未来 5 天，结合天气、月光与目标可见性展示观测时段 |
 | 收藏对比 | 复用 Windy 收藏，可搜索、排序，比较天气、天文事件、海拔与 David Lorenz 2025 光污染数据 |
 | 雷达叠加 | RainViewer 无需 Key，可叠加到 Windy 图层并跟随宿主时间条，显示实际雷达时次 |
-| 单位与说明 | 跟随 Windy 温度、风速、降水、距离及海拔单位；「说明」提供图例与使用边界，「关于」显示版本及更新日志 |
+| 单位与说明 | 跟随 Windy 温度、风速、降水、距离及海拔单位；「说明」提供图例与使用边界，「关于」显示版本、更新日志、[小红书关注](https://xhslink.cn/o/rXpBcBK0Qy)及[爱发电自愿打赏入口](https://afdian.com/a/bytepoem) |
 
 ## 数据边界
 
