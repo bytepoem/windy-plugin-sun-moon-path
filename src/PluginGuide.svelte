@@ -30,6 +30,9 @@
 </script>
 
 <section class="module-about module-guide" aria-label={text.guideHeading}>
+    <p>{uiLanguage === 'zh'
+        ? '在主导航的云层下拉入口切换云层遮挡与云海预报。云海预报尚未上线。偏好设置和使用说明统一位于「设置」。'
+        : 'Use the cloud dropdown in the main navigation to switch cloud functions. Sea-of-clouds forecasting is not available yet. Preferences and this guide are both under Settings.'}</p>
     <p>{text.aboutDescription}</p>
     <p>{text.supportGuideHint}</p>
 

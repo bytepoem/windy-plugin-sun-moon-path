@@ -373,13 +373,18 @@
         class:map-bottom-module--mobile-collapsed={isMobileCollapsed}
         aria-label={text.sunMoonPanelLabel}
     >
-        <nav class="summary-tabs" role="tablist" aria-label={text.summaryViewsLabel}>
+        <nav class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
             <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => (summaryTab = 'events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
             {#if isMobileOrTablet && !isMobileFullscreen}
                 <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => (summaryTab = 'weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
             {/if}
-            <button id="summary-tab-clouds" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'clouds'} aria-selected={summaryTab === 'clouds'} tabindex={summaryTab === 'clouds' ? 0 : -1} on:click={() => (summaryTab = 'clouds')} on:keydown={event => handleSummaryTabKeydown(event, 'clouds')}>{uiLanguage === 'zh' ? '云层遮挡' : 'Clouds'}</button>
-            <button id="summary-tab-guide" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'guide'} aria-selected={summaryTab === 'guide'} tabindex={summaryTab === 'guide' ? 0 : -1} on:click={() => (summaryTab = 'guide')} on:keydown={event => handleSummaryTabKeydown(event, 'guide')}>{text.guideTab}</button>
+            <CloudNavigation
+                active={summaryTab === 'clouds'}
+                bind:view={cloudView}
+                language={uiLanguage}
+                on:activate={() => (summaryTab = 'clouds')}
+                on:tabkeydown={event => handleSummaryTabKeydown(event.detail, 'clouds')}
+            />
             <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => (summaryTab = 'settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
             <button
                 id="summary-tab-about"
@@ -413,6 +418,7 @@
         <div
             id="summary-panel"
             class="summary-panel-frame"
+            class:summary-panel-frame--settings={summaryTab === 'settings'}
             class:summary-panel-frame--events={summaryTab === 'events'}
             class:summary-panel-frame--clouds={summaryTab === 'clouds'}
             role={isMobileCollapsed ? 'region' : 'tabpanel'}
@@ -715,6 +721,7 @@
                     on:atmosphereretry={retryAtmosphere}
                 />
             {:else if summaryTab === 'clouds'}
+                {#if cloudView === 'obstruction'}
                 <CloudObstruction
                     bind:selectedCloudEvent={cloudEvent}
                     bind:timelineEvent={cloudTimelineEvent}
@@ -739,9 +746,20 @@
                     on:modelchange={handleWeatherModelChange}
                     on:retry={retryCloudWeather}
                 />
-            {:else if summaryTab === 'guide'}
-                <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
+                {:else}
+                    <section class="module-about" aria-label={uiLanguage === 'zh' ? '云海预报' : 'Sea of clouds'}>
+                        <h3>{uiLanguage === 'zh' ? '云海预报' : 'Sea of clouds'}</h3>
+                        <p>{uiLanguage === 'zh' ? '云海预报尚未上线，当前暂无预测结果。' : 'Sea-of-clouds forecasting is not available yet. No forecast results are shown.'}</p>
+                    </section>
+                {/if}
             {:else if summaryTab === 'settings'}
+                <div class="settings-pages" role="group" aria-label={text.settingsTab}>
+                    <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{uiLanguage === 'zh' ? '偏好设置' : 'Preferences'}</button>
+                    <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{uiLanguage === 'zh' ? '使用说明' : 'User guide'}</button>
+                </div>
+                {#if settingsPage === 'guide'}
+                    <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
+                {:else}
                 <section class="module-about module-settings" aria-label={text.settingsHeading}>
                     <div class="settings-select">
                         <label for="initial-overlay">{text.initialOverlayLabel}</label>
@@ -919,6 +937,7 @@
                         <span class="settings-toggle__control" aria-hidden="true"></span>
                     </label>
                 </section>
+                {/if}
             {:else}
                 <section class="module-about" aria-label={text.aboutHeading}>
                     <div class="about-hero">
@@ -1104,6 +1123,7 @@
     import { singleclick } from '@windy/singleclick';
     import store from '@windy/store';
     import { onDestroy, onMount, tick } from 'svelte';
+    import CloudNavigation from './CloudNavigation.svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
 
     import { translations, type UiLanguage } from './pluginTranslations';
@@ -1278,10 +1298,10 @@
         }
     })();
     type DirectionEvent = ObservationEvent;
-    type SummaryTab = 'events' | 'weather' | 'clouds' | 'guide' | 'settings' | 'about';
+    type SummaryTab = 'events' | 'weather' | 'clouds' | 'settings' | 'about';
     type MobilePanelMode = MobileNonFullscreenPanelMode | 'fullscreen';
-    const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'clouds', 'guide', 'settings', 'about'];
-    const desktopSummaryTabOrder: SummaryTab[] = ['events', 'clouds', 'guide', 'settings', 'about'];
+    const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'clouds', 'settings', 'about'];
+    const desktopSummaryTabOrder: SummaryTab[] = ['events', 'clouds', 'settings', 'about'];
     const timelineSkeletonSlots = Array.from({ length: 7 }, (_, index) => index);
     const eventOptions: { value: DirectionEvent }[] = [
         { value: 'all' },
@@ -1377,6 +1397,9 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let cloudView: 'obstruction' | 'sea' = 'obstruction';
+    let settingsPage: 'preferences' | 'guide' = 'preferences';
+    $: cloudObstructionVisible = summaryTab === 'clouds' && cloudView === 'obstruction';
     let tabBeforeCollapse: SummaryTab = 'events';
     let cloudSettings = createCloudSettings();
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
@@ -1511,14 +1534,14 @@
     // Observation evidence belongs to the Events view, so both compact data
     // views must trigger the same weather and atmosphere requests on mobile.
     // A collapsed cloud panel still owns a live map overlay and needs new-location forecasts.
-    $: shouldLoadVisibleWeatherData = summaryTab === 'clouds' || (!isMobileCollapsed
+    $: shouldLoadVisibleWeatherData = cloudObstructionVisible || (!isMobileCollapsed
         && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather'));
 
     // The galactic overlay owns its direction; do not pair it with a solar/lunar event ray.
     $: if (isMounted && summaryTab) {
-        const mapEvent = summaryTab === 'clouds' ? cloudMapEvent : selectedEvent;
+        const mapEvent = cloudObstructionVisible ? cloudMapEvent : selectedEvent;
         renderMapFeatures(mapEvent === null ? [] : selectObservationPaths(solarPaths, mapEvent),
-            summaryTab === 'clouds' ? cloudDirectionRangeKm : null, cloudPlanningTimestamp, cloudPlanningBody);
+            cloudObstructionVisible ? cloudDirectionRangeKm : null, cloudPlanningTimestamp, cloudPlanningBody);
     }
 
     $: if (mobilePluginRoot) {
@@ -1552,7 +1575,7 @@
             requestedAt: currentInstant.getTime(),
             contextReady: resolvedContextLocationKey === locationKey,
             visible: shouldLoadVisibleWeatherData,
-            cloudsVisible: summaryTab === 'clouds',
+            cloudsVisible: cloudObstructionVisible,
         });
     }
 
@@ -1793,16 +1816,16 @@
     };
 
     const selectedMapPaths = (paths = solarPaths): SolarPath[] => {
-        const mapEvent = summaryTab === 'clouds' ? cloudMapEvent : selectedEvent;
+        const mapEvent = cloudObstructionVisible ? cloudMapEvent : selectedEvent;
         return mapEvent === null ? [] : selectObservationPaths(paths, mapEvent);
     };
 
-    $: fitMapControlLabel = summaryTab === 'clouds' ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
+    $: fitMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
-    $: detailMapControlLabel = summaryTab === 'clouds' ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
+    $: detailMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
         : text.restoreSearchZoomLabel;
 
-    $: canFitDirectionLines = summaryTab === 'clouds' ? cloudBounds !== null : buildDirectionLineFitBounds({
+    $: canFitDirectionLines = cloudObstructionVisible ? cloudBounds !== null : buildDirectionLineFitBounds({
         location: selectedLocation,
         // Keep the reactive inputs explicit: Svelte cannot infer state read
         // from inside selectedMapPaths(), so an async path refresh would
@@ -1836,7 +1859,7 @@
 
     /** Fits the currently rendered 400/600 km event lines into the unobscured map area. */
     const fitVisibleDirectionLines = (detail: boolean | MouseEvent = false) => {
-        const bounds = summaryTab === 'clouds' ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
+        const bounds = cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
             location: selectedLocation,
             paths: selectedMapPaths(),
             showExtendedDistanceMarker,
@@ -1890,7 +1913,7 @@
 
     /** Restores the selected location to the exact zoom used after a search result is chosen. */
     const restoreSearchLocationZoom = () => {
-        if (summaryTab === 'clouds') {fitVisibleDirectionLines(true); return;}
+        if (cloudObstructionVisible) {fitVisibleDirectionLines(true); return;}
         recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
@@ -2119,11 +2142,11 @@
     };
 
     /** Both full redraws and the periodic refresh honour the cloud preview instant. */
-    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => summaryTab === 'clouds'
+    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => cloudObstructionVisible
         ? cloudMapDirections(planningTimestamp, selectedLocation, planningBody)
         : { currentSun: currentSolarDirection, currentMoon: currentMoonInfo };
 
-    const renderMapFeatures = (paths: SolarPath[], directionRangeKm = summaryTab === 'clouds' ? cloudDirectionRangeKm : null,
+    const renderMapFeatures = (paths: SolarPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
         planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => {
         mapOverlayController.render({
             location: selectedLocation,
@@ -2131,7 +2154,7 @@
             ...mapCurrentDirections(planningTimestamp, planningBody),
             showExtendedDistanceMarker,
             opacityPercent: directionLineOpacityPercent,
-            showDistanceMarkers: summaryTab !== 'clouds',
+            showDistanceMarkers: !cloudObstructionVisible,
             directionRangeKm,
             originLabel: text.legend.origin,
             eventNames: text.events,
@@ -3342,7 +3365,11 @@
     }
 
     .sun-path-panel.mobile_ui .summary-tabs {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .sun-path-panel.mobile_ui .summary-tabs.summary-tabs--weather {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
@@ -3434,7 +3461,7 @@
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .panel-intro,
@@ -4240,9 +4267,54 @@
 
     .summary-tabs {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         border-bottom: 1px solid var(--panel-border);
         background: rgba(255, 255, 255, 0.04);
+    }
+
+    .summary-tabs.summary-tabs--weather {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .summary-panel-frame--settings {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .summary-panel-frame--settings > :global(.module-about) {
+        flex: 1;
+        min-height: 0;
+        height: auto;
+    }
+
+    .settings-pages {
+        flex-shrink: 0;
+        display: flex;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--panel-border);
+    }
+
+    .settings-pages button {
+        flex: 1;
+        min-height: 36px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--panel-muted);
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .settings-pages button.active {
+        color: var(--panel-text);
+        background: rgba(99, 185, 238, 0.14);
+        border-color: var(--panel-accent);
+    }
+
+    .settings-pages button:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: -2px;
     }
 
     .summary-tabs button {
@@ -5777,7 +5849,7 @@
         }
 
         .summary-tabs {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
         .sun-path-panel.mobile_ui .control-grid {

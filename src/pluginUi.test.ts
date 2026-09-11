@@ -593,11 +593,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toMatch(
             /\.settings-api-key__control button\s*{[\s\S]*?min-height: 30px;/,
         );
-        expect(pluginSource).toMatch(
-            /\.sun-path-panel\.mobile_ui \.settings-select select,\s*\.sun-path-panel\.mobile_ui \.settings-api-key__control input\s*{[\s\S]*?height: 44px;/,
-        );
-        expect(pluginSource).toMatch(
-            /\.sun-path-panel\.mobile_ui \.settings-api-key__control button\s*{[\s\S]*?min-height: 44px;/,
+        // Settings controls share desktop dimensions; do not restore mobile-only sizing.
+        expect(pluginSource).not.toMatch(
+            /\.sun-path-panel\.mobile_ui \.settings-(?:select select|api-key__control (?:input|button)|pages button)\s*[,\{]/,
         );
     });
 

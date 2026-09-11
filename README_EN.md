@@ -26,11 +26,11 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.
 | Feature | Purpose |
 | --- | --- |
 | Sun and Moon directions | Rise/set rays sampled 30 minutes before and after each event, live directions, 200 / 400 km reference points and an optional 600 km marker |
-| Cloud planning | Six rise/set buttons select Sun, Moon or Galactic Center; single/layered heights from forecast base, cloud-cover profile, temperature/dew-point profile or manual input, mapped sightline intersections and distance envelopes, with a bilingual illustrated guide |
+| Cloud planning | The Clouds dropdown selects a cloud function (sea-of-clouds forecasting is not available yet); six rise/set buttons select Sun, Moon or Galactic Center; single/layered heights from forecast base, cloud-cover profile, temperature/dew-point profile or manual input, mapped sightline intersections and distance envelopes, with a bilingual illustrated guide |
 | Weather and observing | Windy / Open-Meteo sources and EC / GFS / ICON models, spanning available data from the past 6 hours to the next 5 days; weather, moonlight and target visibility inform observing windows |
 | Favorite comparisons | Reuse Windy favorites, search and sort locations, and compare weather, astronomy, elevation and David Lorenz 2025 light-pollution data |
 | Radar overlay | Keyless RainViewer radar over Windy layers, following the host timeline and showing the actual radar frame time |
-| Units and help | Follow Windy temperature, wind, precipitation, distance and elevation units; Guide explains usage and limits, while About shows version information, release notes, a [RedNote profile link](https://xhslink.cn/o/rXpBcBK0Qy) and an optional [Afdian support link](https://afdian.com/a/bytepoem) |
+| Units and help | Follow Windy temperature, wind, precipitation, distance and elevation units; Settings → User guide explains usage and limits, while About shows version information, release notes, a [RedNote profile link](https://xhslink.cn/o/rXpBcBK0Qy) and an optional [Afdian support link](https://afdian.com/a/bytepoem) |
 
 ## Data limits
 
