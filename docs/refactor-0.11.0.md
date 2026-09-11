@@ -1,10 +1,10 @@
-# 0.11.0 内部重构契约
+# 预报请求与组件职责
 
-基线：main a225462。保持用户可见功能、存储 key、数据源选择、版本及发布快照不变。
+本文保留 0.11.0 重构形成的模块边界与请求契约；文件名沿用原路径。具体版本与变更记录见 package.json 和 release-notes/。
 
 ## 职责
 
-- 天气 provider：统一 Windy 请求参数及 Open-Meteo 分支，返回标准天气和 Windy 原始预报；不管理 UI、缓存或跨地点并发。
+- 天气 provider：统一 Windy / Open-Meteo 来源选择与数据转换，返回标准天气和 Windy 原始预报；不管理 UI、缓存或跨地点并发。
 - 预报 controller：拥有天气、大气补充数据和云层请求的身份、取消、结果、重试与合并；每个插件实例独立。
 - 主组件：传入地点、模型、来源、时间桶与可见性，显示状态；天文地点上下文和地图交互继续由既有模块负责。
 - 收藏对比：复用 provider，保留原有双地点并发限制和 session。
@@ -21,7 +21,7 @@
 | 显式重试相同 key | 旧请求失效，新请求获得唯一身份 | 旧请求 resolve/reject/finally 不干扰新请求 |
 | Open-Meteo 天气 + 云层 Tab | 天气独立加载，云层只读 Windy | 云层失败不污染天气状态 |
 | Windy 天气 + 云层 Tab | 云层复用天气原始 payload | 不重复请求 Windy |
-| 移动端收起普通详情 | 中止尚未完成的详情请求，已完成结果保留 | 展开可重新加载；云层收起仍按既有规则显示 |
+| 移动端收起普通详情 | 中止尚未完成的详情请求，已完成结果保留 | 展开可重新加载；云层 Tab 收起时销毁子组件，展开后重建 |
 | 地点相同但用户显式重新定位 | 失效现有天气/大气/云层结果，等待上下文 | 不能被旧请求恢复 |
 | 销毁或实例替换 | abort 所有请求，停止结果通知 | 不恢复请求，不修改地图、DOM 或组件状态 |
 
@@ -29,21 +29,14 @@
 
 ## 验证
 
-通过 provider 测试和受控 Promise 的 controller 测试验证以上时序。迁出的偏好增加存储行为测试。UI 静态测试仅保留布局契约，不用源码字符串证明请求行为。运行全套测试及生产构建，检查清理注册点，基于全部 staged/unstaged/untracked 快照复审。组件拆分还需本地 Windy 验收。
+通过 provider 测试和受控 Promise 的 controller 测试验证以上时序。偏好模块通过存储行为测试验证。UI 静态测试仅保留布局契约，不用源码字符串证明请求行为。运行全套测试及生产构建，检查清理注册点，基于全部 staged/unstaged/untracked 快照复审。组件拆分还需本地 Windy 验收。
 
-## 本次验收记录（2026-09-11）
+## 实现入口
 
-- `npm test`：40 个文件、383 项测试通过，较基线新增 19 项 provider/controller/偏好行为测试。
-- `SERVE=false npx rollup -c`：生产模式构建通过；构建元数据仍为 0.10.4，截图字段为 screenshot.jpg，文件存在。本轮仅建立 0.11.0 开发分支，不修改版本或发布快照。
-- `tsc --noEmit --incremental false`：有 8 条既有错误。将 HEAD 基线导出到临时目录并使用同一依赖运行，去掉目录前缀后报错逐字一致；涉及 ImportMeta.glob、pluginUpdate.ts 的 never 推断和 updateSiteBuild.test.ts 的 Node 类型。未在本轮扩展根配置或修复无关问题。
-- 本地 Windy Developer mode：已安装当前 localhost:9999/plugin.js。说明组件 DOM 样式标识与本地产物一致；桌面中英文说明、Open-Meteo 天气加载、独立 Windy 云层几何正常。
-- 390px 移动模拟：说明区无横向溢出，紧凑模式保留 6px 10px 10px padding；全屏、收起及恢复说明 Tab 正常。
-- 关闭与重开：关闭动画结束后面板和地图标记为 0；通过既有 rqstOpen 事件重开后恢复单实例、地图标记和天气/观测证据。
-- 已关闭隔离验收窗口；npm start watcher 按项目约定继续运行。
-- 未更改用户可见功能，故不改中英文 README、功能说明文案、正式简介、截图或版本日志。未 commit、push 或发布。
+- [weatherProvider.ts](../src/weatherProvider.ts)：数据来源选择，Windy 原始云层预报与标准天气结果。
+- [forecastController.ts](../src/forecastController.ts)：天气、大气、云层三通道；通过 key 识别可复用结果，通过 AbortController 身份区分同 key 重试。
+- [plugin.svelte](../src/plugin.svelte)：传递输入并显式接收 update 返回的同步快照，使 loading 状态在同一次响应式更新中显示；异步完成通过回调通知。
+- [favoriteComparison.ts](../src/favoriteComparison.ts)：收藏对比会话。
+- [forecastController.test.ts](../src/forecastController.test.ts)、[weatherProvider.test.ts](../src/weatherProvider.test.ts)：请求时序与来源行为验证。
 
-## 后续 UI 修正
-
-- 天气模型/来源切换时，在工具栏增加转圈与细进度线；收藏对比的模型刷新提示增加转圈。动画仅由请求状态驱动，不引入延时或新计时器，支持减少动态效果偏好。
-- 启动图层的显示名称跟随插件自身中英文选择，不再调用返回 Windy 全局界面语言的 getMenuName。图层标识、选中值和存储行为保持不变。
-- 修正 Svelte 同步加载状态依赖：controller.update 返回当前快照，主组件显式赋值，确保 loading 派生值在切换的同一次响应式更新中刷新；异步完成继续通过回调通知。浏览器 MutationObserver 已验证模型切换真实出现 loading/spinner，而非仅按钮选中态变化。
+加载动画只由请求状态驱动，不新增计时器。销毁是终态：即使底层请求忽略取消，其 resolve、reject 和 finally 也不能恢复状态或发出通知。
