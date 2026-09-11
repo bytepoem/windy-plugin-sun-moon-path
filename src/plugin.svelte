@@ -3493,7 +3493,7 @@
         font-size: 7px;
     }
 
-    .sun-path-panel.mobile_ui .module-about {
+    .sun-path-panel.mobile_ui .module-about:not(.module-settings) {
         padding: 6px 10px 10px;
     }
 
@@ -5197,16 +5197,6 @@
         font-size: 12px;
         font-weight: 700;
         cursor: pointer;
-    }
-
-    /* Preserve full-size touch targets on the mobile Settings Tab. */
-    .sun-path-panel.mobile_ui .settings-select select,
-    .sun-path-panel.mobile_ui .settings-api-key__control input {
-        height: 44px;
-    }
-
-    .sun-path-panel.mobile_ui .settings-api-key__control button {
-        min-height: 44px;
     }
 
     .settings-api-key__control button:hover:not(:disabled) {
