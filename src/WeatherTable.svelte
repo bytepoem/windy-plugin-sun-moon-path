@@ -311,7 +311,8 @@
 </script>
 
 <section class="weather-panel" aria-label={language === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
-    <header class="weather-toolbar">
+    <header class="weather-toolbar" class:weather-toolbar--loading={status === 'loading' || atmosphereStatus === 'loading'}>
+        <!-- Keep source/model controls interactive while the newest request supersedes earlier work. -->
         <div class="weather-model-control weather-source-control" role="group" aria-label={language === 'zh' ? '天气数据源' : 'Weather source'}>
             {#each sourceOptions as provider}
                 <button type="button" class:active={source === provider} aria-pressed={source === provider}
@@ -345,6 +346,12 @@
                 ICON
             </button>
         </div>
+        <span class="weather-loading-indicator" role="status" aria-live="polite">
+            {#if status === 'loading' || atmosphereStatus === 'loading'}
+                <span class="weather-spinner weather-spinner--toolbar" aria-hidden="true"></span>
+                <span class="visually-hidden">{text.loading}</span>
+            {/if}
+        </span>
     </header>
     {#if atmosphereStatus === 'error'}
         <div class="weather-date-notice" role="status">
@@ -363,7 +370,7 @@
     {/if}
 
     {#if status === 'loading' && points.length === 0}
-        <div class="weather-state" aria-live="polite">
+        <div class="weather-state" aria-hidden="true">
             <span class="weather-spinner" aria-hidden="true"></span>
             <span>{text.loading}</span>
         </div>
@@ -584,9 +591,10 @@
     }
 
     .weather-toolbar {
+        position: relative;
         display: grid;
         flex-shrink: 0;
-        grid-template-columns: auto auto;
+        grid-template-columns: auto auto 16px;
         justify-content: start;
         align-items: center;
         gap: 8px;
@@ -594,6 +602,51 @@
         padding: 4px 8px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.14);
         background: #171f32;
+    }
+
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .weather-loading-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        min-height: 16px;
+    }
+
+    .weather-spinner.weather-spinner--toolbar {
+        display: inline-block;
+        box-sizing: border-box;
+        width: 14px;
+        height: 14px;
+    }
+
+    /* The progress line remains visible next to the controls even in a short mobile panel. */
+    .weather-toolbar--loading::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 2px;
+        background: #8ed0ff;
+        transform-origin: left;
+        animation: weather-progress 1.2s ease-in-out infinite;
+        content: '';
+    }
+
+    @keyframes weather-progress {
+        0%, 100% { opacity: 0.35; transform: scaleX(0.15); }
+        50% { opacity: 1; transform: scaleX(1); }
     }
 
     .weather-model-control {
@@ -1059,7 +1112,7 @@
         }
 
         .weather-toolbar {
-            grid-template-columns: auto auto;
+            grid-template-columns: auto auto 16px;
             gap: 8px;
             min-height: 36px;
             padding: 4px 6px;
@@ -1076,7 +1129,8 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .weather-spinner {
+        .weather-spinner,
+        .weather-toolbar--loading::after {
             animation: none;
         }
     }

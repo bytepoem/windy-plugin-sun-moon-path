@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     DEFAULT_INITIAL_OVERLAY,
     INITIAL_OVERLAY_PRIORITY,
+    initialOverlayLabel,
     KEEP_CURRENT_OVERLAY,
     normalizeInitialOverlayPreference,
     orderInitialOverlayOptions,
@@ -68,5 +69,15 @@ describe('initial overlay preference', () => {
         expect(normalizeInitialOverlayPreference('unknown-overlay', availableOverlays)).toBe(
             DEFAULT_INITIAL_OVERLAY,
         );
+    });
+});
+
+
+describe('plugin-language overlay names', () => {
+    it('changes labels without changing overlay identifiers or selection', () => {
+        const options = orderInitialOverlayOptions([{ value: 'clouds' }, { value: 'satellite' }, { value: 'wind' }] as const);
+        expect(options.map(option => initialOverlayLabel(option.value, 'en'))).toEqual(['Satellite', 'Clouds', 'Wind']);
+        expect(options.map(option => initialOverlayLabel(option.value, 'zh'))).toEqual(['卫星', '云', '风']);
+        expect(normalizeInitialOverlayPreference('satellite', options.map(option => option.value))).toBe('satellite');
     });
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getElevation, getPointForecastData, getTimezoneInfo } from '@windy/fetch';
+    import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { createEventDispatcher, onDestroy, tick } from 'svelte';
 
     import {
@@ -10,11 +10,10 @@
     } from './favoriteComparison';
     import { fetchLightPollutionPoint } from './lightPollution';
     import { compactLocationLabel } from './location';
-    import { fetchOpenMeteoAtmosphere, fetchOpenMeteoWeather } from './openMeteo';
+    import { fetchOpenMeteoAtmosphere } from './openMeteo';
+    import { windyWeatherProvider } from './windyWeatherProvider';
     import {
-        transformWeatherPayload,
         weatherConditionLabel,
-        type WeatherForecastPayload,
         type WeatherModel,
         type WeatherSource,
     } from './weather';
@@ -140,28 +139,9 @@
         ).data,
         getAtmosphere: (location, _requestedAt, signal, source) => fetchOpenMeteoAtmosphere({ location, signal, includeVisibility: source === 'windy' }),
         getLightPollution: (location, signal) => fetchLightPollutionPoint(location, signal),
-        getWeather: async (location, weatherModel, requestedAt, signal, source) => {
-            if (source === 'open-meteo') {
-                return fetchOpenMeteoWeather({ location, model: weatherModel, requestedAt, signal });
-            }
-            const response = await getPointForecastData(
-                weatherModel,
-                {
-                    lat: location.lat,
-                    lon: location.lon,
-                    days: 5,
-                    step: 1,
-                    source: 'detail',
-                },
-                {
-                    header: true,
-                    meteogram: true,
-                    sounding: true,
-                },
-                { abortSignal: signal },
-            );
-            return transformWeatherPayload(response.data as WeatherForecastPayload, requestedAt);
-        },
+        getWeather: async (location, weatherModel, requestedAt, signal, source = 'windy') => (
+            await windyWeatherProvider.weather({ location, model: weatherModel, requestedAt, signal, source })
+        ).points,
     });
 
     let text = labels.zh;
@@ -573,7 +553,10 @@
         {:else}
             <section class="favorite-comparison__conditions" class:loading={modelLoading} aria-label={text.conditions}>
                 {#if modelLoading}
-                    <p class="favorite-comparison__model-status" role="status">{text.loadingModel}</p>
+                    <p class="favorite-comparison__model-status" role="status">
+                        <span class="favorite-comparison__spinner" aria-hidden="true"></span>
+                        {text.loadingModel}
+                    </p>
                 {/if}
                 <div class="favorite-comparison__table-wrap">
                     <table style={`--comparison-table-width: ${122 + results.length * 80}px`}>
@@ -1034,6 +1017,9 @@
     }
 
     .favorite-comparison__model-status {
+        display: flex;
+        align-items: center;
+        gap: 5px;
         position: absolute;
         z-index: 2;
         top: 4px;
@@ -1188,6 +1174,17 @@
         thead th:first-child,
         tbody th {
             width: 118px;
+        }
+    }
+    .favorite-comparison__model-status .favorite-comparison__spinner {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .favorite-comparison__spinner {
+            animation: none;
         }
     }
 </style>

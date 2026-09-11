@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { translations } from './pluginTranslations';
+import guideSource from './PluginGuide.svelte?raw';
 
 import favoriteComparisonSource from './FavoriteComparison.svelte?raw';
 import favoriteLocationsSource from './FavoriteLocations.svelte?raw';
@@ -173,8 +175,8 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('paddingLeft: visibleViewport.centerPaddingLeft');
         expect(pluginSource).toContain('MOBILE_MAP_RECENTER_DELAY_MS');
         expect(pluginSource).toContain('clearTimeout(mapDetailRecenterTimer)');
-        expect(pluginSource).toContain("fitDirectionLinesLabel: distance => `完整显示 ${distance} 方位线`");
-        expect(pluginSource).toContain("restoreSearchZoomLabel: 'Restore search-location zoom'");
+        expect(translations.zh.fitDirectionLinesLabel('600 km')).toBe('完整显示 600 km 方位线');
+        expect(translations.en.restoreSearchZoomLabel).toBe('Restore search-location zoom');
     });
 
     it('adds the same map controls to the desktop title bar', () => {
@@ -196,8 +198,8 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('on:click={toggleRadarOverlay}');
         expect(pluginSource).toContain('const toggleRadarOverlay = () => {');
         expect(pluginSource).toContain("setRadarProvider(radarProvider === 'rainviewer' ? 'none' : 'rainviewer');");
-        expect(pluginSource).toContain("enableRadarOverlayLabel: '开启气象雷达叠加'");
-        expect(pluginSource).toContain("disableRadarOverlayLabel: 'Disable radar overlay'");
+        expect(translations.zh.enableRadarOverlayLabel).toBe('开启气象雷达叠加');
+        expect(translations.en.disableRadarOverlayLabel).toBe('Disable radar overlay');
         expect(pluginSource).toMatch(
             /\.desktop-radar-toggle\[aria-pressed='true'\][\s\S]*?color: var\(--panel-accent\);/,
         );
@@ -212,8 +214,8 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain(
             'title={text.locationCopyLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
         );
-        expect(pluginSource).toContain("all: '显示全部日月事件方位线'");
-        expect(pluginSource).toContain("moonset: 'Show only moonset direction lines'");
+        expect(translations.zh.eventButtonTitles.all).toBe('显示全部日月事件方位线');
+        expect(translations.en.eventButtonTitles.moonset).toBe('Show only moonset direction lines');
         expect(favoriteLocationsSource).toContain(
             'class="favorite-locations__close" aria-label={text.close} title={text.close}',
         );
@@ -252,16 +254,16 @@ describe('plugin astronomy loading presentation', () => {
             /catch \(error\) \{[\s\S]*?pluginUpdateStatus = 'error';[\s\S]*?\} finally/,
         );
         expect(pluginSource).toContain("pluginUpdateResult.channel === 'beta'");
-        expect(pluginSource).toContain("aboutBetaAvailable: '测试版更新预览'");
-        expect(pluginSource).toContain("aboutUpdateAvailable: '发现新版本'");
+        expect(translations.zh.aboutBetaAvailable).toBe('测试版更新预览');
+        expect(translations.zh.aboutUpdateAvailable).toBe('发现新版本');
         expect(pluginSource).not.toContain('{#if pluginUpdateResult.releaseUrl}');
         expect(pluginSource).toContain('on:click={copyLatestPluginLink}');
         expect(pluginSource).toContain('navigator.clipboard.writeText(latestPluginUrl);');
         expect(pluginSource).toContain('selectPluginLinkVersion(pluginVersion, pluginUpdateResult)');
         expect(pluginSource).toContain('https://windy-plugins.com/17629746/${name}/${latestPluginVersion}/plugin.min.js');
-        expect(pluginSource).toContain("aboutCopyLatestPluginLink: version => `复制 ${version} 插件链接`");
-        expect(pluginSource).toContain("aboutPluginLinkCopied: version => `已复制 ${version} 插件链接`");
-        expect(pluginSource).toContain("aboutPluginLinkCopyError: '复制失败，请重试'");
+        expect(translations.zh.aboutCopyLatestPluginLink('0.11.0')).toBe('复制 0.11.0 插件链接');
+        expect(translations.zh.aboutPluginLinkCopied('0.11.0')).toBe('已复制 0.11.0 插件链接');
+        expect(translations.zh.aboutPluginLinkCopyError).toBe('复制失败，请重试');
         expect(pluginSource).toContain('role="status" aria-live="polite" aria-atomic="true"');
         expect(pluginSource.indexOf('class="about-update__actions"')).toBeLessThan(
             pluginSource.indexOf('class="about-update__notes"'),
@@ -286,15 +288,15 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain("import config, { currentVersionReleasedAt } from './pluginConfig';");
         expect(pluginSource).toContain('class="about-meta__date"');
         expect(pluginSource).toContain('<time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>');
-        expect(pluginSource).toContain("aboutCurrentVersionDateLabel: '更新日期'");
-        expect(pluginSource).toContain("aboutCurrentVersionDateLabel: 'Updated'");
+        expect(translations.zh.aboutCurrentVersionDateLabel).toBe('更新日期');
+        expect(translations.en.aboutCurrentVersionDateLabel).toBe('Updated');
         expect(pluginSource).not.toContain('{text.aboutCurrentVersionLabel}');
         expect(pluginSource).not.toContain('{text.aboutLatestVersionLabel}');
         expect(pluginSource).not.toContain('{text.aboutUpdateDateLabel}');
         expect(pluginSource).not.toContain('class="about-update__release-date"');
         expect(pluginSource).not.toContain('<time datetime={pluginUpdateResult.releasedAt}>');
-        expect(pluginSource).toContain("aboutVersionLabel: '版本'");
-        expect(pluginSource).toContain("aboutUpdateNotesUnavailable: '版本更新说明暂时无法加载。'");
+        expect(translations.zh.aboutVersionLabel).toBe('版本');
+        expect(translations.zh.aboutUpdateNotesUnavailable).toBe('版本更新说明暂时无法加载。');
         expect(pluginSource).not.toContain('aboutUpdateReleaseLink');
         expect(pluginSource).toMatch(
             /\.about-update--compact\s*{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;[\s\S]*?align-items: center;/,
@@ -369,8 +371,8 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('class="astronomy-location__pin"');
         expect(pluginSource).toContain('class:pinned={locationPinned}');
         expect(pluginSource).toContain('aria-pressed={locationPinned}');
-        expect(pluginSource).toContain("pinCurrentLocationLabel: '钉住当前地点'");
-        expect(pluginSource).toContain("unpinCurrentLocationLabel: 'Unpin current location'");
+        expect(translations.zh.pinCurrentLocationLabel).toBe('钉住当前地点');
+        expect(translations.en.unpinCurrentLocationLabel).toBe('Unpin current location');
         expect(pluginSource).toContain('const toggleLocationPinned = () => {');
 
         const mapClickStart = pluginSource.indexOf('const setLocationFromMapClick =');
@@ -404,9 +406,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('<option value={KEEP_CURRENT_OVERLAY}>');
         expect(pluginSource).toContain('{#each initialOverlayOptions as option}');
         expect(pluginSource).toContain('.filter(overlay => !overlay.partOf)');
-        expect(pluginSource).toContain('label: overlay.getMenuName()');
+        expect(pluginSource).toContain('initialOverlayLabel(option.value, uiLanguage)');
         expect(pluginSource).toContain('orderInitialOverlayOptions(Array.from(new Map(');
-        expect(pluginSource).toContain('initialOverlayPreference = loadInitialOverlayPreference();');
+        expect(pluginSource).toContain('initialOverlayPreference = loadInitialOverlayPreference(availableInitialOverlays);');
         expect(pluginSource).toContain('applyInitialOverlayPreference(initialOverlayPreference);');
         const changeHandlerStart = pluginSource.indexOf('const changeInitialOverlayPreference =');
         const changeHandlerEnd = pluginSource.indexOf('const applyInitialOverlayPreference =', changeHandlerStart);
@@ -418,9 +420,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('doNotSaveToCloud: true');
         expect(pluginSource).toContain('doNotStore: true');
         expect(pluginSource).toContain('recenterSelectedLocationInVisibleMap(map.getZoom());');
-        expect(pluginSource).toContain("initialOverlayLabel: '打开插件时的图层'");
-        expect(pluginSource).toContain('选择后立即切换到对应 Windy 图层');
-        expect(pluginSource).toContain("keepCurrentOverlayLabel: 'Keep Windy’s current layer'");
+        expect(translations.zh.initialOverlayLabel).toBe('打开插件时的图层');
+        expect(translations.zh.initialOverlayDescription).toContain('选择后立即切换到对应 Windy 图层');
+        expect(translations.en.keepCurrentOverlayLabel).toBe('Keep Windy’s current layer');
         expect(pluginSource).toMatch(
             /\.settings-select select\s*{[\s\S]*?height: 30px;[\s\S]*?cursor: pointer;/,
         );
@@ -430,10 +432,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain("import {\n        createRadarOverlayController,");
         expect(pluginSource).toContain('<label for="radar-provider">{text.radarProviderLabel}</label>');
         expect(pluginSource).toContain('{#each RADAR_PROVIDERS as providerOption}');
-        expect(pluginSource).toContain("rainviewer: 'RainViewer（无需 Key）'");
+        expect(translations.zh.radarProviderLabels.rainviewer).toBe('RainViewer（无需 Key）');
         expect(pluginSource).toContain("{#if radarProvider === 'rainviewer'}");
         expect(pluginSource).toContain('{text.rainViewerDescription}');
-        expect(pluginSource).toContain("windy-plugin-sun-moon-path:radar-provider");
         expect(pluginSource).toContain('role="status"');
         expect(pluginSource).toContain('aria-live="polite"');
         expect(pluginSource).not.toContain('rainviewer-api-key');
@@ -441,17 +442,16 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('id="radar-overlay-opacity"');
         expect(pluginSource).toContain('{radarOpacityPercent}%');
         expect(pluginSource).toContain('on:input={changeRadarOpacity}');
-        expect(pluginSource).toContain("windy-plugin-sun-moon-path:radar-opacity");
         expect(pluginSource).toContain('radarOverlayController.setOpacity(radarOpacityPercent);');
-        expect(pluginSource).toContain("radarOpacityLabel: '雷达图层透明度'");
-        expect(pluginSource).toContain("radarOpacityLabel: 'Radar overlay opacity'");
+        expect(translations.zh.radarOpacityLabel).toBe('雷达图层透明度');
+        expect(translations.en.radarOpacityLabel).toBe('Radar overlay opacity');
 
         const radarOpacityStart = pluginSource.indexOf('class="settings-range settings-range--radar-opacity"');
         const radarProviderStart = pluginSource.indexOf('class="settings-select settings-radar-source"');
         expect(radarProviderStart).toBeGreaterThanOrEqual(0);
         expect(radarOpacityStart).toBeGreaterThan(radarProviderStart);
-        expect(pluginSource).toContain('窗口雷达按钮与此设置同步，任一处都可直接开关');
-        expect(pluginSource).toContain('The window radar button and this setting stay synchronized');
+        expect(translations.zh.radarProviderDescription).toContain('窗口雷达按钮与此设置同步，任一处都可直接开关');
+        expect(translations.en.radarProviderDescription).toContain('The window radar button and this setting stay synchronized');
     });
 
     it('starts the selected radar overlay on mount and destroys it with the unified cleanup path', () => {
@@ -703,11 +703,11 @@ describe('plugin astronomy loading presentation', () => {
         expect(weatherMetricIconSource).toContain('focusable="false"');
     });
 
-    it('loads weather evidence while the compact mobile Events view is visible', () => {
+    it('passes compact mobile Events visibility into the forecast controller', () => {
         expect(pluginSource).toContain(
             "!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather'",
         );
-        expect(pluginSource.match(/isWeatherTabActive: shouldLoadVisibleWeatherData/g)).toHaveLength(2);
+        expect(pluginSource).toContain('visible: shouldLoadVisibleWeatherData');
     });
 
     it('reserves desktop Events headroom and separates live direction metrics', () => {
@@ -783,8 +783,8 @@ describe('plugin astronomy loading presentation', () => {
 
     it('uses one hidden search setting while exposing coordinate search in both languages', () => {
         expect(pluginSource).toContain('{#if !hideLocationSearch}');
-        expect(pluginSource).toContain("hideLocationSearchLabel: '隐藏地点搜索框'");
-        expect(pluginSource).toContain("hideLocationSearchLabel: 'Hide location search'");
+        expect(translations.zh.hideLocationSearchLabel).toBe('隐藏地点搜索框');
+        expect(translations.en.hideLocationSearchLabel).toBe('Hide location search');
         expect(pluginSource).not.toContain('hideDomesticLocationSearch');
         expect(locationSearchSource).toContain('? [...LOCATION_PROVIDERS, ...COORDINATE_SYSTEMS]');
         expect(locationSearchSource).toContain(': [...COORDINATE_SYSTEMS]');
@@ -860,9 +860,6 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('documents the current user-facing features in usage order in both languages', () => {
-        const guideStart = pluginSource.indexOf("{:else if summaryTab === 'guide'}");
-        const settingsStart = pluginSource.indexOf("{:else if summaryTab === 'settings'}", guideStart);
-        const guideSource = pluginSource.slice(guideStart, settingsStart);
         const coordinatesStart = guideSource.indexOf('{text.featureGuide.coordinates.title}');
         const favoritesStart = guideSource.indexOf('{text.featureGuide.favorites.title}');
         const comparisonStart = guideSource.indexOf('{text.featureGuide.comparison.title}');
@@ -881,18 +878,18 @@ describe('plugin astronomy loading presentation', () => {
         expect(favoritesStart).toBeGreaterThan(evidenceStart);
         expect(comparisonStart).toBeGreaterThan(favoritesStart);
         expect(mobileModeStart).toBeGreaterThan(comparisonStart);
-        expect(pluginSource).toContain("featureGuideHeading: '功能说明'");
-        expect(pluginSource).toContain("featureGuideHeading: 'Feature guide'");
-        expect(pluginSource).not.toContain('0.8.0 新增功能');
-        expect(pluginSource).not.toContain('What’s new in 0.8.0');
-        expect(pluginSource).toContain("title: '收藏地点对比'");
-        expect(pluginSource).toContain("title: 'Favorite location comparison'");
-        expect(pluginSource).toContain("title: '地图视图按钮'");
-        expect(pluginSource).toContain("title: 'Map view controls'");
-        expect(pluginSource).toContain("buttonHintsHeading: '按钮提示'");
-        expect(pluginSource).toContain("buttonHintsHeading: 'Button hints'");
-        expect(pluginSource).toContain("title: '气象雷达叠加'");
-        expect(pluginSource).toContain("title: 'Weather radar overlay'");
+        expect(translations.zh.featureGuideHeading).toBe('功能说明');
+        expect(translations.en.featureGuideHeading).toBe('Feature guide');
+        expect(JSON.stringify(translations)).not.toContain('0.8.0 新增功能');
+        expect(JSON.stringify(translations)).not.toContain('What’s new in 0.8.0');
+        expect(translations.zh.featureGuide.comparison.title).toBe('收藏地点对比');
+        expect(translations.en.featureGuide.comparison.title).toBe('Favorite location comparison');
+        expect(translations.zh.featureGuide.mapControls.title).toBe('地图视图按钮');
+        expect(translations.en.featureGuide.mapControls.title).toBe('Map view controls');
+        expect(translations.zh.buttonHintsHeading).toBe('按钮提示');
+        expect(translations.en.buttonHintsHeading).toBe('Button hints');
+        expect(translations.zh.featureGuide.radarOverlay.title).toBe('气象雷达叠加');
+        expect(translations.en.featureGuide.radarOverlay.title).toBe('Weather radar overlay');
     });
 
     it('localizes accessibility labels and names astronomy regions for the selected date', () => {
@@ -915,12 +912,12 @@ describe('plugin astronomy loading presentation', () => {
         );
         expect(pluginSource).toContain('aria-label={text.currentMoonPhaseLabel}');
         expect(pluginSource).toContain('aria-label={text.nightObservationWindowsLabel}');
-        expect(pluginSource).toContain('aria-label={text.mapLegendLabel}');
+        expect(guideSource).toContain('aria-label={text.mapLegendLabel}');
         expect(pluginSource).toContain(
             'aria-label={text.eventDirectionLinesLabel(eventDisplayName(selectedEvent, text))}',
         );
-        expect(pluginSource).toContain("summaryViewsLabel: 'Sun and moon information views'");
-        expect(pluginSource).toContain("currentMoonPhaseLabel: 'Moon phase'");
+        expect(translations.en.summaryViewsLabel).toBe('Sun and moon information views');
+        expect(translations.en.currentMoonPhaseLabel).toBe('Moon phase');
     });
 
     it('uses live moon illumination only for the observer-local current date', () => {
