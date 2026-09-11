@@ -103,6 +103,7 @@ export const translations: Record<UiLanguage, {
     lineOpacityDescription: string;
     show600Label: (distance: string) => string;
     show600Description: (distance: string) => string;
+    locationSearchHiddenNotice: string;
     hideLocationSearchLabel: string;
     hideLocationSearchDescription: string;
     locationApiKeyLabel: string;
@@ -285,7 +286,7 @@ export const translations: Record<UiLanguage, {
             },
             coordinates: {
                 title: '坐标精确定位',
-                description: '在搜索下拉中选择 WGS84 或 GCJ-02，分别输入纬度和经度；GCJ-02 会自动转换为 Windy 使用的 WGS84。',
+                description: '在搜索下拉中选择 WGS84 或 GCJ-02，分别输入纬度和经度；GCJ-02 会自动转换为 Windy 使用的 WGS84。不用搜索时可点击“隐藏”，在设置中关闭“隐藏地点搜索框”即可恢复。',
             },
             observationEvidence: {
                 title: '观测时段证据',
@@ -329,6 +330,7 @@ export const translations: Record<UiLanguage, {
         lineOpacityDescription: '调整地图上全部日月方位线、银心视线及云层参考线的显示强度。设置会保存在当前浏览器。',
         show600Label: distance => `显示 ${distance} 点`,
         show600Description: distance => `开启后事件方向线会延伸到 ${distance}，并在该距离增加一个参考点。设置会保存在当前浏览器。`,
+        locationSearchHiddenNotice: '地点搜索已隐藏，可在设置中关闭“隐藏地点搜索框”重新显示。',
         hideLocationSearchLabel: '隐藏地点搜索框',
         hideLocationSearchDescription: '开启后不再显示面板顶部的名称和经纬度搜索；已保存的地图 API Key 不会清除。设置会保存在当前浏览器。',
         locationApiKeyLabel: '国内地址搜索 API Key',
@@ -543,7 +545,7 @@ export const translations: Record<UiLanguage, {
             },
             coordinates: {
                 title: 'Exact coordinate location',
-                description: 'Choose WGS84 or GCJ-02 from the search menu and enter latitude and longitude separately. GCJ-02 is converted to the WGS84 coordinates used by Windy.',
+                description: 'Choose WGS84 or GCJ-02 from the search menu and enter latitude and longitude separately. GCJ-02 is converted to the WGS84 coordinates used by Windy. Use Hide to save space; turn off “Hide location search” in Settings to restore it.',
             },
             observationEvidence: {
                 title: 'Observing-window evidence',
@@ -587,6 +589,7 @@ export const translations: Record<UiLanguage, {
         lineOpacityDescription: 'Adjust all sun/moon bearings, galactic centre sightlines and cloud reference lines on the map. This setting is saved in this browser.',
         show600Label: distance => `Show ${distance} point`,
         show600Description: distance => `When enabled, event direction lines extend to ${distance} and add a reference point there. This setting is saved in this browser.`,
+        locationSearchHiddenNotice: 'Location search hidden. Turn off “Hide location search” in Settings to show it again.',
         hideLocationSearchLabel: 'Hide location search',
         hideLocationSearchDescription: 'Hide place-name and coordinate search without removing saved map API keys. This setting is saved in this browser.',
         locationApiKeyLabel: 'Domestic location search API keys',

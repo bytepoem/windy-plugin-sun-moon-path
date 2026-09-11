@@ -164,6 +164,11 @@
     </div>
 
     <div class="primary-controls">
+    <div class="location-search-notice" role="status" aria-atomic="true">
+        {#if locationSearchHiddenNotice}
+            <span>{text.locationSearchHiddenNotice}</span>
+        {/if}
+    </div>
     {#if !hideLocationSearch}
         <div
             class="location-tools"
@@ -178,6 +183,7 @@
                 {units}
                 on:providerchange={handleLocationProviderChange}
                 on:select={handleLocationSearchSelect}
+                on:hide={hideLocationSearchFromControl}
             />
         </div>
     {/if}
@@ -1458,6 +1464,8 @@
     let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let hideLocationSearch = false;
+    let locationSearchHiddenNotice = false;
+    let locationSearchNoticeTimer: ReturnType<typeof setTimeout> | null = null;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
     let initialOverlayPreference: InitialOverlayPreference = DEFAULT_INITIAL_OVERLAY;
     let radarProvider: RadarProvider = 'none';
@@ -1633,7 +1641,28 @@
         return labels.events[event] || event;
     };
 
+    const clearLocationSearchNotice = () => {
+        if (locationSearchNoticeTimer !== null) {
+            clearTimeout(locationSearchNoticeTimer);
+            locationSearchNoticeTimer = null;
+        }
+        locationSearchHiddenNotice = false;
+    };
+
+    /** Reuse the Settings preference; unmounting search cancels its pending requests. */
+    const hideLocationSearchFromControl = async () => {
+        clearLocationSearchNotice();
+        hideLocationSearch = true;
+        saveHideLocationSearchPreference(true);
+        locationSearchHiddenNotice = true;
+        locationSearchNoticeTimer = setTimeout(clearLocationSearchNotice, 5_000);
+        await tick();
+        // The clicked button is gone; keep keyboard navigation in the primary controls.
+        panelElement?.querySelector<HTMLInputElement>('input[type="date"]')?.focus({ preventScroll: true });
+    };
+
     const toggleLocationSearch = (event: Event) => {
+        clearLocationSearchNotice();
         hideLocationSearch = (event.currentTarget as HTMLInputElement).checked;
         saveHideLocationSearchPreference(hideLocationSearch);
     };
@@ -2926,6 +2955,7 @@
                 clearInterval(currentDirectionTimer);
                 currentDirectionTimer = null;
             }
+            clearLocationSearchNotice();
             if (coordinateCopyTimer) {
                 clearTimeout(coordinateCopyTimer);
                 coordinateCopyTimer = null;
@@ -3627,6 +3657,18 @@
     .primary-controls {
         position: relative;
         z-index: 20;
+    }
+
+    .location-search-notice > span {
+        display: block;
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border: 1px solid var(--panel-border);
+        border-radius: 7px;
+        background: var(--panel-bg);
+        color: var(--panel-text);
+        font-size: 12px;
+        line-height: 1.5;
     }
 
     .location-tools {

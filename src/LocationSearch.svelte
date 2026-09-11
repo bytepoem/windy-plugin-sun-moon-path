@@ -47,10 +47,13 @@
     const dispatch = createEventDispatcher<{
         select: LocationSearchSelection;
         providerchange: LocationProvider;
+        hide: void;
     }>();
     const labels = {
         zh: {
             label: '地点搜索',
+            hide: '隐藏',
+            hideLabel: '隐藏地点搜索框',
             modeLabel: '搜索方式',
             providers: {
                 amap: '高德',
@@ -78,6 +81,8 @@
         },
         en: {
             label: 'Location search',
+            hide: 'Hide',
+            hideLabel: 'Hide location search',
             modeLabel: 'Search mode',
             providers: {
                 amap: 'Amap',
@@ -637,6 +642,15 @@
             >
                 {coordinateMode ? text.locate : text.search}
             </button>
+            <button
+                type="button"
+                class="location-search__hide"
+                aria-label={text.hideLabel}
+                title={text.hideLabel}
+                on:click={() => dispatch('hide')}
+            >
+                {text.hide}
+            </button>
         </div>
     </form>
 
@@ -734,7 +748,7 @@
     .location-search__control {
         position: relative;
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
         height: 44px;
         min-height: 44px;
         border: 1px solid var(--panel-border);
@@ -933,7 +947,7 @@
         padding: 0 9px;
         border: 0;
         border-left: 1px solid var(--panel-border);
-        border-radius: 0 6px 6px 0;
+        border-radius: 0;
         background: rgba(99, 185, 238, 0.16);
         color: var(--panel-accent);
         font: inherit;
@@ -954,6 +968,29 @@
     .location-search__submit:disabled {
         cursor: not-allowed;
         opacity: 0.45;
+    }
+
+    .location-search__hide {
+        min-width: 44px;
+        padding: 0 6px;
+        border: 0;
+        border-left: 1px solid var(--panel-border);
+        border-radius: 0 6px 6px 0;
+        background: transparent;
+        color: var(--panel-muted);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .location-search__hide:hover {
+        background: rgba(99, 185, 238, 0.16);
+        color: var(--panel-text);
+    }
+
+    .location-search__hide:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: -3px;
     }
 
     .location-search__results {
