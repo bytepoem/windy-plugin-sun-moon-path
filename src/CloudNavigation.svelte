@@ -1,11 +1,13 @@
 <script lang="ts">
-    import { createEventDispatcher, tick } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
 
     export let active: boolean;
     export let view: 'obstruction' | 'sea' = 'obstruction';
     export let language: 'zh' | 'en';
 
     const dispatch = createEventDispatcher<{ activate: void; tabkeydown: KeyboardEvent }>();
+    // 云海开发暂缓：保留菜单实现供恢复，目前仅启用云层遮挡 Tab。
+    /*
     const views = ['obstruction', 'sea'] as const;
     let open = false;
     let root: HTMLDivElement;
@@ -14,7 +16,7 @@
     $: labels = language === 'zh' ? ['云层遮挡', '云海预报'] : ['Clouds', 'Sea of clouds'];
     $: if (!active) { open = false; }
 
-    /** Open from either navigation state, then focus the current function. */
+    // Open from either navigation state, then focus the current function.
     const toggle = async () => {
         dispatch('activate');
         open = !open;
@@ -55,33 +57,29 @@
         }
     };
 
-    /** Svelte releases window listeners when this navigation component is destroyed. */
+    // Svelte releases window listeners when this navigation component is destroyed.
     const dismissOutside = (event: Event) => {
         if (open && event.target instanceof Node && !root?.contains(event.target)) { open = false; }
     };
+    */
 </script>
 
+<!-- 云海入口恢复时，同时恢复脚本中的菜单逻辑及 tick 导入。
 <svelte:window on:pointerdown={dismissOutside} on:focusin={dismissOutside} on:keydown={dismissEscape} />
+-->
 
-<div class="cloud-navigation" class:active bind:this={root} role="presentation">
+<div class="cloud-navigation" class:active role="presentation">
     <button
         id="summary-tab-clouds"
-        bind:this={trigger}
         type="button"
         role="tab"
         aria-controls="summary-panel"
         aria-selected={active}
-        aria-haspopup="menu"
-        aria-expanded={open}
         tabindex={active ? 0 : -1}
-        on:click={() => active ? toggle() : dispatch('activate')}
-        on:keydown={event => {
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                event.preventDefault();
-                if (!open) { toggle(); }
-            } else { dispatch('tabkeydown', event); }
-        }}
-    >{labels[view === 'obstruction' ? 0 : 1]}</button>
+        on:click={() => { view = 'obstruction'; dispatch('activate'); }}
+        on:keydown={event => dispatch('tabkeydown', event)}
+    >{language === 'zh' ? '云层遮挡' : 'Clouds'}</button>
+    <!-- 云海开发暂缓，隐藏下拉按钮及列表。
     <button
         class="arrow"
         type="button"
@@ -106,6 +104,7 @@
             {/each}
         </div>
     {/if}
+    -->
 </div>
 
 <style>
@@ -130,6 +129,7 @@
     button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: -2px; }
     button:hover, .active > button { color: var(--panel-text); }
     button[role='tab'] { flex: 1; min-width: 0; padding: 0 2px; }
+    /* 云层功能菜单恢复时启用。
     .arrow { width: 24px; flex-shrink: 0; padding: 0; }
     .menu {
         position: absolute;
@@ -154,5 +154,6 @@
     }
     .menu button[aria-checked='true'], .menu button:hover { color: var(--panel-text); background: rgba(99, 185, 238, 0.14); }
     .menu span { width: 16px; }
+    */
     :global(.mobile_ui) button { font-size: 13px; }
 </style>
