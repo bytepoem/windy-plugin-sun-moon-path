@@ -380,18 +380,18 @@
         aria-label={text.sunMoonPanelLabel}
     >
         <nav class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
-            <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => (summaryTab = 'events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
+            <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => selectSummaryTab('events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
             {#if isMobileOrTablet && !isMobileFullscreen}
-                <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => (summaryTab = 'weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
+                <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
             {/if}
             <CloudNavigation
                 active={summaryTab === 'clouds'}
                 bind:view={cloudView}
                 language={uiLanguage}
-                on:activate={() => (summaryTab = 'clouds')}
+                on:activate={() => selectSummaryTab('clouds')}
                 on:tabkeydown={event => handleSummaryTabKeydown(event.detail, 'clouds')}
             />
-            <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => (summaryTab = 'settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
+            <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => selectSummaryTab('settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
             <button
                 id="summary-tab-about"
                 type="button"
@@ -404,7 +404,7 @@
                 aria-selected={summaryTab === 'about'}
                 tabindex={summaryTab === 'about' ? 0 : -1}
                 on:click={() => {
-                    summaryTab = 'about';
+                    selectSummaryTab('about');
                     acknowledgePluginUpdateReminder();
                 }}
                 on:keydown={event => handleSummaryTabKeydown(event, 'about')}
@@ -1188,6 +1188,7 @@
         type ObservationEvidenceState,
     } from './observationEvidence';
     import { claimOverlayOwner } from './overlayOwner';
+    import { startPluginUsage } from './pluginUsage';
     import { createMapOverlayController } from './mapOverlayController';
     import { buildDirectionLineFitBounds, calculateVisibleMapViewport } from './mapView';
     import {
@@ -1403,6 +1404,9 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let pluginUsage: ReturnType<typeof startPluginUsage> | null = null;
+    // Programmatic switches update dwell time but are not user selections.
+    $: pluginUsage?.setTab(summaryTab);
     let cloudView: 'obstruction' | 'sea' = 'obstruction';
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = summaryTab === 'clouds' && cloudView === 'obstruction';
@@ -1822,6 +1826,11 @@
         pluginUpdateReminderVersion = null;
     };
 
+    const selectSummaryTab = (nextTab: SummaryTab) => {
+        pluginUsage?.setTab(nextTab, true);
+        summaryTab = nextTab;
+    };
+
     const handleSummaryTabKeydown = async (event: KeyboardEvent, currentTab: SummaryTab) => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
             return;
@@ -1836,7 +1845,7 @@
             : event.key === 'End'
                 ? summaryTabOrder.at(-1)!
                 : summaryTabOrder[(currentIndex + (event.key === 'ArrowLeft' ? -1 : 1) + summaryTabOrder.length) % summaryTabOrder.length];
-        summaryTab = nextTab;
+        selectSummaryTab(nextTab);
         if (nextTab === 'about' && pluginUpdateReminderVersion) {
             acknowledgePluginUpdateReminder();
         }
@@ -2926,6 +2935,8 @@
 
     const overlayOwner = {
         deactivateForReplacement: () => {
+            // Replacement mounts continue the logical use, with no live old resources.
+            pluginUsage?.stop(true);
             isMounted = false;
             mobilePanelMode = 'compact';
             lastMobileNonFullscreenMode = 'compact';
@@ -3012,6 +3023,7 @@
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
         isMounted = true;
+        pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab });
         radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
         void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
@@ -3027,6 +3039,7 @@
 
     onDestroy(() => {
         const shouldReopenAfterHome = reopenAfterHome;
+        pluginUsage?.stop(shouldReopenAfterHome);
         overlayOwner.deactivateForReplacement();
         releaseOverlayOwnership?.();
         releaseOverlayOwnership = null;

@@ -40,6 +40,12 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.
 - **AOD and visibility.** AOD always comes from CAMS via Open-Meteo. Windy visibility uses an independent Open-Meteo supplement; Open-Meteo mode uses visibility from the selected model.
 - **Time and precipitation.** Windy uses native time steps. Open-Meteo hourly data may include server-side interpolation, with precipitation accumulated over the preceding hour. Observing windows show the range of matched precipitation values, not a window total. Past timestamps are model output, not observations.
 
+## Usage statistics
+
+Collection requires Windy's `consent.analytics` to be `true`. Baidu Tongji receives only a virtual pageview on opening for basic visit reports. PostHog receives openings, main-tab selections, foreground and tab dwell seconds, and one milestone when foreground use reaches three minutes. Background time is excluded; internal remounts do not count as new openings and automatic tab changes do not count as selections. Closing the plugin or withdrawing consent stops collection. Normal local development disables both providers.
+
+Events exclude account details, coordinates, favorites, search terms and actual map URLs. Baidu may use cookies and receive browser information; both services receive request IP addresses. PostHog uses its public capture API and a random identifier held only in memory for the current consented session, with no person profile or cross-session identifier. Results cover permitted, successfully delivered events, not all users or exact person counts. See the [measurement and validation notes](docs/usage-analytics.md).
+
 ## Local development
 
 Publishing uses npm **11.12.1**. Node.js must meet dependency requirements (current CI uses 24).

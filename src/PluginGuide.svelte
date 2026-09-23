@@ -35,6 +35,9 @@
         : 'Open Clouds in the main navigation for cloud planning. Preferences and this guide are both under Settings.'}</p>
     <p>{text.aboutDescription}</p>
     <p>{text.supportGuideHint}</p>
+    <p>{uiLanguage === 'zh'
+        ? '使用统计：仅在 Windy 的分析统计授权允许时，百度统计记录插件打开的基础访问数据，PostHog 记录打开、导航切换和前台停留事件。关闭插件或撤回授权后停止采集。埋点不包含坐标、收藏内容或账号；百度可能使用 Cookie 并接收浏览器信息，两家服务均会接收网络请求的 IP。PostHog 仅使用当前授权会话内的随机标识。'
+        : 'Usage statistics: when Windy permits analytics, Baidu Tongji measures basic visits and PostHog receives opening, tab selection and foreground-time events. Collection stops on close or consent withdrawal. Events exclude coordinates, favorites and account details. Baidu may use cookies and receive browser information; both services receive request IP addresses. PostHog uses only a random identifier for the current consented session.'}</p>
 
     <section class="feature-guide" aria-labelledby="feature-guide-heading">
         <h3 id="feature-guide-heading">{text.featureGuideHeading}</h3>
