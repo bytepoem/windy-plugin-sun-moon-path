@@ -209,7 +209,8 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('adds delayed native hints to compact and icon-only controls', () => {
-        expect(pluginSource).toContain('title={text.eventButtonTitles[option.value]}');
+        expect(pluginSource).toContain(': text.eventButtonTitles[option.value]}');
+        expect(pluginSource).toContain('Cloud planning requires a single event');
         expect(pluginSource).toContain('title={text.languageToggleLabel}');
         expect(pluginSource).toContain(
             'title={text.locationCopyLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
@@ -725,7 +726,7 @@ describe('plugin astronomy loading presentation', () => {
         const landscapeEnd = pluginSource.indexOf('@media (prefers-reduced-motion: reduce)', landscapeStart);
         const landscapeSource = pluginSource.slice(landscapeStart, landscapeEnd);
 
-        expect(pluginSource).toContain("class:summary-panel-frame--events={summaryTab === 'events'}");
+        expect(pluginSource).toContain("class:summary-panel-frame--events={isMobileCollapsed || summaryTab === 'events'}");
         expect(pluginSource).toContain(
             'grid-template-columns: minmax(112px, 1fr) max-content minmax(112px, 1fr);',
         );

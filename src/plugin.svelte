@@ -210,10 +210,14 @@
                 {#each eventOptions as option}
                     <button
                         type="button"
-                        class:active={selectedEvent === option.value}
-                        aria-pressed={selectedEvent === option.value}
+                        class:active={highlightedEvent === option.value}
+                        aria-pressed={highlightedEvent === option.value}
+                        disabled={cloudObstructionVisible && (option.value === 'all'
+                            || !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
                         aria-label={text.events[option.value]}
-                        title={text.eventButtonTitles[option.value]}
+                        title={cloudObstructionVisible && option.value === 'all'
+                            ? (uiLanguage === 'zh' ? '云层规划需选择单个事件' : 'Cloud planning requires a single event')
+                            : text.eventButtonTitles[option.value]}
                         on:click={() => selectEvent(option.value)}
                     >
                         {#if option.value === 'all'}
@@ -424,14 +428,14 @@
         <div
             id="summary-panel"
             class="summary-panel-frame"
-            class:summary-panel-frame--settings={summaryTab === 'settings'}
-            class:summary-panel-frame--events={summaryTab === 'events'}
-            class:summary-panel-frame--clouds={summaryTab === 'clouds'}
+            class:summary-panel-frame--settings={!isMobileCollapsed && summaryTab === 'settings'}
+            class:summary-panel-frame--events={isMobileCollapsed || summaryTab === 'events'}
+            class:summary-panel-frame--clouds={!isMobileCollapsed && summaryTab === 'clouds'}
             role={isMobileCollapsed ? 'region' : 'tabpanel'}
             aria-label={isMobileCollapsed ? text.eventTab : undefined}
             aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
         >
-            {#if summaryTab === 'events'}
+            {#if isMobileCollapsed || summaryTab === 'events'}
                 <span class="visually-hidden" role="status" aria-live="polite">
                     {status === 'loading' ? text.calculating : ''}
                 </span>
@@ -727,32 +731,7 @@
                     on:atmosphereretry={retryAtmosphere}
                 />
             {:else if summaryTab === 'clouds'}
-                {#if cloudView === 'obstruction'}
-                <CloudObstruction
-                    bind:selectedCloudEvent={cloudEvent}
-                    bind:timelineEvent={cloudTimelineEvent}
-                    bind:cloudMapEvent
-                    bind:cloudPlanningBody
-                    bind:cloudPlanningTimestamp
-                    bind:cloudDirectionRangeKm
-                    bind:cloudBounds
-                    bind:cloudDetailBounds
-                    location={selectedLocation}
-                    celestialEvents={solarPaths.flatMap(path => path.status === 'ok'
-                        ? [{ type: path.event, timestamp: path.eventTime.getTime() }] : [])}
-                    forecast={forecastState.cloudForecast}
-                    status={forecastState.cloudStatus}
-                    model={weatherModel}
-                    {selectedDate}
-                    {timeZone}
-                    language={uiLanguage}
-                    {units}
-                    bind:settings={cloudSettings}
-                    lineOpacity={directionLineOpacityPercent}
-                    on:modelchange={handleWeatherModelChange}
-                    on:retry={retryCloudWeather}
-                />
-                {:else}
+                {#if cloudView === 'sea'}
                     <section class="module-about" aria-label={uiLanguage === 'zh' ? '云海预报' : 'Sea of clouds'}>
                         <h3>{uiLanguage === 'zh' ? '云海预报' : 'Sea of clouds'}</h3>
                         <p>{uiLanguage === 'zh' ? '云海预报尚未上线，当前暂无预测结果。' : 'Sea-of-clouds forecasting is not available yet. No forecast results are shown.'}</p>
@@ -1082,6 +1061,38 @@
                     </div>
                 </section>
             {/if}
+            {#if cloudObstructionVisible}
+                <!-- Collapsing hides the controls, but preserves their time and live map ownership. -->
+                <div class="cloud-view" hidden={isMobileCollapsed}>
+                    <CloudObstruction
+                        bind:this={cloudObstructionComponent}
+                        bind:selectedCloudEvent={cloudEvent}
+                        bind:timelineEvent={cloudTimelineEvent}
+                        bind:activeTimelineEvent={cloudActiveTimelineEvent}
+                        bind:cloudMapEvent
+                        bind:cloudPlanningBody
+                        bind:cloudPlanningTimestamp
+                        bind:cloudDirectionRangeKm
+                        bind:cloudBounds
+                        bind:cloudDetailBounds
+                        location={selectedLocation}
+                        celestialEvents={solarPaths.flatMap(path => path.status === 'ok'
+                            ? [{ type: path.event, timestamp: path.eventTime.getTime() }] : [])}
+                        forecast={forecastState.cloudForecast}
+                        status={forecastState.cloudStatus}
+                        model={weatherModel}
+                        {selectedDate}
+                        {timeZone}
+                        language={uiLanguage}
+                        {units}
+                        bind:settings={cloudSettings}
+                        lineOpacity={directionLineOpacityPercent}
+                        on:eventchange={event => { selectedEvent = event.detail; }}
+                        on:modelchange={handleWeatherModelChange}
+                        on:retry={retryCloudWeather}
+                    />
+                </div>
+            {/if}
         </div>
     </section>
 
@@ -1410,7 +1421,6 @@
     let cloudView: 'obstruction' | 'sea' = 'obstruction';
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = summaryTab === 'clouds' && cloudView === 'obstruction';
-    let tabBeforeCollapse: SummaryTab = 'events';
     let cloudSettings = createCloudSettings();
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
     let pluginUpdateResult: PluginUpdateResult | null = null;
@@ -1419,6 +1429,9 @@
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let cloudEvent: SolarEvent = 'sunset';
     let cloudTimelineEvent: CloudTimelineEventType | null = null;
+    let cloudActiveTimelineEvent: CloudTimelineEventType | null = 'sunset';
+    let cloudObstructionComponent: CloudObstruction | null = null;
+    $: highlightedEvent = cloudObstructionVisible ? cloudActiveTimelineEvent : selectedEvent;
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
     let cloudPlanningTimestamp: number | null = null;
@@ -1701,13 +1714,7 @@
             clearTimeout(mapDetailRecenterTimer);
             mapDetailRecenterTimer = null;
         }
-        // Collapsed mode shows the shared event summary; expanding restores the user's tab.
-        if (value === 'collapsed' && mobilePanelMode !== 'collapsed') {
-            tabBeforeCollapse = summaryTab;
-            summaryTab = 'events';
-        } else if (value !== 'collapsed' && mobilePanelMode === 'collapsed') {
-            summaryTab = tabBeforeCollapse;
-        }
+        // Panel size never changes the selected tab or destroys an active cloud session.
         if (value === 'fullscreen' && summaryTab === 'weather') {
             summaryTab = 'events';
         }
@@ -1956,7 +1963,15 @@
     };
 
     const selectEvent = (event: DirectionEvent) => {
+        if (cloudObstructionVisible && event === 'all') {return;}
         selectedEvent = event;
+        if (event !== 'all') {
+            cloudEvent = event;
+            cloudTimelineEvent = event;
+            cloudObstructionComponent?.jumpTime(event);
+        }
+        // The cloud component owns planning time/range; its bindings render the map reactively.
+        if (cloudObstructionVisible) {return;}
         if (solarPaths.length === 0) {
             return;
         }
@@ -3530,6 +3545,11 @@
         display: none;
     }
 
+    .cloud-view {
+        height: 100%;
+        min-height: 0;
+    }
+
     .map-bottom-module--mobile-collapsed .summary-panel-frame {
         height: auto;
     }
@@ -3941,7 +3961,12 @@
         transform: rotate(180deg);
     }
 
-    .segmented-control button:hover,
+    .segmented-control button:disabled {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+    .segmented-control button:hover:not(:disabled),
     .segmented-control button.active {
         color: var(--panel-text);
         background: rgba(73, 169, 232, 0.22);

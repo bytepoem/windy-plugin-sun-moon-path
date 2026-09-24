@@ -34,6 +34,9 @@
         ? '在主导航的「云层遮挡」查看云层规划。偏好设置和使用说明统一位于「设置」。'
         : 'Open Clouds in the main navigation for cloud planning. Preferences and this guide are both under Settings.'}</p>
     <p>{text.aboutDescription}</p>
+    <p>{uiLanguage === 'zh'
+        ? '云层规划中，上下两排日月事件按钮联动，点击任一排都会跳到对应升落时刻；“全部”仅用于事件总览。手动调整时间后两排取消升落高亮，选择银心时上排日月按钮不高亮。移动端收起窗口仍保留云层参考线，展开后保留原来的规划时间；切换到其他 Tab 或关闭插件会清除云层参考线。'
+        : 'In cloud planning, both rows of Sun/Moon buttons select the same rise/set event and time; All is only available in the event overview. Manual time clears both rise/set highlights, and galactic events leave the upper Sun/Moon row unselected. Collapsing the mobile panel keeps cloud reference lines and preserves the planning time on expansion. Switching tabs or closing the plugin removes cloud reference lines.'}</p>
     <p>{text.supportGuideHint}</p>
     <p>{uiLanguage === 'zh'
         ? '使用统计：仅在 Windy 的分析统计授权允许时，百度统计记录插件打开的基础访问数据，PostHog 记录打开、导航切换和前台停留事件。关闭插件或撤回授权后停止采集。埋点不包含坐标、收藏内容或账号；百度可能使用 Cookie 并接收浏览器信息，两家服务均会接收网络请求的 IP。PostHog 仅使用当前授权会话内的随机标识。'

@@ -30,12 +30,13 @@
     export let settings: CloudSettings;
     export let lineOpacity: number;
 
-    const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void }>();
+    const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void; eventchange: SolarEvent }>();
     const overlay = createCloudOverlayController(map);
     export let selectedCloudEvent: SolarEvent = 'sunset';
     export let cloudMapEvent: SolarEvent | null = 'sunset';
     let manualClock: string | null = null;
     export let timelineEvent: CloudTimelineEventType | null = null;
+    export let activeTimelineEvent: CloudTimelineEventType | null = null;
     let previewingTime = false;
     let showSourceHelp = false;
     let showHelp = false;
@@ -55,6 +56,8 @@
     const changeModel = (event: Event) => dispatch('modelchange', (event.currentTarget as HTMLSelectElement).value as WeatherModel);
 
     $: zh = language === 'zh';
+    // Manual time and galactic events must not leave an unrelated rise/set button highlighted above.
+    $: activeTimelineEvent = manualClock === null ? (timelineEvent ?? selectedCloudEvent) : null;
     $: single = settings.view === 'single';
     $: visibleBands = single ? ['low'] as CloudBand[] : CLOUD_BANDS;
     $: heightMode = single ? settings.single.mode
@@ -221,12 +224,16 @@
         manualClock = clock;
         // Keep the last event's celestial body when moving away from its rise/set time.
     };
-    const jumpTime = (type: CloudTimelineEventType) => {
+    /** Shared entry point for both event rows; selecting again exits manual-time preview. */
+    export const jumpTime = (type: CloudTimelineEventType) => {
         settings = { ...settings, body: cloudEventBody(type) };
         timelineEvent = type;
         manualClock = null;
         previewingTime = false;
-        if (type !== 'milkywayrise' && type !== 'milkywayset') {selectedCloudEvent = type;}
+        if (type !== 'milkywayrise' && type !== 'milkywayset') {
+            selectedCloudEvent = type;
+            dispatch('eventchange', type);
+        }
     };
 
 
@@ -260,7 +267,7 @@
 </script>
 
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
-    <CloudTimeline events={timelineEvents} clock={displayedClock} selected={manualClock === null ? (timelineEvent ?? selectedCloudEvent) : null}
+    <CloudTimeline events={timelineEvents} clock={displayedClock} selected={activeTimelineEvent}
         {timeZone} {zh} on:preview={event => previewTime(event.detail)}
         on:commit={() => { previewingTime = false; }} on:jump={event => jumpTime(event.detail)}>
         <label slot="map" class="cloud-map-select"><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
