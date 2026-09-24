@@ -267,9 +267,8 @@
 </script>
 
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
-    <CloudTimeline events={timelineEvents} clock={displayedClock} selected={activeTimelineEvent}
-        {timeZone} {zh} on:preview={event => previewTime(event.detail)}
-        on:commit={() => { previewingTime = false; }} on:jump={event => jumpTime(event.detail)}>
+    <CloudTimeline clock={displayedClock} {zh} on:preview={event => previewTime(event.detail)}
+        on:commit={() => { previewingTime = false; }}>
         <label slot="map" class="cloud-map-select"><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
             <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
             <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>

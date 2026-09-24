@@ -614,17 +614,23 @@
                             {/each}
                         {:else}
                             <div class="timeline-event timeline-event--countdown">
-                                <span class="timeline-event__label">{timelineLeadLabel}</span>
+                                <span class="timeline-event__label" title={timelineLeadLabel}>
+                                    <TimelineEventIcon kind={selectedDateIsToday ? 'countdown' : 'date'} label={timelineLeadLabel} />
+                                </span>
                                 <strong>{timelineLeadTime || '--'}</strong>
                             </div>
-                            {#each astronomyTimeline?.items || [] as item}
+                            {#each summaryTimelineItems as item}
                                 <div
+                                    class:item-milkyway={item.body === 'milkyway'}
+                                    title={timelineEventLabel(item, text)}
                                     class:item-moon={item.body === 'moon'}
                                     class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
                                     class:timeline-event--missing={!item.time}
                                     class="timeline-event"
                                 >
-                                    <span class="timeline-event__label">{timelineEventLabel(item, text)}</span>
+                                    <span class="timeline-event__label">
+                                        <TimelineEventIcon kind={item.kind} label={timelineEventLabel(item, text)} />
+                                    </span>
                                     <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
                                 </div>
                             {/each}
@@ -1163,6 +1169,7 @@
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
 
     import CloudNavigation from './CloudNavigation.svelte';
+    import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import { translations, type UiLanguage } from './pluginTranslations';
     import {
@@ -1338,7 +1345,7 @@
     type MobilePanelMode = MobileNonFullscreenPanelMode | 'fullscreen';
     const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'clouds', 'settings', 'about'];
     const desktopSummaryTabOrder: SummaryTab[] = ['events', 'clouds', 'settings', 'about'];
-    const timelineSkeletonSlots = Array.from({ length: 7 }, (_, index) => index);
+    const timelineSkeletonSlots = Array.from({ length: 9 }, (_, index) => index);
     const eventOptions: { value: ObservationEvent }[] = [
         { value: 'all' },
         { value: 'sunrise' },
@@ -1348,6 +1355,19 @@
     ];
     const galacticShortcutEvents = ['milkywayrise', 'milkywayset'] as const;
     $: galacticEvents = galacticCenterEvents(selectedDate, timeZone, selectedLocation);
+    // Reuse the shortcut crossings; missing events stay visible without inventing a time.
+    $: summaryTimelineItems = [
+        ...(astronomyTimeline?.items || []),
+        ...galacticShortcutEvents.map(kind => {
+            const crossing = galacticEvents.find(event => event.type === kind);
+            return {
+                kind,
+                label: cloudTimelineLabel(kind, uiLanguage === 'zh'),
+                body: 'milkyway',
+                time: crossing ? new Date(crossing.timestamp) : null,
+            };
+        }),
+    ].sort((left, right) => (left.time?.getTime() ?? Infinity) - (right.time?.getTime() ?? Infinity));
     $: galacticPaths = galacticDirectionPaths(galacticEvents, selectedLocation, uiLanguage);
     const LOCATION_PROVIDER_APPLICATION_URLS: Record<LocationProvider, string> = {
         amap: 'https://lbs.amap.com/api/webservice/create-project-and-key',
@@ -2755,7 +2775,9 @@
 
     const timelineEventLabel = (item: { kind: string; label: string }, labels = text): string => {
         if (item.kind === 'dawn' || item.kind === 'dusk') {
-            return labels.timeline.dawn;
+            return uiLanguage === 'zh'
+                ? (item.kind === 'dawn' ? '晨间蓝调' : '暮间蓝调')
+                : (item.kind === 'dawn' ? 'Morning blue hour' : 'Evening blue hour');
         }
         return labels.timeline[item.kind] || item.label;
     };
@@ -2959,7 +2981,7 @@
             timelineLeadLabel = text.dateLabel;
             timelineLeadTime = formatDateControlLabel(selectedDate);
         } else {
-            const next = astronomyTimeline.items.find(item => item.time && item.time.getTime() > currentInstant.getTime());
+            const next = summaryTimelineItems.find(item => item.time && item.time.getTime() > currentInstant.getTime());
             const parts = next?.time
                 ? nextWindowParts(next, uiLanguage)
                 : { label: text.timelineEnded, time: '' };
@@ -4986,7 +5008,7 @@
 
     .timeline-events {
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-template-columns: minmax(max-content, 1fr) repeat(8, minmax(0, 1fr));
         gap: 0;
         margin-top: 4px;
         padding: 6px 0 5px;
@@ -5073,6 +5095,7 @@
         color: var(--astronomy-text);
         font-size: 12px;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
     }
 
     .timeline-event:not(.item-moon) .timeline-event__label,
@@ -5091,6 +5114,11 @@
 
     .timeline-event.item-moon strong {
         color: #91bfff;
+    }
+
+    .timeline-event.item-milkyway .timeline-event__label,
+    .timeline-event.item-milkyway strong {
+        color: #9de0b7;
     }
 
     .timeline-event.timeline-event--countdown .timeline-event__label,
@@ -6024,7 +6052,7 @@
         }
 
         .timeline-events {
-            grid-template-columns: repeat(7, minmax(0, 1fr));
+            grid-template-columns: minmax(max-content, 1fr) repeat(8, minmax(0, 1fr));
             margin-top: 4px;
         }
 
@@ -6119,6 +6147,18 @@
     }
 
     @media (max-width: 360px) {
+        .timeline-events {
+            margin-inline: -4px;
+        }
+
+        .timeline-event {
+            padding: 0;
+        }
+
+        .timeline-event strong {
+            font-size: 10px;
+        }
+
         .sun-path-panel.mobile_ui .control-grid {
             grid-template-columns: 68px minmax(0, 1fr) 48px;
             gap: 5px;

@@ -636,8 +636,8 @@ describe('plugin astronomy loading presentation', () => {
         expect(astronomyPanelSource).toContain('class:astronomy-panel--loading={status === \'loading\'}');
         expect(astronomyPanelSource).toContain('aria-busy={status === \'loading\'}');
         expect(astronomyPanelSource).toContain('class="astronomy-skeleton');
-        expect(pluginSource).toContain('Array.from({ length: 7 }');
-        expect(pluginSource).toContain('grid-template-columns: repeat(7, minmax(0, 1fr))');
+        expect(pluginSource).toContain('Array.from({ length: 9 }');
+        expect(pluginSource).toContain('grid-template-columns: minmax(max-content, 1fr) repeat(8, minmax(0, 1fr))');
         expect(pluginSource).toContain('800ms linear 180ms infinite');
         expect(pluginSource).toContain('1.2s ease-in-out 180ms infinite');
         expect(pluginSource).toContain('@media (prefers-reduced-motion: reduce)');
