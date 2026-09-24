@@ -24,15 +24,11 @@
         </div>
         <slot name="map" />
     </div>
-    <div class="forecast-row">
-        <slot name="forecast" />
-    </div>
 
 </div>
 
 <style>
     .cloud-timeline { width:100%; min-width:0; color:#b9c2ce; font-size:11px; }
-    .forecast-row { display:flex; justify-content:flex-end; margin-top:3px; }
     .time-row { display:flex; align-items:center; gap:6px; margin-bottom:0; }
     .time-track { flex:1 1 0; min-width:0; }
     .time-entry { box-sizing:border-box; width:82px; height:28px; flex-shrink:0; min-width:0; padding:0 5px; border:1px solid var(--panel-border,#485364); border-radius:5px; background:rgba(8,15,27,.5); color:#f2f4fa; color-scheme:dark; font:600 13px/1.2 monospace; }

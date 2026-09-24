@@ -275,18 +275,6 @@
             <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
             <option value="satellite">{zh ? '卫星云图' : 'Satellite'}</option>
         </select></label>
-        <div slot="forecast" class="cloud-data-status" role="status" title={zh ? '预报时次' : 'Forecast step'}>
-            {#if !automaticHeights}
-                {heightMode === 'manual' ? (zh ? '手动高度' : 'Manual height')
-                    : (zh ? '未启用' : 'Disabled')}
-            {:else if status === 'loading' || status === 'idle'}
-                {zh ? '加载中…' : 'Loading…'}
-            {:else if status === 'error'}
-                {zh ? '加载失败' : 'Failed'} <button type="button" on:click={() => dispatch('retry')}>{zh ? '重试' : 'Retry'}</button>
-            {:else}
-                {#each scenarios as event}{@const step = heightSource === 'base' ? event.base : event.profile}<div>{#if step}<span class="cloud-forecast-label">{zh ? '预报时次' : 'Forecast step'} </span>{formatLocalClock(new Date(step.timestamp), timeZone)}{:else}{zh ? '无预报' : 'No forecast'}{/if}</div>{/each}
-            {/if}
-        </div>
     </CloudTimeline>
     <div class="cloud-forecast-controls">
         <div class="cloud-model-mode">
@@ -365,6 +353,18 @@
     <table class="cloud-table">
         <thead><tr>
             <th scope="col" title={zh ? '云层海拔高度' : 'Clouds Height AMSL'}>{zh ? '云层高度' : 'Clouds Height'} ({units.elevation})
+                <div class="cloud-data-status" role="status" title={zh ? '预报时次' : 'Forecast step'}>
+                    {#if !automaticHeights}
+                        {heightMode === 'manual' ? (zh ? '手动高度' : 'Manual height')
+                            : (zh ? '未启用' : 'Disabled')}
+                    {:else if status === 'loading' || status === 'idle'}
+                        {zh ? '加载中…' : 'Loading…'}
+                    {:else if status === 'error'}
+                        {zh ? '加载失败' : 'Failed'} <button type="button" on:click={() => dispatch('retry')}>{zh ? '重试' : 'Retry'}</button>
+                    {:else}
+                        {#each scenarios as event}{@const step = heightSource === 'base' ? event.base : event.profile}<div>{#if step}<span class="cloud-forecast-label">{zh ? '预报时次' : 'Forecast'} </span>{formatLocalClock(new Date(step.timestamp), timeZone)}{:else}{zh ? '无预报' : 'No forecast'}{/if}</div>{/each}
+                    {/if}
+                </div>
                 <div class="cloud-height-heading-controls">
                 <button class="cloud-help-trigger" type="button" aria-haspopup="dialog"
                     aria-label={zh ? '云层距离图解' : 'Cloud distance guide'} title={zh ? '云层距离图解' : 'Cloud distance guide'}
@@ -480,8 +480,8 @@
 {#if showHelp}<CloudHelp {zh} on:close={() => { showHelp = false; }} />{/if}
 
 <style>
-    .cloud-height-heading-controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 2px 4px; margin-top: 2px; }
-    .cloud-panel .cloud-help-trigger { display: inline-flex; align-items: center; gap: 3px; min-height: 24px; padding: 0 2px; border-color: transparent; color: #6ed9ee; background: transparent; font-size: 11px; white-space: nowrap; }
+    .cloud-height-heading-controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 2px 4px; }
+    .cloud-panel .cloud-help-trigger { display: inline-flex; align-items: center; gap: 3px; min-height: 0; padding: 0 2px; border: 0; color: #6ed9ee; background: transparent; font-size: inherit; line-height: inherit; white-space: nowrap; }
     .cloud-panel { --cloud-row-gap: 6px; display: flex; flex-direction: column; gap: var(--cloud-row-gap); box-sizing: border-box; container-type: inline-size; height: 100%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 12px; color: var(--panel-text, #f2f4fa); font-size: 12px; line-height: 1.5; }
     .cloud-panel > * { flex-shrink: 0; }
     .cloud-panel p { margin: 0; }
@@ -511,7 +511,7 @@
     .cloud-panel :is(button, input, select):focus-visible { outline: 2px solid #6ed9ee; outline-offset: 2px; }
     .cloud-panel input[type=checkbox] { accent-color: #6ed9ee; width: 17px; height: 17px; }
     .cloud-muted { color: #b9c2ce; font-size: 11px; overflow-wrap: anywhere; }
-    .cloud-data-status { flex: 0 0 auto; max-width: 112px; margin-left: 0; text-align: right; font-size: 11px; color: #b9c2ce; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+    .cloud-data-status { text-align: center; font-size: inherit; font-weight: inherit; color: inherit; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
     .cloud-map-select { white-space: nowrap; font-size: 11px; }
     .cloud-map-select select { width: auto; padding-inline: 3px; font-size: 12px; }
     .cloud-model-mode select { padding-inline: 3px; font-size: 12px; }
@@ -520,7 +520,8 @@
     .cloud-heading-line { display: block; white-space: nowrap; }
     .cloud-heading-compact { display: none; }
     .cloud-table th, .cloud-table td { padding: 4px 0; text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
-    .cloud-table thead { color: #b9c2ce; font-size: 11px; }
+    /* Inherit one computed row height, including the smaller unit text and guide button. */
+    .cloud-table thead { color: #b9c2ce; font-size: 11px; line-height: 1.5em; }
     .cloud-table thead th { font-weight: 500; overflow-wrap: anywhere; }
     .cloud-table th:first-child { width: 106px; }
     .cloud-panel--english .cloud-table thead th { overflow-wrap: normal; }
@@ -591,7 +592,6 @@
             background-repeat: no-repeat;
         }
         .cloud-panel--english .cloud-map-row { gap: 2px; font-size: 10px; }
-        .cloud-panel--english .cloud-data-status { font-size: 10px; }
         .cloud-panel--english .cloud-map-row label { gap: 3px; }
 
         .cloud-heading-wide { display: none; }
