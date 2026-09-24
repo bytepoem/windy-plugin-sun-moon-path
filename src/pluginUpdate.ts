@@ -368,7 +368,11 @@ export const parseUpdateSnapshot = (value: unknown, version: string): UserFacing
 };
 
 /** Fetch a single immutable snapshot from the same trusted origin as the manifest. */
-const loadUpdateSnapshot = async (manifest: UpdateManifest, fetchImpl: typeof fetch, signal?: AbortSignal) => {
+const loadUpdateSnapshot = async (
+    manifest: UpdateManifest,
+    fetchImpl: typeof fetch,
+    signal?: AbortSignal,
+): Promise<{ notes: UserFacingReleaseNotes[]; status: 'loaded' | 'error' }> => {
     const url = new URL(manifest.notesUrl, updateManifestUrl);
     if (url.origin !== new URL(updateManifestUrl).origin || url.username || url.password
         || url.pathname !== `/${manifest.version}/notes.json` || url.search || url.hash) {

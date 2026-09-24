@@ -4,8 +4,8 @@ import {
     emptyForecastState,
     type ForecastInput,
 } from './forecastController';
-import type { OpenMeteoAtmospherePoint } from './openMeteo';
 import { transformWeatherPayload, type WeatherForecastPayload } from './weather';
+import type { OpenMeteoAtmospherePoint } from './openMeteo';
 import type { WeatherRequest, WeatherResult } from './weatherProvider';
 
 const now = Date.UTC(2026, 8, 11, 5);

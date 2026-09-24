@@ -1,5 +1,5 @@
-import type { Coordinates } from './solar';
 import { WEATHER_PAST_WINDOW_MS, WEATHER_FUTURE_WINDOW_MS, type WeatherModel, type WeatherPoint } from './weather';
+import type { Coordinates } from './solar';
 
 const AIR_QUALITY_API_URL = 'https://air-quality-api.open-meteo.com/v1/air-quality';
 const FORECAST_API_URL = 'https://api.open-meteo.com/v1/forecast';

@@ -118,9 +118,9 @@ describe('disposable Baidu transport', () => {
         for (const failure of ['empty', 'error', 'timeout']) {
             const transport = createBaiduUsageTransport(() => allowed);
             transport.trackOpen();
-            if (failure === 'empty') script.onload?.();
-            if (failure === 'error') script.onerror?.();
-            if (failure === 'timeout') vi.advanceTimersByTime(10_000);
+            if (failure === 'empty') { script.onload?.(); }
+            if (failure === 'error') { script.onerror?.(); }
+            if (failure === 'timeout') { vi.advanceTimersByTime(10_000); }
             expect(vi.getTimerCount()).toBe(0);
             expect(script.onload).toBeNull();
             expect(requests).toEqual([]);

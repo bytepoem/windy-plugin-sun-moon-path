@@ -112,7 +112,7 @@ describe('cloud profile time selection', () => {
 describe('temperature/dew-point cloud estimates', () => {
     const sounding = () => {
         const payload = fixture();
-        for (const key of Object.keys(payload.sounding!).filter(key => key.startsWith('gh-'))) {
+        for (const key of Object.keys(payload.sounding!).filter(field => field.startsWith('gh-'))) {
             const level = key.slice(3);
             payload.sounding![`temp-${level}`] = [270, 270];
             payload.sounding![`dewPoint-${level}`] = [260, 260];

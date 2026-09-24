@@ -137,10 +137,10 @@
         getElevation: async (location, signal) => (
             await getElevation(location.lat, location.lon, { abortSignal: signal })
         ).data,
-        getAtmosphere: (location, _requestedAt, signal, source) => fetchOpenMeteoAtmosphere({ location, signal, includeVisibility: source === 'windy' }),
+        getAtmosphere: (location, _requestedAt, signal, weatherSource) => fetchOpenMeteoAtmosphere({ location, signal, includeVisibility: weatherSource === 'windy' }),
         getLightPollution: (location, signal) => fetchLightPollutionPoint(location, signal),
-        getWeather: async (location, weatherModel, requestedAt, signal, source = 'windy') => (
-            await windyWeatherProvider.weather({ location, model: weatherModel, requestedAt, signal, source })
+        getWeather: async (location, weatherModel, requestedAt, signal, weatherSource = 'windy') => (
+            await windyWeatherProvider.weather({ location, model: weatherModel, requestedAt, signal, source: weatherSource })
         ).points,
     });
 

@@ -188,7 +188,7 @@ export const translations: Record<UiLanguage, {
 }> = {
     zh: {
         dateLabel: '观测日期',
-        eventSelectorLabel: '选择日月事件',
+        eventSelectorLabel: '选择日月或银心事件',
         eventButtonTitles: {
             all: '显示全部日月事件方位线',
             sunrise: '只显示日出方位线',

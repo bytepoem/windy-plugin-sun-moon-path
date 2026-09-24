@@ -2,7 +2,7 @@ const SITE_ID = '1bc918b521d751eba5d2d965e88caf3b';
 const PAGE_PATH = '/plugins/sun-moon-path/usage';
 const SDK_LOAD_TIMEOUT_MS = 10_000;
 
-type Command = [string, ...Array<string | number | boolean>];
+type Command = [string, ...(string | number | boolean)[]];
 type AnalyticsWindow = Window & {
     Image: typeof Image;
     _hmt?: { push: (command: Command) => unknown };

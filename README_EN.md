@@ -17,8 +17,9 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.
 ```
 
 1. Click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own Amap, Baidu or Tencent Maps API Key in Settings.
-2. Choose a date. Events shows celestial rise/set times, live directions, Moon phase, moonless-night and Milky Way observing windows.
+2. Choose a date. Events shows celestial rise/set times, live directions, Moon phase, moonless-night and Milky Way observing windows. The language switch is at the top right of Settings; the top favorites button shows only its icon.
 3. In Clouds, select a target and cloud height, then use rise/set shortcuts, local time or the minute slider to plan a shooting time.
+   The top galactic centre rise/set buttons keep the current tab. In Events, three green bearings show the crossing and 30 minutes before and after it. Below-horizon bearings are direction references, not visibility claims; unavailable events are disabled. In Clouds, both rows of Sun, Moon and galactic centre buttons stay in sync. Manual time clears rise/set highlights; All is reserved for the Sun/Moon overview.
 4. Check the weather below or compare 2–5 favorite locations for the same date. Mobile supports collapsed, compact and fullscreen modes.
 
 ## Features

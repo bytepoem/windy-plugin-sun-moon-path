@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { cloudMapDirections } from './cloudGeometry';
+import { galacticCenterEvents } from './cloudTimeline';
+import { GALACTIC_LINE_COLORS, galacticDirectionPaths } from './eventDirections';
 import { createMapOverlayController, type MapOverlayRuntime } from './mapOverlayController';
 import { destinationPoint, calculateCurrentMoonInfo, calculateCurrentSolarDirection, calculateSolarPath } from './solar';
 
@@ -56,6 +58,29 @@ const createRuntime = () => {
 };
 
 describe('map overlay controller', () => {
+    it.each(['milkywayrise', 'milkywayset'] as const)('renders and clears the three %s rays through the shared lifecycle', event => {
+        const { runtime, groups, markers, lines } = createRuntime();
+        const controller = createMapOverlayController({} as L.LeafletGlMap, runtime);
+        const paths = galacticDirectionPaths(galacticCenterEvents('2026-09-24', 'Asia/Shanghai', location), location, 'en')
+            .filter(path => path.event === event);
+        controller.render({
+            location, paths, currentSun: null, currentMoon: null,
+            showExtendedDistanceMarker: true, showDistanceMarkers: true,
+            directionRangeKm: null, opacityPercent: 80, originLabel: 'Observer',
+            eventNames: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset' },
+            formatDistance: value => `${value} km`,
+        });
+        expect(lines).toHaveLength(3);
+        expect(lines.map(line => line.options.color)).toEqual(Object.values(GALACTIC_LINE_COLORS));
+        expect(markers).toHaveLength(10);
+        expect(markers[1].tooltip).toContain(event === 'milkywayrise' ? 'GC rise' : 'GC set');
+        expect(markers.at(-1)?.tooltip).toContain('600 km');
+        controller.setOpacity(40);
+        expect(lines[0].setStyle).toHaveBeenLastCalledWith({ opacity: 0.38 });
+        controller.destroy();
+        expect(groups[0].remove).toHaveBeenCalledOnce();
+    });
+
     it.each([true, false])('renders event rays with distance markers enabled=%s', showDistanceMarkers => {
         const { runtime, groups, markers, lines } = createRuntime();
         const controller = createMapOverlayController({} as L.LeafletGlMap, runtime);

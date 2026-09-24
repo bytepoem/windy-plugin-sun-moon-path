@@ -252,6 +252,29 @@
                         {/if}
                     </button>
                 {/each}
+                {#each galacticShortcutEvents as event}
+                    <button
+                        type="button"
+                        class:active={highlightedEvent === event}
+                        aria-pressed={highlightedEvent === event}
+                        aria-label={cloudTimelineLabel(event, uiLanguage === 'zh')}
+                        title={cloudTimelineLabel(event, uiLanguage === 'zh')}
+                        disabled={!galacticEvents.some(item => item.type === event)}
+                        on:click={() => selectGalacticEvent(event)}
+                    >
+                        <span class="event-button__icon event-button__icon--milkyway" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="M12 9c-5-5-10 1-6 6s14 3 13-3S9 2 5 7m7 8c5 5 10-1 6-6S4 6 5 12s10 10 14 5"></path>
+                                <circle cx="12" cy="12" r="1.5"></circle>
+                            </svg>
+                        </span>
+                        <span class="event-button__arrow" class:event-button__arrow--down={event === 'milkywayset'} aria-hidden="true">
+                            <svg viewBox="0 0 16 16" focusable="false">
+                                <path d="M8 13V3M4.2 6.8 8 3l3.8 3.8"></path>
+                            </svg>
+                        </span>
+                    </button>
+                {/each}
             </div>
         </fieldset>
 
@@ -268,20 +291,6 @@
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M7 4h10v16l-5-3-5 3Z"></path>
             </svg>
-            {#if favoriteCount > 0}
-                <span class="favorite-locations-trigger__count">{favoriteCount}</span>
-            {/if}
-        </button>
-
-        <button
-            type="button"
-            class="language-toggle"
-            aria-label={text.languageToggleLabel}
-            title={text.languageToggleLabel}
-            on:click={toggleLanguage}
-        >
-            <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中</span>
-            <span class="language-toggle__option" class:active={uiLanguage === 'en'}>EN</span>
         </button>
     </div>
 
@@ -738,9 +747,21 @@
                     </section>
                 {/if}
             {:else if summaryTab === 'settings'}
-                <div class="settings-pages" role="group" aria-label={text.settingsTab}>
-                    <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{uiLanguage === 'zh' ? '偏好设置' : 'Preferences'}</button>
-                    <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{uiLanguage === 'zh' ? '使用说明' : 'User guide'}</button>
+                <div class="settings-header">
+                    <div class="settings-pages" role="group" aria-label={text.settingsTab}>
+                        <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{uiLanguage === 'zh' ? '偏好设置' : 'Preferences'}</button>
+                        <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{uiLanguage === 'zh' ? '使用说明' : 'User guide'}</button>
+                    </div>
+                    <button
+                        type="button"
+                        class="language-toggle"
+                        aria-label={text.languageToggleLabel}
+                        title={text.languageToggleLabel}
+                        on:click={toggleLanguage}
+                    >
+                        <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中文</span>
+                        <span class="language-toggle__option" class:active={uiLanguage === 'en'}>EN</span>
+                    </button>
                 </div>
                 {#if settingsPage === 'guide'}
                     <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
@@ -1128,7 +1149,6 @@
 </section>
 
 <script lang="ts">
-    import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import bcast from '@windy/broadcast';
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { getGPSlocation, getMyLatestPos } from '@windy/geolocation';
@@ -1140,9 +1160,10 @@
     import { singleclick } from '@windy/singleclick';
     import store from '@windy/store';
     import { onDestroy, onMount, tick } from 'svelte';
-    import CloudNavigation from './CloudNavigation.svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
 
+    import CloudNavigation from './CloudNavigation.svelte';
+    import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import { translations, type UiLanguage } from './pluginTranslations';
     import {
         loadLanguagePreference,
@@ -1172,10 +1193,13 @@
         type MobileNonFullscreenPanelMode,
     } from './pluginPreferences';
     import config, { currentVersionReleasedAt } from './pluginConfig';
-    import CelestialIcon from './CelestialIcon.svelte';
     import PluginGuide from './PluginGuide.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
-    import type { CloudTimelineEventType } from './cloudTimeline';
+    import { cloudTimelineLabel, galacticCenterEvents, type CloudTimelineEventType } from './cloudTimeline';
+    import {
+        directionLineColor, galacticDirectionPaths, isGalacticEvent, selectDirectionPaths,
+        type DirectionEvent, type DirectionPath, type GalacticEvent,
+    } from './eventDirections';
     import { createCloudSettings } from './cloudProfile';
     import { loadCloudPreferences, saveCloudPreferences } from './cloudPreferences';
     import FavoriteComparison from './FavoriteComparison.svelte';
@@ -1221,7 +1245,6 @@
         buildObservationWindows,
         createObservationPlanner,
         ObservationPlannerError,
-        selectObservationPaths,
         type ObservationEvent,
         type ObservationMetricRange,
         type ObservationWindow,
@@ -1243,8 +1266,6 @@
         dateInputToUtcNoon,
         formatLocalClock,
         formatLocalDateTime,
-        LINE_COLORS,
-        MOON_LINE_COLORS,
         coordinatesFromLocation,
         type AstronomyInterval,
         type AstronomyTimeline,
@@ -1253,7 +1274,6 @@
         type SolarDirection,
         type SolarEvent,
         type SolarPath,
-        type SolarSampleKind,
     } from './solar';
     import {
         buildWeatherLocationKey,
@@ -1294,7 +1314,6 @@
         resolveUnitPreferencesChange,
         type DistanceUnit,
         type PrecipitationUnit,
-        type TemperatureUnit,
         type UnitPreferences,
     } from './unitPreferences';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
@@ -1315,19 +1334,21 @@
             return 'UTC';
         }
     })();
-    type DirectionEvent = ObservationEvent;
     type SummaryTab = 'events' | 'weather' | 'clouds' | 'settings' | 'about';
     type MobilePanelMode = MobileNonFullscreenPanelMode | 'fullscreen';
     const mobileSummaryTabOrder: SummaryTab[] = ['events', 'weather', 'clouds', 'settings', 'about'];
     const desktopSummaryTabOrder: SummaryTab[] = ['events', 'clouds', 'settings', 'about'];
     const timelineSkeletonSlots = Array.from({ length: 7 }, (_, index) => index);
-    const eventOptions: { value: DirectionEvent }[] = [
+    const eventOptions: { value: ObservationEvent }[] = [
         { value: 'all' },
         { value: 'sunrise' },
         { value: 'sunset' },
         { value: 'moonrise' },
         { value: 'moonset' },
     ];
+    const galacticShortcutEvents = ['milkywayrise', 'milkywayset'] as const;
+    $: galacticEvents = galacticCenterEvents(selectedDate, timeZone, selectedLocation);
+    $: galacticPaths = galacticDirectionPaths(galacticEvents, selectedLocation, uiLanguage);
     const LOCATION_PROVIDER_APPLICATION_URLS: Record<LocationProvider, string> = {
         amap: 'https://lbs.amap.com/api/webservice/create-project-and-key',
         baidu: 'https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/quickstart/prepare',
@@ -1387,7 +1408,7 @@
     let timeZone = systemTimeZone;
     let elevationM = 0;
     let solarPaths: SolarPath[] = [];
-    let activeSolarPath: SolarPath | null = null;
+    let activeSolarPath: DirectionPath | null = null;
     let astronomyTimeline: AstronomyTimeline | null = null;
     let currentSolarDirection: SolarDirection | null = null;
     let currentMoonInfo: CurrentMoonInfo | null = null;
@@ -1565,7 +1586,7 @@
     // The galactic overlay owns its direction; do not pair it with a solar/lunar event ray.
     $: if (isMounted && summaryTab) {
         const mapEvent = cloudObstructionVisible ? cloudMapEvent : selectedEvent;
-        renderMapFeatures(mapEvent === null ? [] : selectObservationPaths(solarPaths, mapEvent),
+        renderMapFeatures(mapEvent === null ? [] : selectDirectionPaths(solarPaths, galacticPaths, mapEvent),
             cloudObstructionVisible ? cloudDirectionRangeKm : null, cloudPlanningTimestamp, cloudPlanningBody);
     }
 
@@ -1636,7 +1657,7 @@
 
     $: activeSolarPath = selectedEvent === 'all'
         ? null
-        : solarPaths.find(path => path.event === selectedEvent) || null;
+        : selectDirectionPaths(solarPaths, galacticPaths, selectedEvent)[0] || null;
 
     $: {
         const selectedDayReference = dateInputForInstant(currentInstant, timeZone) === selectedDate
@@ -1655,6 +1676,9 @@
     }
 
     const eventDisplayName = (event: DirectionEvent, labels = text): string => {
+        if (isGalacticEvent(event)) {
+            return cloudTimelineLabel(event, uiLanguage === 'zh');
+        }
         return labels.events[event] || event;
     };
 
@@ -1860,9 +1884,9 @@
         document.getElementById(`summary-tab-${nextTab}`)?.focus();
     };
 
-    const selectedMapPaths = (paths = solarPaths): SolarPath[] => {
+    const selectedMapPaths = (paths = solarPaths): DirectionPath[] => {
         const mapEvent = cloudObstructionVisible ? cloudMapEvent : selectedEvent;
-        return mapEvent === null ? [] : selectObservationPaths(paths, mapEvent);
+        return mapEvent === null ? [] : selectDirectionPaths(paths, galacticPaths, mapEvent);
     };
 
     $: fitMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
@@ -1875,7 +1899,7 @@
         // Keep the reactive inputs explicit: Svelte cannot infer state read
         // from inside selectedMapPaths(), so an async path refresh would
         // otherwise leave the toolbar button in its initial disabled state.
-        paths: selectObservationPaths(solarPaths, selectedEvent),
+        paths: selectDirectionPaths(solarPaths, galacticPaths, selectedEvent),
         showExtendedDistanceMarker,
     }) !== null;
 
@@ -1962,7 +1986,19 @@
         recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
-    const selectEvent = (event: DirectionEvent) => {
+    /** Stay in the current tab: only an already-open cloud planner owns the event time. */
+    const selectGalacticEvent = (event: GalacticEvent) => {
+        selectedEvent = event;
+        if (cloudObstructionVisible) {
+            cloudObstructionComponent?.jumpTime(event);
+            return;
+        }
+        const paths = selectedMapPaths();
+        status = paths.some(path => path.status === 'ok') ? 'ready' : 'empty';
+        renderMapFeatures(paths);
+    };
+
+    const selectEvent = (event: ObservationEvent) => {
         if (cloudObstructionVisible && event === 'all') {return;}
         selectedEvent = event;
         if (event !== 'all') {
@@ -2183,8 +2219,7 @@
     const makeAstronomyKey = (location: Coordinates, dateInput: string): string =>
         `${dateInput}|${location.lat}|${location.lon}`;
 
-    const lineColorForEvent = (event: DirectionEvent, kind: SolarSampleKind): string =>
-        event === 'moonrise' || event === 'moonset' ? MOON_LINE_COLORS[kind] : LINE_COLORS[kind];
+    const lineColorForEvent = directionLineColor;
 
     const compassDirectionLabel = (azimuth: number, language = uiLanguage): string => {
         if (language === 'zh') {
@@ -2199,7 +2234,7 @@
         ? cloudMapDirections(planningTimestamp, selectedLocation, planningBody)
         : { currentSun: currentSolarDirection, currentMoon: currentMoonInfo };
 
-    const renderMapFeatures = (paths: SolarPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
+    const renderMapFeatures = (paths: DirectionPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
         planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => {
         mapOverlayController.render({
             location: selectedLocation,
@@ -2444,7 +2479,7 @@
     };
 
     const unavailableMessage = (
-        event: SolarEvent,
+        event: Exclude<DirectionEvent, 'all'>,
         reason: 'always-up' | 'always-down' | 'not-available',
     ): string => {
         const nameForEvent = eventDisplayName(event, text);
@@ -3748,24 +3783,12 @@
         stroke-linejoin: round;
     }
 
-    .favorite-locations-trigger__count {
-        color: currentColor;
-        font-size: 9px;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        line-height: 1;
-    }
-
     .favorite-locations-trigger--inline {
         flex-direction: row;
         gap: 4px;
         width: 100%;
         height: 38px;
         border-radius: 6px;
-    }
-
-    .favorite-locations-trigger--inline .favorite-locations-trigger__count {
-        font-size: 10px;
     }
 
     .eyebrow {
@@ -3787,7 +3810,7 @@
 
     .control-grid--favorites {
         z-index: 20;
-        grid-template-columns: 62px minmax(0, 1fr) 54px 52px;
+        grid-template-columns: 62px minmax(0, 1fr) 38px;
     }
 
     .control-grid--favorites .date-control {
@@ -3871,7 +3894,7 @@
 
     .segmented-control {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         min-height: 38px;
         overflow: hidden;
         border: 1px solid var(--panel-border);
@@ -3895,6 +3918,12 @@
 
     .segmented-control button + button {
         border-left: 1px solid var(--panel-border);
+    }
+
+    .segmented-control--events button {
+        gap: 1px;
+        padding-right: 2px;
+        padding-left: 2px;
     }
 
     .segmented-control button {
@@ -3953,6 +3982,14 @@
         fill: none;
         stroke: currentColor;
         stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .event-button__icon--milkyway svg {
+        fill: none;
+        stroke: #9de0b7;
+        stroke-width: 1.6;
         stroke-linecap: round;
         stroke-linejoin: round;
     }
@@ -4367,12 +4404,24 @@
         height: auto;
     }
 
-    .settings-pages {
+    .settings-header {
         flex-shrink: 0;
         display: flex;
         gap: 8px;
         padding: 8px 12px;
         border-bottom: 1px solid var(--panel-border);
+    }
+
+    .settings-pages {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .settings-header .language-toggle {
+        flex: 0 0 80px;
+        width: 80px;
     }
 
     .settings-pages button {
@@ -4392,7 +4441,8 @@
         border-color: var(--panel-accent);
     }
 
-    .settings-pages button:focus-visible {
+    .settings-pages button:focus-visible,
+    .language-toggle:focus-visible {
         outline: 2px solid var(--panel-accent);
         outline-offset: -2px;
     }
@@ -5937,11 +5987,11 @@
         }
 
         .sun-path-panel.mobile_ui .control-grid--favorites {
-            grid-template-columns: 62px minmax(0, 1fr) 52px 52px;
+            grid-template-columns: 62px minmax(0, 1fr) 38px;
         }
 
         .segmented-control--events {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-columns: repeat(7, minmax(0, 1fr));
         }
 
         .sample-row {
@@ -6076,7 +6126,7 @@
 
         .control-grid--favorites,
         .sun-path-panel.mobile_ui .control-grid--favorites {
-            grid-template-columns: 50px minmax(0, 1fr) 42px 44px;
+            grid-template-columns: 50px minmax(0, 1fr) 32px;
             gap: 4px;
         }
 

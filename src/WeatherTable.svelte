@@ -316,7 +316,11 @@
         <div class="weather-model-control weather-source-control" role="group" aria-label={language === 'zh' ? '天气数据源' : 'Weather source'}>
             {#each sourceOptions as provider}
                 <button type="button" class:active={source === provider} aria-pressed={source === provider}
-                    on:click={() => { if (source !== provider) dispatch('sourcechange', provider); }}
+                    on:click={() => {
+                        if (source !== provider) {
+                            dispatch('sourcechange', provider);
+                        }
+                    }}
                 >{provider === 'windy' ? 'Windy' : 'Open-Meteo'}</button>
             {/each}
         </div>

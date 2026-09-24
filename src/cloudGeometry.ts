@@ -146,9 +146,9 @@ export const cloudMapDirections = (timestamp: number | null, location: Coordinat
 /** Shared geodesic ray with fixed distance steps: overlapping rays have identical
  * vertices even when their total lengths differ. Mercator must not join only the endpoints.
  */
-export const cloudBearingPath = (location: Coordinates, azimuth: number, distanceKm: number): Coordinates[] => {
+export function cloudBearingPath(location: Coordinates, azimuth: number, distanceKm: number): Coordinates[] {
     const points = Array.from({ length: Math.ceil(distanceKm / 2) }, (_, index) =>
         destinationPoint(location, azimuth, index * 2));
     points.push(destinationPoint(location, azimuth, distanceKm));
     return points;
-};
+}

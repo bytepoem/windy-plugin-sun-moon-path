@@ -12,7 +12,7 @@ describe('PostHog event transport', () => {
         [{ category: 'usage', action: 'foreground_seconds', label: 'plugin', value: 30 }, 'foreground_seconds', { seconds: 30 }],
         [{ category: 'usage', action: 'tab_seconds', label: 'settings', value: 12.5 }, 'tab_seconds', { tab: 'settings', seconds: 12.5 }],
         [{ category: 'usage', action: 'reached_3min' }, 'reached_3min', {}],
-    ] as Array<[UsageEvent, string, Record<string, unknown>]>)('maps %j without host page data', (event, name, properties) => {
+    ] as [UsageEvent, string, Record<string, unknown>][])('maps %j without host page data', (event, name, properties) => {
         expect(postHogUsagePayload(event, 'random-session-id', config)).toEqual({
             api_key: 'phc_test',
             distinct_id: 'random-session-id',
@@ -60,7 +60,9 @@ describe('PostHog event transport', () => {
     it('bounds in-flight requests and aborts them on revocation without retry', () => {
         const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}));
         const transport = createPostHogUsageTransport(() => true, 'session', config, fetchMock);
-        for (let index = 0; index < 100; index++) transport.send(open);
+        for (let index = 0; index < 100; index++) {
+            transport.send(open);
+        }
         expect(fetchMock).toHaveBeenCalledTimes(16);
         transport.destroy(true);
         expect(fetchMock.mock.calls.every(([, options]) => options.signal.aborted)).toBe(true);

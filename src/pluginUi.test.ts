@@ -158,7 +158,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('<path d="M7 12h10"></path>');
         expect(pluginSource).toContain('<path d="M7 12h10M12 7v10"></path>');
         expect(pluginSource).toContain('disabled={!canFitDirectionLines}');
-        expect(pluginSource).toContain('paths: selectObservationPaths(solarPaths, selectedEvent)');
+        expect(pluginSource).toContain('paths: selectDirectionPaths(solarPaths, galacticPaths, selectedEvent)');
         expect(pluginSource).toContain(
             'aria-label={fitMapControlLabel}',
         );
@@ -596,7 +596,7 @@ describe('plugin astronomy loading presentation', () => {
         );
         // Settings controls share desktop dimensions; do not restore mobile-only sizing.
         expect(pluginSource).not.toMatch(
-            /\.sun-path-panel\.mobile_ui \.settings-(?:select select|api-key__control (?:input|button)|pages button)\s*[,\{]/,
+            /\.sun-path-panel\.mobile_ui \.settings-(?:select select|api-key__control (?:input|button)|pages button)\s*[,{]/,
         );
     });
 

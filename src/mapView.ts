@@ -1,4 +1,5 @@
-import type { Coordinates, SolarPath } from './solar';
+import type { Coordinates } from './solar';
+import type { DirectionPath } from './eventDirections';
 
 export type DirectionLineFitBounds = [
     [southLatitude: number, westLongitude: number],
@@ -95,7 +96,7 @@ export const buildDirectionLineFitBounds = ({
     showExtendedDistanceMarker,
 }: {
     location: Coordinates;
-    paths: SolarPath[];
+    paths: DirectionPath[];
     showExtendedDistanceMarker: boolean;
 }): DirectionLineFitBounds | null => {
     const endpoints = paths.flatMap(path => path.status === 'ok'

@@ -1,15 +1,12 @@
 import { manageMarkerTooltip } from './markerTooltip';
+import { directionLineColor, type DirectionPath } from './eventDirections';
 import {
     destinationPoint,
     CURRENT_DIRECTION_COLOR,
     CURRENT_MOON_DIRECTION_COLOR,
-    LINE_COLORS,
-    MOON_LINE_COLORS,
     splitPolylineAtDateLine,
     type Coordinates,
     type SolarEvent,
-    type SolarPath,
-    type SolarSampleKind,
 } from './solar';
 
 type MarkerKind = 'origin' | 'inner' | 'outer' | 'extended';
@@ -26,7 +23,7 @@ type MapBearing = { endpoint: Coordinates; points?: Coordinates[] };
 
 export type MapOverlayRenderState = {
     location: Coordinates;
-    paths: SolarPath[];
+    paths: DirectionPath[];
     currentSun: MapBearing | null;
     currentMoon: MapBearing | null;
     currentGalacticCenter?: MapBearing | null;
@@ -69,9 +66,6 @@ const markerIcon = (runtime: MapOverlayRuntime, kind: MarkerKind): L.DivIcon => 
 };
 
 const toLatLng = (location: Coordinates): [number, number] => [location.lat, location.lon];
-
-const lineColorForEvent = (event: SolarEvent, kind: SolarSampleKind): string =>
-    event === 'moonrise' || event === 'moonset' ? MOON_LINE_COLORS[kind] : LINE_COLORS[kind];
 
 const normalizedOpacityPercent = (value: number): number =>
     Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 100;
@@ -151,7 +145,7 @@ export const createMapOverlayController = (
         destroy();
         opacityPercent = state.opacityPercent;
         const availablePaths = state.paths.filter(
-            (path): path is Extract<SolarPath, { status: 'ok' }> => path.status === 'ok',
+            (path): path is Extract<DirectionPath, { status: 'ok' }> => path.status === 'ok',
         );
         // A galactic bearing has no solar/lunar event ray, but is independently drawable.
         if (availablePaths.length === 0 && !state.currentSun && !state.currentMoon && !state.currentGalacticCenter) {
@@ -165,6 +159,7 @@ export const createMapOverlayController = (
         releaseTooltips.push(manageMarkerTooltip(origin));
 
         for (const path of availablePaths) {
+            const eventName = 'eventLabel' in path ? path.eventLabel : state.eventNames[path.event];
             const isMoonEvent = path.event === 'moonrise' || path.event === 'moonset';
             const baseOpacity = isMoonEvent ? 0.82 : 0.95;
             for (const sample of path.samples) {
@@ -181,7 +176,7 @@ export const createMapOverlayController = (
                 ];
                 for (const segment of splitPolylineAtDateLine(points)) {
                     const line = runtime.createPolyline(segment.map(toLatLng), {
-                        color: lineColorForEvent(path.event, sample.kind),
+                        color: directionLineColor(path.event, sample.kind),
                         weight: 3,
                         opacity: scaledOpacity(baseOpacity),
                         lineCap: 'round',
@@ -204,7 +199,7 @@ export const createMapOverlayController = (
                     const marker = runtime.createMarker(toLatLng(markerInput.point), {
                         icon: markerIcon(runtime, markerInput.kind),
                     }).addTo(layerGroup).bindTooltip(
-                        `${state.eventNames[path.event]} · ${sample.label} · ${state.formatDistance(markerInput.distance)}`,
+                        `${eventName} · ${sample.label} · ${state.formatDistance(markerInput.distance)}`,
                         { direction: 'top', offset: [0, -6] },
                     );
                     releaseTooltips.push(manageMarkerTooltip(marker));

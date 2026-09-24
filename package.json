@@ -36,6 +36,8 @@
         "suncalc": "2.0.1"
     },
     "devDependencies": {
+        "@types/node": "^24.13.3",
+        "vite": "^8.2.0",
         "vitest": "^4.1.10"
     }
 }

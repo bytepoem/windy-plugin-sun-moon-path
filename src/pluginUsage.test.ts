@@ -4,8 +4,8 @@ const state = vi.hoisted(() => ({
     consent: true,
     listeners: new Map<number, () => void>(),
     sequence: 0,
-    transports: [] as Array<{ send: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
-    pageviews: [] as Array<{ trackOpen: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
+    transports: [] as { send: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }[],
+    pageviews: [] as { trackOpen: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }[],
     identities: [] as string[],
 }));
 

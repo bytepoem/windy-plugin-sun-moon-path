@@ -76,7 +76,7 @@ export const saveHideLocationSearchPreference = (value: boolean) => {
     }
 };
 
-export const loadInitialOverlayPreference = (availableInitialOverlays: readonly WindyOverlay[]): InitialOverlayPreference => {
+export const loadInitialOverlayPreference = (availableInitialOverlays: ReadonlyArray<WindyOverlay>): InitialOverlayPreference => {
     try {
         return normalizeInitialOverlayPreference(
             localStorage.getItem(INITIAL_OVERLAY_STORAGE_KEY),

@@ -1,4 +1,3 @@
-import type { Coordinates } from './solar';
 import {
     transformWeatherPayload,
     type WeatherForecastPayload,
@@ -6,6 +5,7 @@ import {
     type WeatherPoint,
     type WeatherSource,
 } from './weather';
+import type { Coordinates } from './solar';
 
 export type WeatherRequest = {
     location: Coordinates;
