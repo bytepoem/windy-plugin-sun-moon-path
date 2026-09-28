@@ -1,19 +1,17 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, tick } from 'svelte';
 
     export let active: boolean;
-    export let view: 'obstruction' | 'sea' = 'obstruction';
+    export let view: 'obstruction' | 'rainbow' = 'obstruction';
     export let language: 'zh' | 'en';
 
     const dispatch = createEventDispatcher<{ activate: void; tabkeydown: KeyboardEvent }>();
-    // 云海开发暂缓：保留菜单实现供恢复，目前仅启用云层遮挡 Tab。
-    /*
-    const views = ['obstruction', 'sea'] as const;
+    const views = ['obstruction', 'rainbow'] as const;
     let open = false;
     let root: HTMLDivElement;
     let trigger: HTMLButtonElement;
     let menu: HTMLDivElement;
-    $: labels = language === 'zh' ? ['云层遮挡', '云海预报'] : ['Clouds', 'Sea of clouds'];
+    $: labels = language === 'zh' ? ['云层遮挡', '彩虹'] : ['Clouds', 'Rainbow'];
     $: if (!active) { open = false; }
 
     // Open from either navigation state, then focus the current function.
@@ -61,14 +59,11 @@
     const dismissOutside = (event: Event) => {
         if (open && event.target instanceof Node && !root?.contains(event.target)) { open = false; }
     };
-    */
 </script>
 
-<!-- 云海入口恢复时，同时恢复脚本中的菜单逻辑及 tick 导入。
 <svelte:window on:pointerdown={dismissOutside} on:focusin={dismissOutside} on:keydown={dismissEscape} />
--->
 
-<div class="cloud-navigation" class:active role="presentation">
+<div class="cloud-navigation" class:active role="presentation" bind:this={root}>
     <button
         id="summary-tab-clouds"
         type="button"
@@ -76,14 +71,14 @@
         aria-controls="summary-panel"
         aria-selected={active}
         tabindex={active ? 0 : -1}
-        on:click={() => { view = 'obstruction'; dispatch('activate'); }}
+        on:click={() => dispatch('activate')}
         on:keydown={event => dispatch('tabkeydown', event)}
-    >{language === 'zh' ? '云层遮挡' : 'Clouds'}</button>
-    <!-- 云海开发暂缓，隐藏下拉按钮及列表。
+    ><span class="tab-label">{labels[views.indexOf(view)]}</span></button>
     <button
         class="arrow"
+        bind:this={trigger}
         type="button"
-        aria-label={language === 'zh' ? '选择云层功能' : 'Choose cloud function'}
+        aria-label={language === 'zh' ? '选择云层或彩虹功能' : 'Choose clouds or rainbow'}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="cloud-function-menu"
@@ -94,17 +89,20 @@
                 if (!open) { toggle(); }
             }
         }}
-    >▾</button>
+    >
+        <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="m4 6 4 4 4-4"></path>
+        </svg>
+    </button>
     {#if open}
-        <div id="cloud-function-menu" class="menu" role="menu" aria-label={language === 'zh' ? '云层功能' : 'Cloud functions'} bind:this={menu} on:keydown={menuKeydown}>
+        <div id="cloud-function-menu" class="menu" role="menu" aria-label={language === 'zh' ? '摄影规划功能' : 'Photography planning'} bind:this={menu} on:keydown={menuKeydown}>
             {#each views as value, index}
                 <button type="button" role="menuitemradio" aria-checked={view === value} tabindex="-1" data-view={value} on:click={() => select(value)}>
-                    <span aria-hidden="true">{view === value ? '✓' : ''}</span>{labels[index]}
+                    <span class="menu-check" aria-hidden="true">{view === value ? '✓' : ''}</span><span class="menu-label">{labels[index]}</span>
                 </button>
             {/each}
         </div>
     {/if}
-    -->
 </div>
 
 <style>
@@ -128,9 +126,13 @@
     }
     button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: -2px; }
     button:hover, .active > button { color: var(--panel-text); }
-    button[role='tab'] { flex: 1; min-width: 0; padding: 0 2px; }
-    /* 云层功能菜单恢复时启用。
-    .arrow { width: 24px; flex-shrink: 0; padding: 0; }
+    button[role='tab'] { flex: 1; min-width: 0; padding: 0; text-align: center; }
+    .tab-label { display: block; width: 100%; text-align: center; }
+    /* Reserve real layout space so the entire button, not just its glyph, clears the title. */
+    .arrow { flex: 0 0 28px; align-self: center; display: flex; align-items: center; justify-content: center; width: 28px; min-height: 28px; margin: 4px 5px 4px 6px; padding: 0; border-radius: 4px; color: var(--panel-text); background: rgba(255, 255, 255, 0.06); }
+    .arrow:hover, .arrow[aria-expanded='true'] { background: rgba(99, 185, 238, 0.2); }
+    .chevron { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .arrow[aria-expanded='true'] .chevron { transform: rotate(180deg); }
     .menu {
         position: absolute;
         top: 100%;
@@ -144,16 +146,14 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     }
     .menu button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        position: relative;
         width: 100%;
         min-height: 30px;
-        padding: 0 6px;
-        text-align: left;
+        padding: 0 24px;
+        text-align: center;
     }
     .menu button[aria-checked='true'], .menu button:hover { color: var(--panel-text); background: rgba(99, 185, 238, 0.14); }
-    .menu span { width: 16px; }
-    */
+    .menu-check { position: absolute; left: 6px; top: 50%; width: 16px; transform: translateY(-50%); text-align: center; }
+    .menu-label { display: block; width: 100%; text-align: center; }
     :global(.mobile_ui) button { font-size: 13px; }
 </style>

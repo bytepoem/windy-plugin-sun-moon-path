@@ -24,6 +24,16 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.
 
 ## Features
 
+The Clouds/Rainbow dropdown remembers the last selected function and restores its tab label after a refresh.
+
+Rainbow's Sun/Moon selection, Double, Full circle and local clock are saved in this browser and restored when reopening Rainbow after a refresh. Directions are recalculated using the current date and location.
+
+The rainbow map's coloured target marks the antisolar/antilunar direction: 180° opposite the selected source in azimuth, with negated altitude, which may lie below the horizon. It is hidden when the source is below the horizon. Ribbon width and target size are display styling, not actual angular sizes or a glory forecast.
+
+The dropdown beside Clouds opens **Rainbow**. Select Sun or Moon, adjust local time or use the top Sun/Moon rise/set shortcuts, and enable Double or Full circle as needed. Options survive tab changes during the session. Collapsing on mobile keeps the overlay; Settings, About and Weather keep the preceding overlay and planning time; switching map-planning features or closing the plugin removes it.
+
+The rainbow overlay is a top-down orthographic sky chart, not a distance map. The 0° ring is the horizontal horizon and altitude rings are not evenly spaced. In full-circle mode, above/below-horizon directions can overlap; solid/dashed arcs distinguish them. The primary bow is about 42° and the secondary about 51° from the opposite light-source direction. When the selected light source is below the horizon, bows are hidden and bow readouts show —, including Double and Full circle modes. The bearing, icon and name follow the selected Sun or Moon at the planning instant; a dashed bearing and downward indicator identify a below-horizon source. Thicker strokes are display styling only and do not alter calculated angles. Droplets, illumination, terrain and lunar brightness are not evaluated; seeing a full circle also requires lit droplets and clear sightlines below.
+
 | Feature | Purpose |
 | --- | --- |
 | Sun and Moon directions | Rise/set rays sampled 30 minutes before and after each event, live directions, 200 / 400 km reference points and an optional 600 km marker |

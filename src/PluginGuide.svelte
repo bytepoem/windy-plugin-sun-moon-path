@@ -31,12 +31,24 @@
 
 <section class="module-about module-guide" aria-label={text.guideHeading}>
     <p>{uiLanguage === 'zh'
-        ? '在主导航的「云层遮挡」查看云层规划。偏好设置和使用说明统一位于「设置」，中英文切换位于设置顶部右侧。顶部收藏按钮仅显示图标。'
-        : 'Open Clouds in the main navigation for cloud planning. Preferences and this guide are under Settings, with the language switch at the top right. The top favorites button shows only its icon.'}</p>
+        ? '主导航的下拉菜单可切换「云层遮挡」与「彩虹」。偏好设置和使用说明统一位于「设置」，中英文切换位于设置顶部右侧。顶部收藏按钮仅显示图标。'
+        : 'The navigation dropdown switches between Clouds and Rainbow. Preferences and this guide are under Settings, with the language switch at the top right. The top favorites button shows only its icon.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '彩虹：选择日虹或月虹，调整当地时间，查看主虹／副虹的顶部高度与地平线交点方位。支持双彩虹、完整圆圈；地图为天空俯视投影，0° 圈为水平地平线，高度刻度并非等距，不表示真实距离。完整圆圈的上下半球方向可能重叠，用实线与虚线区分。所选光源在地平线下时隐藏虹弧和虹弧数据。方位线与标记跟随所选日虹／月虹光源和规划时间，光源在地平线下时使用虚线与向下标记。移动端收起时保留图层，进入设置、关于或天气保留此前图层与规划时间；切换地图规划功能或关闭插件后清除。需另行判断水滴、光照、地形和月光亮度。'
+        : 'Rainbow: choose Sun or Moon and adjust local time to see bow-top altitudes and horizon-crossing bearings. Double and full-circle modes are available. The map is a top-down sky projection; the 0° ring is the horizon and altitude rings are not evenly spaced. It is not a distance map. In full-circle mode, above/below-horizon directions may overlap and use solid/dashed arcs. Bows and bow readouts are hidden when the selected source is below the horizon. The bearing and marker follow the selected Sun or Moon at planning time; a below-horizon source uses a dashed bearing and downward indicator. Collapsing on mobile keeps the overlay; Settings, About and Weather keep the preceding overlay and planning time; switching map-planning features or closing removes it. Droplets, illumination, terrain and lunar brightness need separate assessment.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '七彩虹弧的显示宽度不代表实际角宽。彩色同心圆为反太阳点／反月亮点，方位与光源相差 180°、高度相反，可能位于地平线下；光源在地平线下时隐藏此标记。图标大小固定，不表示佛光大小或出现预报。'
+        : 'Rainbow ribbon width is display styling, not actual angular width. The coloured target marks the antisolar/antilunar direction, 180° opposite in azimuth with negated altitude, which may lie below the horizon. It is hidden when the source is below the horizon. The fixed icon size does not model or predict a glory.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '「云层遮挡／彩虹」下拉菜单会记住上次选择，刷新后恢复对应 Tab 名称和功能。'
+        : 'The Clouds/Rainbow dropdown remembers the last selected function and restores its tab label after a refresh.'}</p>
     <p>{text.aboutDescription}</p>
     <p>{uiLanguage === 'zh'
-        ? '顶部银心升落按钮保持当前 Tab；在事件页显示银心升落时刻及前后 30 分钟的三条绿色方位线，地平线以下的线仅供方向参考，不代表可见。当天无对应事件时按钮不可用。云层规划中，使用顶部日月与银心事件按钮跳到对应升落时刻；事件页时间栏以图标显示日月和银心升落时刻；“全部”仅用于日月事件总览。手动调整时间后顶部取消升落高亮。移动端收起窗口仍保留云层参考线，展开后保留原来的规划时间；切换到其他 Tab 或关闭插件会清除云层参考线。'
-        : 'The top galactic centre rise/set buttons keep the current tab. In Events, three green bearings show the crossing and 30 minutes before and after it; below-horizon bearings are direction references, not visibility claims. Unavailable events are disabled. In cloud planning, the top Sun, Moon and galactic centre buttons select the rise/set event and time. The Events time strip uses icons for Sun, Moon and galactic centre crossings; All is only available for the Sun/Moon overview. Manual time clears the top rise/set highlight. Collapsing the mobile panel keeps cloud reference lines and preserves the planning time on expansion. Switching tabs or closing the plugin removes cloud reference lines.'}</p>
+        ? '彩虹的日虹／月虹、双彩虹、完整圆圈和当地时间保存在当前浏览器，刷新后再次打开彩虹即可恢复；按当前日期和地点重新计算方向。'
+        : 'Rainbow saves Sun/Moon, Double, Full circle and local clock in this browser, restoring them when you reopen Rainbow after a refresh. Directions are recalculated for the current date and location.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '顶部银心升落按钮保持当前 Tab；在事件页显示银心升落时刻及前后 30 分钟的三条绿色方位线，地平线以下的线仅供方向参考，不代表可见。当天无对应事件时按钮不可用。云层规划中，使用顶部日月与银心事件按钮跳到对应升落时刻；事件页时间栏以图标显示日月和银心升落时刻；“全部”仅用于日月事件总览。手动调整时间后顶部取消升落高亮。移动端收起窗口仍保留云层参考线，展开后保留原来的规划时间；进入设置、关于或天气保留云层参考线和规划时间，切换到其他地图规划功能或关闭插件会清除云层参考线。'
+        : 'The top galactic centre rise/set buttons keep the current tab. In Events, three green bearings show the crossing and 30 minutes before and after it; below-horizon bearings are direction references, not visibility claims. Unavailable events are disabled. In cloud planning, the top Sun, Moon and galactic centre buttons select the rise/set event and time. The Events time strip uses icons for Sun, Moon and galactic centre crossings; All is only available for the Sun/Moon overview. Manual time clears the top rise/set highlight. Collapsing the mobile panel keeps cloud reference lines and preserves the planning time on expansion. Settings, About and Weather keep cloud reference lines and planning time; switching map-planning features or closing the plugin removes cloud reference lines.'}</p>
     <p>{text.supportGuideHint}</p>
     <p>{uiLanguage === 'zh'
         ? '使用统计：仅在 Windy 的分析统计授权允许时，百度统计记录插件打开的基础访问数据，PostHog 记录打开、导航切换和前台停留事件。关闭插件或撤回授权后停止采集。埋点不包含坐标、收藏内容或账号；百度可能使用 Cookie 并接收浏览器信息，两家服务均会接收网络请求的 IP。PostHog 仅使用当前授权会话内的随机标识。'

@@ -9,6 +9,7 @@ export const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
 // Keep established storage keys and parsing semantics so upgrades and rollback need no migration.
 const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
 const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
+const PLANNING_VIEW_STORAGE_KEY = 'windy-plugin-sun-moon-path:planning-view';
 const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-mode';
 const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
 const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
@@ -31,6 +32,23 @@ export const loadLanguagePreference = (): UiLanguage => {
         return localStorage.getItem(UI_LANGUAGE_STORAGE_KEY) === 'en' ? 'en' : 'zh';
     } catch {
         return 'zh';
+    }
+};
+
+/** Remember the dropdown function independently of the currently open top-level tab. */
+export const loadPlanningViewPreference = (): 'obstruction' | 'rainbow' => {
+    try {
+        return localStorage.getItem(PLANNING_VIEW_STORAGE_KEY) === 'rainbow' ? 'rainbow' : 'obstruction';
+    } catch {
+        return 'obstruction';
+    }
+};
+
+export const savePlanningViewPreference = (view: 'obstruction' | 'rainbow'): void => {
+    try {
+        localStorage.setItem(PLANNING_VIEW_STORAGE_KEY, view);
+    } catch {
+        // Keep the selected function usable when browser storage is unavailable.
     }
 };
 

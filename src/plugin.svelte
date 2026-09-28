@@ -212,11 +212,13 @@
                         type="button"
                         class:active={highlightedEvent === option.value}
                         aria-pressed={highlightedEvent === option.value}
-                        disabled={cloudObstructionVisible && (option.value === 'all'
+                        disabled={(cloudObstructionVisible || rainbowVisible) && (option.value === 'all'
                             || !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
                         aria-label={text.events[option.value]}
-                        title={cloudObstructionVisible && option.value === 'all'
-                            ? (uiLanguage === 'zh' ? '云层规划需选择单个事件' : 'Cloud planning requires a single event')
+                        title={(cloudObstructionVisible || rainbowVisible) && option.value === 'all'
+                            ? (rainbowVisible
+                                ? (uiLanguage === 'zh' ? '彩虹规划需选择单个事件' : 'Rainbow planning requires a single event')
+                                : (uiLanguage === 'zh' ? '云层规划需选择单个事件' : 'Cloud planning requires a single event'))
                             : text.eventButtonTitles[option.value]}
                         on:click={() => selectEvent(option.value)}
                     >
@@ -259,7 +261,7 @@
                         aria-pressed={highlightedEvent === event}
                         aria-label={cloudTimelineLabel(event, uiLanguage === 'zh')}
                         title={cloudTimelineLabel(event, uiLanguage === 'zh')}
-                        disabled={!galacticEvents.some(item => item.type === event)}
+                        disabled={rainbowVisible || !galacticEvents.some(item => item.type === event)}
                         on:click={() => selectGalacticEvent(event)}
                     >
                         <span class="event-button__icon event-button__icon--milkyway" aria-hidden="true">
@@ -746,12 +748,7 @@
                     on:atmosphereretry={retryAtmosphere}
                 />
             {:else if summaryTab === 'clouds'}
-                {#if cloudView === 'sea'}
-                    <section class="module-about" aria-label={uiLanguage === 'zh' ? '云海预报' : 'Sea of clouds'}>
-                        <h3>{uiLanguage === 'zh' ? '云海预报' : 'Sea of clouds'}</h3>
-                        <p>{uiLanguage === 'zh' ? '云海预报尚未上线，当前暂无预测结果。' : 'Sea-of-clouds forecasting is not available yet. No forecast results are shown.'}</p>
-                    </section>
-                {/if}
+                <!-- Planning views stay mounted while the mobile controls are collapsed. -->
             {:else if summaryTab === 'settings'}
                 <div class="settings-header">
                     <div class="settings-pages" role="group" aria-label={text.settingsTab}>
@@ -1090,7 +1087,7 @@
             {/if}
             {#if cloudObstructionVisible}
                 <!-- Collapsing hides the controls, but preserves their time and live map ownership. -->
-                <div class="cloud-view" hidden={isMobileCollapsed}>
+                <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <CloudObstruction
                         bind:this={cloudObstructionComponent}
                         bind:selectedCloudEvent={cloudEvent}
@@ -1117,6 +1114,23 @@
                         on:eventchange={event => { selectedEvent = event.detail; }}
                         on:modelchange={handleWeatherModelChange}
                         on:retry={retryCloudWeather}
+                    />
+                </div>
+            {/if}
+            {#if isMounted && rainbowVisible}
+                <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
+                    <RainbowPlanning
+                        location={selectedLocation}
+                        {selectedDate}
+                        {timeZone}
+                        contextReady={resolvedContextLocationKey === locationKey}
+                        contextError={status === 'error'}
+                        language={uiLanguage}
+                        lineOpacity={directionLineOpacityPercent}
+                        bind:clock={rainbowClock}
+                        bind:body={rainbowBody}
+                        bind:secondary={rainbowSecondary}
+                        bind:fullCircle={rainbowFullCircle}
                     />
                 </div>
             {/if}
@@ -1174,6 +1188,8 @@
     import { translations, type UiLanguage } from './pluginTranslations';
     import {
         loadLanguagePreference,
+        loadPlanningViewPreference,
+        savePlanningViewPreference,
         saveLanguagePreference,
         loadMobilePanelModePreference,
         saveMobilePanelModePreference,
@@ -1202,6 +1218,7 @@
     import config, { currentVersionReleasedAt } from './pluginConfig';
     import PluginGuide from './PluginGuide.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
+    import RainbowPlanning from './RainbowPlanning.svelte';
     import { cloudTimelineLabel, galacticCenterEvents, type CloudTimelineEventType } from './cloudTimeline';
     import {
         directionLineColor, galacticDirectionPaths, isGalacticEvent, selectDirectionPaths,
@@ -1209,6 +1226,7 @@
     } from './eventDirections';
     import { createCloudSettings } from './cloudProfile';
     import { loadCloudPreferences, saveCloudPreferences } from './cloudPreferences';
+    import { loadRainbowPreferences, saveRainbowPreferences } from './rainbowPreferences';
     import FavoriteComparison from './FavoriteComparison.svelte';
     import FavoriteLocations from './FavoriteLocations.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
@@ -1456,12 +1474,21 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    // Only map-planning tabs take ownership of layers. Settings, About and Weather
+    // keep the preceding planner alive, including its local time and asynchronous work.
+    let mapTab: SummaryTab = 'events';
+    $: if (summaryTab === 'events' || summaryTab === 'clouds') { mapTab = summaryTab; }
     let pluginUsage: ReturnType<typeof startPluginUsage> | null = null;
     // Programmatic switches update dwell time but are not user selections.
     $: pluginUsage?.setTab(summaryTab);
-    let cloudView: 'obstruction' | 'sea' = 'obstruction';
+    let cloudView: 'obstruction' | 'rainbow' = 'obstruction';
     let settingsPage: 'preferences' | 'guide' = 'preferences';
-    $: cloudObstructionVisible = summaryTab === 'clouds' && cloudView === 'obstruction';
+    $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
+    $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
+    let rainbowClock = '16:00';
+    let rainbowBody: 'sun' | 'moon' = 'sun';
+    let rainbowSecondary = false;
+    let rainbowFullCircle = false;
     let cloudSettings = createCloudSettings();
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
     let pluginUpdateResult: PluginUpdateResult | null = null;
@@ -1472,7 +1499,7 @@
     let cloudTimelineEvent: CloudTimelineEventType | null = null;
     let cloudActiveTimelineEvent: CloudTimelineEventType | null = 'sunset';
     let cloudObstructionComponent: CloudObstruction | null = null;
-    $: highlightedEvent = cloudObstructionVisible ? cloudActiveTimelineEvent : selectedEvent;
+    $: highlightedEvent = rainbowVisible ? null : cloudObstructionVisible ? cloudActiveTimelineEvent : selectedEvent;
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
     let cloudPlanningTimestamp: number | null = null;
@@ -1604,8 +1631,8 @@
         && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'events' || summaryTab === 'weather'));
 
     // The galactic overlay owns its direction; do not pair it with a solar/lunar event ray.
-    $: if (isMounted && summaryTab) {
-        const mapEvent = cloudObstructionVisible ? cloudMapEvent : selectedEvent;
+    $: if (isMounted && mapTab) {
+        const mapEvent = rainbowVisible ? null : cloudObstructionVisible ? cloudMapEvent : selectedEvent;
         renderMapFeatures(mapEvent === null ? [] : selectDirectionPaths(solarPaths, galacticPaths, mapEvent),
             cloudObstructionVisible ? cloudDirectionRangeKm : null, cloudPlanningTimestamp, cloudPlanningBody);
     }
@@ -1741,6 +1768,16 @@
 
     $: if (isMounted) {
         try { saveCloudPreferences(localStorage, cloudSettings); } catch { /* Keep preferences for this session. */ }
+        savePlanningViewPreference(cloudView);
+    }
+
+    // onMount restores these controls before enabling persistence or mounting the planner.
+    $: if (isMounted) {
+        try {
+            saveRainbowPreferences(localStorage, {
+                body: rainbowBody, clock: rainbowClock, secondary: rainbowSecondary, fullCircle: rainbowFullCircle,
+            });
+        } catch { /* Storage access may be blocked; retain the current session's controls. */ }
     }
 
     const toggleLanguage = () => {
@@ -1760,7 +1797,9 @@
         }
         // Panel size never changes the selected tab or destroys an active cloud session.
         if (value === 'fullscreen' && summaryTab === 'weather') {
-            summaryTab = 'events';
+            // Fullscreen moves Weather into its own pane; restore the owning planner
+            // instead of implicitly selecting Events and discarding its map/time state.
+            summaryTab = mapTab;
         }
         mobilePluginRoot = mobilePluginRoot
             || panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path')
@@ -1909,19 +1948,20 @@
         return mapEvent === null ? [] : selectDirectionPaths(paths, galacticPaths, mapEvent);
     };
 
-    $: fitMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
+    $: fitMapControlLabel = rainbowVisible ? (uiLanguage === 'zh' ? '居中彩虹方向图' : 'Centre rainbow sky chart')
+        : cloudObstructionVisible ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
     $: detailMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
         : text.restoreSearchZoomLabel;
 
-    $: canFitDirectionLines = cloudObstructionVisible ? cloudBounds !== null : buildDirectionLineFitBounds({
+    $: canFitDirectionLines = rainbowVisible || (cloudObstructionVisible ? cloudBounds !== null : buildDirectionLineFitBounds({
         location: selectedLocation,
         // Keep the reactive inputs explicit: Svelte cannot infer state read
         // from inside selectedMapPaths(), so an async path refresh would
         // otherwise leave the toolbar button in its initial disabled state.
         paths: selectDirectionPaths(solarPaths, galacticPaths, selectedEvent),
         showExtendedDistanceMarker,
-    }) !== null;
+    }) !== null);
 
     /** Returns fit and center offsets for the map pixels not covered by Windy's UI. */
     const currentVisibleMapViewport = () => {
@@ -1948,6 +1988,7 @@
 
     /** Fits the currently rendered 400/600 km event lines into the unobscured map area. */
     const fitVisibleDirectionLines = (detail: boolean | MouseEvent = false) => {
+        if (rainbowVisible) { recenterSelectedLocationInVisibleMap(map.getZoom()); return; }
         const bounds = cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
             location: selectedLocation,
             paths: selectedMapPaths(),
@@ -2019,6 +2060,15 @@
     };
 
     const selectEvent = (event: ObservationEvent) => {
+        if (rainbowVisible) {
+            if (event === 'all') {return;}
+            const path = solarPaths.find(path => path.event === event);
+            if (path?.status === 'ok') {
+                rainbowBody = event.startsWith('moon') ? 'moon' : 'sun';
+                rainbowClock = formatLocalClock(path.eventTime, timeZone);
+            }
+            return;
+        }
         if (cloudObstructionVisible && event === 'all') {return;}
         selectedEvent = event;
         if (event !== 'all') {
@@ -2250,12 +2300,16 @@
     };
 
     /** Both full redraws and the periodic refresh honour the cloud preview instant. */
-    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => cloudObstructionVisible
+    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => rainbowVisible
+        ? { currentSun: null, currentMoon: null, currentGalacticCenter: null }
+        : cloudObstructionVisible
         ? cloudMapDirections(planningTimestamp, selectedLocation, planningBody)
         : { currentSun: currentSolarDirection, currentMoon: currentMoonInfo };
 
     const renderMapFeatures = (paths: DirectionPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
         planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => {
+        // Rainbow owns a sky-angle chart; unrelated event rays would imply a different time and scale.
+        if (rainbowVisible) { mapOverlayController.destroy(); return; }
         mapOverlayController.render({
             location: selectedLocation,
             paths,
@@ -3077,8 +3131,16 @@
             : null;
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
         uiLanguage = loadLanguagePreference();
+        cloudView = loadPlanningViewPreference();
         units = currentUnitPreferences();
         try { cloudSettings = loadCloudPreferences(localStorage); } catch { /* Storage access may be blocked. */ }
+        try {
+            const preferences = loadRainbowPreferences(localStorage);
+            rainbowBody = preferences.body;
+            rainbowClock = preferences.clock;
+            rainbowSecondary = preferences.secondary;
+            rainbowFullCircle = preferences.fullCircle;
+        } catch { /* Storage access may be blocked. */ }
         mobilePanelMode = isMobileOrTablet ? loadMobilePanelModePreference() : 'compact';
         lastMobileNonFullscreenMode = mobilePanelMode;
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
@@ -3480,11 +3542,11 @@
     }
 
     .sun-path-panel.mobile_ui .summary-tabs {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr) minmax(108px, 1fr) repeat(2, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui .summary-tabs.summary-tabs--weather {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(108px, 1.4fr) minmax(0, 1.2fr) minmax(0, 1fr);
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
@@ -3576,7 +3638,7 @@
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr) minmax(108px, 1fr) repeat(2, minmax(0, 1fr));
     }
 
     .panel-intro,

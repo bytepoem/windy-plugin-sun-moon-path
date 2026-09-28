@@ -6,6 +6,8 @@ import {
     loadHideLocationSearchPreference,
     loadInitialOverlayPreference,
     loadLanguagePreference,
+    loadPlanningViewPreference,
+    savePlanningViewPreference,
     loadLocationApiKeys,
     loadLocationSearchProvider,
     loadMobilePanelModePreference,
@@ -37,6 +39,22 @@ const storage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('existing plugin preferences', () => {
+    it('remembers either planning dropdown choice and handles unavailable or invalid storage', () => {
+        storage();
+        expect(loadPlanningViewPreference()).toBe('obstruction');
+        savePlanningViewPreference('rainbow');
+        expect(loadPlanningViewPreference()).toBe('rainbow');
+        savePlanningViewPreference('obstruction');
+        expect(loadPlanningViewPreference()).toBe('obstruction');
+        storage({ 'planning-view': 'invalid' });
+        expect(loadPlanningViewPreference()).toBe('obstruction');
+        vi.stubGlobal('localStorage', {
+            getItem: () => { throw Error('blocked'); },
+            setItem: () => { throw Error('blocked'); },
+        });
+        expect(loadPlanningViewPreference()).toBe('obstruction');
+        expect(() => savePlanningViewPreference('rainbow')).not.toThrow();
+    });
     it('preserves defaults for a new installation', () => {
         storage();
         expect(loadLanguagePreference()).toBe('zh');
