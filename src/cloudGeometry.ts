@@ -27,7 +27,7 @@ export const cloudBodyPosition = (body: 'sun' | 'moon', timestamp: number, locat
 
 /** Fixed equatorial Milky Way photography reference shared with the visibility planner.
  * Use its RA/Dec directly with the date's sidereal rotation (no J2000 precession),
- * matching the PlanIt screenshot convention. This is a photographic band reference,
+ * for a photographic band reference,
  * not an astrometric Sgr A* position. Keep true and refracted altitudes separate.
  */
 export const cloudGalacticCenterPosition = (timestamp: number, location: Coordinates) => {
@@ -89,7 +89,7 @@ export const cloudTwilightDistances = (cloudHeightM: number) => {
     if (!Number.isFinite(cloudHeightM)
         || cloudHeightM <= 0 || cloudHeightM > 30_000) {return null;}
     const cloudAngle = Math.acos(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + cloudHeightM / 1_000));
-    // Planit's reference envelopes use a sea-level origin; camera elevation must
+    // These reference envelopes use a sea-level origin; camera elevation must
     // not add the observer's horizon distance to every circle and limiting angle.
     return {
         horizonKm: EARTH_RADIUS_KM * cloudAngle,

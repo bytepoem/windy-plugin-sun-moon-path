@@ -81,8 +81,8 @@ export const calculateRainbow = (source: SkyDirection, radius = PRIMARY_RAINBOW_
 };
 
 /** Top-down orthographic sky chart: project the unit direction onto the EN plane.
- * Unlike a linear altitude radius, this reproduces the outward bow in Planit's
- * daylight map references. Above/below-horizon directions can overlap in 2D;
+ * The cosine altitude radius preserves the bow's outward curvature.
+ * Above/below-horizon directions can overlap in 2D;
  * the renderer distinguishes them using solid/dashed strokes. Radius is pixels.
  */
 export const projectRainbowDirection = (point: SkyDirection, horizonRadius: number) => {

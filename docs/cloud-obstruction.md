@@ -53,7 +53,7 @@
 
 目标不可见时隐藏遮蔽距离与交点，保留仅由云高决定的距离参考。底层球面求交仍允许负视高度角用于几何验证。
 
-银心使用与既有银河规划共享的摄影参考点：赤经 266.405°、赤纬 −28.9361111111111°，直接按当日恒星时转换，不作 J2000 岁差转换。这是摄影银带参考，不是 Sgr A* 精密星历；与巧摄截图吻合也不能证明其内部算法。
+银心使用与既有银河规划共享的摄影参考点：赤经 266.405°、赤纬 −28.9361111111111°，直接按当日恒星时转换，不作 J2000 岁差转换。这是摄影银带参考，不是 Sgr A* 精密星历。
 
 - 六个升落按钮选择天体和事件时刻，调整时间保持所选天体。日月事件复用主页面；银心事件按当地日界扫描视高度角过零点并细化。
 - 当地时间输入按定位点时区解释；夏令时空缺无效，重复分钟选择首次出现。升落按钮保留事件秒级精度，手动时间步长为一分钟。
@@ -84,7 +84,7 @@
 
 | 地点与当地时刻（Asia/Shanghai） | 2000 / 4000 / 6000 米遮蔽云距 |
 | --- | --- |
-| 潘家洞 24.918759, 112.658726；2026-09-06 18:39，太阳 | 插件约 106.62 / 169.04 / 218.04 km；巧摄截图 106.62 / 169.03 / 218.03 km，未舍入差值均小于 0.01 km |
+| 潘家洞 24.918759, 112.658726；2026-09-06 18:39，太阳 | 插件约 106.62 / 169.04 / 218.04 km；参考截图 106.62 / 169.03 / 218.03 km，未舍入差值均小于 0.01 km |
 | 同地点；2026-09-08 20:07，银心 | 显示 2.95 / 5.89 / 8.84 km，高度角 34.1°、方位角 196.5°，与截图一致 |
 
 测试同时覆盖相邻分钟、时区和夏令时边界。不得用截图舍入后的角度或反推角度硬编码校正。
@@ -94,4 +94,4 @@
 - [CloudObstruction.svelte](../src/CloudObstruction.svelte)、[cloudOverlayController.ts](../src/cloudOverlayController.ts)：场景、宿主同步与地图图层。
 - [forecastController.ts](../src/forecastController.ts)、[cloudPreferences.ts](../src/cloudPreferences.ts)：请求生命周期与偏好。
 
-设计参考：[巧摄云层距离指南](https://www.planitphoto.com/pdfs/10.PlanIt-User-Guide-Cloud-Distance.pdf)、[Astronomy Engine](https://github.com/cosinekitty/astronomy)、[Windy fetch API](https://docs.windy-plugins.com/api/modules/fetch.html)。旧指南中的临界角与截图存在差异，项目以明确的球面公式和上述回归输入为准。
+设计参考：[云层距离指南](https://www.planitphoto.com/pdfs/10.PlanIt-User-Guide-Cloud-Distance.pdf)、[Astronomy Engine](https://github.com/cosinekitty/astronomy)、[Windy fetch API](https://docs.windy-plugins.com/api/modules/fetch.html)。旧指南中的临界角与截图存在差异，项目以明确的球面公式和上述回归输入为准。

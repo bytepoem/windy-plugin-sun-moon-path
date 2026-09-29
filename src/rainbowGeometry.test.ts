@@ -11,7 +11,7 @@ describe('rainbow sky geometry', () => {
             expect(rainbowSourceAboveHorizon({ altitude, azimuth: 270 })).toBe(true);
         }
     });
-    it('reproduces the measured Planit primary-bow bearings', () => {
+    it('reproduces the reference primary-bow bearings', () => {
         const arc = calculateRainbow({ azimuth: 92.3, altitude: 3.4 })!;
         expect(arc.center.azimuth).toBeCloseTo(272.3, 10);
         expect(arc.center.altitude).toBe(-3.4);
