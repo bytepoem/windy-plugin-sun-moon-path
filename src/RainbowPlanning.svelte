@@ -2,9 +2,11 @@
     import { onMount, onDestroy } from 'svelte';
     import { map } from '@windy/map';
     import CelestialIcon from './CelestialIcon.svelte';
+    import RainbowConditions from './RainbowConditions.svelte';
     import { cloudBodyPosition } from './cloudGeometry';
     import { calculateRainbow, rainbowSourceAboveHorizon, SECONDARY_RAINBOW_RADIUS } from './rainbowGeometry';
     import { createRainbowOverlay } from './rainbowOverlay';
+    import type { WeatherModel } from './weather';
     import type { Coordinates } from './solar';
 
     export let location: Coordinates;
@@ -12,6 +14,8 @@
     export let contextError: boolean;
     export let language: 'zh' | 'en';
     export let lineOpacity: number;
+    export let model: WeatherModel;
+    export let timeZone: string;
     // Parent-owned session state survives tab changes; collapsing never unmounts this view.
     export let timestamp: number | null;
     export let body: 'sun' | 'moon' = 'sun';
@@ -55,7 +59,7 @@
         <div id="rainbow-help" class="rainbow-help">
             <p>{zh ? '七彩弧线的宽度仅用于清晰显示，不代表实际角宽。彩色同心圆标记反太阳点／反月亮点：方位与光源相差 180°，高度相反；它可能位于地平线下。圆圈大小为固定图标，不表示佛光大小，也不预测佛光是否出现。' : 'The rainbow ribbon width is for legibility, not actual angular width. The coloured target marks the antisolar/antilunar direction: 180° opposite in azimuth, with negated altitude; it can be below the horizon. Its fixed icon size does not model or predict a glory.'}</p>
             <p>{zh ? '主虹围绕光源反方向约 42°，副虹约 51° 且颜色相反。左右方位是虹弧与水平地平线的交点，没有交点时显示 —。地图从上方俯视天空，0° 圈为水平地平线，高度刻度并非等距。完整圆圈中，地平线上下的方向可能重叠，用实线与虚线区分。' : 'The primary bow lies about 42° from the opposite light-source direction; the secondary is about 51° with reversed colours. Left/right bearings mark horizontal-horizon crossings, or — if absent. The map looks down onto the sky; the 0° ring is the horizon and altitude rings are not evenly spaced. In full-circle mode, above/below-horizon directions may overlap; solid/dashed arcs distinguish them.'}</p>
-            <p>{zh ? '这是构图参考，不是彩虹天气预报。前方需有受光水滴，身后光源无遮挡；完整圆圈还需下方有受光水滴及无遮挡视线。月虹通常需要较亮月光和长曝光。本功能不判断降雨、云层、地形或月光亮度。' : 'This is a composition reference, not a rainbow forecast. Lit droplets must be ahead and the light source unobstructed behind you. A full circle also needs lit droplets and clear sightlines below. Moonbows usually need bright moonlight and long exposures. Rain, clouds, terrain and lunar brightness are not evaluated.'}</p>
+            <p>{zh ? '虹弧为构图参考。下方可单独评估白天主虹的小时降雨与直射光条件，不是出现概率。前方需有受光水滴；完整圆圈还需下方有受光水滴及无遮挡视线。月虹通常需要较亮月光和长曝光，不纳入条件评估。' : 'The bow is a composition reference. The separate assessment below screens hourly rain and direct light for daytime primary bows; it is not an occurrence probability. Lit droplets must be ahead. Full circles also need lit droplets and clear sightlines below. Moonbows usually need bright moonlight and long exposures and are not assessed.'}</p>
         </div>
     {/if}
     <div class="source-line">
@@ -82,6 +86,7 @@
             : (zh ? '主虹在水平地平线下；开启完整圆圈可查看俯视方向。' : 'The primary bow is below the horizontal horizon. Full circle shows downward directions.')}</p>
     {/if}
     <p class="caption">{zh ? '地图为天空俯视投影，不表示距离；虚线为地平线下。' : 'Map overlay is a top-down sky projection, not distance; dashed arcs are below the horizon.'}</p>
+    <RainbowConditions {location} {source} {timestamp} {model} {timeZone} {language} enabled={contextReady && body === 'sun'} />
 </section>
 
 <style>

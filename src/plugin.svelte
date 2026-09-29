@@ -1130,6 +1130,8 @@
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <RainbowPlanning
                         location={selectedLocation}
+                        model={weatherModel}
+                        {timeZone}
                         timestamp={planningTime.timestamp}
                         contextReady={eventSkyReadyKey === astronomyKey}
                         contextError={status === 'error'}
