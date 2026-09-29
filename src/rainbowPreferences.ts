@@ -3,7 +3,6 @@ type StorageAccess = Pick<Storage, 'getItem' | 'setItem'>;
 
 interface RainbowPreferences {
     body: 'sun' | 'moon';
-    clock: string;
     secondary: boolean;
     fullCircle: boolean;
 }
@@ -14,7 +13,6 @@ export const restoreRainbowPreferences = (value: unknown): RainbowPreferences =>
         ? value as Record<string, unknown> : {};
     return {
         body: source.body === 'moon' ? 'moon' : 'sun',
-        clock: typeof source.clock === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(source.clock) ? source.clock : '16:00',
         secondary: source.secondary === true,
         fullCircle: source.fullCircle === true,
     };

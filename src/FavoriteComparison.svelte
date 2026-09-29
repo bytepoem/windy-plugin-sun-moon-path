@@ -48,6 +48,7 @@
         back: void;
         close: void;
         select: FavoriteComparisonTarget;
+        datechange: void;
     }>();
     const labels = {
         zh: {
@@ -518,6 +519,7 @@
                     <input
                         type="date"
                         bind:value={selectedDate}
+                        on:change={() => dispatch('datechange')}
                         aria-label={text.dateControl}
                         on:click={openDatePicker}
                     />

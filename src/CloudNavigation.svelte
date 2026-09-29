@@ -14,9 +14,8 @@
     $: labels = language === 'zh' ? ['云层遮挡', '彩虹'] : ['Clouds', 'Rainbow'];
     $: if (!active) { open = false; }
 
-    // Open from either navigation state, then focus the current function.
+    // Opening only exposes choices; selecting an item activates its planning tab.
     const toggle = async () => {
-        dispatch('activate');
         open = !open;
         if (open) {
             await tick();

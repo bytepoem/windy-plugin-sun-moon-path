@@ -39,6 +39,18 @@ const storage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('existing plugin preferences', () => {
+    it('distinguishes a first visit from either confirmed language without saving on read', () => {
+        const entries = storage();
+        expect(loadLanguagePreference()).toBeNull();
+        expect(entries.has(prefix + 'ui-language')).toBe(false);
+        for (const language of ['zh', 'en'] as const) {
+            saveLanguagePreference(language);
+            expect(loadLanguagePreference()).toBe(language);
+        }
+        storage({ 'ui-language': '' });
+        expect(loadLanguagePreference()).toBeNull();
+    });
+
     it('remembers either planning dropdown choice and handles unavailable or invalid storage', () => {
         storage();
         expect(loadPlanningViewPreference()).toBe('obstruction');
@@ -57,7 +69,7 @@ describe('existing plugin preferences', () => {
     });
     it('preserves defaults for a new installation', () => {
         storage();
-        expect(loadLanguagePreference()).toBe('zh');
+        expect(loadLanguagePreference()).toBeNull();
         expect(loadMobilePanelModePreference()).toBe('compact');
         expect(loadHideLocationSearchPreference()).toBe(false);
         expect(loadExtendedDistancePreference()).toBe(false);
@@ -111,7 +123,7 @@ describe('existing plugin preferences', () => {
             'location-provider': 'unknown',
             'initial-overlay': 'removed',
         });
-        expect(loadLanguagePreference()).toBe('zh');
+        expect(loadLanguagePreference()).toBeNull();
         expect(loadMobilePanelModePreference()).toBe('compact');
         expect(loadDirectionLineOpacityPreference()).toBe(100);
         expect(loadRadarOpacityPreference()).toBe(0);
@@ -127,7 +139,7 @@ describe('existing plugin preferences', () => {
             throw new Error('storage denied');
         };
         vi.stubGlobal('localStorage', { getItem: denied, setItem: denied, removeItem: denied });
-        expect(loadLanguagePreference()).toBe('zh');
+        expect(loadLanguagePreference()).toBeNull();
         expect(loadLocationApiKeys()).toEqual({ amap: '', baidu: '', tencent: '' });
         expect(writeLocationApiKey('amap', 'test-only-placeholder')).toBe(false);
         expect(() => {

@@ -27,11 +27,13 @@ const LOCATION_PROVIDER_API_KEY_STORAGE_KEYS: Record<LocationProvider, string> =
     tencent: 'windy-plugin-sun-moon-path:tencent-api-key',
 };
 
-export const loadLanguagePreference = (): UiLanguage => {
+/** Missing or invalid choices require first-use confirmation; do not silently persist a default. */
+export const loadLanguagePreference = (): UiLanguage | null => {
     try {
-        return localStorage.getItem(UI_LANGUAGE_STORAGE_KEY) === 'en' ? 'en' : 'zh';
+        const value = localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
+        return value === 'zh' || value === 'en' ? value : null;
     } catch {
-        return 'zh';
+        return null;
     }
 };
 

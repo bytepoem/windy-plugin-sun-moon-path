@@ -244,14 +244,14 @@
 </script>
 
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
+    <div class="cloud-forecast-controls">
+        <div class="cloud-model-mode">
         <label class="cloud-map-select"><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
             <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
             <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>
             <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
             <option value="satellite">{zh ? '卫星云图' : 'Satellite'}</option>
         </select></label>
-    <div class="cloud-forecast-controls">
-        <div class="cloud-model-mode">
         <label class="cloud-model"><span>{zh ? '模型' : 'Model'}</span>
             <select aria-label={zh ? '云层预报模型' : 'Cloud forecast model'} value={model}
                 on:change={changeModel}>
@@ -263,6 +263,9 @@
             <option value="single">{zh ? '单层' : 'Single'}</option>
             <option value="layers">{zh ? '分层' : 'Layered'}</option>
         </select></label>
+        </div>
+    </div>
+    <div class="cloud-source-controls">
         <div class="cloud-source-picker">
         <label class="cloud-source-select"><span>{zh ? '高度来源' : 'Height source'}</span>
             <select value={sourceValue} on:change={changeSource} aria-label={zh ? '云层高度来源' : 'Cloud height source'}>
@@ -280,13 +283,10 @@
                     if (!showSourceHelp && event.detail > 0) { event.currentTarget.blur(); }
                 }}>ⓘ</button>
         </div>
-        </div>
-    </div>
-    {#if automaticHeights && heightSource !== 'base'}
-    <div class="cloud-source-controls">
     {#if automaticHeights && heightSource === 'dewpoint'}
         <label class="cloud-threshold">{zh ? '温度－露点 ≤' : 'Temperature − dew point ≤'}
             <input type="number" min="0" max="10" step="0.1" bind:value={settings.dewPointSpreadC}
+                aria-label={zh ? '温度与露点之差的上限' : 'Maximum temperature minus dew-point spread'}
                 aria-invalid={!Number.isFinite(settings.dewPointSpreadC) || settings.dewPointSpreadC < 0 || settings.dewPointSpreadC > 10} /> °C
         </label>
         {#if !Number.isFinite(settings.dewPointSpreadC) || settings.dewPointSpreadC < 0 || settings.dewPointSpreadC > 10}
@@ -306,7 +306,6 @@
         {/if}
     {/if}
     </div>
-    {/if}
     {#if showSourceHelp}
         <div id="cloud-source-help" class="cloud-source-descriptions cloud-muted">
             {#each sourceDescriptions as description}<p>{description}</p>{/each}
@@ -463,7 +462,7 @@
     .cloud-model-mode > label { flex: 0 0 auto; min-width: 0; }
     .cloud-source-descriptions { display: flex; flex-direction: column; gap: 4px; }
     .cloud-source-picker { display: flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; }
-    .cloud-model-mode > .cloud-source-picker { flex: 0 1 auto; }
+    .cloud-source-controls > .cloud-source-picker { flex: 0 1 auto; }
     .cloud-source-picker .cloud-source-help { flex-shrink: 0; }
     .cloud-model-mode label select { width: auto; }
     .cloud-panel * { box-sizing: border-box; letter-spacing: 0; }

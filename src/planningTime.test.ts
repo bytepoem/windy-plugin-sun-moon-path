@@ -7,6 +7,18 @@ const input = {
 };
 
 describe('shared planning time', () => {
+    it('captures now once and displays that instant in the resolved location time zone', () => {
+        const timestamp = Date.parse('2026-09-28T23:30:27Z');
+        const selection = { mode: 'instant', timestamp } as const;
+        expect(resolvePlanningTime({ ...input, selection }))
+            .toEqual({ clock: '07:30', timestamp });
+        expect(resolvePlanningTime({ ...input, selection, now: new Date('2026-09-30T01:00:00Z') }))
+            .toEqual({ clock: '07:30', timestamp });
+        expect(resolvePlanningTime({ ...input, selection, timeZone: 'America/New_York' }))
+            .toEqual({ clock: '19:30', timestamp });
+        expect(resolvePlanningTime({ ...input, selection, ready: false }).timestamp).toBeNull();
+    });
+
     it('preserves the exact host instant including repeated daylight-saving clock times', () => {
         const timestamp = Date.parse('2026-11-01T06:30:27Z');
         const selection = { mode: 'windy', timestamp } as const;

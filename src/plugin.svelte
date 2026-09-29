@@ -196,11 +196,7 @@
                 <input
                     type="date"
                     bind:value={selectedDate}
-                    on:change={() => {
-                        if (planningSelection.mode === 'windy') {
-                            planningSelection = { mode: 'clock', clock: planningTime.clock };
-                        }
-                    }}
+                    on:change={selectPlanningDate}
                     aria-label={text.dateLabel}
                     on:click={openDatePicker}
                 />
@@ -209,6 +205,7 @@
 
         <div class="shared-planning-time">
             <CloudTimeline clock={planningTime.clock} zh={uiLanguage === 'zh'}
+                on:now={jumpToNow}
                 on:preview={event => previewPlanningTime(event.detail)}
                 on:commit={() => { planningTimePreview = false; }} />
         </div>
@@ -305,6 +302,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M7 4h10v16l-5-3-5 3Z"></path>
             </svg>
+            <span class="favorite-locations-count" aria-hidden="true">{favoriteCount}</span>
         </button>
     </div>
 
@@ -332,6 +330,7 @@
     <FavoriteComparison
         bind:open={favoriteComparisonOpen}
         bind:selectedDate
+        on:datechange={selectPlanningDate}
         currentInstant={currentInstant}
         targets={favoriteComparisonTargets}
         initialModel={weatherModel}
@@ -1177,6 +1176,14 @@
     </div>
 </section>
 
+{#if showLanguageChoice}
+    <LanguageChoice on:confirm={event => {
+        uiLanguage = event.detail;
+        saveLanguagePreference(uiLanguage);
+        showLanguageChoice = false;
+    }} />
+{/if}
+
 <script lang="ts">
     import bcast from '@windy/broadcast';
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
@@ -1193,6 +1200,7 @@
 
     import CloudNavigation from './CloudNavigation.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
+    import LanguageChoice from './LanguageChoice.svelte';
     import { resolvePlanningTime, type PlanningTimeSelection } from './planningTime';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
@@ -1456,6 +1464,7 @@
     let selectedDate = dateInputForInstant(new Date(), systemTimeZone);
     let selectedEvent: DirectionEvent = 'sunset';
     let uiLanguage: UiLanguage = 'zh';
+    let showLanguageChoice = false;
     let text = translations.zh;
     let timeZone = systemTimeZone;
     let elevationM = 0;
@@ -1499,8 +1508,9 @@
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
     $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
-    let planningSelection: PlanningTimeSelection = { mode: 'event', event: 'sunset' };
+    let planningSelection: PlanningTimeSelection = { mode: 'instant', timestamp: Date.now() };
     let planningTimePreview = false;
+    let hostTimeSelectionActive = false;
     let rainbowBody: 'sun' | 'moon' = 'sun';
     let rainbowSecondary = false;
     let rainbowFullCircle = false;
@@ -1516,9 +1526,10 @@
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
     $: cloudPlanningTimestamp = planningTime.timestamp;
-    // Host instants remain absolute across time-zone resolution; derive their
+    // Host and one-shot current instants remain absolute across time-zone resolution; derive their
     // civil date only after the selected location's context has arrived.
-    $: if (planningSelection.mode === 'windy' && resolvedContextLocationKey === locationKey) {
+    $: if ((planningSelection.mode === 'windy' || planningSelection.mode === 'instant')
+        && resolvedContextLocationKey === locationKey) {
         selectedDate = dateInputForInstant(new Date(planningSelection.timestamp), timeZone);
     }
     let cloudDirectionRangeKm = 0;
@@ -1809,10 +1820,10 @@
     }
 
     // onMount restores these controls before enabling persistence or mounting the planner.
-    $: if (isMounted && planningTime.timestamp !== null) {
+    $: if (isMounted) {
         try {
             saveRainbowPreferences(localStorage, {
-                body: rainbowBody, clock: planningTime.clock, secondary: rainbowSecondary, fullCircle: rainbowFullCircle,
+                body: rainbowBody, secondary: rainbowSecondary, fullCircle: rainbowFullCircle,
             });
         } catch { /* Storage access may be blocked; retain the current session's controls. */ }
     }
@@ -2084,8 +2095,27 @@
         recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
+    /** Capture now once; the resolved location supplies its local date and clock. */
+    const jumpToNow = () => {
+        hostTimeSelectionActive = false;
+        planningTimePreview = false;
+        planningSelection = { mode: 'instant', timestamp: Date.now() };
+    };
+
+    /** A manual date edit releases an absolute instant but retains its displayed clock. */
+    const selectPlanningDate = () => {
+        hostTimeSelectionActive = false;
+        if (planningSelection.mode === 'windy' || planningSelection.mode === 'instant') {
+            planningSelection = {
+                mode: 'clock',
+                clock: formatLocalClock(new Date(planningSelection.timestamp), timeZone),
+            };
+        }
+    };
+
     /** Manual edits keep the selected body/long rays, but clear event highlighting. */
     const previewPlanningTime = (clock: string) => {
+        hostTimeSelectionActive = false;
         planningTimePreview = true;
         planningSelection = { mode: 'clock', clock };
     };
@@ -2093,6 +2123,7 @@
     /** Both shortcut rows select one exact event instant without changing Tab. */
     const jumpPlanningEvent = (event: string) => {
         if (eventSkyReadyKey !== astronomyKey || !summaryTimelineItems.some(item => item.kind === event && item.time)) {return;}
+        hostTimeSelectionActive = false;
         planningSelection = { mode: 'event', event };
         planningTimePreview = false;
         const directionEvent = event === 'dawn' ? 'sunrise' : event === 'dusk' ? 'sunset' : event as CloudTimelineEventType;
@@ -2108,6 +2139,7 @@
     const selectEvent = (event: ObservationEvent) => {
         if (event === 'all') {
             if (cloudObstructionVisible || rainbowVisible) {return;}
+            hostTimeSelectionActive = false;
             selectedEvent = event;
             planningSelection = { mode: 'current' };
             planningTimePreview = false;
@@ -2168,8 +2200,30 @@
         radarOverlayController.setTimestamp(timestampMs);
         if (!isMounted || source === name || !Number.isFinite(timestampMs) || !Number.isFinite(new Date(timestampMs).getTime())
             || timestampMs === planningTime.timestamp) {return;}
+        // Windy's forecast and radar/satellite initialization publish times without
+        // a source. Keep local selections until the user operates a host timeline.
+        if (planningSelection.mode !== 'windy' && !source && !hostTimeSelectionActive) {return;}
         planningTimePreview = false;
         planningSelection = { mode: 'windy', timestamp: timestampMs };
+    };
+
+    /** Distinguish host timeline input from automatic time/frame initialization. */
+    const handleHostTimeInput = (event: PointerEvent | KeyboardEvent) => {
+        if (!(event.target instanceof Element) || panelElement?.contains(event.target)) {return;}
+        if (event instanceof KeyboardEvent) {
+            if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+                && !event.target.closest('input, textarea, select, [contenteditable]')) {
+                hostTimeSelectionActive = true;
+            }
+        } else if (event.target.closest([
+            '#plugin-progress-bar',
+            '#plugin-radar-plus .slider',
+            '#plugin-radar-plus .timecode',
+            '#plugin-radar-plus .play-pause',
+            '#plugin-radar-plus .radsat__segments',
+        ].join(', '))) {
+            hostTimeSelectionActive = true;
+        }
     };
 
     /** Persist and apply one radar state so Settings and the homepage shortcut stay synchronized. */
@@ -3168,24 +3222,28 @@
             map.off('moveend', handleMapMoveEnd);
             document.removeEventListener('click', handleHomeButtonClick, true);
             document.removeEventListener('pointerdown', handleFavoriteOutsidePointerDown);
+            document.removeEventListener('pointerdown', handleHostTimeInput, true);
+            document.removeEventListener('keydown', handleHostTimeInput, true);
         },
     };
 
     onMount(() => {
+        jumpToNow();
         releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
         radarFrameTimeLabelController = createRadarFrameTimeLabel();
         mobilePluginRoot = isMobileOrTablet
             ? panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path') || null
             : null;
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
-        uiLanguage = loadLanguagePreference();
+        const savedLanguage = loadLanguagePreference();
+        uiLanguage = savedLanguage ?? 'zh';
+        showLanguageChoice = savedLanguage === null;
         cloudView = loadPlanningViewPreference();
         units = currentUnitPreferences();
         try { cloudSettings = loadCloudPreferences(localStorage); } catch { /* Storage access may be blocked. */ }
         try {
             const preferences = loadRainbowPreferences(localStorage);
             rainbowBody = preferences.body;
-            planningSelection = { mode: 'clock', clock: preferences.clock };
             rainbowSecondary = preferences.secondary;
             rainbowFullCircle = preferences.fullCircle;
         } catch { /* Storage access may be blocked. */ }
@@ -3215,6 +3273,8 @@
         map.on('moveend', handleMapMoveEnd);
         document.addEventListener('click', handleHomeButtonClick, true);
         document.addEventListener('pointerdown', handleFavoriteOutsidePointerDown);
+        document.addEventListener('pointerdown', handleHostTimeInput, true);
+        document.addEventListener('keydown', handleHostTimeInput, true);
         updateCurrentDirections();
         currentDirectionTimer = setInterval(updateCurrentDirections, 5_000);
     });
@@ -3969,11 +4029,20 @@
     }
 
     .favorite-locations-trigger--inline {
-        flex-direction: row;
-        gap: 4px;
+        flex-direction: column;
+        gap: 1px;
         width: 100%;
         height: 38px;
         border-radius: 6px;
+        padding: 0 6px;
+        min-width: 38px;
+    }
+
+    .favorite-locations-count {
+        font-size: 11px;
+        line-height: 12px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
     }
 
     .eyebrow {
@@ -3995,7 +4064,7 @@
 
     .control-grid--favorites {
         z-index: 20;
-        grid-template-columns: minmax(0, 1fr) 38px;
+        grid-template-columns: minmax(0, 1fr) max-content;
     }
 
     .planning-datetime .date-control {
@@ -6178,7 +6247,7 @@
         }
 
         .sun-path-panel.mobile_ui .control-grid--favorites {
-            grid-template-columns: minmax(0, 1fr) 38px;
+            grid-template-columns: minmax(0, 1fr) max-content;
         }
 
         .segmented-control--events {
@@ -6329,7 +6398,7 @@
 
         .control-grid--favorites,
         .sun-path-panel.mobile_ui .control-grid--favorites {
-            grid-template-columns: minmax(0, 1fr) 32px;
+            grid-template-columns: minmax(0, 1fr) max-content;
             gap: 4px;
         }
 

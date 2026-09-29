@@ -5,6 +5,7 @@ export type PlanningTimeSelection =
     | { mode: 'clock'; clock: string }
     | { mode: 'event'; event: string }
     | { mode: 'windy'; timestamp: number }
+    | { mode: 'instant'; timestamp: number }
     | { mode: 'current' };
 
 /** One clock for every planner. Event selections retain their exact instant;
@@ -26,7 +27,7 @@ export const resolvePlanningTime = ({ selection, selectedDate, timeZone, now, ev
         const event = events.find(item => item.kind === selection.event)?.time;
         return { clock: event ? formatLocalClock(event, timeZone) : '', timestamp: event?.getTime() ?? null };
     }
-    if (selection.mode === 'windy') {
+    if (selection.mode === 'windy' || selection.mode === 'instant') {
         return { clock: formatLocalClock(new Date(selection.timestamp), timeZone), timestamp: selection.timestamp };
     }
     const clock = selection.mode === 'clock' ? selection.clock : formatLocalClock(now, timeZone);

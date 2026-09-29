@@ -4,7 +4,7 @@
 
     export let clock: string;
     export let zh: boolean;
-    const dispatch = createEventDispatcher<{ preview: string; commit: void }>();
+    const dispatch = createEventDispatcher<{ preview: string; commit: void; now: void }>();
     $: minute = cloudClockMinute(clock);
 </script>
 
@@ -15,6 +15,10 @@
             on:click={event => event.currentTarget.showPicker?.()}
             on:input={event => dispatch('preview', event.currentTarget.value)}
             on:change={() => dispatch('commit')} on:blur={() => dispatch('commit')} />
+        <button class="time-now" type="button"
+            aria-label={zh ? '回到当前日期和时间' : 'Jump to the current date and time'}
+            title={zh ? '回到当前日期和时间' : 'Jump to the current date and time'}
+            on:click={() => dispatch('now')}>{zh ? '现在' : 'Now'}</button>
         <div class="time-track">
             <input type="range" min="0" max="1439" step="1" value={minute}
                 aria-label={zh ? '当地计算时间' : 'Local calculation time'} aria-valuetext={clock || '--:--'}
@@ -45,6 +49,20 @@
     .time-entry { box-sizing:border-box; width:82px; height:38px; flex-shrink:0; min-width:0; padding:0 5px; border:1px solid var(--panel-border,#485364); border-radius:6px; background:#0e161f; color:var(--panel-text,#f2f4fa); color-scheme:dark; font-family:inherit; font-size:13px; font-weight:500; line-height:1.2; font-variant-numeric:tabular-nums; }
     .time-entry::-webkit-datetime-edit { padding:0; }
     .time-entry::-webkit-calendar-picker-indicator { width:14px; margin:0; padding:0; flex-shrink:0; }
+    .time-now {
+        height:38px;
+        flex-shrink:0;
+        padding:0 8px;
+        border:1px solid var(--panel-border,#485364);
+        border-radius:6px;
+        background:#0e161f;
+        color:var(--panel-text,#f2f4fa);
+        font-family:inherit;
+        font-size:12px;
+        cursor:pointer;
+    }
+    .time-now:hover { background:#1b3948; }
+    .time-now:focus-visible { outline:2px solid #6ed9ee; outline-offset:2px; }
     input:focus-visible { outline:2px solid #6ed9ee; outline-offset:2px; }
     input[type=range] { display:block; appearance:none; -webkit-appearance:none; width:100%; height:18px; margin:0; padding:0; border:0; background:transparent; cursor:pointer; }
     input::-webkit-slider-runnable-track { height:4px; border-radius:2px; background:#607587; }
