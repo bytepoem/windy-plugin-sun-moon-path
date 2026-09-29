@@ -1,4 +1,4 @@
-import { EquatorFromVector, Horizon, Observer, RotateVector, Rotation_GAL_EQJ, Vector } from 'astronomy-engine';
+import { EquatorFromVector, Horizon, MakeTime, Observer, RotateVector, Rotation_GAL_EQJ, Vector } from 'astronomy-engine';
 import { cloudBodyPosition, cloudGalacticCenterPosition } from './cloudGeometry';
 import { projectRainbowDirection, type SkyDirection } from './rainbowGeometry';
 import type { Coordinates } from './solar';
@@ -19,12 +19,14 @@ export interface EventSkyState {
  */
 export const eventSkyGeometry = (timestamp: number, location: Coordinates) => {
     const date = new Date(timestamp);
+    // Vector requires AstroTime; all galactic samples share the same observation instant.
+    const time = MakeTime(date);
     const observer = new Observer(location.lat, location.lon, 0);
     const rotation = Rotation_GAL_EQJ();
     const band = Array.from({ length: 361 }, (_, longitude) => {
         const radians = longitude * Math.PI / 180;
         const equatorial = EquatorFromVector(RotateVector(rotation,
-            new Vector(Math.cos(radians), Math.sin(radians), 0, date)));
+            new Vector(Math.cos(radians), Math.sin(radians), 0, time)));
         return Horizon(date, observer, equatorial.ra, equatorial.dec, 'normal');
     });
     return {
