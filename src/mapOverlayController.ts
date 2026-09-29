@@ -27,6 +27,8 @@ export type MapOverlayRenderState = {
     currentSun: MapBearing | null;
     currentMoon: MapBearing | null;
     currentGalacticCenter?: MapBearing | null;
+    // Only event-view bearings represent wall-clock time; cloud sightlines do not.
+    liveLabels?: { sun: string; moon: string };
     showExtendedDistanceMarker: boolean;
     showDistanceMarkers: boolean;
     directionRangeKm: number | null;
@@ -38,7 +40,7 @@ export type MapOverlayRenderState = {
 
 export type MapOverlayCurrentState = Pick<
     MapOverlayRenderState,
-    'location' | 'currentSun' | 'currentMoon' | 'currentGalacticCenter' | 'opacityPercent'
+    'location' | 'currentSun' | 'currentMoon' | 'currentGalacticCenter' | 'liveLabels' | 'opacityPercent'
 >;
 
 export type MapOverlayController = {
@@ -78,6 +80,7 @@ export const createMapOverlayController = (
     let layerGroup: L.LayerGroup | null = null;
     let eventLines: { line: L.Polyline; baseOpacity: number }[] = [];
     let currentLines: { line: L.Polyline; baseOpacity: number }[] = [];
+    let currentMarkers: L.Marker[] = [];
     let opacityPercent = 100;
 
     const scaledOpacity = (baseOpacity: number): number =>
@@ -85,9 +88,13 @@ export const createMapOverlayController = (
 
     const removeCurrentLines = () => {
         for (const { line } of currentLines) {
-            line.remove();
+            layerGroup?.removeLayer(line);
         }
         currentLines = [];
+        for (const marker of currentMarkers) {
+            layerGroup?.removeLayer(marker);
+        }
+        currentMarkers = [];
     };
 
     const destroy = () => {
@@ -96,6 +103,7 @@ export const createMapOverlayController = (
         layerGroup = null;
         eventLines = [];
         currentLines = [];
+        currentMarkers = [];
     };
 
     const drawCurrentDirection = (
@@ -125,16 +133,36 @@ export const createMapOverlayController = (
     const updateCurrent = (state: MapOverlayCurrentState) => {
         opacityPercent = state.opacityPercent;
         removeCurrentLines();
-        if (state.currentSun) {
-            drawCurrentDirection(state.location, state.currentSun, CURRENT_DIRECTION_COLOR);
-        }
-        if (state.currentMoon) {
-            drawCurrentDirection(
-                state.location,
-                state.currentMoon,
-                CURRENT_MOON_DIRECTION_COLOR,
-                { dashArray: '7 6' },
-            );
+        for (const body of ['sun', 'moon'] as const) {
+            const direction = body === 'sun' ? state.currentSun : state.currentMoon;
+            if (!direction) {continue;}
+            const live = state.liveLabels?.[body];
+            const color = body === 'sun' ? (live ? '#ffd166' : CURRENT_DIRECTION_COLOR) : CURRENT_MOON_DIRECTION_COLOR;
+            const dash = body === 'moon' ? { dashArray: '7 6' } : {};
+            if (live) {
+                drawCurrentDirection(state.location, direction, '#111b26', { weight: 6, ...dash, interactive: false });
+            }
+            drawCurrentDirection(state.location, direction, color, { weight: live ? 3 : 2, ...dash, interactive: false });
+            if (live && layerGroup) {
+                // These are direction-endpoint badges, not projected sky positions.
+                const symbol = body === 'sun'
+                    ? '<circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/>'
+                    : '<path d="M19.6 15.2A8.4 8.4 0 0 1 8.8 4.4A8.6 8.6 0 1 0 19.6 15.2Z" fill="currentColor"/>';
+                const label = live.replace(/[&<>"']/g, character =>
+                    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+                const icon = runtime.createDivIcon({
+                    className: `live-direction-marker live-direction-marker--${body}`,
+                    html: `<span role="img" aria-label="${label}" style="color:${color}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${symbol}</svg><b aria-hidden="true">now</b></span>`,
+                    iconSize: [30, 34],
+                    // The 20px body icon is centred exactly on the bearing endpoint;
+                    // the caption sits below it within the same transparent marker.
+                    iconAnchor: [15, 10],
+                });
+                const marker = runtime.createMarker(toLatLng(direction.endpoint), {
+                    icon, interactive: false, keyboard: false, opacity: scaledOpacity(1),
+                }).addTo(layerGroup);
+                currentMarkers.push(marker);
+            }
         }
         if (state.currentGalacticCenter) {
             drawCurrentDirection(state.location, state.currentGalacticCenter, '#9de0b7');
@@ -215,6 +243,7 @@ export const createMapOverlayController = (
         for (const { line, baseOpacity } of [...eventLines, ...currentLines]) {
             line.setStyle({ opacity: scaledOpacity(baseOpacity) });
         }
+        currentMarkers.forEach(marker => marker.setOpacity(scaledOpacity(1)));
     };
 
     return { render, updateCurrent, setOpacity, destroy };

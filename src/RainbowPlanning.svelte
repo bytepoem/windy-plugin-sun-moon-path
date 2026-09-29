@@ -1,22 +1,19 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { map } from '@windy/map';
-    import CloudTimeline from './CloudTimeline.svelte';
     import CelestialIcon from './CelestialIcon.svelte';
-    import { cloudBodyPosition, cloudTimeInstant } from './cloudGeometry';
+    import { cloudBodyPosition } from './cloudGeometry';
     import { calculateRainbow, rainbowSourceAboveHorizon, SECONDARY_RAINBOW_RADIUS } from './rainbowGeometry';
     import { createRainbowOverlay } from './rainbowOverlay';
     import type { Coordinates } from './solar';
 
     export let location: Coordinates;
-    export let selectedDate: string;
-    export let timeZone: string;
     export let contextReady: boolean;
     export let contextError: boolean;
     export let language: 'zh' | 'en';
     export let lineOpacity: number;
     // Parent-owned session state survives tab changes; collapsing never unmounts this view.
-    export let clock = '16:00';
+    export let timestamp: number | null;
     export let body: 'sun' | 'moon' = 'sun';
     export let secondary = false;
     export let fullCircle = false;
@@ -26,8 +23,6 @@
     const degree = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${value.toFixed(1)}°`;
 
     $: zh = language === 'zh';
-    // Never combine a newly selected location with the previous location's time zone.
-    $: timestamp = contextReady ? cloudTimeInstant(selectedDate, clock, timeZone) : null;
     $: source = timestamp === null ? null : cloudBodyPosition(body, timestamp, location);
     $: primaryArc = rainbowSourceAboveHorizon(source) ? calculateRainbow(source) : null;
     $: secondaryArc = rainbowSourceAboveHorizon(source) && secondary ? calculateRainbow(source, SECONDARY_RAINBOW_RADIUS) : null;
@@ -63,7 +58,6 @@
             <p>{zh ? '这是构图参考，不是彩虹天气预报。前方需有受光水滴，身后光源无遮挡；完整圆圈还需下方有受光水滴及无遮挡视线。月虹通常需要较亮月光和长曝光。本功能不判断降雨、云层、地形或月光亮度。' : 'This is a composition reference, not a rainbow forecast. Lit droplets must be ahead and the light source unobstructed behind you. A full circle also needs lit droplets and clear sightlines below. Moonbows usually need bright moonlight and long exposures. Rain, clouds, terrain and lunar brightness are not evaluated.'}</p>
         </div>
     {/if}
-    <CloudTimeline {clock} {zh} on:preview={event => clock = event.detail} />
     <div class="source-line">
         <span>{body === 'sun' ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon')}</span>
         <span>{zh ? '高度' : 'Altitude'} <strong>{degree(source?.altitude)}</strong></span>

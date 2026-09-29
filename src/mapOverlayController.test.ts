@@ -9,8 +9,8 @@ import { destinationPoint, calculateCurrentMoonInfo, calculateCurrentSolarDirect
 const location = { lat: 23.1291, lon: 113.2644 };
 
 const createRuntime = () => {
-    const groups: { remove: ReturnType<typeof vi.fn> }[] = [];
-    const markers: { tooltip: string; addTo: ReturnType<typeof vi.fn>; bindTooltip: ReturnType<typeof vi.fn> }[] = [];
+    const groups: { remove: ReturnType<typeof vi.fn>; removeLayer: ReturnType<typeof vi.fn> }[] = [];
+    const markers: { tooltip: string; options: L.MarkerOptions; remove: ReturnType<typeof vi.fn>; setOpacity: ReturnType<typeof vi.fn>; addTo: ReturnType<typeof vi.fn>; bindTooltip: ReturnType<typeof vi.fn> }[] = [];
     const lines: {
         points: [number, number][];
         options: L.PolylineOptions;
@@ -20,14 +20,15 @@ const createRuntime = () => {
     }[] = [];
     const runtime: MapOverlayRuntime = {
         createLayerGroup: () => {
-            const group = { remove: vi.fn() };
+            const group = { remove: vi.fn(), removeLayer: vi.fn(layer => layer.remove()) };
             groups.push(group);
             return group as unknown as L.LayerGroup;
         },
         createDivIcon: options => ({ options }) as unknown as L.DivIcon,
-        createMarker: () => {
+        createMarker: (_latLng, options) => {
             const marker = {
                 tooltip: '',
+                options, remove: vi.fn(), setOpacity: vi.fn(),
                 on: vi.fn(), off: vi.fn(), closeTooltip: vi.fn(), unbindTooltip: vi.fn(),
                 addTo: vi.fn(function addTo() {
                     return marker;
@@ -58,6 +59,40 @@ const createRuntime = () => {
 };
 
 describe('map overlay controller', () => {
+    it('labels only live bearings, styles both bodies and releases old layers on each refresh', () => {
+        const { runtime, groups, markers, lines } = createRuntime();
+        const controller = createMapOverlayController({} as L.LeafletGlMap, runtime);
+        const date = new Date('2026-09-28T09:00:00Z');
+        const directions = {
+            location, currentSun: calculateCurrentSolarDirection({ date, location }),
+            currentMoon: calculateCurrentMoonInfo({ date, location }), opacityPercent: 80,
+            liveLabels: { sun: 'Sun · Live', moon: 'Moon · Live' },
+        };
+        controller.render({ ...directions, paths: [], showDistanceMarkers: false,
+            showExtendedDistanceMarker: false, directionRangeKm: null, originLabel: 'Observer',
+            eventNames: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset' },
+            formatDistance: value => `${value} km`,
+        });
+        expect(lines.map(line => line.options.weight)).toEqual([6, 3, 6, 3]);
+        expect(lines[1].options.color).toBe('#ffd166');
+        expect(lines[3].options.dashArray).toBe('7 6');
+        expect(markers).toHaveLength(3);
+        expect((markers[1].options.icon as L.DivIcon).options.html).toContain('Sun · Live');
+        expect((markers[2].options.icon as L.DivIcon).options.html).toContain('Moon · Live');
+        controller.setOpacity(40);
+        expect(markers[1].setOpacity).toHaveBeenLastCalledWith(0.4);
+        controller.updateCurrent(directions);
+        expect(groups[0].removeLayer).toHaveBeenCalledTimes(6);
+        expect(markers[1].remove).toHaveBeenCalledOnce();
+        expect(markers[2].remove).toHaveBeenCalledOnce();
+        // A cloud preview must never inherit the previous live labels or thicker styling.
+        controller.updateCurrent({ ...directions, liveLabels: undefined });
+        expect(lines.slice(-2).map(line => line.options.weight)).toEqual([2, 2]);
+        expect(markers).toHaveLength(5);
+        controller.destroy();
+        expect(groups[0].remove).toHaveBeenCalledOnce();
+    });
+
     it.each(['milkywayrise', 'milkywayset'] as const)('renders and clears the three %s rays through the shared lifecycle', event => {
         const { runtime, groups, markers, lines } = createRuntime();
         const controller = createMapOverlayController({} as L.LeafletGlMap, runtime);

@@ -4,10 +4,9 @@
     import store from '@windy/store';
     import plugins from '@windy/plugins';
     import metrics from '@windy/metrics';
-    import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTimeInstant, cloudTwilightDistances, type CloudDirectionBody } from './cloudGeometry';
-    import CloudTimeline from './CloudTimeline.svelte';
+    import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTwilightDistances, type CloudDirectionBody } from './cloudGeometry';
     import CloudHelp from './CloudHelp.svelte';
-    import { galacticCenterEvents, cloudEventBody, type CloudTimelineEventType } from './cloudTimeline';
+    import { cloudEventBody, type CloudTimelineEventType } from './cloudTimeline';
     import { selectCloudBase, resolveCloudLayers } from './cloudBase';
     import { CLOUD_BAND_COLORS, createCloudOverlayController } from './cloudOverlayController';
     import {
@@ -19,29 +18,24 @@
     import type { WeatherForecastPayload, WeatherLoadStatus, WeatherModel } from './weather';
 
     export let location: Coordinates;
-    export let celestialEvents: { type: SolarEvent; timestamp: number }[];
     export let forecast: WeatherForecastPayload | null;
     export let status: WeatherLoadStatus;
     export let model: WeatherModel;
     export let timeZone: string;
-    export let selectedDate: string;
     export let language: 'zh' | 'en';
     export let units: UnitPreferences;
     export let settings: CloudSettings;
     export let lineOpacity: number;
 
-    const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void; eventchange: SolarEvent }>();
+    const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void }>();
     const overlay = createCloudOverlayController(map);
-    export let selectedCloudEvent: SolarEvent = 'sunset';
     export let cloudMapEvent: SolarEvent | null = 'sunset';
-    let manualClock: string | null = null;
-    export let timelineEvent: CloudTimelineEventType | null = null;
-    export let activeTimelineEvent: CloudTimelineEventType | null = null;
-    let previewingTime = false;
+    export let timelineEvent: CloudTimelineEventType = 'sunset';
+    export let previewingTime = false;
+    export let timestamp: number | null;
     let showSourceHelp = false;
     let showHelp = false;
     export let cloudPlanningBody: CloudDirectionBody = 'sun';
-    export let cloudPlanningTimestamp: number | null = null;
     export let cloudDirectionRangeKm = 0;
     export let cloudBounds: [[number, number], [number, number]] | null = null;
     export let cloudDetailBounds: [[number, number], [number, number]] | null = null;
@@ -56,8 +50,6 @@
     const changeModel = (event: Event) => dispatch('modelchange', (event.currentTarget as HTMLSelectElement).value as WeatherModel);
 
     $: zh = language === 'zh';
-    // Manual time and galactic events must not leave an unrelated rise/set button highlighted above.
-    $: activeTimelineEvent = manualClock === null ? (timelineEvent ?? selectedCloudEvent) : null;
     $: single = settings.view === 'single';
     $: visibleBands = single ? ['low'] as CloudBand[] : CLOUD_BANDS;
     $: heightMode = single ? settings.single.mode
@@ -80,21 +72,17 @@
         'Temperature/dew-point profile · Estimates candidate layers from the temperature/dew-point spread. Single view uses the lowest candidate; layered view retains separate candidates. Not measured bases; no ice-saturation correction.',
         'Manual input · Enter cloud altitude AMSL. Single view uses one reference height; layered view accepts separate low, middle and high layer heights.',
     ];
-    $: timelineEvents = [...celestialEvents, ...galacticCenterEvents(selectedDate, timeZone, location)];
-    $: automaticEvent = timelineEvents.find(event => event.type === (timelineEvent ?? selectedCloudEvent));
-    $: manualTimestamp = manualClock === null ? null : cloudTimeInstant(selectedDate, manualClock, timeZone);
-    $: planningEvents = manualClock === null ? (automaticEvent ? [automaticEvent] : [])
-        : manualTimestamp === null ? [] : [{ type: selectedCloudEvent, timestamp: manualTimestamp }];
-    $: displayedClock = manualClock ?? (automaticEvent ? formatLocalClock(new Date(automaticEvent.timestamp), timeZone) : '');
+    // The parent owns the clock across every Tab, including while this view is unmounted.
+    $: planningEvents = timestamp === null ? [] : [{ type: timelineEvent, timestamp }];
     $: scenarios = planningEvents.map(event => {
         const profile = selectCloudProfile(cloudForecast, event.timestamp);
         const base = heightSource === 'base' && automaticHeights ? selectCloudBase(forecast, event.timestamp) : null;
-        return { ...event, profile, base, ...cloudTargetPosition(cloudEventBody(timelineEvent ?? selectedCloudEvent), event.timestamp, location),
+        return { ...event, profile, base, ...cloudTargetPosition(cloudEventBody(timelineEvent), event.timestamp, location),
             layers: resolveCloudLayers(settings, base, profile) };
     });
-    $: activeBody = scenarios[0]?.body ?? cloudEventBody(timelineEvent ?? selectedCloudEvent);
+    $: activeBody = scenarios[0]?.body ?? cloudEventBody(timelineEvent);
     $: cloudPlanningBody = activeBody;
-    $: cloudMapEvent = activeBody === 'milkyway' ? null : `${activeBody}${(timelineEvent ?? selectedCloudEvent).endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
+    $: cloudMapEvent = activeBody === 'milkyway' ? null : `${activeBody}${timelineEvent.endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
     $: bodyName = activeBody === 'milkyway' ? (zh ? '银心' : 'Galactic centre')
         : activeBody === 'sun' ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon');
     $: layers = scenarios.flatMap(event => event.layers);
@@ -103,8 +91,6 @@
         cloudTwilightDistances(layer.heightM)?.clearKm ?? 0,
         event.position.sightlineAvailable ? cloudSightDistance(layer.heightM, event.position.altitude) ?? 0 : 0,
     )))) * 1.05;
-    $: timestamp = scenarios[0]?.timestamp ?? null;
-    $: cloudPlanningTimestamp = timestamp;
     $: cloudBounds = planningBounds(scenarios, false);
     $: cloudDetailBounds = planningBounds(scenarios, true);
     $: if (mounted) {
@@ -114,7 +100,13 @@
                 layers: event.layers, twilight: true, opacity: lineOpacity, language, units });
         });
     }
-    $: if (mounted && !previewingTime) {
+    $: if (mounted && (previewingTime || timestamp === null)) {
+        // Invalidate queued host writes on each preview before commit resumes synchronization.
+        lastSyncKey = `preview|${timestamp}`;
+        syncRevision += 1;
+        syncing = false;
+    }
+    $: if (mounted && !previewingTime && timestamp !== null) {
         const key = `${model}|${timestamp}|${settings.overlay}|${settings.syncMap}`;
         if (!settings.syncMap && key !== lastSyncKey) {
             lastSyncKey = key;
@@ -215,31 +207,16 @@
         return [[Math.max(-85, Math.min(...points.map(point => point.lat))), Math.min(...lons)],
             [Math.min(85, Math.max(...points.map(point => point.lat))), Math.max(...lons)]];
     };
-    /** Preview locally; invalidate outstanding map writes until the user commits the slider. */
-    const previewTime = (clock: string) => {
-        previewingTime = true;
-        lastSyncKey = '';
-        syncRevision += 1;
-        syncing = false;
-        manualClock = clock;
-        // Keep the last event's celestial body when moving away from its rise/set time.
-    };
-    /** Shared entry point for both event rows; selecting again exits manual-time preview. */
-    export const jumpTime = (type: CloudTimelineEventType) => {
-        settings = { ...settings, body: cloudEventBody(type) };
-        timelineEvent = type;
-        manualClock = null;
-        previewingTime = false;
-        if (type !== 'milkywayrise' && type !== 'milkywayset') {
-            selectedCloudEvent = type;
-            dispatch('eventchange', type);
-        }
-    };
-
-
     onMount(() => {
         mounted = true;
-        listeners.push(store.on('timestamp', value => {
+        listeners.push(store.on('timestamp', (value, source) => {
+            // A host scrub supersedes any queued plugin write immediately,
+            // before the parent's new planning timestamp reaches this component.
+            if (mounted && source !== options.UIident && typeof value === 'number' && Number.isFinite(value) && value !== timestamp) {
+                syncRevision += 1;
+                syncing = false;
+                lastSyncKey = '';
+            }
             if (mounted && settings.syncMap && !syncing && settings.overlay !== 'satellite' && typeof value === 'number') {
                 syncError = (timestamp !== null && Math.abs(value - timestamp) > 1_000)
                     || store.get('product') !== model || store.get('overlay') !== settings.overlay;
@@ -267,15 +244,12 @@
 </script>
 
 <section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
-    <CloudTimeline clock={displayedClock} {zh} on:preview={event => previewTime(event.detail)}
-        on:commit={() => { previewingTime = false; }}>
-        <label slot="map" class="cloud-map-select"><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
+        <label class="cloud-map-select"><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
             <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
             <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>
             <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
             <option value="satellite">{zh ? '卫星云图' : 'Satellite'}</option>
         </select></label>
-    </CloudTimeline>
     <div class="cloud-forecast-controls">
         <div class="cloud-model-mode">
         <label class="cloud-model"><span>{zh ? '模型' : 'Model'}</span>
@@ -347,7 +321,7 @@
         {/if}
     {/if}
     {#if !scenarios.length}
-        <p class="cloud-error" role="status">{manualClock !== null ? (zh ? '请输入有效的当地时间' : 'Enter a valid local time') : (zh ? '该日暂无所选升落时刻' : 'Selected rise/set time unavailable for this date')}</p>
+        <p class="cloud-error" role="status">{zh ? '所选时刻不可用，或地点时区尚未就绪' : 'Selected time unavailable, or location time zone is not ready'}</p>
     {/if}
     <div class="cloud-table-scroll" tabindex="0" role="region" aria-label={zh ? '云层距离表' : 'Cloud distance table'}>
     <table class="cloud-table">

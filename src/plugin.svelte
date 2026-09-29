@@ -188,9 +188,7 @@
         </div>
     {/if}
 
-    <div
-        class="control-grid control-grid--favorites"
-    >
+    <div class="planning-datetime">
         <label class="control-field">
             <span class="control-label">{text.dateLabel}</span>
             <span class="date-control">
@@ -198,12 +196,25 @@
                 <input
                     type="date"
                     bind:value={selectedDate}
+                    on:change={() => {
+                        if (planningSelection.mode === 'windy') {
+                            planningSelection = { mode: 'clock', clock: planningTime.clock };
+                        }
+                    }}
                     aria-label={text.dateLabel}
                     on:click={openDatePicker}
                 />
             </span>
         </label>
 
+        <div class="shared-planning-time">
+            <CloudTimeline clock={planningTime.clock} zh={uiLanguage === 'zh'}
+                on:preview={event => previewPlanningTime(event.detail)}
+                on:commit={() => { planningTimePreview = false; }} />
+        </div>
+    </div>
+
+    <div class="control-grid control-grid--favorites">
         <fieldset class="event-selector">
             <legend class="control-label">{text.eventSelectorLabel}</legend>
             <div class="segmented-control segmented-control--events" role="group" aria-label={text.eventSelectorLabel}>
@@ -212,8 +223,9 @@
                         type="button"
                         class:active={highlightedEvent === option.value}
                         aria-pressed={highlightedEvent === option.value}
-                        disabled={(cloudObstructionVisible || rainbowVisible) && (option.value === 'all'
-                            || !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
+                        disabled={eventSkyReadyKey !== astronomyKey || (option.value === 'all'
+                            ? cloudObstructionVisible || rainbowVisible
+                            : !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
                         aria-label={text.events[option.value]}
                         title={(cloudObstructionVisible || rainbowVisible) && option.value === 'all'
                             ? (rainbowVisible
@@ -261,7 +273,7 @@
                         aria-pressed={highlightedEvent === event}
                         aria-label={cloudTimelineLabel(event, uiLanguage === 'zh')}
                         title={cloudTimelineLabel(event, uiLanguage === 'zh')}
-                        disabled={rainbowVisible || !galacticEvents.some(item => item.type === event)}
+                        disabled={eventSkyReadyKey !== astronomyKey || !galacticEvents.some(item => item.type === event)}
                         on:click={() => selectGalacticEvent(event)}
                     >
                         <span class="event-button__icon event-button__icon--milkyway" aria-hidden="true">
@@ -622,7 +634,10 @@
                                 <strong>{timelineLeadTime || '--'}</strong>
                             </div>
                             {#each summaryTimelineItems as item}
-                                <div
+                                <button
+                                    type="button"
+                                    disabled={!item.time || eventSkyReadyKey !== astronomyKey}
+                                    on:click={() => jumpPlanningEvent(item.kind)}
                                     class:item-milkyway={item.body === 'milkyway'}
                                     title={timelineEventLabel(item, text)}
                                     class:item-moon={item.body === 'moon'}
@@ -634,7 +649,7 @@
                                         <TimelineEventIcon kind={item.kind} label={timelineEventLabel(item, text)} />
                                     </span>
                                     <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
-                                </div>
+                                </button>
                             {/each}
                         {/if}
                     </div>
@@ -1089,29 +1104,23 @@
                 <!-- Collapsing hides the controls, but preserves their time and live map ownership. -->
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <CloudObstruction
-                        bind:this={cloudObstructionComponent}
-                        bind:selectedCloudEvent={cloudEvent}
-                        bind:timelineEvent={cloudTimelineEvent}
-                        bind:activeTimelineEvent={cloudActiveTimelineEvent}
+                        timelineEvent={cloudTimelineEvent}
+                        timestamp={planningTime.timestamp}
+                        previewingTime={planningTimePreview}
                         bind:cloudMapEvent
                         bind:cloudPlanningBody
-                        bind:cloudPlanningTimestamp
                         bind:cloudDirectionRangeKm
                         bind:cloudBounds
                         bind:cloudDetailBounds
                         location={selectedLocation}
-                        celestialEvents={solarPaths.flatMap(path => path.status === 'ok'
-                            ? [{ type: path.event, timestamp: path.eventTime.getTime() }] : [])}
                         forecast={forecastState.cloudForecast}
                         status={forecastState.cloudStatus}
                         model={weatherModel}
-                        {selectedDate}
                         {timeZone}
                         language={uiLanguage}
                         {units}
                         bind:settings={cloudSettings}
                         lineOpacity={directionLineOpacityPercent}
-                        on:eventchange={event => { selectedEvent = event.detail; }}
                         on:modelchange={handleWeatherModelChange}
                         on:retry={retryCloudWeather}
                     />
@@ -1121,13 +1130,11 @@
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <RainbowPlanning
                         location={selectedLocation}
-                        {selectedDate}
-                        {timeZone}
-                        contextReady={resolvedContextLocationKey === locationKey}
+                        timestamp={planningTime.timestamp}
+                        contextReady={eventSkyReadyKey === astronomyKey}
                         contextError={status === 'error'}
                         language={uiLanguage}
                         lineOpacity={directionLineOpacityPercent}
-                        bind:clock={rainbowClock}
                         bind:body={rainbowBody}
                         bind:secondary={rainbowSecondary}
                         bind:fullCircle={rainbowFullCircle}
@@ -1183,6 +1190,8 @@
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
 
     import CloudNavigation from './CloudNavigation.svelte';
+    import CloudTimeline from './CloudTimeline.svelte';
+    import { resolvePlanningTime, type PlanningTimeSelection } from './planningTime';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import { translations, type UiLanguage } from './pluginTranslations';
@@ -1250,6 +1259,7 @@
     import { claimOverlayOwner } from './overlayOwner';
     import { startPluginUsage } from './pluginUsage';
     import { createMapOverlayController } from './mapOverlayController';
+    import { createEventSkyOverlay } from './eventSkyOverlay';
     import { buildDirectionLineFitBounds, calculateVisibleMapViewport } from './mapView';
     import {
         createRadarFrameTimeLabel,
@@ -1426,6 +1436,8 @@
         getElevation: async location => (await getElevation(location.lat, location.lon)).data,
     });
     const mapOverlayController = createMapOverlayController(map);
+    const eventSkyOverlay = createEventSkyOverlay(map);
+    let eventSkyReadyKey = '';
     let radarOverlayStatus: RadarOverlayStatus = 'disabled';
     let radarFrameTimeMs: number | null = null;
     let radarFrameTimeLabelController: RadarFrameTimeLabelController | null = null;
@@ -1485,7 +1497,8 @@
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
     $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
-    let rainbowClock = '16:00';
+    let planningSelection: PlanningTimeSelection = { mode: 'event', event: 'sunset' };
+    let planningTimePreview = false;
     let rainbowBody: 'sun' | 'moon' = 'sun';
     let rainbowSecondary = false;
     let rainbowFullCircle = false;
@@ -1495,14 +1508,17 @@
     let pluginUpdateNotesRetrying = false;
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
-    let cloudEvent: SolarEvent = 'sunset';
-    let cloudTimelineEvent: CloudTimelineEventType | null = null;
-    let cloudActiveTimelineEvent: CloudTimelineEventType | null = 'sunset';
-    let cloudObstructionComponent: CloudObstruction | null = null;
-    $: highlightedEvent = rainbowVisible ? null : cloudObstructionVisible ? cloudActiveTimelineEvent : selectedEvent;
+    let cloudTimelineEvent: CloudTimelineEventType = 'sunset';
+    $: highlightedEvent = planningSelection.mode === 'event' ? planningSelection.event
+        : planningSelection.mode === 'current' ? 'all' : null;
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
-    let cloudPlanningTimestamp: number | null = null;
+    $: cloudPlanningTimestamp = planningTime.timestamp;
+    // Host instants remain absolute across time-zone resolution; derive their
+    // civil date only after the selected location's context has arrived.
+    $: if (planningSelection.mode === 'windy' && resolvedContextLocationKey === locationKey) {
+        selectedDate = dateInputForInstant(new Date(planningSelection.timestamp), timeZone);
+    }
     let cloudDirectionRangeKm = 0;
     let cloudBounds: [[number, number], [number, number]] | null = null;
     let cloudDetailBounds: [[number, number], [number, number]] | null = null;
@@ -1706,6 +1722,25 @@
         ? null
         : selectDirectionPaths(solarPaths, galacticPaths, selectedEvent)[0] || null;
 
+    // Resolve once for all three planners; exact event timestamps are not rounded
+    // to the minute displayed in the shared control.
+    $: planningTime = resolvePlanningTime({
+        selection: planningSelection, selectedDate, timeZone, now: currentInstant,
+        events: summaryTimelineItems, ready: eventSkyReadyKey === astronomyKey,
+    });
+    $: eventSkyTimestamp = planningTime.timestamp;
+    $: if (isMounted && mapTab === 'events' && eventSkyReadyKey === astronomyKey && eventSkyTimestamp !== null) {
+        eventSkyOverlay.render({
+            location: selectedLocation,
+            timestamp: eventSkyTimestamp,
+            timeLabel: formatLocalDateTime(new Date(eventSkyTimestamp), timeZone),
+            language: uiLanguage,
+            opacity: directionLineOpacityPercent,
+        });
+    } else {
+        eventSkyOverlay.destroy();
+    }
+
     $: {
         const selectedDayReference = dateInputForInstant(currentInstant, timeZone) === selectedDate
             ? currentInstant.getTime()
@@ -1772,10 +1807,10 @@
     }
 
     // onMount restores these controls before enabling persistence or mounting the planner.
-    $: if (isMounted) {
+    $: if (isMounted && planningTime.timestamp !== null) {
         try {
             saveRainbowPreferences(localStorage, {
-                body: rainbowBody, clock: rainbowClock, secondary: rainbowSecondary, fullCircle: rainbowFullCircle,
+                body: rainbowBody, clock: planningTime.clock, secondary: rainbowSecondary, fullCircle: rainbowFullCircle,
             });
         } catch { /* Storage access may be blocked; retain the current session's controls. */ }
     }
@@ -2047,43 +2082,36 @@
         recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
-    /** Stay in the current tab: only an already-open cloud planner owns the event time. */
-    const selectGalacticEvent = (event: GalacticEvent) => {
-        selectedEvent = event;
-        if (cloudObstructionVisible) {
-            cloudObstructionComponent?.jumpTime(event);
-            return;
-        }
-        const paths = selectedMapPaths();
-        status = paths.some(path => path.status === 'ok') ? 'ready' : 'empty';
-        renderMapFeatures(paths);
+    /** Manual edits keep the selected body/long rays, but clear event highlighting. */
+    const previewPlanningTime = (clock: string) => {
+        planningTimePreview = true;
+        planningSelection = { mode: 'clock', clock };
     };
 
+    /** Both shortcut rows select one exact event instant without changing Tab. */
+    const jumpPlanningEvent = (event: string) => {
+        if (eventSkyReadyKey !== astronomyKey || !summaryTimelineItems.some(item => item.kind === event && item.time)) {return;}
+        planningSelection = { mode: 'event', event };
+        planningTimePreview = false;
+        const directionEvent = event === 'dawn' ? 'sunrise' : event === 'dusk' ? 'sunset' : event as CloudTimelineEventType;
+        selectedEvent = directionEvent;
+        cloudTimelineEvent = directionEvent;
+        if (!isGalacticEvent(directionEvent)) {
+            rainbowBody = directionEvent.startsWith('moon') ? 'moon' : 'sun';
+        }
+    };
+
+    const selectGalacticEvent = (event: GalacticEvent) => jumpPlanningEvent(event);
+
     const selectEvent = (event: ObservationEvent) => {
-        if (rainbowVisible) {
-            if (event === 'all') {return;}
-            const path = solarPaths.find(path => path.event === event);
-            if (path?.status === 'ok') {
-                rainbowBody = event.startsWith('moon') ? 'moon' : 'sun';
-                rainbowClock = formatLocalClock(path.eventTime, timeZone);
-            }
-            return;
+        if (event === 'all') {
+            if (cloudObstructionVisible || rainbowVisible) {return;}
+            selectedEvent = event;
+            planningSelection = { mode: 'current' };
+            planningTimePreview = false;
+        } else {
+            jumpPlanningEvent(event);
         }
-        if (cloudObstructionVisible && event === 'all') {return;}
-        selectedEvent = event;
-        if (event !== 'all') {
-            cloudEvent = event;
-            cloudTimelineEvent = event;
-            cloudObstructionComponent?.jumpTime(event);
-        }
-        // The cloud component owns planning time/range; its bindings render the map reactively.
-        if (cloudObstructionVisible) {return;}
-        if (solarPaths.length === 0) {
-            return;
-        }
-        const paths = selectedMapPaths();
-        status = paths.some(path => path.status === 'ok') ? 'ready' : 'empty';
-        renderMapFeatures(paths);
     };
 
     const changeInitialOverlayPreference = (event: Event) => {
@@ -2131,9 +2159,15 @@
         });
     };
 
-    /** Keep the third-party radar frame synchronized with Windy's native timeline. */
-    const syncRadarTimestamp = (timestampMs: number) => {
+    /** Native timeline changes drive the shared planner as well as radar.
+     * Echoes of our own exact planning instant must retain event selection.
+     */
+    const syncRadarTimestamp = (timestampMs: number, source?: string) => {
         radarOverlayController.setTimestamp(timestampMs);
+        if (!isMounted || source === name || !Number.isFinite(timestampMs) || !Number.isFinite(new Date(timestampMs).getTime())
+            || timestampMs === planningTime.timestamp) {return;}
+        planningTimePreview = false;
+        planningSelection = { mode: 'windy', timestamp: timestampMs };
     };
 
     /** Persist and apply one radar state so Settings and the homepage shortcut stay synchronized. */
@@ -2304,7 +2338,13 @@
         ? { currentSun: null, currentMoon: null, currentGalacticCenter: null }
         : cloudObstructionVisible
         ? cloudMapDirections(planningTimestamp, selectedLocation, planningBody)
-        : { currentSun: currentSolarDirection, currentMoon: currentMoonInfo };
+        : {
+            currentSun: currentSolarDirection,
+            currentMoon: currentMoonInfo,
+            liveLabels: uiLanguage === 'zh'
+                ? { sun: '太阳 · 实时', moon: '月亮 · 实时' }
+                : { sun: 'Sun · Live', moon: 'Moon · Live' },
+        };
 
     const renderMapFeatures = (paths: DirectionPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
         planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => {
@@ -2352,6 +2392,8 @@
 
     const refreshPaths = async (key: string) => {
         const requestId = ++latestRequestId;
+        eventSkyReadyKey = '';
+        eventSkyOverlay.destroy();
         const location = { ...selectedLocation };
         const dateInput = selectedDate;
         const contextLocationKey = buildWeatherLocationKey(location);
@@ -2377,6 +2419,9 @@
             elevationM = plan.elevationM;
             solarPaths = plan.paths;
             astronomyTimeline = plan.timeline;
+            // Only a successfully resolved snapshot may supply the chart's
+            // local time. Event buttons can change status while a request runs.
+            eventSkyReadyKey = key;
             const selectedPaths = selectedMapPaths(plan.paths);
             status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
             renderMapFeatures(selectedPaths);
@@ -3107,6 +3152,7 @@
             }
             mapOverlayController.destroy();
             radarOverlayController.destroy();
+            eventSkyOverlay.destroy();
             radarFrameTimeLabelController?.destroy();
             radarFrameTimeLabelController = null;
             if (radarTimestampSubscriptionId !== null) {
@@ -3137,7 +3183,7 @@
         try {
             const preferences = loadRainbowPreferences(localStorage);
             rainbowBody = preferences.body;
-            rainbowClock = preferences.clock;
+            planningSelection = { mode: 'clock', clock: preferences.clock };
             rainbowSecondary = preferences.secondary;
             rainbowFullCircle = preferences.fullCircle;
         } catch { /* Storage access may be blocked. */ }
@@ -3184,6 +3230,59 @@
 </script>
 
 <style lang="less">
+    :global(.live-direction-marker) { background: none; border: 0; pointer-events: none !important; }
+    :global(.live-direction-marker > span) {
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 2px;
+        height: 34px;
+        /* Outline only the glyphs; keep the map visible between and around them. */
+        filter: drop-shadow(0 1px 1px #111b26);
+        white-space: nowrap;
+        font: 10px/1.2 sans-serif;
+    }
+    :global(.live-direction-marker svg) { width: 20px; height: 20px; flex-shrink: 0; }
+    /* One extra row grows the shell; the existing Tab content keeps its height. */
+    .planning-datetime {
+        display: grid;
+        grid-template-columns: 62px minmax(0, 1fr);
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        margin-bottom: 6px;
+    }
+
+    .shared-planning-time {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    button.timeline-event {
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    button.timeline-event:hover:not(:disabled) {
+        background: rgba(99, 185, 238, 0.14);
+    }
+
+    button.timeline-event:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: -2px;
+    }
+
+    button.timeline-event:disabled { cursor: default; }
+
     :global(.sun-path-radar-frame-time) {
         position: fixed;
         z-index: 10000;
@@ -3301,8 +3400,8 @@
         --mobile-window-icon-size: 25px;
 
         height: fit-content !important;
-        max-height: min(430px, 52vh) !important;
-        max-height: min(430px, 52dvh) !important;
+        max-height: min(478px, calc(52vh + 48px)) !important;
+        max-height: min(478px, calc(52dvh + 48px)) !important;
         min-height: 0;
         padding: 0;
         margin: 0;
@@ -3311,7 +3410,7 @@
 
     :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-moon-path.sun-path-mobile-collapsed) {
         max-height: min(
-            280px,
+            328px,
             calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
         ) !important;
     }
@@ -3359,8 +3458,8 @@
         align-items: stretch;
         gap: 0;
         height: fit-content !important;
-        max-height: min(430px, 52vh);
-        max-height: min(430px, 52dvh);
+        max-height: min(478px, calc(52vh + 48px));
+        max-height: min(478px, calc(52dvh + 48px));
         min-height: 0;
         margin: 0;
         padding: 0;
@@ -3501,8 +3600,8 @@
         width: 100%;
         height: fit-content;
         min-height: 0;
-        max-height: min(430px, 52vh);
-        max-height: min(430px, 52dvh);
+        max-height: min(478px, calc(52vh + 48px));
+        max-height: min(478px, calc(52dvh + 48px));
         flex: 0 1 auto;
         overflow-x: hidden;
         overflow-y: auto;
@@ -3515,7 +3614,7 @@
     /* Compact mode is a fixed shell in both orientations; each Tab owns any scrolling it needs. */
     :global(.plugin-mobile-bottom-small#plugin-windy-plugin-sun-moon-path.sun-path-mobile-compact:not(.sun-path-mobile-fullscreen)) {
         max-height: min(
-            430px,
+            478px,
             calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
         ) !important;
     }
@@ -3523,7 +3622,7 @@
     .sun-path-panel.mobile_ui.mobile_compact:not(.mobile_fullscreen),
     .sun-path-panel.mobile_ui.mobile_compact:not(.mobile_fullscreen) .mobile-scroll-content {
         max-height: min(
-            430px,
+            478px,
             calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
         );
     }
@@ -3894,10 +3993,10 @@
 
     .control-grid--favorites {
         z-index: 20;
-        grid-template-columns: 62px minmax(0, 1fr) 38px;
+        grid-template-columns: minmax(0, 1fr) 38px;
     }
 
-    .control-grid--favorites .date-control {
+    .planning-datetime .date-control {
         justify-content: center;
         padding-right: 8px;
         padding-left: 8px;
@@ -6077,7 +6176,7 @@
         }
 
         .sun-path-panel.mobile_ui .control-grid--favorites {
-            grid-template-columns: 62px minmax(0, 1fr) 38px;
+            grid-template-columns: minmax(0, 1fr) 38px;
         }
 
         .segmented-control--events {
@@ -6228,9 +6327,11 @@
 
         .control-grid--favorites,
         .sun-path-panel.mobile_ui .control-grid--favorites {
-            grid-template-columns: 50px minmax(0, 1fr) 32px;
+            grid-template-columns: minmax(0, 1fr) 32px;
             gap: 4px;
         }
+
+        .planning-datetime { grid-template-columns: 50px minmax(0, 1fr); gap: 4px; }
 
         .control-grid--favorites .segmented-control button {
             gap: 0;

@@ -44,8 +44,20 @@
         : 'The Clouds/Rainbow dropdown remembers the last selected function and restores its tab label after a refresh.'}</p>
     <p>{text.aboutDescription}</p>
     <p>{uiLanguage === 'zh'
-        ? '彩虹的日虹／月虹、双彩虹、完整圆圈和当地时间保存在当前浏览器，刷新后再次打开彩虹即可恢复；按当前日期和地点重新计算方向。'
-        : 'Rainbow saves Sun/Moon, Double, Full circle and local clock in this browser, restoring them when you reopen Rainbow after a refresh. Directions are recalculated for the current date and location.'}</p>
+        ? '拖动 Windy 自带时间轴会同步规划日期、当地时间及当前规划图形，包括事件天空盘、彩虹和云层视线；跨天时重新计算升落事件。标有 now 的日月长线仍表示真实当前时刻，不随时间轴变化。'
+        : 'Moving the Windy timeline updates the planning date, local clock and active planning geometry: the Events sky chart, rainbow and cloud sightlines. Crossing midnight recalculates events. Sun/Moon bearings labelled now remain tied to the real current instant.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '事件页的实时太阳长线为金色实线，实时月亮长线为浅蓝虚线，均带深色描边；末端仅显示日月图标和小号 now，无背景框。它们每 5 秒按当前时刻刷新，不跟随时间条或观测日期；末端只是方位参考，不是天体所在的地理位置。云层视线跟随规划时间，不标为实时。'
+        : 'In Events, the live Sun bearing is solid gold and the live Moon bearing is dashed light blue. Both have dark outlines; endpoints show only body icons and small now labels without background boxes. They refresh from the current instant every five seconds, independently of the planning slider or date. Endpoints are bearing references, not celestial geographic locations. Cloud sightlines follow planning time and are not labelled now.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '日期旁的时间输入和滑条由事件、云层遮挡、彩虹共用，下方为升落按钮；切换 Tab 或收起面板仍保留时间条与所选时间。点击升落按钮或事件栏的具体时刻可跳转；拖动或输入时间会取消升落高亮，但保留原有长线。拖动时本地预览，结束后按云层设置同步 Windy。更换日期或地点时，手动时间按新日期与当地时区解释，事件时间重新计算；“全部”使用所选日期的当前当地钟点。'
+        : 'The time input and slider beside the date are shared by Events, Clouds and Rainbow, with rise/set buttons below. Switching tabs or collapsing the panel preserves the control and time. Click a rise/set shortcut or an event time to jump; editing the clock clears event highlighting but keeps the existing long bearings. Dragging previews locally; releasing synchronizes Windy according to cloud settings. On date/location changes, manual clocks use the new local date and time zone, while event times are recalculated. All uses the current local clock on the selected date.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '事件页天空盘跟随共用时间，盘顶标注对应时刻；原有实时日月长线仍表示现在。北上东右，圆周为地平线、圆心为天顶；银河带展示走向与拱形，虚线及向下箭头表示地平线下。天空盘不是距离图，银河带宽仅为示意，不保证可见；切换到云距／彩虹或关闭插件会移除。'
+        : 'The Events sky chart follows the shared time labelled above the chart; live Sun/Moon long bearings still mean now. North is up and east is right; the rim is the horizon and the centre is the zenith. The galactic band shows orientation and arch shape; dashes and downward arrows indicate below-horizon directions. This is not a distance map; band width is illustrative and does not guarantee visibility. Switching to Clouds/Rainbow or closing removes the chart.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '共用时间条的有效当地钟点，以及彩虹的日虹／月虹、双彩虹、完整圆圈选项保存在当前浏览器；刷新后恢复钟点，再按当前日期和地点计算，不保存上次的绝对时刻或升落高亮。'
+        : 'The valid shared local clock and Rainbow Sun/Moon, Double and Full circle options are saved in this browser. Refresh restores the clock on the current date and location, not the previous absolute instant or event highlight.'}</p>
     <p>{uiLanguage === 'zh'
         ? '顶部银心升落按钮保持当前 Tab；在事件页显示银心升落时刻及前后 30 分钟的三条绿色方位线，地平线以下的线仅供方向参考，不代表可见。当天无对应事件时按钮不可用。云层规划中，使用顶部日月与银心事件按钮跳到对应升落时刻；事件页时间栏以图标显示日月和银心升落时刻；“全部”仅用于日月事件总览。手动调整时间后顶部取消升落高亮。移动端收起窗口仍保留云层参考线，展开后保留原来的规划时间；进入设置、关于或天气保留云层参考线和规划时间，切换到其他地图规划功能或关闭插件会清除云层参考线。'
         : 'The top galactic centre rise/set buttons keep the current tab. In Events, three green bearings show the crossing and 30 minutes before and after it; below-horizon bearings are direction references, not visibility claims. Unavailable events are disabled. In cloud planning, the top Sun, Moon and galactic centre buttons select the rise/set event and time. The Events time strip uses icons for Sun, Moon and galactic centre crossings; All is only available for the Sun/Moon overview. Manual time clears the top rise/set highlight. Collapsing the mobile panel keeps cloud reference lines and preserves the planning time on expansion. Settings, About and Weather keep cloud reference lines and planning time; switching map-planning features or closing the plugin removes cloud reference lines.'}</p>

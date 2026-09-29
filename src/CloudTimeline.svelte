@@ -22,7 +22,6 @@
                 on:change={() => dispatch('commit')} on:pointercancel={() => dispatch('commit')} on:blur={() => dispatch('commit')} />
             <div class="time-ticks" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
         </div>
-        <slot name="map" />
     </div>
 
 </div>
@@ -30,8 +29,20 @@
 <style>
     .cloud-timeline { width:100%; min-width:0; color:#b9c2ce; font-size:11px; }
     .time-row { display:flex; align-items:center; gap:6px; margin-bottom:0; }
-    .time-track { flex:1 1 0; min-width:0; }
-    .time-entry { box-sizing:border-box; width:82px; height:28px; flex-shrink:0; min-width:0; padding:0 5px; border:1px solid var(--panel-border,#485364); border-radius:5px; background:rgba(8,15,27,.5); color:#f2f4fa; color-scheme:dark; font:600 13px/1.2 monospace; }
+    .time-track {
+        box-sizing:border-box;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        flex:1 1 0;
+        min-width:0;
+        height:38px;
+        padding:0 7px;
+        border:1px solid var(--panel-border,#485364);
+        border-radius:6px;
+        background:#0e161f;
+    }
+    .time-entry { box-sizing:border-box; width:82px; height:38px; flex-shrink:0; min-width:0; padding:0 5px; border:1px solid var(--panel-border,#485364); border-radius:6px; background:#0e161f; color:var(--panel-text,#f2f4fa); color-scheme:dark; font-family:inherit; font-size:13px; font-weight:500; line-height:1.2; font-variant-numeric:tabular-nums; }
     .time-entry::-webkit-datetime-edit { padding:0; }
     .time-entry::-webkit-calendar-picker-indicator { width:14px; margin:0; padding:0; flex-shrink:0; }
     input:focus-visible { outline:2px solid #6ed9ee; outline-offset:2px; }
@@ -41,5 +52,5 @@
     input::-moz-range-track { height:4px; border-radius:2px; background:#607587; }
     input::-moz-range-thumb { width:14px; height:14px; border:2px solid #17212a; border-radius:50%; background:#6ed9ee; }
     .time-ticks { display:flex; justify-content:space-between; padding:0 3px; font-size:10px; line-height:10px; }
-    @media (pointer:coarse) { input[type=range] { height:24px; } .time-entry { height:30px; } }
+    @media (pointer:coarse) { input[type=range] { height:24px; } }
 </style>
