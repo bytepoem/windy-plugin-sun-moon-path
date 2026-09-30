@@ -2,13 +2,13 @@
 
 [中文](README.md) · **English**
 
-Plan sunrise, sunset, Moon and Milky Way photography on Windy with celestial directions, cloud-distance references, weather and observing conditions at saved locations. Available in Chinese and English on desktop and mobile.
+Plan sunrise, sunset, Moon and Milky Way photography on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Available in Chinese and English on desktop and mobile.
 
 ![Plugin interface](src/screenshot.jpg)
 
-## Install and use
+## Install and get started
 
-Current version: **0.10.4** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.4)
+Current release: **0.10.4** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.4)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
@@ -16,56 +16,42 @@ Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path*
 https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.js
 ```
 
-1. Click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own Amap, Baidu or Tencent Maps API Key in Settings.
-2. Choose a date. Events shows celestial rise/set times, live directions, Moon phase, moonless-night and Milky Way observing windows. The language switch is at the top right of Settings; the top favorites button shows only its icon.
-3. In Clouds, select a target and cloud height, then use rise/set shortcuts, local time or the minute slider to plan a shooting time.
-   The top galactic centre rise/set buttons keep the current tab. In Events, three green bearings show the crossing and 30 minutes before and after it. Below-horizon bearings are direction references, not visibility claims; unavailable events are disabled. In Clouds, use the top Sun, Moon and galactic centre buttons to select a crossing; local time, the slider and cloud map selection share one row. The Events time strip uses icons for Sun, Moon and galactic centre crossings. Manual time clears rise/set highlights; All is reserved for the Sun/Moon overview.
-4. Check the weather below or compare 2–5 favorite locations for the same date. Mobile supports collapsed, compact and fullscreen modes.
+1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
+2. **Choose a time:** select a date, then use the local time strip or Sun, Moon and galactic centre rise/set shortcuts.
+3. **Check conditions:** explore events and weather, use cloud or rainbow planning, or compare 2–5 favorite locations.
+
+Language and display options are in Settings; detailed legends are under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
 
 ## Features
 
-The Clouds/Rainbow dropdown remembers the last selected function and restores its tab label after a refresh.
-
-Rainbow's Sun/Moon selection, Double, Full circle and local clock are saved in this browser and restored when reopening Rainbow after a refresh. Directions are recalculated using the current date and location.
-
-The rainbow map's coloured target marks the antisolar/antilunar direction: 180° opposite the selected source in azimuth, with negated altitude, which may lie below the horizon. It is hidden when the source is below the horizon. Ribbon width and target size are display styling, not actual angular sizes or a glory forecast.
-
-The dropdown beside Clouds opens **Rainbow**. Select Sun or Moon, adjust local time or use the top Sun/Moon rise/set shortcuts, and enable Double or Full circle as needed. Options survive tab changes during the session. Collapsing on mobile keeps the overlay; Settings, About and Weather keep the preceding overlay and planning time; switching map-planning features or closing the plugin removes it.
-
-The rainbow overlay is a top-down orthographic sky chart, not a distance map. The 0° ring is the horizontal horizon and altitude rings are not evenly spaced. In full-circle mode, above/below-horizon directions can overlap; solid/dashed arcs distinguish them. The primary bow is about 42° and the secondary about 51° from the opposite light-source direction. When the selected light source is below the horizon, bows are hidden and bow readouts show —, including Double and Full circle modes. The bearing, icon and name follow the selected Sun or Moon at the planning instant; a dashed bearing and downward indicator identify a below-horizon source. Thicker strokes are display styling only and do not alter calculated angles. Seeing a full circle also requires lit droplets and clear sightlines below.
-
-**Primary bow conditions:** select **Assess selected time** to sample hourly liquid rain and direct normal irradiance from Open-Meteo's selected ECMWF/GFS/ICON model, independently of the weather table source. Three distances along each of the bow's left, centre and right bearings use 1, 2 and 3 times the approximate model grid spacing (9/22/13 km). These are neither droplet distances nor independent observations. With complete data, rain ≥0.1 mm and mean DNI ≥120 W/m² at the same point in the same hour yield “More favourable”; rain alone yields “Mixed conditions”, and no rain signal yields “Unfavourable”. Missing fields or out-of-range times yield “Insufficient data”. These uncalibrated screening rules always carry low confidence, never a percentage probability, and cannot rule out rainbows outside the sampled area. The panel shows the hour interval and individual samples. Hourly rain and surface sunlight do not prove simultaneous illumination of droplets; 3D clouds are not checked. Moonbows and below-horizon arcs are not assessed. Planning-context changes clear previous evidence; closing the panel cancels requests.
-
-**Terrain reference:** the same assessment samples Open-Meteo / Copernicus DEM GLO-90 (90 m data) in seven visible-bow directions, at 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 7, 10, 15, 20, 25 and 30 km. Observer elevation uses the same DEM plus an adjustable height above its surface (default 2 m, range 0–1000 m). Earth curvature is included; atmospheric refraction is not. Bow altitude, the highest sampled terrain angle and its distance are shown. Terrain above the bow indicates potential obstruction only: droplets may be in front of hills, and terrain shadows on droplets are not checked. Sparse sampling may miss ridges and does not resolve buildings or trees reliably; “not found” is not proof of a clear view.
-
-**Route visibility reference:** the observer, candidate rain locations and their midpoints are sampled, reusing nearer points along the same bearing. Each route shows its minimum near-surface visibility; below 5 km is a screening threshold, never a direct comparison with rain distance. All samples use the same model and the explicitly displayed timestamp at the end of the rainfall interval; they do not represent the entire hour or an elevated sightline. Terrain and visibility remain separate from the rain/light grade and do not produce a probability. A failed branch does not discard other successful evidence; missing data remain unknown. Changing camera height also cancels and clears old results. New height and assessment state are retained only for the current panel session.
-
 | Feature | Purpose |
 | --- | --- |
-| Sun and Moon directions | Rise/set rays sampled 30 minutes before and after each event, live directions, 200 / 400 km reference points and an optional 600 km marker |
-| Cloud planning | In Clouds, six rise/set buttons select Sun, Moon or Galactic Center; single/layered heights from forecast base, cloud-cover profile, temperature/dew-point profile or manual input, mapped sightline intersections and distance envelopes, with a bilingual illustrated guide |
-| Weather and observing | Windy / Open-Meteo sources and EC / GFS / ICON models, spanning available data from the past 6 hours to the next 5 days; weather, moonlight and target visibility inform observing windows |
-| Favorite comparisons | Reuse Windy favorites, search and sort locations, and compare weather, astronomy, elevation and David Lorenz 2025 light-pollution data |
-| Radar overlay | Keyless RainViewer radar over Windy layers, following the host timeline and showing the actual radar frame time |
-| Units and help | Follow Windy temperature, wind, precipitation, distance and elevation units; Settings → User guide explains usage and limits, while About shows version information, release notes, a [RedNote profile link](https://xhslink.cn/o/rXpBcBK0Qy) and an optional [Afdian support link](https://afdian.com/a/bytepoem) |
+| Sun, Moon and Milky Way | Rise/set times, direction lines, Moon phase, moonless and Milky Way observing windows, plus a sky chart for composition |
+| Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections; supports single/layered views and satellite comparison |
+| Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
+| Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position |
+| Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
+| Radar and display | RainViewer radar overlays, Windy units, and collapsed, compact or fullscreen mobile views |
 
-## Data limits
+## Using rainbow planning
 
-- **Cloud distances are geometric references.** Local cloud heights do not describe distant cloud regions. The plugin does not sample weather, terrain, cloud thickness or extinction along the light path, and cannot guarantee visibility or colorful twilight. Time adjustments retain the selected body. Satellite observations use an independent timeline, not the planned forecast time. Above-ground cloud base and altitude above sea level are labeled separately. See the [cloud calculation notes in Chinese](docs/cloud-obstruction.md).
-- **Cloud height methods.** Single view defaults to forecast cloud base; layered view defaults to cloud-cover profiles. Temperature/dew-point profiles estimate candidate layers, not measured bases. Missing data never switches methods. Manual heights and thresholds are retained independently; calculation notes explain thresholds, bands and altitude references.
-- **Weather sources differ.** Weather, observing windows and favorite comparisons share the selected source. Cloud base, vertical cloud heights and map clouds always use Windy. Cloud-band definitions may differ; missing values remain empty and failed requests do not switch sources automatically.
-- **AOD and visibility.** AOD always comes from CAMS via Open-Meteo. Windy visibility uses an independent Open-Meteo supplement; Open-Meteo mode uses visibility from the selected model.
-- **Time and precipitation.** Windy uses native time steps. Open-Meteo hourly data may include server-side interpolation, with precipitation accumulated over the preceding hour. Observing windows show the range of matched precipitation values, not a window total. Past timestamps are model output, not observations.
+Choose **Rainbow** from the dropdown beside Clouds, select Sun or Moon, and adjust the time. The map shows bow directions and altitudes: solid arcs are above the horizon, dashed arcs below it. Bows are hidden when the selected light source is below the horizon.
 
-## Usage statistics
+Select **Assess selected time** to check rain and sunlight along primary-bow directions, with separate terrain and route low-visibility references. Adjust camera height above ground to explore terrain effects.
 
-Collection requires Windy's `consent.analytics` to be `true`. Baidu Tongji receives only a virtual pageview on opening for basic visit reports. PostHog receives openings, main-tab selections, foreground and tab dwell seconds, and one milestone when foreground use reaches three minutes. Background time is excluded; internal remounts do not count as new openings and automatic tab changes do not count as selections. Closing the plugin or withdrawing consent stops collection. Normal local development disables both providers.
+**Bow geometry is a composition reference; condition grades are not probabilities.** Assessment uses hourly forecasts and limited samples, always with low confidence. It cannot prove that droplets are illuminated at the same instant; moonbows are not assessed. Terrain warnings do not prove the bow is blocked, and no detected obstruction does not guarantee a clear view. Seeing a double bow or full circle still depends on lit droplets and actual sightlines.
 
-Events exclude account details, coordinates, favorites, search terms and actual map URLs. Baidu may use cookies and receive browser information; both services receive request IP addresses. PostHog uses its public capture API and a random identifier held only in memory for the current consented session, with no person profile or cross-session identifier. Results cover permitted, successfully delivered events, not all users or exact person counts. See the [measurement and validation notes](docs/usage-analytics.md).
+## Usage limits
+
+- **Planning time differs from now.** The shared time strip uses the location's time zone and resets to the current time when refreshed or reopened. Sun/Moon lines labeled `now` always show the actual current instant.
+- **Sky charts show directions, not distances.** Milky Way bands and rainbow arcs are geometric illustrations; stroke widths are not actual angular widths or visibility guarantees.
+- **Cloud distances are geometric references.** Local cloud heights do not describe distant clouds. Cloud-distance calculations do not check weather, terrain or cloud thickness along the path and cannot guarantee visibility or colorful twilight. See [cloud calculation principles and limits](docs/cloud-obstruction.md) (Chinese).
+- **Sources and timestamps differ.** Weather, observing windows and favorite comparisons share the selected source. Automatic cloud heights come from Windy; satellite and radar show their own observation times. Missing data remain unknown without automatic source switching.
+- **Forecasts are not observations.** Open-Meteo hourly precipitation covers the preceding hour; past model data are not on-site observations. Check current weather and conditions in the field.
 
 ## Local development
 
-Publishing uses npm **11.12.1**. Node.js must meet dependency requirements (current CI uses 24).
+Current CI uses Node.js 24 and npm 11.12.1.
 
 ```sh
 npm exec --yes --package=npm@11.12.1 -- npm install
@@ -73,16 +59,10 @@ npm test
 npm start
 ```
 
-Open [Windy Developer mode](https://www.windy.com/developer-mode) and load `https://localhost:9999/plugin.js`. Local preview reads bilingual notes from `release-notes/`.
+Open [Windy Developer mode](https://www.windy.com/developer-mode) and load `https://localhost:9999/plugin.js`.
 
-```sh
-npm run build
-```
-
-Output in `dist/` includes scripts, `plugin.json` and `screenshot.jpg`. Update metadata and complete minor-series notes are hosted on Netlify and synchronized only after a successful Windy upload, then verified with the production parser. See [publishing and recovery](docs/update-hosting.md).
-
-For development, see [forecast request and component responsibilities](docs/refactor-0.11.0.md) (Chinese).
+Run `npm run build` to generate `dist/`, including scripts, `plugin.json` and the screenshot. Maintenance notes (Chinese): [forecast request and component responsibilities](docs/refactor-0.11.0.md) · [update hosting and publishing](docs/update-hosting.md).
 
 ## Feedback and license
 
-[Report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [MIT License](LICENSE)
+[Report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [RedNote](https://xhslink.cn/o/rXpBcBK0Qy) · [Optional support on Afdian](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)
