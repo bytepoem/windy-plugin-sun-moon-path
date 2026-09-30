@@ -642,6 +642,7 @@
                                     class:item-moon={item.body === 'moon'}
                                     class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
                                     class:timeline-event--missing={!item.time}
+                                    class:timeline-event--next={item === nextTimelineEvent}
                                     class="timeline-event"
                                 >
                                     <span class="timeline-event__label">
@@ -1100,6 +1101,11 @@
             };
         }),
     ].sort((left, right) => (left.time?.getTime() ?? Infinity) - (right.time?.getTime() ?? Infinity));
+    // Highlight the countdown's next real event, independently of planning-time selection.
+    // Elapsed crossings and missing events must not remain highlighted.
+    $: nextTimelineEvent = selectedDateIsToday
+        ? summaryTimelineItems.find(item => item.time && item.time.getTime() > currentInstant.getTime())
+        : undefined;
     $: galacticPaths = galacticDirectionPaths(galacticEvents, selectedLocation, uiLanguage);
     const SEARCH_LOCATION_ZOOM = 12;
     const MAP_VIEW_EDGE_PADDING_PX = 18;
@@ -2818,7 +2824,7 @@
             timelineLeadLabel = text.dateLabel;
             timelineLeadTime = formatDateControlLabel(selectedDate);
         } else {
-            const next = summaryTimelineItems.find(item => item.time && item.time.getTime() > currentInstant.getTime());
+            const next = nextTimelineEvent;
             const parts = next?.time
                 ? nextWindowParts(next, uiLanguage)
                 : { label: text.timelineEnded, time: '' };
@@ -4839,7 +4845,7 @@
         grid-template-columns: minmax(max-content, 1fr) repeat(8, minmax(0, 1fr));
         gap: 0;
         margin-top: 4px;
-        padding: 6px 0 5px;
+        padding: 6px 0;
         border-top: 1px solid rgba(255, 255, 255, 0.12);
         border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
@@ -4920,6 +4926,7 @@
     .timeline-event strong {
         display: block;
         margin-top: 3px;
+        line-height: 18px;
         color: var(--astronomy-text);
         font-size: 12px;
         font-variant-numeric: tabular-nums;
@@ -4956,6 +4963,10 @@
 
     .timeline-event--missing {
         opacity: 0.55;
+    }
+
+    button.timeline-event--next {
+        background: rgba(255, 255, 255, 0.09);
     }
 
     .night-window-list {

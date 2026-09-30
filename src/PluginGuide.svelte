@@ -70,6 +70,9 @@
     <p>{uiLanguage === 'zh'
         ? '顶部银心升落按钮保持当前 Tab；在事件页显示银心升落时刻及前后 30 分钟的三条绿色方位线，地平线以下的线仅供方向参考，不代表可见。当天无对应事件时按钮不可用。云层规划中，使用顶部日月与银心事件按钮跳到对应升落时刻；事件页时间栏以图标显示日月和银心升落时刻；“全部”仅用于日月事件总览。手动调整时间后顶部取消升落高亮。移动端收起窗口仍保留云层参考线，展开后保留原来的规划时间；进入设置、关于或天气保留云层参考线和规划时间，切换到其他地图规划功能或关闭插件会清除云层参考线。'
         : 'The top galactic centre rise/set buttons keep the current tab. In Events, three green bearings show the crossing and 30 minutes before and after it; below-horizon bearings are direction references, not visibility claims. Unavailable events are disabled. In cloud planning, the top Sun, Moon and galactic centre buttons select the rise/set event and time. The Events time strip uses icons for Sun, Moon and galactic centre crossings; All is only available for the Sun/Moon overview. Manual time clears the top rise/set highlight. Collapsing the mobile panel keeps cloud reference lines and preserves the planning time on expansion. Settings, About and Weather keep cloud reference lines and planning time; switching map-planning features or closing the plugin removes cloud reference lines.'}</p>
+    <p>{uiLanguage === 'zh'
+        ? '查看今天时，事件时间栏用柔和背景色突出下一个事件，倒计时对应同一事件。它们跟随真实当前时刻，不随规划时间变化；其他日期不显示实时标记。'
+        : 'For today, a subtle background highlights the next event; the countdown refers to that same event. These follow the real current instant, independently of planning time. Other dates do not show a live marker.'}</p>
     <p>{text.supportGuideHint}</p>
     <p>{uiLanguage === 'zh'
         ? '使用统计：仅在 Windy 的分析统计授权允许时，百度统计记录插件打开的基础访问数据，PostHog 记录打开、导航切换和前台停留事件。关闭插件或撤回授权后停止采集。埋点不包含坐标、收藏内容或账号；百度可能使用 Cookie 并接收浏览器信息，两家服务均会接收网络请求的 IP。PostHog 仅使用当前授权会话内的随机标识。'
