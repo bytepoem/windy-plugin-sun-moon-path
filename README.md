@@ -4,16 +4,22 @@
 
 在 Windy 地图上规划日出、日落、月亮和银河拍摄，结合天体方向、云层距离、天气与收藏机位选择拍摄时机。支持中英文、桌面端与移动端。
 
-![插件界面](src/screenshot.jpg)
+**移动端**
+
+<img src="docs/images/screenshot-mobile.png" alt="移动端插件界面" width="360">
+
+**桌面端**
+
+![桌面端插件界面](docs/images/screenshot-desktop.png)
 
 ## 安装与上手
 
-当前发布版本：**0.10.4** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.4)
+当前发布版本：**0.11.0** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.11.0)
 
 将以下地址填入 Windy 的外部插件加载入口，打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.11.0/plugin.min.js
 ```
 
 1. **选机位**：点击地图，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写自己的地图服务 API Key。

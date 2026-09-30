@@ -4,16 +4,22 @@
 
 Plan sunrise, sunset, Moon and Milky Way photography on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Available in Chinese and English on desktop and mobile.
 
-![Plugin interface](src/screenshot.jpg)
+**Mobile**
+
+<img src="docs/images/screenshot-mobile.png" alt="Mobile plugin interface" width="360">
+
+**Desktop**
+
+![Desktop plugin interface](docs/images/screenshot-desktop.png)
 
 ## Install and get started
 
-Current release: **0.10.4** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.10.4)
+Current release: **0.11.0** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.11.0)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.10.4/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.11.0/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
