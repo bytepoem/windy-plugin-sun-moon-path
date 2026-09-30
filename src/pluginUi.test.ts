@@ -7,6 +7,8 @@ import favoriteLocationsSource from './FavoriteLocations.svelte?raw';
 import locationSearchSource from './LocationSearch.svelte?raw';
 import pluginConfigSource from './pluginConfig.ts?raw';
 import pluginSource from './plugin.svelte?raw';
+import settingsSource from './PluginSettings.svelte?raw';
+import aboutSource from './PluginAbout.svelte?raw';
 import radarFrameTimeLabelSource from './radarFrameTimeLabel.ts?raw';
 import weatherSource from './weather.ts?raw';
 import weatherMetricIconSource from './WeatherMetricIcon.svelte?raw';
@@ -211,7 +213,7 @@ describe('plugin astronomy loading presentation', () => {
     it('adds delayed native hints to compact and icon-only controls', () => {
         expect(pluginSource).toContain(': text.eventButtonTitles[option.value]}');
         expect(pluginSource).toContain('Cloud planning requires a single event');
-        expect(pluginSource).toContain('title={text.languageToggleLabel}');
+        expect(settingsSource).toContain('title={text.languageToggleLabel}');
         expect(pluginSource).toContain(
             'title={text.locationCopyLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
         );
@@ -236,7 +238,7 @@ describe('plugin astronomy loading presentation', () => {
 
     it('checks for updates on mount, marks the About tab, and presents user-facing notes', () => {
         expect(pluginSource).toContain("isMounted && pluginUpdateStatus === 'idle'");
-        expect(pluginSource).not.toContain("summaryTab === 'about' && pluginUpdateStatus === 'idle'");
+        expect(aboutSource).not.toContain("summaryTab === 'about' && pluginUpdateStatus === 'idle'");
         expect(pluginSource).toContain('checkPluginUpdate({');
         expect(pluginSource).toContain('betaNotesUrl: betaReleaseNotesUrl');
         expect(pluginSource).toContain('let pluginUpdateReminderSeenVersion = readPluginUpdateReminderSeenVersion({');
@@ -254,11 +256,11 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toMatch(
             /catch \(error\) \{[\s\S]*?pluginUpdateStatus = 'error';[\s\S]*?\} finally/,
         );
-        expect(pluginSource).toContain("pluginUpdateResult.channel === 'beta'");
+        expect(aboutSource).toContain("pluginUpdateResult.channel === 'beta'");
         expect(translations.zh.aboutBetaAvailable).toBe('测试版更新预览');
         expect(translations.zh.aboutUpdateAvailable).toBe('发现新版本');
         expect(pluginSource).not.toContain('{#if pluginUpdateResult.releaseUrl}');
-        expect(pluginSource).toContain('on:click={copyLatestPluginLink}');
+        expect(aboutSource).toContain('on:click={copyLatestPluginLink}');
         expect(pluginSource).toContain('navigator.clipboard.writeText(latestPluginUrl);');
         expect(pluginSource).toContain('selectPluginLinkVersion(pluginVersion, pluginUpdateResult)');
         expect(pluginSource).toContain('https://windy-plugins.com/17629746/${name}/${latestPluginVersion}/plugin.min.js');
@@ -266,71 +268,71 @@ describe('plugin astronomy loading presentation', () => {
         expect(translations.zh.aboutPluginLinkCopied('0.11.0')).toBe('已复制 0.11.0 插件链接');
         expect(translations.zh.aboutPluginLinkCopyError).toBe('复制失败，请重试');
         expect(pluginSource).toContain('role="status" aria-live="polite" aria-atomic="true"');
-        expect(pluginSource.indexOf('class="about-update__actions"')).toBeLessThan(
-            pluginSource.indexOf('class="about-update__notes"'),
+        expect(aboutSource.indexOf('class="about-update__actions"')).toBeLessThan(
+            aboutSource.indexOf('class="about-update__notes"'),
         );
-        expect(pluginSource).toContain("class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}");
+        expect(aboutSource).toContain("class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}");
         expect(pluginSource).toContain('role="status" aria-live="polite"');
-        expect(pluginSource).toContain('{#each localizedUpdateNotes as releaseNote}');
-        expect(pluginSource).toContain('{releaseNote.version}');
-        expect(pluginSource).toContain('{releaseNote.notes.title}');
-        expect(pluginSource).toContain("pluginUpdateStatus === 'current'");
-        expect(pluginSource).toContain('? text.aboutUpdateCurrent');
-        expect(pluginSource).toContain('{text.aboutUpdateTypeLabels[item.type]}');
-        expect(pluginSource).toContain('on:click={retryPluginUpdate}');
-        expect(pluginSource).toContain("pluginUpdateResult.notesStatus === 'error'");
-        expect(pluginSource).toContain('on:click={retryPluginUpdateNotes}');
-        expect(pluginSource).toContain('text.aboutUpdateNotesRetry');
+        expect(aboutSource).toContain('{#each localizedUpdateNotes as releaseNote}');
+        expect(aboutSource).toContain('{releaseNote.version}');
+        expect(aboutSource).toContain('{releaseNote.notes.title}');
+        expect(aboutSource).toContain("pluginUpdateStatus === 'current'");
+        expect(aboutSource).toContain('? text.aboutUpdateCurrent');
+        expect(aboutSource).toContain('{text.aboutUpdateTypeLabels[item.type]}');
+        expect(aboutSource).toContain('on:click={retryPluginUpdate}');
+        expect(aboutSource).toContain("pluginUpdateResult.notesStatus === 'error'");
+        expect(aboutSource).toContain('on:click={retryPluginUpdateNotes}');
+        expect(aboutSource).toContain('text.aboutUpdateNotesRetry');
         expect(pluginSource).toContain('let pluginUpdateNotesRetrying = false;');
-        expect(pluginSource).toContain('{text.aboutAuthorLabel}');
-        expect(pluginSource).toContain('{text.aboutVersionLabel}');
-        expect(pluginSource).toContain('{text.aboutCurrentVersionDateLabel}');
+        expect(aboutSource).toContain('{text.aboutAuthorLabel}');
+        expect(aboutSource).toContain('{text.aboutVersionLabel}');
+        expect(aboutSource).toContain('{text.aboutCurrentVersionDateLabel}');
         expect(pluginConfigSource).toContain("export const currentVersionReleasedAt = '2026-09-10';");
-        expect(pluginSource).toContain("import config, { currentVersionReleasedAt } from './pluginConfig';");
-        expect(pluginSource).toContain('class="about-meta__date"');
-        expect(pluginSource).toContain('<time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>');
+        expect(aboutSource).toContain("import config, { currentVersionReleasedAt } from './pluginConfig';");
+        expect(aboutSource).toContain('class="about-meta__date"');
+        expect(aboutSource).toContain('<time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>');
         expect(translations.zh.aboutCurrentVersionDateLabel).toBe('更新日期');
         expect(translations.en.aboutCurrentVersionDateLabel).toBe('Updated');
-        expect(pluginSource).not.toContain('{text.aboutCurrentVersionLabel}');
-        expect(pluginSource).not.toContain('{text.aboutLatestVersionLabel}');
-        expect(pluginSource).not.toContain('{text.aboutUpdateDateLabel}');
-        expect(pluginSource).not.toContain('class="about-update__release-date"');
+        expect(aboutSource).not.toContain('{text.aboutCurrentVersionLabel}');
+        expect(aboutSource).not.toContain('{text.aboutLatestVersionLabel}');
+        expect(aboutSource).not.toContain('{text.aboutUpdateDateLabel}');
+        expect(aboutSource).not.toContain('class="about-update__release-date"');
         expect(pluginSource).not.toContain('<time datetime={pluginUpdateResult.releasedAt}>');
         expect(translations.zh.aboutVersionLabel).toBe('版本');
         expect(translations.zh.aboutUpdateNotesUnavailable).toBe('版本更新说明暂时无法加载。');
-        expect(pluginSource).not.toContain('aboutUpdateReleaseLink');
-        expect(pluginSource).toMatch(
+        expect(aboutSource).not.toContain('aboutUpdateReleaseLink');
+        expect(aboutSource).toMatch(
             /\.about-update--compact\s*{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;[\s\S]*?align-items: center;/,
         );
-        expect(pluginSource).toMatch(
+        expect(aboutSource).toMatch(
             /\.about-update\s*{[\s\S]*?box-sizing: border-box;/,
         );
-        expect(pluginSource).toMatch(
+        expect(aboutSource).toMatch(
             /\.about-update--compact\s*{[\s\S]*?padding: 0;/,
         );
-        expect(pluginSource).toMatch(
-            /\.sun-path-panel\.mobile_ui \.about-update button\s*{[\s\S]*?min-height: 32px;/,
+        expect(aboutSource).toMatch(
+            /:global\(\.sun-path-panel\.mobile_ui\) \.about-update button\s*{[\s\S]*?min-height: 32px;/,
         );
         expect(pluginConfigSource).toContain("version: '0.10.4'");
         expect(pluginSource).toMatch(
             /\.summary-tab__badge\s*{[\s\S]*?white-space: nowrap;[\s\S]*?background: var\(--panel-accent\);/,
         );
-        expect(pluginSource).toMatch(
+        expect(aboutSource).toMatch(
             /\.about-update__header\s*{[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;/,
         );
-        expect(pluginSource).toMatch(
+        expect(aboutSource).toMatch(
             /\.about-hero__header\s*{[^}]*align-items: end;[^}]*}/,
         );
-        expect(pluginSource).toMatch(
+        expect(aboutSource).toMatch(
             /\.about-hero__copy strong\s*{[^}]*font-size: 12px;[^}]*}/,
         );
-        expect(pluginSource).toMatch(
+        expect(aboutSource).toMatch(
             /\.about-meta\s*{[^}]*grid-template-columns: repeat\(3, auto\);[^}]*grid-template-rows: auto auto;[^}]*grid-auto-flow: column;[^}]*align-items: baseline;[^}]*}/,
         );
-        expect(pluginSource).toMatch(
+        expect(aboutSource).toMatch(
             /\.about-meta div\s*{[^}]*display: contents;[^}]*}/,
         );
-        expect(pluginSource).not.toMatch(/\.about-meta__date dd\s*{/);
+        expect(aboutSource).not.toMatch(/\.about-meta__date dd\s*{/);
     });
 
     it('uses the Events-tab height as a fixed non-scrolling compact mobile shell', () => {
@@ -401,13 +403,13 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('applies the selected Windy layer immediately and on later plugin opens', () => {
-        expect(pluginSource).toContain('class="settings-select"');
-        expect(pluginSource).toContain('<label for="initial-overlay">{text.initialOverlayLabel}</label>');
-        expect(pluginSource).toContain('aria-describedby="initial-overlay-description"');
-        expect(pluginSource).toContain('<option value={KEEP_CURRENT_OVERLAY}>');
-        expect(pluginSource).toContain('{#each initialOverlayOptions as option}');
+        expect(settingsSource).toContain('class="settings-select"');
+        expect(settingsSource).toContain('<label for="initial-overlay">{text.initialOverlayLabel}</label>');
+        expect(settingsSource).toContain('aria-describedby="initial-overlay-description"');
+        expect(settingsSource).toContain('<option value={KEEP_CURRENT_OVERLAY}>');
+        expect(settingsSource).toContain('{#each initialOverlayOptions as option}');
         expect(pluginSource).toContain('.filter(overlay => !overlay.partOf)');
-        expect(pluginSource).toContain('initialOverlayLabel(option.value, uiLanguage)');
+        expect(settingsSource).toContain('initialOverlayLabel(option.value, uiLanguage)');
         expect(pluginSource).toContain('orderInitialOverlayOptions(Array.from(new Map(');
         expect(pluginSource).toContain('initialOverlayPreference = loadInitialOverlayPreference(availableInitialOverlays);');
         expect(pluginSource).toContain('applyInitialOverlayPreference(initialOverlayPreference);');
@@ -424,31 +426,31 @@ describe('plugin astronomy loading presentation', () => {
         expect(translations.zh.initialOverlayLabel).toBe('打开插件时的图层');
         expect(translations.zh.initialOverlayDescription).toContain('选择后立即切换到对应 Windy 图层');
         expect(translations.en.keepCurrentOverlayLabel).toBe('Keep Windy’s current layer');
-        expect(pluginSource).toMatch(
+        expect(settingsSource).toMatch(
             /\.settings-select select\s*{[\s\S]*?height: 30px;[\s\S]*?cursor: pointer;/,
         );
     });
 
     it('adds the keyless RainViewer radar overlay with local display preferences', () => {
         expect(pluginSource).toContain("import {\n        createRadarOverlayController,");
-        expect(pluginSource).toContain('<label for="radar-provider">{text.radarProviderLabel}</label>');
-        expect(pluginSource).toContain('{#each RADAR_PROVIDERS as providerOption}');
+        expect(settingsSource).toContain('<label for="radar-provider">{text.radarProviderLabel}</label>');
+        expect(settingsSource).toContain('{#each RADAR_PROVIDERS as providerOption}');
         expect(translations.zh.radarProviderLabels.rainviewer).toBe('RainViewer（无需 Key）');
-        expect(pluginSource).toContain("{#if radarProvider === 'rainviewer'}");
-        expect(pluginSource).toContain('{text.rainViewerDescription}');
+        expect(settingsSource).toContain("{#if radarProvider === 'rainviewer'}");
+        expect(settingsSource).toContain('{text.rainViewerDescription}');
         expect(pluginSource).toContain('role="status"');
         expect(pluginSource).toContain('aria-live="polite"');
         expect(pluginSource).not.toContain('rainviewer-api-key');
         expect(pluginSource).not.toContain("{#if radarProvider !== 'none'}");
-        expect(pluginSource).toContain('id="radar-overlay-opacity"');
-        expect(pluginSource).toContain('{radarOpacityPercent}%');
-        expect(pluginSource).toContain('on:input={changeRadarOpacity}');
+        expect(settingsSource).toContain('id="radar-overlay-opacity"');
+        expect(settingsSource).toContain('{radarOpacityPercent}%');
+        expect(settingsSource).toContain('on:input={changeRadarOpacity}');
         expect(pluginSource).toContain('radarOverlayController.setOpacity(radarOpacityPercent);');
         expect(translations.zh.radarOpacityLabel).toBe('雷达图层透明度');
         expect(translations.en.radarOpacityLabel).toBe('Radar overlay opacity');
 
-        const radarOpacityStart = pluginSource.indexOf('class="settings-range settings-range--radar-opacity"');
-        const radarProviderStart = pluginSource.indexOf('class="settings-select settings-radar-source"');
+        const radarOpacityStart = settingsSource.indexOf('class="settings-range settings-range--radar-opacity"');
+        const radarProviderStart = settingsSource.indexOf('class="settings-select settings-radar-source"');
         expect(radarProviderStart).toBeGreaterThanOrEqual(0);
         expect(radarOpacityStart).toBeGreaterThan(radarProviderStart);
         expect(translations.zh.radarProviderDescription).toContain('窗口雷达按钮与此设置同步，任一处都可直接开关');
@@ -560,10 +562,10 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('keeps settings checkbox focus inside the visible toggle card', () => {
-        const toggleStyle = pluginSource.match(
+        const toggleStyle = settingsSource.match(
             /\.settings-toggle\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
-        const inputStyle = pluginSource.match(
+        const inputStyle = settingsSource.match(
             /\.settings-toggle input\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
 
@@ -576,26 +578,26 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('uses one vertical gap between every top-level settings item', () => {
-        const settingsStyle = pluginSource.match(
+        const settingsStyle = settingsSource.match(
             /\.module-settings\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
 
         expect(settingsStyle).toContain('gap: 6px;');
-        expect(pluginSource).not.toContain('settings-toggle--location-search');
+        expect(settingsSource).not.toContain('settings-toggle--location-search');
 
-        const apiKeyStyle = pluginSource.match(
+        const apiKeyStyle = settingsSource.match(
             /\.settings-api-key\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
         expect(apiKeyStyle).toContain('gap: 4px;');
         expect(apiKeyStyle).toContain('padding: 7px 10px;');
-        expect(pluginSource).toMatch(
+        expect(settingsSource).toMatch(
             /\.settings-api-key__control input\s*{[\s\S]*?height: 30px;/,
         );
-        expect(pluginSource).toMatch(
+        expect(settingsSource).toMatch(
             /\.settings-api-key__control button\s*{[\s\S]*?min-height: 30px;/,
         );
         // Settings controls share desktop dimensions; do not restore mobile-only sizing.
-        expect(pluginSource).not.toMatch(
+        expect(settingsSource).not.toMatch(
             /\.sun-path-panel\.mobile_ui \.settings-(?:select select|api-key__control (?:input|button)|pages button)\s*[,{]/,
         );
     });

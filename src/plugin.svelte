@@ -764,340 +764,44 @@
             {:else if summaryTab === 'clouds'}
                 <!-- Planning views stay mounted while the mobile controls are collapsed. -->
             {:else if summaryTab === 'settings'}
-                <div class="settings-header">
-                    <div class="settings-pages" role="group" aria-label={text.settingsTab}>
-                        <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{uiLanguage === 'zh' ? '偏好设置' : 'Preferences'}</button>
-                        <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{uiLanguage === 'zh' ? '使用说明' : 'User guide'}</button>
-                    </div>
-                    <button
-                        type="button"
-                        class="language-toggle"
-                        aria-label={text.languageToggleLabel}
-                        title={text.languageToggleLabel}
-                        on:click={toggleLanguage}
-                    >
-                        <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中文</span>
-                        <span class="language-toggle__option" class:active={uiLanguage === 'en'}>EN</span>
-                    </button>
-                </div>
-                {#if settingsPage === 'guide'}
-                    <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
-                {:else}
-                <section class="module-about module-settings" aria-label={text.settingsHeading}>
-                    <div class="settings-select">
-                        <label for="initial-overlay">{text.initialOverlayLabel}</label>
-                        <select
-                            id="initial-overlay"
-                            value={initialOverlayPreference}
-                            aria-describedby="initial-overlay-description"
-                            on:change={changeInitialOverlayPreference}
-                        >
-                            <option value={KEEP_CURRENT_OVERLAY}>{text.keepCurrentOverlayLabel}</option>
-                            {#each initialOverlayOptions as option}
-                                <option value={option.value}>{initialOverlayLabel(option.value, uiLanguage)}</option>
-                            {/each}
-                        </select>
-                        <span id="initial-overlay-description" class="settings-select__description">
-                            {text.initialOverlayDescription}
-                        </span>
-                    </div>
-                    <div class="settings-select settings-radar-source">
-                        <label for="radar-provider">{text.radarProviderLabel}</label>
-                        <select
-                            id="radar-provider"
-                            value={radarProvider}
-                            aria-describedby="radar-provider-description radar-provider-status"
-                            on:change={changeRadarProvider}
-                        >
-                            {#each RADAR_PROVIDERS as providerOption}
-                                <option value={providerOption}>{text.radarProviderLabels[providerOption]}</option>
-                            {/each}
-                        </select>
-                        <span id="radar-provider-description" class="settings-select__description">
-                            {text.radarProviderDescription}
-                        </span>
-                        {#if radarProvider === 'rainviewer'}
-                            <span class="settings-select__description settings-radar-source__provider-note">
-                                {text.rainViewerDescription}
-                                <a href={RAINVIEWER_WEBSITE_URL} target="_blank" rel="noreferrer">RainViewer</a>
-                            </span>
-                        {/if}
-                        <span
-                            id="radar-provider-status"
-                            class="settings-radar-status"
-                            class:settings-radar-status--ready={radarOverlayStatus === 'ready'}
-                            class:settings-radar-status--warning={radarOverlayStatus === 'out-of-range'}
-                            class:settings-radar-status--error={radarOverlayStatus === 'error'}
-                            role="status"
-                            aria-live="polite"
-                        >
-                            <span aria-hidden="true"></span>
-                            {radarStatusText}
-                        </span>
-                    </div>
-                    <div class="settings-range settings-range--radar-opacity">
-                        <div class="settings-range__header">
-                            <label for="radar-overlay-opacity">{text.radarOpacityLabel}</label>
-                            <output for="radar-overlay-opacity">{radarOpacityPercent}%</output>
-                        </div>
-                        <input
-                            id="radar-overlay-opacity"
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={radarOpacityPercent}
-                            aria-describedby="radar-overlay-opacity-description"
-                            on:input={changeRadarOpacity}
-                        />
-                        <span id="radar-overlay-opacity-description" class="settings-range__description">
-                            {text.radarOpacityDescription}
-                        </span>
-                    </div>
-                    <label class="settings-toggle">
-                        <span class="settings-toggle__copy">
-                            <strong>{text.hideLocationSearchLabel}</strong>
-                            <span>{text.hideLocationSearchDescription}</span>
-                        </span>
-                        <input
-                            type="checkbox"
-                            checked={hideLocationSearch}
-                            aria-label={text.hideLocationSearchLabel}
-                            on:change={toggleLocationSearch}
-                        />
-                        <span class="settings-toggle__control" aria-hidden="true"></span>
-                    </label>
-                    {#if uiLanguage === 'zh'}
-                        <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
-                            {#each LOCATION_PROVIDERS as providerOption}
-                                <form
-                                    class="settings-api-key"
-                                    on:submit={event => saveLocationApiKey(event, providerOption)}
-                                >
-                                    <div class="settings-api-key__header">
-                                        <label for={`${providerOption}-api-key`}>
-                                            {text.locationProviderLabels[providerOption]}
-                                        </label>
-                                        <span class="settings-api-key__header-actions">
-                                            <a
-                                                href={LOCATION_PROVIDER_APPLICATION_URLS[providerOption]}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                {text.locationProviderApplyLabels[providerOption]}
-                                            </a>
-                                            {#if savedApiKeyProvider === providerOption}
-                                                <span role="status">{text.locationApiKeySaved}</span>
-                                            {/if}
-                                        </span>
-                                    </div>
-                                    <div class="settings-api-key__control">
-                                        <input
-                                            id={`${providerOption}-api-key`}
-                                            type="password"
-                                            value={locationApiKeyDrafts[providerOption]}
-                                            placeholder={text.locationApiKeyPlaceholder}
-                                            autocomplete="off"
-                                            aria-describedby={`${providerOption}-api-key-description`}
-                                            on:input={event => updateLocationApiKeyDraft(event, providerOption)}
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={!locationApiKeyDrafts[providerOption].trim()}
-                                        >
-                                            {text.locationApiKeySave}
-                                        </button>
-                                        {#if locationApiKeys[providerOption]}
-                                            <button
-                                                type="button"
-                                                class="settings-api-key__clear"
-                                                on:click={() => clearLocationApiKey(providerOption)}
-                                            >
-                                                {text.locationApiKeyClear}
-                                            </button>
-                                        {/if}
-                                    </div>
-                                    <span
-                                        id={`${providerOption}-api-key-description`}
-                                        class="settings-api-key__description"
-                                    >
-                                        {text.locationProviderDescriptions[providerOption]}
-                                    </span>
-                                </form>
-                            {/each}
-                        </div>
-                    {/if}
-                    <div class="settings-range">
-                        <div class="settings-range__header">
-                            <label for="direction-line-opacity">{text.lineOpacityLabel}</label>
-                            <output for="direction-line-opacity">{directionLineOpacityPercent}%</output>
-                        </div>
-                        <input
-                            id="direction-line-opacity"
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={directionLineOpacityPercent}
-                            aria-describedby="direction-line-opacity-description"
-                            on:input={changeDirectionLineOpacity}
-                        />
-                        <span id="direction-line-opacity-description" class="settings-range__description">
-                            {text.lineOpacityDescription}
-                        </span>
-                    </div>
-                    <label class="settings-toggle">
-                        <span class="settings-toggle__copy">
-                            <strong>{text.show600Label(formatDistanceLabel(600, units.distance))}</strong>
-                            <span>{text.show600Description(formatDistanceLabel(600, units.distance))}</span>
-                        </span>
-                        <input
-                            type="checkbox"
-                            checked={showExtendedDistanceMarker}
-                            aria-label={text.show600Label(formatDistanceLabel(600, units.distance))}
-                            on:change={toggleExtendedDistanceMarker}
-                        />
-                        <span class="settings-toggle__control" aria-hidden="true"></span>
-                    </label>
-                </section>
-                {/if}
+                <PluginSettings
+                    {uiLanguage}
+                    {units}
+                    bind:settingsPage
+                    {initialOverlayPreference}
+                    {initialOverlayOptions}
+                    {radarProvider}
+                    {radarOverlayStatus}
+                    {radarOpacityPercent}
+                    {hideLocationSearch}
+                    {directionLineOpacityPercent}
+                    {showExtendedDistanceMarker}
+                    {savedApiKeyProvider}
+                    {locationApiKeyDrafts}
+                    {locationApiKeys}
+                    {toggleLanguage}
+                    {changeInitialOverlayPreference}
+                    {changeRadarProvider}
+                    {changeRadarOpacity}
+                    {toggleLocationSearch}
+                    {changeDirectionLineOpacity}
+                    {toggleExtendedDistanceMarker}
+                    {saveLocationApiKey}
+                    {updateLocationApiKeyDraft}
+                    {clearLocationApiKey}
+                />
             {:else}
-                <section class="module-about" aria-label={text.aboutHeading}>
-                    <div class="about-hero">
-                        <div class="about-hero__header">
-                            <div class="about-hero__copy">
-                                <span>{text.aboutHeading}</span>
-                                <strong>{title}</strong>
-                            </div>
-                            <dl class="about-meta">
-                                <div>
-                                    <dt>{text.aboutAuthorLabel}</dt>
-                                    <dd>{pluginAuthor}</dd>
-                                </div>
-                                <div>
-                                    <dt>{text.aboutVersionLabel}</dt>
-                                    <dd>{pluginVersion}</dd>
-                                </div>
-                                <div class="about-meta__date">
-                                    <dt>{text.aboutCurrentVersionDateLabel}</dt>
-                                    <dd>
-                                        <time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>
-                                    </dd>
-                                </div>
-                            </dl>
-                        </div>
-                        <div class="about-actions" aria-label={text.aboutLinksLabel}>
-                            <a class="about-actions__github" href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutGithubLabel}</a>
-                            <a class="about-actions__issues" href={issuesUrl} target="_blank" rel="noreferrer">{text.aboutIssuesLabel}</a>
-                            <a class="about-actions__star" href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutStarLabel}</a>
-                            <a class="about-actions__xiaohongshu" href="https://xhslink.cn/o/rXpBcBK0Qy" target="_blank" rel="noopener noreferrer" aria-label={text.aboutXiaohongshuHint} title={text.aboutXiaohongshuHint}>{text.aboutXiaohongshuLabel}</a>
-                            <a class="about-actions__support" href="https://afdian.com/a/bytepoem" target="_blank" rel="noopener noreferrer">
-                                <svg class="about-support-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M7 7 6 2l4 2 2-3 2 3 4-2-1 5M8 14c-5 2-4 9 4 9s9-7 4-9M7 17l-4-2m14 2 4-3M19 11h4l-2 5Z" fill="#fff" stroke="#c52b38" stroke-width="1.3" stroke-linejoin="round"></path>
-                                    <path d="M18 11c0-2 2-2 3-5 0 3 3 3 3 5ZM6 10a6 5 0 1 0 12 0 6 5 0 1 0-12 0" fill="#fff" stroke="#c52b38" stroke-width="1.3"></path>
-                                    <path d="M9 10h.1m5.8 0h.1M10 12q2 2 4 0m-5 4h6" fill="none" stroke="#c52b38" stroke-width="1.5" stroke-linecap="round"></path>
-                                </svg>
-                                <span>{text.aboutSupportLabel}</span>
-                            </a>
-                        </div>
-                        <p>{text.aboutStarHint}</p>
-                        <div
-                            class="about-update"
-                            class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}
-                            class:about-update--available={pluginUpdateStatus === 'available' || pluginUpdateStatus === 'current'}
-                            class:about-update--error={pluginUpdateStatus === 'error'}
-                            aria-busy={pluginUpdateStatus === 'idle' || pluginUpdateStatus === 'loading'}
-                        >
-                            {#if pluginUpdateStatus === 'idle' || pluginUpdateStatus === 'loading'}
-                                <span class="about-update__status" role="status" aria-live="polite">
-                                    {text.aboutUpdateChecking}
-                                </span>
-                            {:else if (pluginUpdateStatus === 'current' || pluginUpdateStatus === 'available') && pluginUpdateResult}
-                                <div class="about-update__header" role="status" aria-live="polite">
-                                    <strong>
-                                        {pluginUpdateStatus === 'current'
-                                            ? text.aboutUpdateCurrent
-                                            : pluginUpdateResult.channel === 'beta'
-                                            ? text.aboutBetaAvailable
-                                            : text.aboutUpdateAvailable}
-                                    </strong>
-                                </div>
-                                <div class="about-update__actions">
-                                    <button type="button" on:click={copyLatestPluginLink}>
-                                        {text.aboutCopyLatestPluginLink(latestPluginVersion)}
-                                    </button>
-                                    {#if pluginLinkCopyStatus !== 'idle'}
-                                        <span
-                                            class:about-update__copy-feedback--error={pluginLinkCopyStatus === 'error'}
-                                            class="about-update__copy-feedback"
-                                            role="status"
-                                            aria-live="polite"
-                                            aria-atomic="true"
-                                        >
-                                            {pluginLinkCopyStatus === 'copied'
-                                                ? text.aboutPluginLinkCopied(latestPluginVersion)
-                                                : text.aboutPluginLinkCopyError}
-                                        </span>
-                                    {/if}
-                                </div>
-                                {#if localizedUpdateNotes.length > 0}
-                                    <div class="about-update__notes">
-                                        {#each localizedUpdateNotes as releaseNote}
-                                            <section class="about-update__release-note">
-                                                <div class="about-update__release-note-header">
-                                                    <strong>{releaseNote.version}</strong>
-                                                    <time datetime={releaseNote.releasedAt}>{releaseNote.releasedAt}</time>
-                                                </div>
-                                                <strong class="about-update__title">{releaseNote.notes.title}</strong>
-                                                <p>{releaseNote.notes.summary}</p>
-                                                <ul>
-                                                    {#each releaseNote.notes.items as item}
-                                                        <li>
-                                                            <span class={`about-update__type about-update__type--${item.type}`}>
-                                                                {text.aboutUpdateTypeLabels[item.type]}
-                                                            </span>
-                                                            <span>{item.text}</span>
-                                                        </li>
-                                                    {/each}
-                                                </ul>
-                                            </section>
-                                        {/each}
-                                    </div>
-                                    {#if pluginUpdateResult.notesStatus === 'error'}
-                                        <button
-                                            type="button"
-                                            disabled={pluginUpdateNotesRetrying}
-                                            on:click={retryPluginUpdateNotes}
-                                        >
-                                            {pluginUpdateNotesRetrying
-                                                ? text.aboutUpdateNotesRetrying
-                                                : text.aboutUpdateNotesRetry}
-                                        </button>
-                                    {/if}
-                                {:else}
-                                    <p>{text.aboutUpdateNotesUnavailable}</p>
-                                    {#if pluginUpdateResult.notesStatus === 'error'}
-                                        <button
-                                            type="button"
-                                            disabled={pluginUpdateNotesRetrying}
-                                            on:click={retryPluginUpdateNotes}
-                                        >
-                                            {pluginUpdateNotesRetrying
-                                                ? text.aboutUpdateNotesRetrying
-                                                : text.aboutUpdateNotesRetry}
-                                        </button>
-                                    {/if}
-                                {/if}
-                            {:else}
-                                <span class="about-update__status" role="status" aria-live="polite">
-                                    {text.aboutUpdateError}
-                                </span>
-                                <button type="button" on:click={retryPluginUpdate}>{text.aboutUpdateRetry}</button>
-                            {/if}
-                        </div>
-
-                    </div>
-                </section>
+                <PluginAbout
+                    {uiLanguage}
+                    {pluginUpdateStatus}
+                    {pluginUpdateResult}
+                    {latestPluginVersion}
+                    {pluginLinkCopyStatus}
+                    {pluginUpdateNotesRetrying}
+                    {copyLatestPluginLink}
+                    {retryPluginUpdate}
+                    {retryPluginUpdateNotes}
+                />
             {/if}
             {#if cloudObstructionVisible}
                 <!-- Collapsing hides the controls, but preserves their time and live map ownership. -->
@@ -1234,8 +938,9 @@
         DEFAULT_DIRECTION_LINE_OPACITY_PERCENT,
         type MobileNonFullscreenPanelMode,
     } from './pluginPreferences';
-    import config, { currentVersionReleasedAt } from './pluginConfig';
-    import PluginGuide from './PluginGuide.svelte';
+    import config from './pluginConfig';
+    import PluginSettings from './PluginSettings.svelte';
+    import PluginAbout from './PluginAbout.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
     import RainbowPlanning from './RainbowPlanning.svelte';
     import { cloudTimelineLabel, galacticCenterEvents, type CloudTimelineEventType } from './cloudTimeline';
@@ -1280,8 +985,6 @@
         DEFAULT_RADAR_OPACITY_PERCENT,
         normalizeRadarProvider,
         normalizeRadarOpacityPercent,
-        RADAR_PROVIDERS,
-        RAINVIEWER_WEBSITE_URL,
         type RadarOverlayStatus,
         type RadarOverlayController,
         type RadarProvider,
@@ -1328,7 +1031,6 @@
     } from './weather';
     import {
         applyLocationApiKey,
-        LOCATION_PROVIDERS,
         type LocationProvider,
         type LocationProviderApiKeys,
         type LocationSearchResult,
@@ -1339,14 +1041,12 @@
         KEEP_CURRENT_OVERLAY,
         normalizeInitialOverlayPreference,
         orderInitialOverlayOptions,
-        initialOverlayLabel,
         type InitialOverlayPreference,
     } from './initialOverlay';
     import {
         checkPluginUpdate,
         readPluginUpdateReminderSeenVersion,
         selectPluginLinkVersion,
-        type LocalizedUpdateNotes,
         type PluginUpdateResult,
         writePluginUpdateReminderSeenVersion,
     } from './pluginUpdate';
@@ -1365,13 +1065,7 @@
 
     import type { LatLon } from '@windy/interfaces.d';
 
-    const { author: pluginAuthor, name, repository: repositoryUrl, title, version: pluginVersion } = config;
-    type LocalizedUpdateSeriesNote = {
-        version: string;
-        releasedAt: string;
-        notes: LocalizedUpdateNotes;
-    };
-    const issuesUrl = `${repositoryUrl}/issues`;
+    const { name, repository: repositoryUrl, title, version: pluginVersion } = config;
     const systemTimeZone = (() => {
         try {
             return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -1407,11 +1101,6 @@
         }),
     ].sort((left, right) => (left.time?.getTime() ?? Infinity) - (right.time?.getTime() ?? Infinity));
     $: galacticPaths = galacticDirectionPaths(galacticEvents, selectedLocation, uiLanguage);
-    const LOCATION_PROVIDER_APPLICATION_URLS: Record<LocationProvider, string> = {
-        amap: 'https://lbs.amap.com/api/webservice/create-project-and-key',
-        baidu: 'https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/quickstart/prepare',
-        tencent: 'https://lbs.qq.com/webApi/javascriptGL/glGuide/glBasic',
-    };
     const SEARCH_LOCATION_ZOOM = 12;
     const MAP_VIEW_EDGE_PADDING_PX = 18;
     const MOBILE_MAP_RECENTER_DELAY_MS = 550;
@@ -1544,7 +1233,6 @@
         repositoryUrl,
     });
     let pluginUpdateReminderVersion: string | null = null;
-    let localizedUpdateNotes: LocalizedUpdateSeriesNote[] = [];
     let pluginUpdateAbortController: AbortController | null = null;
     let latestPluginUpdateRequestId = 0;
     let weatherModel: WeatherModel = 'ecmwf';
@@ -1632,12 +1320,6 @@
     $: latestPluginUrl = latestPluginVersion
         ? `https://windy-plugins.com/17629746/${name}/${latestPluginVersion}/plugin.min.js`
         : '';
-    $: localizedUpdateNotes = pluginUpdateResult?.seriesNotes.map(notes => ({
-        version: notes.version,
-        releasedAt: notes.releasedAt,
-        notes: notes[uiLanguage],
-    })) ?? [];
-    $: radarStatusText = text.radarStatusLabels[radarOverlayStatus];
     $: radarFrameTimeLabelController?.update({
         language: uiLanguage,
         provider: radarProvider,
@@ -3863,10 +3545,6 @@
         font-size: 7px;
     }
 
-    .sun-path-panel.mobile_ui .module-about:not(.module-settings) {
-        padding: 6px 10px 10px;
-    }
-
     .panel-title {
         display: flex;
         align-items: center;
@@ -4155,10 +3833,8 @@
         border-radius: 6px;
         background: #0e161f;
     }
-
     .segmented-control button,
-    .text-button,
-    .language-toggle {
+    .text-button {
         min-height: 36px;
         padding: 0 4px;
         border: 0;
@@ -4261,41 +3937,6 @@
     .segmented-control button.active {
         color: var(--panel-text);
         background: rgba(73, 169, 232, 0.22);
-    }
-
-    .language-toggle {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-items: center;
-        gap: 2px;
-        width: 100%;
-        padding: 2px;
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        background: #0e161f;
-        font-size: 12px;
-        font-weight: 700;
-    }
-
-    .language-toggle:hover {
-        background: rgba(73, 169, 232, 0.12);
-    }
-
-    .language-toggle__option {
-        display: grid;
-        place-items: center;
-        min-width: 0;
-        min-height: 30px;
-        border-radius: 5px;
-        color: var(--panel-muted);
-        line-height: 1;
-        white-space: nowrap;
-        transition: color 160ms ease, background 160ms ease;
-    }
-
-    .language-toggle__option.active {
-        color: #07131c;
-        background: #67c5ff;
     }
 
     .location-summary,
@@ -4658,49 +4299,6 @@
         height: auto;
     }
 
-    .settings-header {
-        flex-shrink: 0;
-        display: flex;
-        gap: 8px;
-        padding: 8px 12px;
-        border-bottom: 1px solid var(--panel-border);
-    }
-
-    .settings-pages {
-        display: flex;
-        flex: 1;
-        min-width: 0;
-        gap: 8px;
-    }
-
-    .settings-header .language-toggle {
-        flex: 0 0 80px;
-        width: 80px;
-    }
-
-    .settings-pages button {
-        flex: 1;
-        min-height: 36px;
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        background: transparent;
-        color: var(--panel-muted);
-        font: inherit;
-        cursor: pointer;
-    }
-
-    .settings-pages button.active {
-        color: var(--panel-text);
-        background: rgba(99, 185, 238, 0.14);
-        border-color: var(--panel-accent);
-    }
-
-    .settings-pages button:focus-visible,
-    .language-toggle:focus-visible {
-        outline: 2px solid var(--panel-accent);
-        outline-offset: -2px;
-    }
-
     .summary-tabs button {
         display: flex;
         align-items: center;
@@ -4809,9 +4407,7 @@
         color: var(--astronomy-text);
         background: var(--astronomy-bg);
     }
-
-    .sun-path-panel:not(.mobile_ui) .astronomy-panel,
-    .sun-path-panel:not(.mobile_ui) .module-about {
+    .sun-path-panel:not(.mobile_ui) .astronomy-panel {
         overscroll-behavior-y: auto;
     }
 
@@ -5439,786 +5035,7 @@
         opacity: 0.48;
     }
 
-    .module-about {
-        box-sizing: border-box;
-        height: 100%;
-        overflow-y: auto;
-        display: grid;
-        align-content: start;
-        gap: 10px;
-        padding: 12px;
-        color: var(--panel-muted);
-        background: rgba(0, 0, 0, 0.14);
-        font-size: 12px;
-    }
-
-    .module-about__title {
-        margin-bottom: 6px;
-        color: var(--panel-text);
-        font-weight: 600;
-    }
-
-    .module-about p {
-        margin: 6px 0 0;
-    }
-
-    .module-about p:first-child {
-        margin-top: 0;
-    }
-
-    .module-settings {
-        gap: 6px;
-    }
-
-    .settings-select {
-        display: grid;
-        gap: 6px;
-        padding: 10px 12px;
-        border: 1px solid var(--panel-border);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.06);
-    }
-
-    .settings-select label {
-        color: var(--panel-text);
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.25;
-    }
-
-    .settings-select select {
-        width: 100%;
-        min-width: 0;
-        height: 30px;
-        padding: 0 10px;
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        outline: 0;
-        background: rgba(8, 15, 27, 0.68);
-        color: var(--panel-text);
-        font: inherit;
-        font-size: 13px;
-        cursor: pointer;
-    }
-
-    .settings-select select:focus-visible {
-        border-color: var(--panel-accent);
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .settings-select__description {
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.35;
-    }
-
-    .settings-radar-source__provider-note {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 2px 6px;
-        align-items: baseline;
-    }
-
-    .settings-radar-source__provider-note a {
-        color: var(--panel-accent);
-        font-weight: 700;
-        text-underline-offset: 2px;
-    }
-
-    .settings-radar-source__provider-note a:hover {
-        color: var(--panel-text);
-    }
-
-    .settings-radar-source__provider-note a:focus-visible {
-        border-radius: 3px;
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .settings-radar-status {
-        display: inline-flex;
-        gap: 6px;
-        align-items: center;
-        min-height: 18px;
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.35;
-    }
-
-    .settings-radar-status > span[aria-hidden='true'] {
-        flex: 0 0 auto;
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: currentColor;
-        opacity: 0.72;
-    }
-
-    .settings-radar-status--ready {
-        color: #8bd6a3;
-    }
-
-    .settings-radar-status--warning {
-        color: var(--panel-warning);
-    }
-
-    .settings-radar-status--error {
-        color: #ffc078;
-    }
-
-    .settings-api-keys {
-        display: grid;
-        gap: 6px;
-    }
-
-    .settings-api-key {
-        display: grid;
-        gap: 4px;
-        padding: 7px 10px;
-        border: 1px solid var(--panel-border);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.06);
-    }
-
-    .settings-api-key__header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 6px;
-        align-items: center;
-        color: var(--panel-text);
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.25;
-    }
-
-    .settings-api-key__header-actions {
-        display: inline-flex;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 2px 8px;
-        align-items: baseline;
-        text-align: right;
-    }
-
-    .settings-api-key__header-actions a {
-        color: var(--panel-accent);
-        font-size: 11px;
-        font-weight: 700;
-        text-underline-offset: 2px;
-    }
-
-    .settings-api-key__header-actions a:hover {
-        color: var(--panel-text);
-    }
-
-    .settings-api-key__header-actions a:focus-visible {
-        border-radius: 3px;
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .settings-api-key__header-actions [role='status'] {
-        color: #8bd6a3;
-        font-size: 11px;
-    }
-
-    .settings-api-key__control {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto auto;
-        gap: 4px;
-    }
-
-    .settings-api-key__control input {
-        min-width: 0;
-        height: 30px;
-        padding: 0 10px;
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        outline: 0;
-        background: rgba(8, 15, 27, 0.68);
-        color: var(--panel-text);
-        font: inherit;
-        font-size: 13px;
-    }
-
-    .settings-api-key__control input:focus {
-        border-color: var(--panel-accent);
-        box-shadow: 0 0 0 2px rgba(99, 185, 238, 0.18);
-    }
-
-    .settings-api-key__control button {
-        min-width: 54px;
-        min-height: 30px;
-        padding: 0 10px;
-        border: 1px solid rgba(99, 185, 238, 0.45);
-        border-radius: 6px;
-        background: rgba(99, 185, 238, 0.18);
-        color: var(--panel-accent);
-        font: inherit;
-        font-size: 12px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .settings-api-key__control button:hover:not(:disabled) {
-        background: rgba(99, 185, 238, 0.28);
-    }
-
-    .settings-api-key__control button:focus-visible,
-    .settings-api-key__control input:focus-visible {
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .settings-api-key__control button:disabled {
-        cursor: not-allowed;
-        opacity: 0.45;
-    }
-
-    .settings-api-key__control .settings-api-key__clear {
-        border-color: var(--panel-border);
-        background: transparent;
-        color: var(--panel-muted);
-    }
-
-    .settings-api-key__description {
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.35;
-    }
-
-    .settings-range {
-        display: grid;
-        gap: 4px;
-        padding: 8px 12px 9px;
-        border: 1px solid var(--panel-border);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.06);
-    }
-
-    .settings-range__header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 12px;
-        color: var(--panel-text);
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.25;
-    }
-
-    .settings-range__header output {
-        min-width: 4ch;
-        color: var(--panel-accent);
-        font-variant-numeric: tabular-nums;
-        text-align: right;
-    }
-
-    .settings-range input[type='range'] {
-        appearance: none;
-        width: 100%;
-        height: 32px;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        border-radius: 0;
-        background: transparent;
-        accent-color: var(--panel-accent);
-        cursor: pointer;
-        touch-action: manipulation;
-    }
-
-    .settings-range input[type='range']::-webkit-slider-runnable-track {
-        height: 6px;
-        border-radius: 3px;
-        background: rgba(255, 255, 255, 0.2);
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
-    }
-
-    .settings-range input[type='range']::-webkit-slider-thumb {
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        margin-top: -6px;
-        border: 2px solid rgba(255, 255, 255, 0.92);
-        border-radius: 50%;
-        background: var(--panel-accent);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-    }
-
-    .settings-range input[type='range']::-moz-range-track {
-        height: 6px;
-        border: 0;
-        border-radius: 3px;
-        background: rgba(255, 255, 255, 0.2);
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
-    }
-
-    .settings-range input[type='range']::-moz-range-progress {
-        height: 6px;
-        border-radius: 3px;
-        background: var(--panel-accent);
-    }
-
-    .settings-range input[type='range']::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        border: 2px solid rgba(255, 255, 255, 0.92);
-        border-radius: 50%;
-        background: var(--panel-accent);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-    }
-
-    .settings-range input[type='range']:focus-visible {
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .settings-range__description {
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.35;
-    }
-
-    .settings-toggle {
-        position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 12px;
-        align-items: center;
-        height: max-content;
-        min-height: 48px;
-        padding: 10px 12px;
-        border: 1px solid var(--panel-border);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.06);
-        cursor: pointer;
-    }
-
-    .settings-toggle__copy {
-        display: grid;
-        gap: 3px;
-        min-width: 0;
-    }
-
-    .settings-toggle__copy strong {
-        color: var(--panel-text);
-        font-size: 13px;
-        line-height: 1.25;
-    }
-
-    .settings-toggle__copy span {
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.35;
-    }
-
-    .settings-toggle input {
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        opacity: 0;
-        cursor: pointer;
-    }
-
-    .settings-toggle__control {
-        position: relative;
-        width: 42px;
-        height: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.12);
-        transition: background-color 180ms ease, border-color 180ms ease;
-    }
-
-    .settings-toggle__control::after {
-        position: absolute;
-        top: 3px;
-        left: 3px;
-        width: 16px;
-        height: 16px;
-        content: '';
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-        transition: transform 180ms ease;
-    }
-
-    .settings-toggle input:checked + .settings-toggle__control {
-        border-color: rgba(99, 185, 238, 0.8);
-        background: rgba(99, 185, 238, 0.58);
-    }
-
-    .settings-toggle input:checked + .settings-toggle__control::after {
-        transform: translateX(18px);
-    }
-
-    .settings-toggle input:focus-visible + .settings-toggle__control {
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .about-hero {
-        display: grid;
-        gap: 8px;
-        padding: 10px 12px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 8px;
-        background: linear-gradient(135deg, rgba(42, 55, 86, 0.92), rgba(18, 28, 48, 0.94));
-        color: var(--panel-text);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    }
-
-    .about-hero p {
-        margin: 0;
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.35;
-    }
-
-    .about-hero__header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 10px;
-        align-items: end;
-    }
-
-    .about-hero__copy {
-        display: grid;
-        gap: 2px;
-        min-width: 0;
-    }
-
-    .about-hero__copy span {
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.2;
-    }
-
-    .about-hero__copy strong {
-        color: var(--panel-text);
-        font-size: 12px;
-        line-height: 1.2;
-    }
-
-    .about-meta {
-        display: grid;
-        grid-template-columns: repeat(3, auto);
-        grid-template-rows: auto auto;
-        grid-auto-flow: column;
-        column-gap: 8px;
-        row-gap: 1px;
-        align-items: baseline;
-        margin: 0;
-    }
-
-    .about-meta div {
-        display: contents;
-    }
-
-    .about-meta dt,
-    .about-meta dd {
-        margin: 0;
-        text-align: right;
-    }
-
-    .about-meta dt {
-        color: var(--panel-muted);
-        font-size: 10px;
-        line-height: 1.2;
-    }
-
-    .about-meta dd {
-        color: var(--panel-text);
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.2;
-        white-space: nowrap;
-    }
-
-    .about-update {
-        box-sizing: border-box;
-        display: grid;
-        gap: 6px;
-        min-height: 32px;
-        padding: 0;
-        border-top: 1px solid rgba(153, 181, 235, 0.2);
-        border-bottom: 1px solid rgba(153, 181, 235, 0.2);
-    }
-
-    .about-update--compact {
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        padding: 0;
-    }
-
-    .about-update--available {
-        padding: 7px 0;
-        border-color: rgba(99, 185, 238, 0.5);
-    }
-
-    .about-update--error {
-        border-color: rgba(248, 170, 104, 0.28);
-    }
-
-    .about-update__status,
-    .about-update__header strong,
-    .about-update__title {
-        color: var(--panel-text);
-        line-height: 1.35;
-    }
-
-    .about-update__header {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        gap: 5px;
-    }
-
-    .about-update__status {
-        align-self: center;
-        font-size: 11px;
-    }
-
-    .about-update--compact .about-update__status {
-        padding: 7px 0;
-    }
-
-    .about-update__header strong {
-        font-size: 12px;
-    }
-
-    .about-update__notes {
-        display: grid;
-        gap: 8px;
-    }
-
-    .about-update__release-note {
-        display: grid;
-        gap: 5px;
-        margin: 0;
-        padding: 0;
-    }
-
-    .about-update__release-note + .about-update__release-note {
-        padding-top: 8px;
-        border-top: 1px solid rgba(153, 181, 235, 0.2);
-    }
-
-    .about-update__release-note-header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 8px;
-        color: var(--panel-muted);
-        font-size: 10px;
-        line-height: 1.35;
-    }
-
-    .about-update__release-note-header strong {
-        color: var(--panel-text);
-        font-size: 11px;
-    }
-
-    .about-update__title {
-        font-size: 12px;
-    }
-
-    .about-update__notes p,
-    .about-update > p {
-        margin: 0;
-        color: var(--panel-muted);
-        font-size: 11px;
-        line-height: 1.45;
-    }
-
-    .about-update__notes ul {
-        display: grid;
-        gap: 6px;
-        margin: 2px 0 0;
-        padding: 0;
-        list-style: none;
-    }
-
-    .about-update__notes li {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 6px;
-        align-items: start;
-        color: var(--panel-text);
-        font-size: 11px;
-        line-height: 1.4;
-    }
-
-    .about-update__type {
-        min-width: 30px;
-        padding: 1px 4px;
-        border: 1px solid currentColor;
-        border-radius: 4px;
-        font-size: 9px;
-        font-weight: 700;
-        line-height: 1.35;
-        text-align: center;
-        white-space: nowrap;
-    }
-
-    .about-update__type--new {
-        color: #8dd2ff;
-    }
-
-    .about-update__type--improved {
-        color: #f7cf79;
-    }
-
-    .about-update__type--fixed {
-        color: #91dfaa;
-    }
-
-    .about-update button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        justify-self: start;
-        min-height: 28px;
-        padding: 0 8px;
-        border: 1px solid rgba(99, 185, 238, 0.42);
-        border-radius: 5px;
-        color: var(--panel-text) !important;
-        background: rgba(99, 185, 238, 0.1);
-        font: inherit;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 1.2;
-        text-decoration: none;
-        cursor: pointer;
-        touch-action: manipulation;
-    }
-
-    .about-update button:hover {
-        border-color: rgba(99, 185, 238, 0.72);
-        background: rgba(99, 185, 238, 0.18);
-    }
-
-    .about-update button:disabled {
-        cursor: default;
-        opacity: 0.55;
-    }
-
-    .about-update button:focus-visible {
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .sun-path-panel.mobile_ui .about-update button {
-        min-height: 32px;
-    }
-
-    .about-update__actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-    }
-
-    .about-update__copy-feedback {
-        color: #91dfaa;
-        font-size: 10px;
-        line-height: 1.35;
-    }
-
-    .about-update__copy-feedback--error {
-        color: #f8aa68;
-    }
-
-    .about-actions {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 6px;
-    }
-
-    .about-actions a {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 0;
-        height: 36px;
-        box-sizing: border-box;
-        padding: 0 6px;
-        border: 1px solid var(--about-action-border, #bac6d8);
-        border-radius: 8px;
-        color: var(--about-action-text, #27354b) !important;
-        background: var(--about-action-bg, #e2e8f0) !important;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.15;
-        text-align: center;
-        text-decoration: none;
-        cursor: pointer;
-        transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
-    }
-
-    .about-actions a:hover {
-        filter: brightness(1.08);
-    }
-
-    .about-actions a:active {
-        filter: brightness(0.94);
-    }
-
-    .about-actions a:focus-visible {
-        outline: 2px solid var(--panel-accent);
-        outline-offset: 2px;
-    }
-
-    .about-actions__issues {
-        --about-action-border: #90c4e8;
-        --about-action-text: #164c70;
-        --about-action-bg: #cce8fa;
-    }
-
-    .about-actions__star {
-        --about-action-border: #edc568;
-        --about-action-text: #694609;
-        --about-action-bg: #ffe49a;
-    }
-
-    .about-actions__xiaohongshu {
-        --about-action-border: #efacb8;
-        --about-action-text: #992c44;
-        --about-action-bg: #ffdae2;
-    }
-
     /* Keep the bilingual support label readable without narrowing the project links. */
-    .about-actions a.about-actions__support {
-        grid-column-start: 1;
-        grid-column-end: -1;
-        gap: 8px;
-        padding: 0 12px;
-        border-color: #f5c478;
-        color: #64330d !important;
-        background: linear-gradient(110deg, #fff2cb, #ffd394) !important;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-    }
-
-    .about-actions a.about-actions__support:hover {
-        border-color: #ffdfa0;
-        background: linear-gradient(110deg, #fff7df, #ffe1af) !important;
-    }
-
-    .about-actions a.about-actions__support:active {
-        background: #ffd394 !important;
-    }
-
-    .about-support-icon {
-        width: 22px;
-        height: 22px;
-        flex-shrink: 0;
-    }
 
     .panel-note {
         margin-top: 12px;

@@ -7,6 +7,8 @@
 - 天气 provider：统一 Windy / Open-Meteo 来源选择与数据转换，返回标准天气和 Windy 原始预报；不管理 UI、缓存或跨地点并发。
 - 预报 controller：拥有天气、大气补充数据和云层请求的身份、取消、结果、重试与合并；每个插件实例独立。
 - 主组件：传入地点、模型、来源、时间桶与可见性，显示状态；天文地点上下文和地图交互继续由既有模块负责。
+- 设置组件 `PluginSettings.svelte`：拥有偏好控件、说明入口及样式；接收当前偏好和操作回调，写存储和地图副作用仍由主组件执行。`settingsPage` 双向绑定到主组件，切换主 Tab 后保留子页。
+- 关于组件 `PluginAbout.svelte`：拥有版本信息、双语日志及样式，按语言派生显示文案；更新请求、重试、提醒和复制结果仍由主组件拥有，切换 Tab 不重复请求。
 - 收藏对比：复用 provider，保留原有双地点并发限制和 session。
 - 偏好模块：保留各存储 key、默认值、归一化及存储失败的会话内行为，不迁移用户数据。
 
@@ -40,3 +42,5 @@
 - [forecastController.test.ts](../src/forecastController.test.ts)、[weatherProvider.test.ts](../src/weatherProvider.test.ts)：请求时序与来源行为验证。
 
 加载动画只由请求状态驱动，不新增计时器。销毁是终态：即使底层请求忽略取消，其 resolve、reject 和 finally 也不能恢复状态或发出通知。
+
+设置和关于组件不注册全局监听器、计时器或请求。其 DOM 事件随 Svelte 卸载释放；跨组件样式仅将宿主 `.sun-path-panel` 祖先标为 global，控件样式仍限定于组件内部。
