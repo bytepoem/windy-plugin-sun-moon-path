@@ -1,3 +1,50 @@
+/** Fixed public update endpoints. No client credentials or arbitrary manifest URLs. */
+export type UpdateSource = 'gitee' | 'github';
+
+export const updateSourceRoots: Record<UpdateSource, string> = {
+    gitee: 'https://gitee.com/api/v5/repos/bytepoem/windy-plugin/contents/',
+    github: 'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/update-metadata/',
+};
+
+/** Only IP-derived country codes describe the network; missing data prefers Gitee. */
+export const selectUpdateSource = (location: { source?: string; cc?: string } | null | undefined): UpdateSource => {
+    if (location?.source !== 'ip' || !/^[a-z]{2}$/i.test(location.cc ?? '')) {
+        return 'gitee';
+    }
+    return location.cc?.toLowerCase() === 'cn' ? 'gitee' : 'github';
+};
+
+/** Read public JSON, decoding Gitee's UTF-8/Base64 envelope before domain validation. */
+export const fetchUpdateJson = async (
+    source: UpdateSource,
+    path: string,
+    fetchImpl: typeof fetch,
+    signal?: AbortSignal,
+    revalidate = false,
+): Promise<unknown> => {
+    if (path !== 'latest.json' && !/^\d+\.\d+\.\d+\/notes\.json$/.test(path)) {
+        throw new Error('Invalid update file path');
+    }
+    const url = updateSourceRoots[source] + path + (source === 'gitee' ? '?ref=master' : '');
+    const response = await fetchImpl(url, {
+        signal,
+        ...(revalidate ? { cache: 'no-cache' as const } : {}),
+        ...(source === 'gitee' ? { credentials: 'omit' as const } : {}),
+    });
+    if (!response.ok) {
+        throw new Error(`Update ${path === 'latest.json' ? 'manifest' : 'notes'} request failed with ${response.status}`);
+    }
+    const value = await response.json();
+    if (source !== 'gitee') {
+        return value;
+    }
+    if (value?.type !== 'file' || value.encoding !== 'base64' || value.path !== path || typeof value.content !== 'string') {
+        throw new Error('Invalid Gitee file response');
+    }
+    const bytes = Uint8Array.from(atob(value.content.replace(/\s/g, '')), character => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+};
+
 export type UpdateNoteKind = 'new' | 'improved' | 'fixed';
 
 export interface UserFacingUpdateNote {
@@ -76,6 +123,7 @@ interface WritePluginUpdateReminderOptions extends PluginUpdateReminderOptions {
 }
 
 interface CheckPluginUpdateOptions {
+    source?: UpdateSource;
     currentVersion: string;
     repositoryUrl: string;
     signal?: AbortSignal;
@@ -351,7 +399,6 @@ const isUpdateManifest = (
     return candidate.name === repository && isNonEmptyString(candidate.version) && isNonEmptyString(candidate.notesUrl);
 };
 
-export const updateManifestUrl = 'https://bytepoem-windy-updates.netlify.app/latest.json';
 
 /** Validate a whole release snapshot; missing, duplicate or mixed-series entries are errors. */
 export const parseUpdateSnapshot = (value: unknown, version: string): UserFacingReleaseNotes[] => {
@@ -372,18 +419,14 @@ const loadUpdateSnapshot = async (
     manifest: UpdateManifest,
     fetchImpl: typeof fetch,
     signal?: AbortSignal,
+    source: UpdateSource = 'gitee',
 ): Promise<{ notes: UserFacingReleaseNotes[]; status: 'loaded' | 'error' }> => {
-    const url = new URL(manifest.notesUrl, updateManifestUrl);
-    if (url.origin !== new URL(updateManifestUrl).origin || url.username || url.password
-        || url.pathname !== `/${manifest.version}/notes.json` || url.search || url.hash) {
+    if (manifest.notesUrl !== `./${manifest.version}/notes.json`) {
         throw new Error('Invalid update notes URL');
     }
     try {
-        const response = await fetchImpl(url.href, { signal });
-        if (!response.ok) {
-            throw new Error(`Update notes request failed with ${response.status}`);
-        }
-        return { notes: parseUpdateSnapshot(await response.json(), manifest.version), status: 'loaded' as const };
+        const value = await fetchUpdateJson(source, `${manifest.version}/notes.json`, fetchImpl, signal);
+        return { notes: parseUpdateSnapshot(value, manifest.version), status: 'loaded' as const };
     } catch (error) {
         if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
             throw error;
@@ -591,9 +634,10 @@ const writeCachedResult = (cache: SessionCache | null, key: string, result: Plug
 
 /**
  * Preview the local beta notes when configured; otherwise read the version already
- * published on Netlify and its complete version-pinned snapshot. No GitHub request is needed.
+ * published on the selected mirror and its complete version-pinned snapshot.
  */
 export const checkPluginUpdate = async ({
+    source = 'gitee',
     currentVersion,
     repositoryUrl,
     signal,
@@ -630,7 +674,7 @@ export const checkPluginUpdate = async ({
         };
     }
 
-    const cacheKey = `netlify:${owner}/${repository}:update-check:v1:${normalizedCurrentVersion}`;
+    const cacheKey = `${source}:${owner}/${repository}:update-check:v1:${normalizedCurrentVersion}`;
     const cachedResult = readCachedResult(
         sessionCache,
         cacheKey,
@@ -642,14 +686,7 @@ export const checkPluginUpdate = async ({
         return cachedResult;
     }
 
-    const manifestResponse = await fetchImpl(
-        updateManifestUrl,
-        { signal, cache: 'no-cache' },
-    );
-    if (!manifestResponse.ok) {
-        throw new Error(`Update manifest request failed with ${manifestResponse.status}`);
-    }
-    const manifestValue: unknown = await manifestResponse.json();
+    const manifestValue = await fetchUpdateJson(source, 'latest.json', fetchImpl, signal, true);
     if (!isUpdateManifest(manifestValue, repository)) {
         throw new Error('Update manifest is invalid');
     }
@@ -659,7 +696,7 @@ export const checkPluginUpdate = async ({
     if (parseSemanticVersion(latestVersion).prerelease.length || latestVersion !== manifestValue.version) {
         throw new Error('Invalid formal update version');
     }
-    const noteSeries = await loadUpdateSnapshot(manifestValue, fetchImpl, signal);
+    const noteSeries = await loadUpdateSnapshot(manifestValue, fetchImpl, signal, source);
     const notes = noteSeries.notes.find(note => compareSemanticVersions(note.version, latestVersion) === 0) ?? null;
     const notesStatus = noteSeries.status;
 

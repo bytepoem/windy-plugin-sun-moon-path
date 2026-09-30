@@ -1048,6 +1048,7 @@
         checkPluginUpdate,
         readPluginUpdateReminderSeenVersion,
         selectPluginLinkVersion,
+        selectUpdateSource,
         type PluginUpdateResult,
         writePluginUpdateReminderSeenVersion,
     } from './pluginUpdate';
@@ -2276,6 +2277,7 @@
 
         try {
             const result = await checkPluginUpdate({
+                source: selectUpdateSource(store.get('ipLocation')),
                 currentVersion: pluginVersion,
                 repositoryUrl,
                 betaNotesUrl: betaReleaseNotesUrl,

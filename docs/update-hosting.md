@@ -1,33 +1,41 @@
 # 更新信息托管与发布
 
-正式插件从 `https://bytepoem-windy-updates.netlify.app/latest.json` 读取版本，再读取同源的 `<version>/notes.json` 完整中英文 minor 系列快照。无 GitHub Raw 请求，也不自动切换来源。本地预览仍读取 localhost 的 `release-notes/beta.json` 及相邻历史日志。
+客户端按 Windy 的 IP 来源国家码选择更新源：中国大陆（CN）使用 Gitee，其他已知国家使用 GitHub；国家码缺失或定位不是 IP 来源时默认 Gitee。代理可能影响判断，不使用语言、时区、GPS 或地图中心推测网络地区。Netlify 不再参与新发布流程。
+
+- Gitee：`bytepoem/windy-plugin` 的 `master` 分支，公开文件 API 返回 UTF-8/Base64 内容，无需客户端 token。
+- GitHub：`bytepoem/windy-plugin-sun-moon-path` 的 `update-metadata` 分支，通过 Raw 读取 JSON。
+- 每次检查从选定来源读取 `latest.json` 与 `<version>/notes.json`。只接受固定文件路径、匹配版本及完整 minor 系列，不在失败时自动切换来源。
+- 成功检查按来源和安装版本隔离缓存，最多复用五分钟；重新进入关于页时再次检查。失败不缓存，关闭插件通过已有 AbortController 取消请求。
+- 本地预览读取 localhost 的 `release-notes/beta.json` 及相邻历史日志，不进行地区选择或公网更新检查。
 
 ## 发布契约
 
-- 客户端：只接受同源、版本匹配且系列完整的快照；失败提供重试，不缓存失败结果；关闭插件沿现有 AbortController 取消请求。
-- 生成器：当前系列来自工作区日志，历史已托管版本（自 0.10.3 起）来自对应 Git tag，不改写已发布快照。
-- 发布流程：全仓库测试、生产构建、静态更新站点生成及生产解析器验证全部通过后上传 Windy；Windy 成功后才原子部署 Netlify，最后验证公网结果。
-- CI 凭据：仓库 Secret `NETLIFY_AUTH_TOKEN`，目标固定为 `bytepoem-windy-updates.netlify.app`。不要把 token 放进仓库或客户端。Netlify token 是账号凭据，命名不会将其权限限制为单个站点。
-- `latest.json` 浏览器缓存 5 分钟；版本快照长期缓存。每次完整部署都必须包含已发布快照，避免旧 manifest 缓存引用失效。
+生成器 `scripts/build-update-site.mjs` 从工作区生成当前快照，从明确的 Git tag 读取已发布快照。发布器 `scripts/publish-update-mirrors.py` 只提交 JSON，每个镜像通过一次普通 Git push 原子更新，拒绝版本倒退及覆盖、删除历史快照，不使用 force push。
+
+CI 使用仓库 Secret `GITEE_TOKEN` 和工作流自带的 `GITHUB_TOKEN`，后者需要 `contents: write`。凭据不进入仓库文件或客户端。Gitee 公开 API 可能限流，失败时由用户重试，不自动高频请求。
 
 | 状态与时序 | 对外结果 | 处理 |
 | --- | --- | --- |
-| 测试、构建或生成失败 | 不发布 | 修复后重跑 |
-| Windy 上传失败 | Netlify 保持旧版本 | 不更新指针 |
-| Windy 成功、Netlify 失败 | 新插件已可用，更新服务仍保持旧部署或状态待核对 | 查 Netlify deploy 状态；只重跑失败的同步步骤，避免重复上传 Windy |
-| Netlify 发布完成 | manifest 与所有快照同一部署上线 | 公网生产解析器验收 |
-| 并行发布 | CI concurrency 串行处理 | 发布器拒绝版本倒退；不允许在 CI 运行时手工部署同一站点 |
-| 插件关闭或请求取消 | 不修改已销毁组件 | 沿现有 signal 传播取消 |
+| 测试、构建、快照生成或本地生产解析失败 | 不发布 | 修复后重跑 |
+| Windy 上传失败 | 两个镜像均保持原版本 | 不更新版本指针 |
+| Windy 成功 | 先同步 Gitee，再同步 GitHub | 每站 manifest 和全部快照在同一提交上线 |
+| 一个镜像成功、另一个失败 | 两边可能暂时处于不同版本，各站内容仍完整 | 修复后只重跑镜像同步及公网验收，成功站点幂等，不重复上传 Windy |
+| 两个镜像成功 | 分别用生产解析器验证当前版、旧版发现新版及完整系列 | 公网检查失败则发布任务失败 |
+| 并发发布 | CI concurrency 串行处理；普通 Git push 拒绝竞争写入 | 不强制覆盖，重新核对镜像再运行 |
+| 插件关闭或请求替换 | 不修改已销毁组件 | 沿 signal 与请求序号处理取消 |
 
-## 本地验证
+## 验证与恢复
 
-需要支持 TypeScript 类型剥离的 Node.js（CI 使用 Node 24）。在干净临时目录生成，避免把其他文件带入部署。
+需要支持 TypeScript 类型剥离的 Node.js（CI 使用 Node 24）。在新的临时目录生成：
 
 ```sh
 node scripts/build-update-site.mjs /tmp/windy-update-site
 node scripts/verify-update-site.mjs /tmp/windy-update-site
-# 公网验证当前工作区版本，需已发布相同版本：
-node scripts/verify-update-site.mjs
+node scripts/verify-update-site.mjs /tmp/windy-update-site --source=github
+# 公网必须已发布相同版本：
+node scripts/verify-update-site.mjs --source=gitee
+node scripts/verify-update-site.mjs --source=github
+python3 scripts/test_publish_update_mirrors.py
 ```
 
-回滚优先在 Netlify 恢复上一个已验证部署，再核验 latest 与快照；发布器有防版本倒退保护，不用旧工作区直接覆盖新版本。浏览器可能在 5 分钟内仍持有上一份 manifest。已发布的插件和 Git tag 不删除、不改写。旧插件 0.10.3 及以前仍请求 GitHub，安装包含本改动的新版本后才切换到 Netlify。
+镜像发布失败后保留 Windy 已成功的版本，只重试镜像步骤。发现已发布日志或客户端错误时发布更高修复版本，不改写旧快照、旧 tag 或旧插件。已有 Netlify 文件不删除，但后续不再同步；仍依赖 Netlify 的旧插件需用户手动安装新版。

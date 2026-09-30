@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-    checkPluginUpdate,
+    checkPluginUpdate as checkUpdate,
     compareSemanticVersions,
     readPluginUpdateReminderSeenVersion,
     selectPluginLinkVersion,
@@ -9,6 +9,7 @@ import {
 } from './pluginUpdate';
 
 const repositoryUrl = 'https://github.com/bytepoem/windy-plugin-sun-moon-path';
+const checkPluginUpdate = (options: Parameters<typeof checkUpdate>[0]) => checkUpdate({ source: 'github', ...options });
 const jsonResponse = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
     status,
     headers: { 'content-type': 'application/json' },
@@ -210,15 +211,15 @@ describe('checkPluginUpdate', () => {
         return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) };
     };
 
-    it.each(['0.8.1', '0.9.1', '0.10.0-beta.1'])('loads Netlify in two requests for %s without GitHub', async currentVersion => {
+    it.each(['0.8.1', '0.9.1', '0.10.0-beta.1'])('loads the GitHub snapshot in two requests for %s', async currentVersion => {
         const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest())).mockResolvedValueOnce(jsonResponse(snapshot));
         const result = await checkPluginUpdate({ currentVersion, repositoryUrl, fetchImpl, sessionCache: null });
         expect(result.status).toBe(currentVersion === '0.8.1' ? 'available' : 'current');
         expect(result.notesStatus).toBe(currentVersion === '0.10.0-beta.1' ? 'missing' : 'loaded');
         expect(result.seriesNotes).toEqual(currentVersion === '0.10.0-beta.1' ? [] : snapshot.seriesNotes);
         expect(fetchImpl.mock.calls.map(call => call[0])).toEqual([
-            'https://bytepoem-windy-updates.netlify.app/latest.json',
-            'https://bytepoem-windy-updates.netlify.app/0.9.1/notes.json',
+            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/update-metadata/latest.json',
+            'https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/update-metadata/0.9.1/notes.json',
         ]);
     });
 

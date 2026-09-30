@@ -32,8 +32,6 @@ export async function buildUpdateSite(outputDirectory) {
         pluginUrl: `https://windy-plugins.com/17629746/${manifest.name}/${version}/plugin.min.js`,
         notesUrl: `./${version}/notes.json`,
     }) + '\n');
-    await writeFile(join(outputDirectory, '_headers'), '/*\n  Access-Control-Allow-Origin: *\n  X-Content-Type-Options: nosniff\n/latest.json\n  Cache-Control: public, max-age=300\n/*/notes.json\n  Cache-Control: public, max-age=31536000, immutable\n');
-    await writeFile(join(outputDirectory, 'index.html'), '<!doctype html><meta charset="utf-8"><title>Sun & Moon Path updates</title><a href="latest.json">Latest version JSON</a>');
     return version;
 }
 

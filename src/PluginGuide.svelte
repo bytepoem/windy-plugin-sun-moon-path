@@ -31,6 +31,9 @@
 
 <section class="module-about module-guide" aria-label={text.guideHeading}>
     <p>{uiLanguage === 'zh'
+        ? '更新检查按网络地区选择来源：中国大陆及地区未知时使用 Gitee，其他已知地区使用 GitHub。代理可能影响判断，检查失败可在关于页重试。'
+        : 'Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About.'}</p>
+    <p>{uiLanguage === 'zh'
         ? '首次使用且尚未保存语言时，会显示双语语言选择弹窗，默认选中中文；确认后保存，之后可在设置中修改。'
         : 'On your first visit without a saved language, a bilingual language dialog opens with Chinese selected by default. Confirm to save your choice; you can change it later in Settings.'}</p>
     <p>{uiLanguage === 'zh'

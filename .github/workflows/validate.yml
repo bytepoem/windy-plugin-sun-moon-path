@@ -35,7 +35,7 @@ jobs:
             - name: Tests
               run: |
                   npm test
-                  python3 scripts/test_publish_update_site.py
+                  python3 scripts/test_publish_update_mirrors.py
             - name: Production build and update-site validation
               run: |
                   npm run build
