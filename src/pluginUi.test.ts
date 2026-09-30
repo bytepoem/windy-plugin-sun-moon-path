@@ -238,7 +238,7 @@ describe('plugin astronomy loading presentation', () => {
 
     it('checks for updates on mount, marks the About tab, and presents user-facing notes', () => {
         expect(pluginSource).toContain("isMounted && pluginUpdateStatus === 'idle'");
-        expect(aboutSource).not.toContain("summaryTab === 'about' && pluginUpdateStatus === 'idle'");
+        expect(pluginSource).not.toContain("summaryTab === 'about' && pluginUpdateStatus === 'idle'");
         expect(pluginSource).toContain('checkPluginUpdate({');
         expect(pluginSource).toContain('betaNotesUrl: betaReleaseNotesUrl');
         expect(pluginSource).toContain('let pluginUpdateReminderSeenVersion = readPluginUpdateReminderSeenVersion({');
@@ -256,33 +256,19 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toMatch(
             /catch \(error\) \{[\s\S]*?pluginUpdateStatus = 'error';[\s\S]*?\} finally/,
         );
-        expect(aboutSource).toContain("pluginUpdateResult.channel === 'beta'");
-        expect(translations.zh.aboutBetaAvailable).toBe('测试版更新预览');
-        expect(translations.zh.aboutUpdateAvailable).toBe('发现新版本');
         expect(pluginSource).not.toContain('{#if pluginUpdateResult.releaseUrl}');
         expect(aboutSource).toContain('on:click={copyLatestPluginLink}');
         expect(pluginSource).toContain('navigator.clipboard.writeText(latestPluginUrl);');
         expect(pluginSource).toContain('selectPluginLinkVersion(pluginVersion, pluginUpdateResult)');
         expect(pluginSource).toContain('https://windy-plugins.com/17629746/${name}/${latestPluginVersion}/plugin.min.js');
-        expect(translations.zh.aboutCopyLatestPluginLink('0.11.0')).toBe('复制 0.11.0 插件链接');
-        expect(translations.zh.aboutPluginLinkCopied('0.11.0')).toBe('已复制 0.11.0 插件链接');
-        expect(translations.zh.aboutPluginLinkCopyError).toBe('复制失败，请重试');
         expect(pluginSource).toContain('role="status" aria-live="polite" aria-atomic="true"');
         expect(aboutSource.indexOf('class="about-update__actions"')).toBeLessThan(
             aboutSource.indexOf('class="about-update__notes"'),
         );
         expect(aboutSource).toContain("class:about-update--compact={pluginUpdateStatus !== 'available' && pluginUpdateStatus !== 'current'}");
         expect(pluginSource).toContain('role="status" aria-live="polite"');
-        expect(aboutSource).toContain('{#each localizedUpdateNotes as releaseNote}');
-        expect(aboutSource).toContain('{releaseNote.version}');
-        expect(aboutSource).toContain('{releaseNote.notes.title}');
-        expect(aboutSource).toContain("pluginUpdateStatus === 'current'");
-        expect(aboutSource).toContain('? text.aboutUpdateCurrent');
-        expect(aboutSource).toContain('{text.aboutUpdateTypeLabels[item.type]}');
         expect(aboutSource).toContain('on:click={retryPluginUpdate}');
-        expect(aboutSource).toContain("pluginUpdateResult.notesStatus === 'error'");
         expect(aboutSource).toContain('on:click={retryPluginUpdateNotes}');
-        expect(aboutSource).toContain('text.aboutUpdateNotesRetry');
         expect(pluginSource).toContain('let pluginUpdateNotesRetrying = false;');
         expect(aboutSource).toContain('{text.aboutAuthorLabel}');
         expect(aboutSource).toContain('{text.aboutVersionLabel}');

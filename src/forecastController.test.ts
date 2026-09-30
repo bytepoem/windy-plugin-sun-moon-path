@@ -89,6 +89,70 @@ const harness = () => {
 };
 
 describe('forecast session behavior', () => {
+    it('keeps only the last location/model/source/hour after a rapid switch sequence', async () => {
+        const h = harness();
+        const relocated = { ...base, location: { lat: 40, lon: 120 }, cloudsVisible: true };
+        const finalInput = { ...relocated, model: 'gfs' as const, source: 'open-meteo' as const,
+            requestedAt: now + 3_600_000 };
+        for (const input of [base, relocated, { ...relocated, model: 'gfs' as const },
+            { ...finalInput, requestedAt: now }, finalInput]) {
+            h.controller.update(input);
+        }
+        expect(h.requests).toHaveLength(5);
+        const latest = { ...result, points: [{ ...result.points[0], temperatureC: 7 }], cloudForecast: null };
+        h.requests.at(-1)!.task.resolve(latest);
+        h.cloudRequests.at(-1)!.task.resolve(payload);
+        h.atmosphereRequests.at(-1)!.task.resolve([{ timestamp: now, aod550: 0.1, visibilityKm: 20 }]);
+        await flush();
+        const settled = h.state();
+        const notifications = h.changed.mock.calls.length;
+        for (const stale of h.requests.slice(0, -1)) {
+            expect(stale.request.signal.aborted).toBe(true);
+            stale.task.resolve(result);
+        }
+        for (const stale of h.cloudRequests.slice(0, -1)) {
+            expect(stale.request.signal.aborted).toBe(true);
+            stale.task.reject(new Error('obsolete clouds'));
+        }
+        for (const stale of h.atmosphereRequests.slice(0, -1)) {
+            expect(stale.request.signal.aborted).toBe(true);
+            stale.task.resolve([{ timestamp: now, aod550: 9, visibilityKm: 1 }]);
+        }
+        await flush();
+        expect(h.changed).toHaveBeenCalledTimes(notifications);
+        expect(h.state()).toBe(settled);
+        expect(h.state().points[0]).toMatchObject({ temperatureC: 7, aod550: 0.1 });
+        expect(h.state().cloudForecast).toBe(payload);
+        h.controller.destroy();
+    });
+
+    it('does not let a collapsed request settle a new request after expansion', async () => {
+        const h = harness();
+        h.controller.update(base);
+        h.controller.suspendDetails();
+        h.controller.update({ ...base, visible: false });
+        expect(h.requests).toHaveLength(1);
+        h.controller.update(base);
+        expect(h.requests).toHaveLength(2);
+        h.requests[0].task.resolve(result);
+        h.atmosphereRequests[0].task.reject(new Error('late collapsed request'));
+        await flush();
+        expect(h.state().weatherStatus).toBe('loading');
+        expect(h.state().atmosphereStatus).toBe('loading');
+        expect(h.state().points).toEqual([]);
+        h.requests[1].task.resolve(result);
+        h.atmosphereRequests[1].task.resolve([{ timestamp: now, aod550: 0.2, visibilityKm: 18 }]);
+        await flush();
+        const completed = h.state();
+        h.controller.suspendDetails();
+        h.controller.update({ ...base, visible: false });
+        h.controller.update(base);
+        expect(h.requests).toHaveLength(2);
+        expect(h.atmosphereRequests).toHaveLength(2);
+        expect(h.state().points).toEqual(completed.points);
+        h.controller.destroy();
+    });
+
     it('waits for visibility and resolved location context, then deduplicates the same key', () => {
         const h = harness();
         h.controller.update({ ...base, contextReady: false });

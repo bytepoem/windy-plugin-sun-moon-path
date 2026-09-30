@@ -39,7 +39,7 @@ describe('rainbow map overlay', () => {
 
     it('places the opposite-source target at the antipodal direction and hides it with a below-horizon source', () => {
         const svg = rainbowOverlaySvg({ ...state, source: { altitude: 60, azimuth: 270 } });
-        const position = svg.match(/class="rainbow-opposite-source" transform="translate\(([^,]+),([^\)]+)\)"/)!;
+        const position = svg.match(/class="rainbow-opposite-source" transform="translate\(([^,]+),([^)]+)\)"/)!;
         expect(Number(position[1])).toBeCloseTo(53);
         expect(Number(position[2])).toBeCloseTo(0);
         expect(svg).toContain('反太阳点');

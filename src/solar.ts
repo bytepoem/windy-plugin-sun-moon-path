@@ -225,8 +225,35 @@ const dateInputToUtcHour = (dateInput: string, timeZone: string, hour: number): 
         return naiveUtc;
     }
 
-    const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtc, timeZone);
-    return new Date(naiveUtc.getTime() - offsetMinutes * 60_000);
+    const localTimestamp = (instant: number) =>
+        instant + getTimeZoneOffsetMinutes(new Date(instant), timeZone) * 60_000;
+    const target = naiveUtc.getTime();
+    // Consider both sides of a nearby offset transition. A repeated civil hour
+    // resolves to its first occurrence, which is the beginning of that local day.
+    const offsets = new Set([-DAY_MS, 0, DAY_MS].map(delta =>
+        getTimeZoneOffsetMinutes(new Date(target + delta), timeZone)));
+    const candidates = [...offsets].map(offset => target - offset * 60_000).sort((a, b) => a - b);
+    const exact = candidates.find(instant => localTimestamp(instant) === target);
+    if (exact !== undefined) {
+        return new Date(exact);
+    }
+
+    // Some zones skip midnight (or an entire civil date). Find the first valid
+    // instant at/after that wall time, rather than moving back into the prior day.
+    let before = candidates.filter(instant => localTimestamp(instant) < target).at(-1);
+    let after = candidates.find(instant => localTimestamp(instant) > target);
+    if (before === undefined || after === undefined) {
+        throw new RangeError(`Unable to resolve local date: ${dateInput} (${timeZone})`);
+    }
+    while (after - before > 1) {
+        const middle = Math.floor((before + after) / 2);
+        if (localTimestamp(middle) < target) {
+            before = middle;
+        } else {
+            after = middle;
+        }
+    }
+    return new Date(after);
 };
 
 /** Convert a date input value into a stable local-noon instant for a time zone. */
@@ -484,6 +511,41 @@ interface LocalMoonTimes {
 const isValidDate = (value: Date | null | undefined): value is Date =>
     value instanceof Date && !Number.isNaN(value.getTime());
 
+type LocalSunTimes = Pick<SunCalc.SunTimes,
+    'sunrise' | 'sunset' | 'dawn' | 'dusk' | 'night' | 'nightEnd' | 'alwaysUp' | 'alwaysDown'>;
+
+/** SunCalc 2 anchors getTimes to the input UTC date, not the observer's civil day.
+ * Collect adjacent solar days and select each crossing inside [local midnight,
+ * next local midnight). This also handles date-line offsets and 23/25-hour days.
+ */
+const getSunTimesForLocalDate = (
+    dateInput: string,
+    timeZone: string,
+    location: Coordinates,
+    elevationM = 0,
+): LocalSunTimes => {
+    const dayStart = dateInputToUtcMidnight(dateInput, timeZone).getTime();
+    const dayEnd = dateInputToUtcMidnight(addDaysToDateInput(dateInput, 1), timeZone).getTime();
+    const midpoint = (dayStart + dayEnd) / 2;
+    const candidates = [-1, 0, 1].map(offset => SunCalc.getTimes(
+        dateInputToUtcNoon(addDaysToDateInput(dateInput, offset), 'UTC'),
+        location.lat, location.lon, elevationM,
+    ));
+    const nearest = candidates.reduce((best, candidate) =>
+        Math.abs(candidate.solarNoon.getTime() - midpoint) < Math.abs(best.solarNoon.getTime() - midpoint)
+            ? candidate : best);
+    const result: LocalSunTimes = {
+        sunrise: null, sunset: null, dawn: null, dusk: null, night: null, nightEnd: null,
+        alwaysUp: nearest.alwaysUp, alwaysDown: nearest.alwaysDown,
+    };
+    for (const event of ['sunrise', 'sunset', 'dawn', 'dusk', 'night', 'nightEnd'] as const) {
+        result[event] = candidates.map(candidate => candidate[event])
+            .filter((time): time is Date => isValidDate(time) && time.getTime() >= dayStart && time.getTime() < dayEnd)
+            .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+    }
+    return result;
+};
+
 const getMoonTimesForLocalDate = (
     dateInput: string,
     timeZone: string,
@@ -623,7 +685,7 @@ export const calculateSolarPath = ({
         eventTime = event === 'moonrise' ? moonTimes.rise : moonTimes.set;
         availability = moonTimes;
     } else {
-        const times = SunCalc.getTimes(date, location.lat, location.lon, elevationM);
+        const times = getSunTimesForLocalDate(dateInput || dateInputForInstant(date, timeZone), timeZone, location, elevationM);
         eventTime = event === 'sunrise' ? times.sunrise : times.sunset;
         availability = times;
     }
@@ -802,23 +864,17 @@ const calculateAstronomyIntervals = (
     const scanEnd = new Date(dayEnd.getTime() + DAY_MS);
     // Keep summary boundaries on SunCalc's sea-level astronomical-night convention;
     // the main solar event timeline may still use the observer's elevation.
-    const nightWindows = [-1, 0, 1]
-        .map(dayOffset => addDaysToDateInput(dateInput, dayOffset))
-        .flatMap(localDate => {
-            const eveningTimes = SunCalc.getTimes(
-                dateInputToUtcNoon(localDate, timeZone),
-                location.lat,
-                location.lon,
-            );
-            const followingMorningTimes = SunCalc.getTimes(
-                dateInputToUtcNoon(addDaysToDateInput(localDate, 1), timeZone),
-                location.lat,
-                location.lon,
-            );
-            return isValidDate(eveningTimes.night) && isValidDate(followingMorningTimes.nightEnd)
-                ? [{ start: eveningTimes.night, end: followingMorningTimes.nightEnd }]
-                : [];
-        });
+    const solarDays = [-1, 0, 1, 2].map(dayOffset =>
+        getSunTimesForLocalDate(addDaysToDateInput(dateInput, dayOffset), timeZone, location));
+    const nightEnds = solarDays.map(times => times.nightEnd).filter(isValidDate)
+        .sort((a, b) => a.getTime() - b.getTime());
+    // At high latitudes night can begin after midnight. Pair the next actual
+    // morning crossing, not a fixed "following calendar day" that could span daylight.
+    const nightWindows = solarDays.flatMap(times => {
+        const start = times.night;
+        const end = isValidDate(start) ? nightEnds.find(time => time > start) : null;
+        return isValidDate(start) && end ? [{ start, end }] : [];
+    });
     const isAstronomicalNight = (date: Date): boolean => {
         if (nightWindows.some(window => date >= window.start && date <= window.end)) {
             return true;
@@ -859,7 +915,7 @@ export const calculateAstronomyTimeline = ({
 }): AstronomyTimeline => {
     const dayStart = dateInputToUtcMidnight(dateInput, timeZone);
     const dayEnd = dateInputToUtcMidnight(addDaysToDateInput(dateInput, 1), timeZone);
-    const sunTimes = SunCalc.getTimes(dateInputToUtcNoon(dateInput, timeZone), location.lat, location.lon, elevationM);
+    const sunTimes = getSunTimesForLocalDate(dateInput, timeZone, location, elevationM);
     const moonTimes = getMoonTimesForLocalDate(dateInput, timeZone, location);
     const moonIllumination = SunCalc.getMoonIllumination(dateInputToUtcNoon(dateInput, timeZone));
 

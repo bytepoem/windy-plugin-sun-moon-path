@@ -1,0 +1,43 @@
+name: validate
+
+on:
+    push:
+        branches: ['**']
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: validate-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    validate:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  # Update-site tests retain and validate immutable tag snapshots.
+                  fetch-depth: 0
+                  persist-credentials: false
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+            - name: Install locked dependencies
+              run: npm exec --yes --package=npm@11.12.1 -- npm ci
+            - name: Type and lint checks
+              run: |
+                  npx --no-install tsc --noEmit --incremental false
+                  npx --no-install eslint src --ext .ts,.svelte
+            - name: Tests
+              run: |
+                  npm test
+                  python3 scripts/test_publish_update_site.py
+            - name: Production build and update-site validation
+              run: |
+                  npm run build
+                  node scripts/build-update-site.mjs "$RUNNER_TEMP/update-site-validation"
+                  node scripts/verify-update-site.mjs "$RUNNER_TEMP/update-site-validation"
