@@ -3402,7 +3402,7 @@
     }
 
     .sun-path-panel.mobile_ui .summary-tabs.summary-tabs--weather {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(108px, 1.4fr) minmax(0, 1.2fr) minmax(0, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(108px, 1.4fr) repeat(2, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
