@@ -3001,7 +3001,7 @@
         grid-template-columns: 62px minmax(0, 1fr);
         align-items: center;
         gap: 6px;
-        min-height: 44px;
+        min-height: 38px;
         margin-bottom: 6px;
     }
 

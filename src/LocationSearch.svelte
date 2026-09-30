@@ -748,9 +748,10 @@
     .location-search__control {
         position: relative;
         display: grid;
+        box-sizing: border-box;
         grid-template-columns: auto minmax(0, 1fr) auto auto;
-        height: 44px;
-        min-height: 44px;
+        height: 38px;
+        min-height: 38px;
         border: 1px solid var(--panel-border);
         border-radius: 7px;
         background: rgba(8, 15, 27, 0.68);
@@ -775,8 +776,8 @@
         align-items: center;
         width: 100%;
         min-width: 0;
-        height: 42px;
-        min-height: 42px;
+        height: 36px;
+        min-height: 36px;
         padding: 0 10px;
         border: 0;
         border-right: 1px solid var(--panel-border);
@@ -883,7 +884,7 @@
 
     .location-search__control > input {
         min-width: 0;
-        height: 42px;
+        height: 36px;
         padding: 0 9px;
         border: 0;
         outline: 0;
@@ -901,7 +902,7 @@
     .location-search__coordinate-fields {
         display: grid;
         min-width: 0;
-        height: 42px;
+        height: 36px;
         grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
         align-items: center;
     }
@@ -909,7 +910,7 @@
     .location-search__coordinate-fields label {
         display: grid;
         min-width: 0;
-        height: 42px;
+        height: 36px;
         padding: 0 7px;
         grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
@@ -923,7 +924,7 @@
         box-sizing: border-box;
         width: 100%;
         min-width: 0;
-        height: 40px;
+        height: 36px;
         padding: 0;
         border: 0;
         outline: 0;
@@ -942,8 +943,8 @@
 
     .location-search__submit {
         min-width: 56px;
-        height: 42px;
-        min-height: 42px;
+        height: 36px;
+        min-height: 36px;
         padding: 0 9px;
         border: 0;
         border-left: 1px solid var(--panel-border);
