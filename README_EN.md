@@ -33,13 +33,35 @@ Language and display options are in Settings; detailed legends are under Setting
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
 | Radar and display | RainViewer radar overlays, Windy units, and collapsed, compact or fullscreen mobile views |
 
-## Using rainbow planning
+## How to use the features
+
+### Sun, Moon and Milky Way
+
+Choose a location and date, then open Events for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
+
+### Cloud planning
+
+Open Clouds and select the Sun, Moon or galactic centre and a shooting time. Choose a single or layered view and a forecast cloud-height source, or enter a known cloud altitude manually. Use sightline intersections, distance references and forecast cloud maps to identify cloud regions of interest; satellite imagery provides a comparison with current observations.
+
+### Rainbow planning
 
 Choose **Rainbow** from the dropdown beside Clouds, select Sun or Moon, and adjust the time. The map shows bow directions and altitudes: solid arcs are above the horizon, dashed arcs below it. Bows are hidden when the selected light source is below the horizon.
 
 Select **Assess selected time** to check rain and sunlight along primary-bow directions, with separate terrain and route low-visibility references. Adjust camera height above ground to explore terrain effects.
 
 **Bow geometry is a composition reference; condition grades are not probabilities.** Assessment uses hourly forecasts and limited samples, always with low confidence. It cannot prove that droplets are illuminated at the same instant; moonbows are not assessed. Terrain warnings do not prove the bow is blocked, and no detected obstruction does not guarantee a clear view. Seeing a double bow or full circle still depends on lit droplets and actual sightlines.
+
+### Weather and observing
+
+Open Weather and choose a data source and forecast model in the weather table. Check cloud cover, precipitation, wind and visibility for your target period, alongside observing windows, moonlight and target position. Compare again after changing sources or models, and treat missing values as unknown.
+
+### Favorite comparisons
+
+Use the top favorites button to save the current location or search and open existing Windy favorites. Select Compare, choose 2–5 locations and start the comparison to check weather, observing windows, elevation and light pollution for the same date and shortlist alternative shooting locations.
+
+### Radar and display
+
+In Settings, select the RainViewer radar source and adjust its opacity. Use Windy's timeline and the displayed radar timestamp to examine changes in rainfall. Settings also contains language and display options, while measurement units follow Windy. On mobile, use the panel controls to switch between collapsed, compact and fullscreen views.
 
 ## Usage limits
 
