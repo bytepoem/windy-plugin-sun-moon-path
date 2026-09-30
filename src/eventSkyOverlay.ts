@@ -6,6 +6,18 @@ import type { Coordinates } from './solar';
 const HORIZON_RADIUS = 106;
 const ICON_SIZE = 280;
 
+// The GAL → EQJ rotation and equatorial angles are time-independent. Vector's
+// required time is metadata here; only Horizon uses the actual planning instant.
+const galacticEquator = (() => {
+    const rotation = Rotation_GAL_EQJ();
+    const referenceTime = MakeTime(new Date('2000-01-01T12:00:00Z'));
+    return Array.from({ length: 361 }, (_, longitude) => {
+        const radians = longitude * Math.PI / 180;
+        return EquatorFromVector(RotateVector(rotation,
+            new Vector(Math.cos(radians), Math.sin(radians), 0, referenceTime)));
+    });
+})();
+
 export interface EventSkyState {
     location: Coordinates;
     timestamp: number;
@@ -19,16 +31,9 @@ export interface EventSkyState {
  */
 export const eventSkyGeometry = (timestamp: number, location: Coordinates) => {
     const date = new Date(timestamp);
-    // Vector requires AstroTime; all galactic samples share the same observation instant.
-    const time = MakeTime(date);
     const observer = new Observer(location.lat, location.lon, 0);
-    const rotation = Rotation_GAL_EQJ();
-    const band = Array.from({ length: 361 }, (_, longitude) => {
-        const radians = longitude * Math.PI / 180;
-        const equatorial = EquatorFromVector(RotateVector(rotation,
-            new Vector(Math.cos(radians), Math.sin(radians), 0, time)));
-        return Horizon(date, observer, equatorial.ra, equatorial.dec, 'normal');
-    });
+    const band = galacticEquator.map(equatorial =>
+        Horizon(date, observer, equatorial.ra, equatorial.dec, 'normal'));
     return {
         sun: cloudBodyPosition('sun', timestamp, location),
         moon: cloudBodyPosition('moon', timestamp, location),

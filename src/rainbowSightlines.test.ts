@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { assessTerrain, assessVisibility, createRainbowSightlineLoader, fetchRainbowTerrain, fetchRainbowVisibility,
+import { assessTerrain, assessVisibility, createRainbowSightlineLoader, createRainbowTerrainFetcher, fetchRainbowVisibility,
     terrainElevationAngle, terrainPlan, visibilityPlan, type SightlineRequest, type TerrainResult } from './rainbowSightlines';
 
 const request: SightlineRequest = {
@@ -9,6 +9,67 @@ const request: SightlineRequest = {
 const end = Date.UTC(2026, 8, 29, 9);
 
 describe('terrain screening', () => {
+    const successfulFetcher = () => vi.fn(async (url: URL) => ({
+        ok: true,
+        json: async () => ({ elevation: url.searchParams.get('latitude')!.split(',').map(() => 100) }),
+    } as Response));
+
+    it('reuses DEM for height and forecast changes while recalculating sightline angles', async () => {
+        const terrain = createRainbowTerrainFetcher();
+        const fetcher = successfulFetcher();
+        const input = { ...request, fetcher: fetcher as unknown as typeof fetch };
+        const original = await terrain(input);
+        const raised = await terrain({ ...input, cameraHeightM: 50, model: 'gfs', timestamp: end });
+        expect(fetcher).toHaveBeenCalledTimes(2);
+        expect(raised.observerElevationM).toBe(150);
+        expect(raised.directions[0].horizonAltitude).toBeLessThan(original.directions[0].horizonAltitude!);
+        // A new mount must not inherit a previous component's samples.
+        await createRainbowTerrainFetcher()(input);
+        expect(fetcher).toHaveBeenCalledTimes(4);
+    });
+
+    it('does not reuse another location or direction and evicts old batches', async () => {
+        const terrain = createRainbowTerrainFetcher();
+        const fetcher = successfulFetcher();
+        const input = { ...request, fetcher: fetcher as unknown as typeof fetch };
+        await terrain(input);
+        await terrain({ ...input, source: { ...input.source, azimuth: 260 } });
+        expect(fetcher).toHaveBeenCalledTimes(4);
+        for (let lat = 31; lat <= 34; lat += 1) {
+            await terrain({ ...input, location: { ...input.location, lat } });
+        }
+        await terrain(input);
+        expect(fetcher).toHaveBeenCalledTimes(14);
+    });
+
+    it('retries missing batches without discarding complete cached batches', async () => {
+        const terrain = createRainbowTerrainFetcher();
+        const fetcher = successfulFetcher();
+        fetcher.mockResolvedValueOnce({ ok: true, json: async () => ({ elevation: Array(100).fill(null) }) } as Response);
+        const input = { ...request, fetcher: fetcher as unknown as typeof fetch };
+        expect((await terrain(input)).observerElevationM).toBeNull();
+        const retried = await terrain(input);
+        expect(fetcher).toHaveBeenCalledTimes(3);
+        expect(retried.observerElevationM).toBe(102);
+        expect(retried.directions.every(direction => direction.complete)).toBe(true);
+    });
+
+    it('never caches cancelled late responses and checks abort even on a cache hit', async () => {
+        const terrain = createRainbowTerrainFetcher();
+        const controller = new AbortController();
+        const fetcher = successfulFetcher();
+        fetcher.mockImplementationOnce(async () => {
+            controller.abort();
+            return { ok: true, json: async () => ({ elevation: Array(100).fill(999) }) } as Response;
+        });
+        const input = { ...request, fetcher: fetcher as unknown as typeof fetch };
+        await expect(terrain({ ...input, signal: controller.signal })).rejects.toThrow();
+        expect((await terrain(input)).observerElevationM).toBe(102);
+        expect(fetcher).toHaveBeenCalledTimes(3);
+        await expect(terrain({ ...input, signal: controller.signal })).rejects.toThrow();
+        expect(fetcher).toHaveBeenCalledTimes(3);
+    });
+
     it('samples the visible bow including both horizon crossings and the top', () => {
         const plan = terrainPlan(request.location, request.source);
         expect(plan.directions).toHaveLength(7);
@@ -40,6 +101,7 @@ describe('terrain screening', () => {
     });
 
     it('batches elevation requests below the API limit and preserves the observer datum', async () => {
+        const fetchRainbowTerrain = createRainbowTerrainFetcher();
         const fetcher = vi.fn(async (url: URL) => {
             const count = url.searchParams.get('latitude')!.split(',').length;
             return { ok: true, json: async () => ({ elevation: Array(count).fill(-20) }) } as Response;
@@ -51,6 +113,7 @@ describe('terrain screening', () => {
     });
 
     it('preserves partial evidence on batch failure and stops dispatching when aborted', async () => {
+        const fetchRainbowTerrain = createRainbowTerrainFetcher();
         const fetcher = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ elevation: Array(100).fill(100) }) })
             .mockResolvedValueOnce({ ok: false });
         const result = await fetchRainbowTerrain({ ...request, fetcher });
@@ -62,7 +125,7 @@ describe('terrain screening', () => {
             return { ok: true, json: async () => ({ elevation: Array(100).fill(100) }) };
         });
         fetcher.mockClear();
-        await expect(fetchRainbowTerrain({ ...request, signal: controller.signal, fetcher })).rejects.toThrow();
+        await expect(createRainbowTerrainFetcher()({ ...request, signal: controller.signal, fetcher })).rejects.toThrow();
         expect(fetcher).toHaveBeenCalledTimes(1);
     });
 });
@@ -115,6 +178,18 @@ describe('visibility along candidate routes', () => {
 });
 
 describe('sightline request ownership', () => {
+    it('cannot restart a destroyed loader', async () => {
+        const ports = { terrain: vi.fn(), visibility: vi.fn() };
+        const publish = vi.fn();
+        const loader = createRainbowSightlineLoader(publish, ports);
+        loader.destroy();
+        loader.reset();
+        await loader.load(request);
+        expect(publish).not.toHaveBeenCalled();
+        expect(ports.terrain).not.toHaveBeenCalled();
+        expect(ports.visibility).not.toHaveBeenCalled();
+    });
+
     it('keeps terrain results if visibility fails', async () => {
         const publish = vi.fn();
         const terrain = { observerElevationM: 102, directions: [] };

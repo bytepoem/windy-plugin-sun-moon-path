@@ -9,6 +9,9 @@ const TERRAIN_DIRECTION_COUNT = 7;
 // Coarse screening: tighter spacing nearby, not a continuous or obstruction-free horizon.
 export const TERRAIN_DISTANCES_KM = [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 7, 10, 15, 20, 25, 30];
 const ELEVATION_BATCH_SIZE = 100;
+const MAX_CACHED_ELEVATION_BATCHES = 8;
+const ELEVATION_SOURCE = 'https://api.open-meteo.com/v1/elevation';
+const ELEVATION_DATASET = 'copernicus-glo90';
 export const LOW_VISIBILITY_KM = 5;
 
 export type SightlineRequest = {
@@ -95,32 +98,55 @@ export const assessTerrain = (
     };
 };
 
-/** One observer elevation and 112 terrain samples, in API-sized batches.
- * Failed batches stay missing; abort prevents later batches from being dispatched.
+/** Own a bounded DEM cache for one mounted assessment. Cache complete batches by
+ * dataset and the exact transmitted coordinates, never by time or camera height.
+ * Failures remain retryable; cancelled requests cannot populate the cache.
  */
-export const fetchRainbowTerrain = async (request: SightlineRequest): Promise<TerrainResult> => {
-    const plan = terrainPlan(request.location, request.source);
-    const coordinates = [request.location, ...plan.points];
-    const elevations: (number | null)[] = [];
-    for (let offset = 0; offset < coordinates.length; offset += ELEVATION_BATCH_SIZE) {
+export const createRainbowTerrainFetcher = () => {
+    const cache = new Map<string, number[]>();
+    return async (request: SightlineRequest): Promise<TerrainResult> => {
         request.signal.throwIfAborted();
-        const batch = coordinates.slice(offset, offset + ELEVATION_BATCH_SIZE);
-        const url = new URL('https://api.open-meteo.com/v1/elevation');
-        url.searchParams.set('latitude', batch.map(point => point.lat.toFixed(5)).join(','));
-        url.searchParams.set('longitude', batch.map(point => point.lon.toFixed(5)).join(','));
-        try {
-            const response = await (request.fetcher ?? fetch)(url, { signal: request.signal });
-            if (!response.ok) { throw new Error('Elevation request failed'); }
-            const payload = await response.json() as { elevation?: unknown };
-            const values = payload.elevation;
-            if (!Array.isArray(values) || values.length !== batch.length) { throw new Error('Incomplete elevation batch'); }
-            elevations.push(...values.map(value => typeof value === 'number' && Number.isFinite(value) ? value : null));
-        } catch {
+        const plan = terrainPlan(request.location, request.source);
+        const coordinates = [request.location, ...plan.points];
+        const elevations: (number | null)[] = [];
+        for (let offset = 0; offset < coordinates.length; offset += ELEVATION_BATCH_SIZE) {
             request.signal.throwIfAborted();
-            elevations.push(...batch.map(() => null));
+            const batch = coordinates.slice(offset, offset + ELEVATION_BATCH_SIZE);
+            const url = new URL(ELEVATION_SOURCE);
+            url.searchParams.set('latitude', batch.map(point => point.lat.toFixed(5)).join(','));
+            url.searchParams.set('longitude', batch.map(point => point.lon.toFixed(5)).join(','));
+            const key = `${ELEVATION_DATASET}|${url.href}`;
+            const cached = cache.get(key);
+            if (cached) {
+                // Refresh insertion order so repeated height edits retain their samples.
+                cache.delete(key);
+                cache.set(key, cached);
+                elevations.push(...cached);
+                continue;
+            }
+            try {
+                const response = await (request.fetcher ?? fetch)(url, { signal: request.signal });
+                if (!response.ok) { throw new Error('Elevation request failed'); }
+                const payload = await response.json() as { elevation?: unknown };
+                const values = payload.elevation;
+                if (!Array.isArray(values) || values.length !== batch.length) { throw new Error('Incomplete elevation batch'); }
+                request.signal.throwIfAborted();
+                const heights = values.map(value => typeof value === 'number' && Number.isFinite(value) ? value : null);
+                elevations.push(...heights);
+                if (heights.every((height): height is number => height !== null)) {
+                    cache.set(key, heights);
+                    if (cache.size > MAX_CACHED_ELEVATION_BATCHES) {
+                        cache.delete(cache.keys().next().value!);
+                    }
+                }
+            } catch {
+                request.signal.throwIfAborted();
+                elevations.push(...batch.map(() => null));
+            }
         }
-    }
-    return assessTerrain(plan, elevations, request.cameraHeightM);
+        request.signal.throwIfAborted();
+        return assessTerrain(plan, elevations, request.cameraHeightM);
+    };
 };
 
 export const visibilityPlan = (location: Coordinates, source: SkyDirection, model: WeatherModel) => {
@@ -185,20 +211,26 @@ export const fetchRainbowVisibility = async (request: SightlineRequest): Promise
  */
 export const createRainbowSightlineLoader = (
     publish: (state: SightlineState) => void,
-    ports = { terrain: fetchRainbowTerrain, visibility: fetchRainbowVisibility },
+    ports = { terrain: createRainbowTerrainFetcher(), visibility: fetchRainbowVisibility },
 ) => {
     let active: AbortController | null = null;
+    let destroyed = false;
     const cancel = () => {
         active?.abort();
         active = null;
     };
     return {
         reset: () => {
+            if (destroyed) { return; }
             cancel();
             publish({ status: 'idle', terrain: null, visibility: null });
         },
-        destroy: cancel,
+        destroy: () => {
+            destroyed = true;
+            cancel();
+        },
         load: async (request: Omit<SightlineRequest, 'signal'>) => {
+            if (destroyed) { return; }
             cancel();
             const controller = new AbortController();
             active = controller;
