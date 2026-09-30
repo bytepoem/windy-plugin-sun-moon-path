@@ -18,7 +18,7 @@ export async function buildUpdateSite(outputDirectory) {
         for (let index = patch; index >= 0; index--) {
             const file = `release-notes/${major}.${minor}.${index}.json`;
             const source = target === version ? await readFile(file, 'utf8')
-                : execFileSync('git', ['show', `${target}:${file}`], { encoding: 'utf8' });
+                : execFileSync('git', ['show', `refs/tags/${target}:${file}`], { encoding: 'utf8' });
             seriesNotes.push(JSON.parse(source));
         }
         const snapshot = { version: target, seriesNotes };

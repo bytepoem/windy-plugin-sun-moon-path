@@ -1404,7 +1404,7 @@
     }
 
     // Check on mount so the About tab can notify users before they open it.
-    // Formal results remain session-cached; local beta notes are intentionally live.
+    // Formal results have a bounded session cache; local beta notes are intentionally live.
     $: if (isMounted && pluginUpdateStatus === 'idle') {
         void refreshPluginUpdate();
     }
@@ -1655,6 +1655,11 @@
     const selectSummaryTab = (nextTab: SummaryTab) => {
         pluginUsage?.setTab(nextTab, true);
         summaryTab = nextTab;
+        // Recheck on entry even if this mounted plugin previously found no update.
+        // The update service reuses fresh results and revalidates expired metadata.
+        if (nextTab === 'about' && pluginUpdateStatus !== 'loading') {
+            void refreshPluginUpdate();
+        }
     };
 
     const handleSummaryTabKeydown = async (event: KeyboardEvent, currentTab: SummaryTab) => {

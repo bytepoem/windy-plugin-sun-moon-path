@@ -299,7 +299,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(aboutSource).toMatch(
             /:global\(\.sun-path-panel\.mobile_ui\) \.about-update button\s*{[\s\S]*?min-height: 32px;/,
         );
-        expect(pluginConfigSource).toContain("version: '0.11.0'");
+        expect(pluginConfigSource).toContain("version: '0.11.1'");
         expect(pluginSource).toMatch(
             /\.summary-tab__badge\s*{[\s\S]*?white-space: nowrap;[\s\S]*?background: var\(--panel-accent\);/,
         );

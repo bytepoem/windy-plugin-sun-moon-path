@@ -14,12 +14,12 @@ Plan sunrise, sunset, Moon and Milky Way photography on Windy. Use celestial dir
 
 ## Install and get started
 
-Current release: **0.11.0** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.11.0)
+Current release: **0.11.1** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.11.1)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.11.0/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.11.1/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.

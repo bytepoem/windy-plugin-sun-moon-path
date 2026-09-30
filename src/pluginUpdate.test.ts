@@ -248,6 +248,45 @@ describe('checkPluginUpdate', () => {
         await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache: null })).rejects.toMatchObject({ name: 'AbortError' });
     });
 
+    it('discovers a release after the current-result cache expires', async () => {
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+        try {
+            const sessionCache = cache();
+            const fetchImpl = vi.fn<typeof fetch>()
+                .mockResolvedValueOnce(jsonResponse(manifest('0.9.0')))
+                .mockResolvedValueOnce(jsonResponse({ version: '0.9.0', seriesNotes: [userNotes] }))
+                .mockResolvedValueOnce(jsonResponse(manifest()))
+                .mockResolvedValueOnce(jsonResponse(snapshot));
+            const options = { currentVersion: '0.9.0', repositoryUrl, fetchImpl, sessionCache };
+            expect((await checkPluginUpdate(options)).status).toBe('current');
+            now.mockReturnValue(1_299_999);
+            expect((await checkPluginUpdate(options)).status).toBe('current');
+            expect(fetchImpl).toHaveBeenCalledTimes(2);
+            now.mockReturnValue(1_300_000);
+            expect(await checkPluginUpdate(options)).toMatchObject({ status: 'available', latestVersion: '0.9.1' });
+            expect(fetchImpl).toHaveBeenCalledTimes(4);
+            expect(fetchImpl.mock.calls[2][1]).toMatchObject({ cache: 'no-cache' });
+        } finally {
+            now.mockRestore();
+        }
+    });
+
+    it.each([undefined, -1, Number.MAX_SAFE_INTEGER])('ignores legacy or invalid cache timestamps: %s', async checkedAt => {
+        const oldResult = await checkPluginUpdate({
+            currentVersion: '0.9.0', repositoryUrl, sessionCache: null,
+            fetchImpl: vi.fn<typeof fetch>()
+                .mockResolvedValueOnce(jsonResponse(manifest('0.9.0')))
+                .mockResolvedValueOnce(jsonResponse({ version: '0.9.0', seriesNotes: [userNotes] })),
+        });
+        const sessionCache = { getItem: () => JSON.stringify({ ...oldResult, checkedAt }), setItem: vi.fn() };
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(manifest()))
+            .mockResolvedValueOnce(jsonResponse(snapshot));
+        expect(await checkPluginUpdate({ currentVersion: '0.9.0', repositoryUrl, sessionCache, fetchImpl }))
+            .toMatchObject({ status: 'available', latestVersion: '0.9.1' });
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
     it('retries failed snapshots then reuses a successful result', async () => {
         const sessionCache = cache();
         const fetchImpl = vi.fn<typeof fetch>()

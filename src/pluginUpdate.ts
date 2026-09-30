@@ -546,6 +546,9 @@ const parseCachedResult = (
     return null;
 };
 
+// Bound successful checks to five minutes, including the "no update" result.
+const UPDATE_CHECK_CACHE_TTL_MS = 5 * 60 * 1000;
+
 const readCachedResult = (
     cache: SessionCache | null,
     key: string,
@@ -561,7 +564,15 @@ const readCachedResult = (
         if (!value) {
             return null;
         }
-        return parseCachedResult(JSON.parse(value), currentVersion, owner, repository);
+        const candidate = JSON.parse(value);
+        const checkedAt = candidate?.checkedAt;
+        const now = Date.now();
+        // Legacy entries have no timestamp; clock rollback also requires a fresh check.
+        if (typeof checkedAt !== 'number' || !Number.isFinite(checkedAt)
+            || checkedAt < 0 || checkedAt > now || now - checkedAt >= UPDATE_CHECK_CACHE_TTL_MS) {
+            return null;
+        }
+        return parseCachedResult(candidate, currentVersion, owner, repository);
     } catch {
         return null;
     }
@@ -572,7 +583,7 @@ const writeCachedResult = (cache: SessionCache | null, key: string, result: Plug
         return;
     }
     try {
-        cache.setItem(key, JSON.stringify(result));
+        cache.setItem(key, JSON.stringify({ ...result, checkedAt: Date.now() }));
     } catch {
         // Version checking must continue even when browser storage is unavailable.
     }
@@ -633,7 +644,7 @@ export const checkPluginUpdate = async ({
 
     const manifestResponse = await fetchImpl(
         updateManifestUrl,
-        { signal },
+        { signal, cache: 'no-cache' },
     );
     if (!manifestResponse.ok) {
         throw new Error(`Update manifest request failed with ${manifestResponse.status}`);
