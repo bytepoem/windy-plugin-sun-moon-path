@@ -6,6 +6,8 @@
     import { cloudBodyPosition } from './cloudGeometry';
     import { calculateRainbow, rainbowSourceAboveHorizon, SECONDARY_RAINBOW_RADIUS } from './rainbowGeometry';
     import { createRainbowOverlay } from './rainbowOverlay';
+    import { rainbowWindows } from './rainbowWindows';
+    import { formatLocalClock } from './solar';
     import type { WeatherModel } from './weather';
     import type { Coordinates } from './solar';
 
@@ -16,6 +18,7 @@
     export let lineOpacity: number;
     export let model: WeatherModel;
     export let timeZone: string;
+    export let selectedDate: string;
     // Parent-owned session state survives tab changes; collapsing never unmounts this view.
     export let timestamp: number | null;
     export let body: 'sun' | 'moon' = 'sun';
@@ -27,6 +30,14 @@
     const degree = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${value.toFixed(1)}°`;
 
     $: zh = language === 'zh';
+    // Date-level geometry is independent of clock dragging and weather requests.
+    $: windows = contextReady ? rainbowWindows(selectedDate, timeZone, location, body) : null;
+    const windowClock = (time: number) => time === windows?.dayEnd ? '24:00' : formatLocalClock(new Date(time), timeZone);
+    const durationLabel = (start: number, end: number) => {
+        const minutes = Math.round((end - start) / 60_000);
+        const hours = Math.floor(minutes / 60);
+        return `${hours ? `${hours}h ` : ''}${minutes % 60}m`;
+    };
     $: source = timestamp === null ? null : cloudBodyPosition(body, timestamp, location);
     $: primaryArc = rainbowSourceAboveHorizon(source) ? calculateRainbow(source) : null;
     $: secondaryArc = rainbowSourceAboveHorizon(source) && secondary ? calculateRainbow(source, SECONDARY_RAINBOW_RADIUS) : null;
@@ -67,13 +78,39 @@
         <span>{zh ? '高度' : 'Altitude'} <strong>{degree(source?.altitude)}</strong></span>
         <span>{zh ? '方位' : 'Azimuth'} <strong>{degree(source?.azimuth)}</strong></span>
     </div>
-    <table aria-label={zh ? '彩虹高度与方位' : 'Rainbow altitude and bearings'}>
-        <colgroup><col class="bow-column" /><col span="4" class="angle-column" /></colgroup>
-        <thead><tr><th scope="col">{zh ? '虹弧' : 'Bow'}</th><th scope="col">{zh ? '顶部高度' : 'Top alt.'}</th><th scope="col">{zh ? '左侧' : 'Left'}</th><th scope="col">{zh ? '中间' : 'Centre'}</th><th scope="col">{zh ? '右侧' : 'Right'}</th></tr></thead>
-        <tbody>{#each rows as arc, index}
-            <tr><th scope="row">{index === 0 ? (zh ? '主虹' : 'Primary') : (zh ? '副虹' : 'Secondary')}</th><td>{degree(arc?.topAltitude)}</td><td>{degree(arc?.leftAzimuth)}</td><td>{degree(arc?.center.azimuth)}</td><td>{degree(arc?.rightAzimuth)}</td></tr>
-        {/each}</tbody>
+    <div class="rainbow-table-scroll" role="region" tabindex="0" aria-label={zh ? '彩虹角度与当日时段' : 'Rainbow angles and daily windows'}>
+    <table>
+        <colgroup><col class="bow-column" /><col class="window-column" /><col span="4" class="angle-column" /></colgroup>
+        <thead><tr><th scope="col">{zh ? '虹弧' : 'Bow'}</th><th scope="col" class="window-heading">{zh ? '时段 / 时长' : 'Window / duration'}</th><th scope="col" title={zh ? '顶部高度' : 'Top altitude'}>{zh ? '顶高' : 'Top alt.'}</th><th scope="col">{zh ? '左侧' : 'Left'}</th><th scope="col">{zh ? '中间' : 'Centre'}</th><th scope="col">{zh ? '右侧' : 'Right'}</th></tr></thead>
+        {#each rows as arc, index}
+            {@const intervals = index === 0 ? windows?.primary : windows?.secondary}
+            <tbody>
+                <tr>
+                    <th scope="row">{index === 0 ? (zh ? '主虹' : 'Primary') : (zh ? '副虹' : 'Secondary')}</th>
+                    <td class="window-cell">
+                        {#if intervals}
+                            {#each intervals as interval}
+                                <div class="window-time">
+                                    <span>{windowClock(interval.start)}–{windowClock(interval.end)}</span>
+                                    <span>{durationLabel(interval.start, interval.end)}</span>
+                                </div>
+                            {:else}
+                                <span>{zh ? '当日无符合条件的时段' : 'No qualifying window today'}</span>
+                            {/each}
+                        {:else}
+                            <span>{contextError ? (zh ? '时段暂不可用' : 'Windows unavailable') : (zh ? '等待地点与时区…' : 'Waiting for location and time zone…')}</span>
+                        {/if}
+                    </td>
+                    <td>{degree(arc?.topAltitude)}</td>
+                    <td>{degree(arc?.leftAzimuth)}</td>
+                    <td>{degree(arc?.center.azimuth)}</td>
+                    <td>{degree(arc?.rightAzimuth)}</td>
+                </tr>
+            </tbody>
+        {/each}
     </table>
+    </div>
+    <p class="caption">{zh ? '角度对应所选时刻；时段为当地几何估算，不保证出现。' : 'Angles are for the selected time; windows are local geometric estimates, not occurrence forecasts.'}</p>
     {#if !contextReady}
         <p class="status" role="status">{contextError
             ? (zh ? '地点时区解析失败，暂无法计算彩虹；请重新选择地点。' : 'Location time zone unavailable; select the location again to retry.')
@@ -90,6 +127,12 @@
 </section>
 
 <style>
+    .rainbow-table-scroll { overflow-x: auto; }
+    .rainbow-table-scroll:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: -2px; }
+    .window-cell { white-space: normal; font-size: 10.5px; line-height: 1.6; }
+    .window-time { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 3px; font-variant-numeric: tabular-nums; }
+    .window-time span { white-space: nowrap; }
+    .window-time span:last-child { color: var(--panel-muted); }
     .rainbow-panel { box-sizing: border-box; height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 8px 10px; color: var(--panel-text); font-size: 12px; }
     .rainbow-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 8px; }
     .body-picker { display: flex; border: 1px solid var(--panel-border); border-radius: 5px; overflow: hidden; }
@@ -104,12 +147,13 @@
     .source-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 5px; color: var(--panel-muted); }
     strong { color: var(--panel-text); font-weight: 500; }
     /* Data can switch between angles and unavailable dashes; neither may resize a column. */
-    table { width: 100%; table-layout: fixed; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-    .bow-column { width: 24%; }
-    .angle-column { width: 19%; }
-    th, td { padding: 5px 3px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--panel-border); }
-    th { color: var(--panel-muted); font-weight: 400; }
-    th:first-child { text-align: left; }
+    table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .bow-column { width: 11%; }
+    .window-column { width: 41%; }
+    .angle-column { width: 12%; }
+    th, td { padding: 5px 1px; text-align: center; vertical-align: middle; white-space: nowrap; border-bottom: 1px solid var(--panel-border); }
+    th { color: var(--panel-muted); font-weight: 400; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+    thead th { font-weight: 700; }
     p { margin: 7px 0 0; line-height: 1.5; }
     .caption { color: var(--panel-muted); font-size: 11px; }
     .status { color: #edcf90; }

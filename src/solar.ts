@@ -493,10 +493,10 @@ const eventName = (event: SolarEvent): string => {
 const sampleLabel = (event: SolarEvent, kind: SolarSampleKind): string => {
     const name = eventName(event);
     if (kind === 'before') {
-        return `${name}前 30 分钟`;
+        return `${name}前 30m`;
     }
     if (kind === 'after') {
-        return `${name}后 30 分钟`;
+        return `${name}后 30m`;
     }
     return name;
 };

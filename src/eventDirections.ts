@@ -32,9 +32,9 @@ export const galacticDirectionPaths = (
     }
     const name = eventLabel;
     const samples = ([
-        { kind: 'before', offsetMinutes: -30, label: language === 'zh' ? `${name}前 30 分钟` : `30 min before ${name}` },
+        { kind: 'before', offsetMinutes: -30, label: language === 'zh' ? `${name}前 30m` : `30m before ${name}` },
         { kind: 'event', offsetMinutes: 0, label: name },
-        { kind: 'after', offsetMinutes: 30, label: language === 'zh' ? `${name}后 30 分钟` : `30 min after ${name}` },
+        { kind: 'after', offsetMinutes: 30, label: language === 'zh' ? `${name}后 30m` : `30m after ${name}` },
     ] satisfies { kind: SolarSampleKind; offsetMinutes: number; label: string }[]).map(sample => {
         const time = new Date(crossing.timestamp + sample.offsetMinutes * 60_000);
         const { azimuth } = cloudGalacticCenterPosition(time.getTime(), location);

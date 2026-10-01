@@ -30,56 +30,46 @@
 </script>
 
 <section class="module-about module-guide" aria-label={text.guideHeading}>
-    <p>{uiLanguage === 'zh'
-        ? '更新检查按网络地区选择来源：中国大陆及地区未知时使用 Gitee，其他已知地区使用 GitHub。代理可能影响判断，检查失败可在关于页重试。'
-        : 'Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '首次使用且尚未保存语言时，会显示双语语言选择弹窗，默认选中中文；确认后保存，之后可在设置中修改。'
-        : 'On your first visit without a saved language, a bilingual language dialog opens with Chinese selected by default. Confirm to save your choice; you can change it later in Settings.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '主导航的下拉菜单可切换「云层遮挡」与「彩虹」。偏好设置和使用说明统一位于「设置」，中英文切换位于设置顶部右侧。顶部收藏按钮显示图标和收藏数量。云图、模型和云层模式位于同一行，高度来源及对应子设置位于下一行。'
-        : 'The navigation dropdown switches between Clouds and Rainbow. Preferences and this guide are under Settings, with the language switch at the top right. The top favorites button shows its icon and count. Cloud map, model and layer mode share a row; height source and its options follow below, wrapping when space is limited.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '彩虹：选择日虹或月虹，调整当地时间，查看主虹／副虹的顶部高度与地平线交点方位。支持双彩虹、完整圆圈；地图为天空俯视投影，0° 圈为水平地平线，高度刻度并非等距，不表示真实距离。完整圆圈的上下半球方向可能重叠，用实线与虚线区分。所选光源在地平线下时隐藏虹弧和虹弧数据。方位线与标记跟随所选日虹／月虹光源和规划时间，光源在地平线下时使用虚线与向下标记。移动端收起时保留图层，进入设置、关于或天气保留此前图层与规划时间；切换地图规划功能或关闭插件后清除。需另行判断水滴、光照、地形和月光亮度。'
-        : 'Rainbow: choose Sun or Moon and adjust local time to see bow-top altitudes and horizon-crossing bearings. Double and full-circle modes are available. The map is a top-down sky projection; the 0° ring is the horizon and altitude rings are not evenly spaced. It is not a distance map. In full-circle mode, above/below-horizon directions may overlap and use solid/dashed arcs. Bows and bow readouts are hidden when the selected source is below the horizon. The bearing and marker follow the selected Sun or Moon at planning time; a below-horizon source uses a dashed bearing and downward indicator. Collapsing on mobile keeps the overlay; Settings, About and Weather keep the preceding overlay and planning time; switching map-planning features or closing removes it. Droplets, illumination, terrain and lunar brightness need separate assessment.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '七彩虹弧的显示宽度不代表实际角宽。彩色同心圆为反太阳点／反月亮点，方位与光源相差 180°、高度相反，可能位于地平线下；光源在地平线下时隐藏此标记。图标大小固定，不表示佛光大小或出现预报。'
-        : 'Rainbow ribbon width is display styling, not actual angular width. The coloured target marks the antisolar/antilunar direction, 180° opposite in azimuth with negated altitude, which may lie below the horizon. It is hidden when the source is below the horizon. The fixed icon size does not model or predict a glory.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '主虹条件：点击「评估当前时刻」，按主虹左、中、右方向和三个模型网格尺度距离读取 Open-Meteo 的小时液态降水与直射光，模型跟随天气表，数据源独立。显示雨光等级、小时区间及可展开的依据，可信度固定为低，不是出现概率。小时雨量 ≥0.1 mm、平均直射法向辐射 ≥120 W/m² 仅为未校准的参考，不能证明雨滴同时受光。缺失或超出预报范围显示数据不足；无降水信号不排除未采样区域的彩虹。未检查三维云层，不评估月虹及地平线下弧段。换地点、时间、模型或离地高度清空旧评估，关闭面板取消全部请求。'
-        : 'Primary bow conditions: select Assess selected time to sample Open-Meteo hourly liquid rain and direct light along three bow bearings at three model-scaled distances. The model follows the weather table; the source is independent. Rain/light grades, the hour interval and expandable evidence carry low confidence, never an occurrence probability. Rain ≥0.1 mm and mean DNI ≥120 W/m² are uncalibrated references, not proof of simultaneous illumination. Missing or out-of-range data remain unavailable; no rain signal does not rule out rainbows elsewhere. 3D clouds, moonbows and below-horizon arcs are not assessed. Location, time, model or camera-height changes clear old evidence; closing cancels all requests.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '视线风险独立于雨光等级。地形使用 Open-Meteo / Copernicus DEM GLO-90，在主虹 7 个方向的 100 m–30 km 内各取 16 点，计入地球曲率；离地高度默认 2 m。山体高于虹弧时提示潜在遮挡，但雨滴可能在山前；不判断雨滴是否处于山影，也可能漏掉采样间山脊或近处建筑、树木。能见度采样机位、候选雨区和中间点，显示雨量区间末端的预报时次及沿途最低值，<5 km 为经验风险提示。近地面能见度不代表高空视线，不与雨区距离直接比较。缺测保留未知，单项失败不抹除其他结果。'
-        : 'Sightline risks are separate from the rain/light grade. Terrain uses Open-Meteo / Copernicus DEM GLO-90 at 16 distances from 100 m to 30 km in seven bow directions, with Earth curvature and a default camera height of 2 m. Terrain above the bow indicates potential obstruction, but droplets may lie in front of hills. Shadows on rain are not tested; ridges between samples, nearby buildings and trees may be missed. Visibility samples the observer, candidate rain locations and intermediate points, showing the forecast time at the rainfall interval end and each route minimum. Below 5 km is a screening warning. Surface visibility does not describe elevated sightlines and is not compared directly with rain distance. Missing evidence remains unknown; one failed branch does not discard other results.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '「云层遮挡／彩虹」下拉菜单会记住上次选择，刷新后恢复对应 Tab 名称和功能。点击箭头只展开菜单，选择功能后才切换 Tab。'
-        : 'The Clouds/Rainbow dropdown remembers the last selected function and restores its tab label after a refresh. The arrow only opens the menu; choosing a function switches the tab.'}</p>
-    <p>{text.aboutDescription}</p>
-    <p>{uiLanguage === 'zh'
-        ? '拖动 Windy 自带时间轴会同步规划日期、当地时间及当前规划图形，包括事件天空盘、彩虹和云层视线；跨天时重新计算升落事件。标有 now 的日月长线仍表示真实当前时刻，不随时间轴变化。'
-        : 'Moving the Windy timeline updates the planning date, local clock and active planning geometry: the Events sky chart, rainbow and cloud sightlines. Crossing midnight recalculates events. Sun/Moon bearings labelled now remain tied to the real current instant.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '事件页的实时太阳长线为金色实线，实时月亮长线为浅蓝虚线，均带深色描边；末端仅显示日月图标和小号 now，无背景框。它们每 5 秒按当前时刻刷新，不跟随时间条或观测日期；末端只是方位参考，不是天体所在的地理位置。云层视线跟随规划时间，不标为实时。'
-        : 'In Events, the live Sun bearing is solid gold and the live Moon bearing is dashed light blue. Both have dark outlines; endpoints show only body icons and small now labels without background boxes. They refresh from the current instant every five seconds, independently of the planning slider or date. Endpoints are bearing references, not celestial geographic locations. Cloud sightlines follow planning time and are not labelled now.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '日期旁的时间输入和滑条由事件、云层遮挡、彩虹共用，下方为升落按钮；切换 Tab 或收起面板仍保留时间条与所选时间。点击升落按钮或事件栏的具体时刻可跳转；拖动或输入时间会取消升落高亮，但保留原有长线。拖动时本地预览，结束后按云层设置同步 Windy。更换日期或地点时，手动时间按新日期与当地时区解释，事件时间重新计算；“全部”使用所选日期的当前当地钟点。'
-        : 'The time input and slider beside the date are shared by Events, Clouds and Rainbow, with rise/set buttons below. Switching tabs or collapsing the panel preserves the control and time. Click a rise/set shortcut or an event time to jump; editing the clock clears event highlighting but keeps the existing long bearings. Dragging previews locally; releasing synchronizes Windy according to cloud settings. On date/location changes, manual clocks use the new local date and time zone, while event times are recalculated. All uses the current local clock on the selected date.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '事件页天空盘跟随共用时间，盘顶标注对应时刻；原有实时日月长线仍表示现在。北上东右，圆周为地平线、圆心为天顶；银河带展示走向与拱形，虚线及向下箭头表示地平线下。天空盘不是距离图，银河带宽仅为示意，不保证可见；切换到云距／彩虹或关闭插件会移除。'
-        : 'The Events sky chart follows the shared time labelled above the chart; live Sun/Moon long bearings still mean now. North is up and east is right; the rim is the horizon and the centre is the zenith. The galactic band shows orientation and arch shape; dashes and downward arrows indicate below-horizon directions. This is not a distance map; band width is illustrative and does not guarantee visibility. Switching to Clouds/Rainbow or closing removes the chart.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '刷新或重新打开插件时，日期和时间回到当前时刻，按所选地点的时区显示；点击时间旁的“现在”也可一步返回。只在打开或点击时取当前时刻，不持续走时；手动选择后，切换 Tab 或调整参数不会重置时间。规划时间不跨次保存，彩虹的日虹／月虹、双彩虹、完整圆圈选项仍保存在当前浏览器。'
-        : 'Refreshing or reopening starts at the current date and time in the selected location’s time zone. Click Now beside the time to return in one step. This captures the instant once rather than running a live clock; switching tabs or adjusting options preserves your selected time. Planning time is not saved between visits. Rainbow Sun/Moon, Double and Full circle options are still saved in this browser.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '顶部银心升落按钮保持当前 Tab；在事件页显示银心升落时刻及前后 30 分钟的三条绿色方位线，地平线以下的线仅供方向参考，不代表可见。当天无对应事件时按钮不可用。云层规划中，使用顶部日月与银心事件按钮跳到对应升落时刻；事件页时间栏以图标显示日月和银心升落时刻；“全部”仅用于日月事件总览。手动调整时间后顶部取消升落高亮。移动端收起窗口仍保留云层参考线，展开后保留原来的规划时间；进入设置、关于或天气保留云层参考线和规划时间，切换到其他地图规划功能或关闭插件会清除云层参考线。'
-        : 'The top galactic centre rise/set buttons keep the current tab. In Events, three green bearings show the crossing and 30 minutes before and after it; below-horizon bearings are direction references, not visibility claims. Unavailable events are disabled. In cloud planning, the top Sun, Moon and galactic centre buttons select the rise/set event and time. The Events time strip uses icons for Sun, Moon and galactic centre crossings; All is only available for the Sun/Moon overview. Manual time clears the top rise/set highlight. Collapsing the mobile panel keeps cloud reference lines and preserves the planning time on expansion. Settings, About and Weather keep cloud reference lines and planning time; switching map-planning features or closing the plugin removes cloud reference lines.'}</p>
-    <p>{uiLanguage === 'zh'
-        ? '查看今天时，事件时间栏用柔和背景色突出下一个事件，倒计时对应同一事件。它们跟随真实当前时刻，不随规划时间变化；其他日期不显示实时标记。'
-        : 'For today, a subtle background highlights the next event; the countdown refers to that same event. These follow the real current instant, independently of planning time. Other dates do not show a live marker.'}</p>
-    <p>{text.supportGuideHint}</p>
-    <p>{uiLanguage === 'zh'
-        ? '使用统计：仅在 Windy 的分析统计授权允许时，百度统计记录插件打开的基础访问数据，PostHog 记录打开、导航切换和前台停留事件。关闭插件或撤回授权后停止采集。埋点不包含坐标、收藏内容或账号；百度可能使用 Cookie 并接收浏览器信息，两家服务均会接收网络请求的 IP。PostHog 仅使用当前授权会话内的随机标识。'
-        : 'Usage statistics: when Windy permits analytics, Baidu Tongji measures basic visits and PostHog receives opening, tab selection and foreground-time events. Collection stops on close or consent withdrawal. Events exclude coordinates, favorites and account details. Baidu may use cookies and receive browser information; both services receive request IP addresses. PostHog uses only a random identifier for the current consented session.'}</p>
+    <section class="feature-guide" aria-labelledby="quick-start-heading">
+        <h3 id="quick-start-heading">{uiLanguage === 'zh' ? '开始使用' : 'Getting started'}</h3>
+        <p>{uiLanguage === 'zh'
+            ? '先选地点，再调整顶部当地日期和时间；「现在」返回当前时刻，升落按钮可直接跳转。Windy 时间轴也会同步规划时间，切换 Tab 不会重置。重新打开插件从当前时刻开始。'
+            : 'Choose a location, then set the local date and time above. Now returns to the current instant; rise/set shortcuts jump to events. The Windy timeline also updates planning time. Tabs preserve your selection; reopening starts at the current instant.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? '主导航下拉菜单切换云层遮挡与彩虹；语言、单位和其他偏好在设置中修改。'
+            : 'Use the navigation dropdown for Clouds or Rainbow. Change language, units and other preferences in Settings.'}</p>
+    </section>
+
+    <section class="feature-guide" aria-labelledby="events-guide-heading">
+        <h3 id="events-guide-heading">{uiLanguage === 'zh' ? '事件与天空盘' : 'Events and sky chart'}</h3>
+        <p>{uiLanguage === 'zh'
+            ? '查看日月、银心升落和无月黑夜／银河时段，点击事件时刻跳转。今天的高亮与倒计时指向下一个真实事件。天空盘跟随规划时间；标有 now 的日月长线始终表示现在。'
+            : 'View Sun, Moon and galactic centre events, moonless nights and Milky Way windows. Click an event time to jump. Today’s highlight and countdown identify the next real event. The sky chart follows planning time; Sun/Moon bearings labelled now always mean the current instant.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? '天空盘北上东右，圆周为地平线、圆心为天顶；虚线与向下标记表示地平线下。银河带只示意走向，不保证可见；夜间卡片的云量、降水和能见度供拍摄参考。'
+            : 'North is up, east is right, the rim is the horizon and the centre is the zenith. Dashes and downward markers indicate below-horizon directions. The galactic band is illustrative, not a visibility guarantee. Night cards summarize cloud, rain and visibility for planning.'}</p>
+    </section>
+
+    <section class="feature-guide" aria-labelledby="cloud-guide-heading">
+        <h3 id="cloud-guide-heading">{uiLanguage === 'zh' ? '云层遮挡' : 'Cloud planning'}</h3>
+        <p>{uiLanguage === 'zh'
+            ? '选择云图、模型、云层模式与高度来源，参考所选时刻的云距和天体视线。云距采用零高度基准，不扣除机位海拔；沿途云况、地形与消光未校验，不能据此保证可见。详细图例见面板内的说明按钮。'
+            : 'Choose the cloud map, model, layer mode and height source to inspect cloud distances and celestial sightlines at planning time. Distances use a zero-height reference without subtracting camera elevation. Path clouds, terrain and extinction are unverified, so visibility is not guaranteed. Use the panel help for its detailed legend.'}</p>
+        <p>{text.featureGuide.cloudPlanning.description}</p>
+    </section>
+
+    <section class="feature-guide" aria-labelledby="rainbow-guide-heading">
+        <h3 id="rainbow-guide-heading">{uiLanguage === 'zh' ? '彩虹规划' : 'Rainbow planning'}</h3>
+        <p>{uiLanguage === 'zh'
+            ? '选择日虹／月虹，查看当日主虹时段、顶部高度和左右方位；开启双彩虹可同时查看副虹。时段按分钟估算，仅表示光源在地平线上且虹弧部分高于水平地平线，不是彩虹出现预报。月虹还需要足够月光，通常需长曝光。'
+            : 'Choose Sun or Moon to see daily primary-bow windows, top altitude and bearings; Double adds the secondary bow. Windows are estimated at minute resolution, with the source above the horizon and part of the bow above the horizontal horizon. They do not predict occurrence. Moonbows also need sufficient moonlight and usually long exposures.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? '地图为天空俯视投影，不表示距离；实线／虚线区分地平线上下。完整圆圈只提供俯视方向参考，仍需受光水滴和无遮挡视线。彩色同心圆标记光源反方向，不预测佛光。'
+            : 'The map is a top-down sky projection, not distance; solid/dashed arcs distinguish above/below the horizon. Full circle adds downward directions, still requiring lit droplets and clear sightlines. The coloured target marks the opposite light-source direction; it does not predict a glory.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? '「评估当前时刻」单独检查白天主虹的小时雨光条件，并展示地形、能见度风险。结果可信度低，不是出现概率，也不能证明同一瞬间雨滴受光；月虹不参与评估。山体提示不等于一定遮挡，未发现风险也不等于视线畅通。'
+            : 'Assess selected time separately screens hourly rain/light for daytime primary bows, with terrain and visibility risks. Confidence is low: grades are not probabilities or proof of simultaneous illumination. Moonbows are not assessed. Terrain warnings do not prove obstruction, and no detected risk does not establish a clear view.'}</p>
+    </section>
 
     <section class="feature-guide" aria-labelledby="feature-guide-heading">
         <h3 id="feature-guide-heading">{text.featureGuideHeading}</h3>
@@ -95,10 +85,6 @@
             <div>
                 <dt>{text.featureGuide.mapControls.title}</dt>
                 <dd>{text.featureGuide.mapControls.description}</dd>
-            </div>
-            <div>
-                <dt>{text.featureGuide.cloudPlanning.title}</dt>
-                <dd>{text.featureGuide.cloudPlanning.description}</dd>
             </div>
             <div>
                 <dt>{text.featureGuide.weatherSources.title}</dt>
@@ -208,8 +194,8 @@
         </dl>
     </section>
 
-    <div class="weather-legend" aria-label={text.weatherLegend.heading}>
-        <h3>{text.weatherLegend.heading}</h3>
+    <details class="weather-legend" aria-label={text.weatherLegend.heading}>
+        <summary>{text.weatherLegend.heading}</summary>
 
         <section class="weather-legend__section">
             <h4>{text.weatherLegend.cloud}</h4>
@@ -344,7 +330,7 @@
             </div>
             <p>{text.weatherLegend.celestialEventsDescription}</p>
         </section>
-    </div>
+    </details>
 </section>
 
 <style lang="less">
@@ -561,17 +547,22 @@
         color: var(--panel-muted);
     }
 
-    .weather-legend h3,
     .weather-legend h4,
     .weather-legend p {
         margin: 0;
     }
 
-    .weather-legend h3 {
-        padding: 10px 0 4px;
+    .weather-legend summary {
+        padding: 10px 0;
         color: var(--panel-text);
         font-size: 13px;
         line-height: 1.2;
+        cursor: pointer;
+    }
+
+    .weather-legend summary:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
     }
 
     .weather-legend__section {

@@ -189,26 +189,12 @@
     {/if}
 
     <div class="planning-datetime">
-        <label class="control-field">
-            <span class="control-label">{text.dateLabel}</span>
-            <span class="date-control">
-                <span class="date-control__text">{formatDateControlLabel(selectedDate)}</span>
-                <input
-                    type="date"
-                    bind:value={selectedDate}
-                    on:change={selectPlanningDate}
-                    aria-label={text.dateLabel}
-                    on:click={openDatePicker}
-                />
-            </span>
-        </label>
-
-        <div class="shared-planning-time">
-            <CloudTimeline clock={planningTime.clock} zh={uiLanguage === 'zh'}
-                on:now={jumpToNow}
-                on:preview={event => previewPlanningTime(event.detail)}
-                on:commit={() => { planningTimePreview = false; }} />
-        </div>
+        <CloudTimeline clock={planningTime.clock} date={selectedDate}
+            dateLabel={formatDateControlLabel(selectedDate)} zh={uiLanguage === 'zh'}
+            on:now={jumpToNow}
+            on:datetime={event => selectPlanningDateTime(event.detail)}
+            on:preview={event => previewPlanningTime(event.detail)}
+            on:commit={() => { planningTimePreview = false; }} />
     </div>
 
     <div class="control-grid control-grid--favorites">
@@ -672,7 +658,7 @@
                                         {#if status === 'loading'}
                                             <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
                                         {:else if slot.interval}
-                                            <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval, uiLanguage)}</span>
+                                            <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval)}</span>
                                             {@const evidenceState = observationEvidenceState(slot)}
                                             {#if evidenceState === 'loading'}
                                                 <span class="astronomy-skeleton astronomy-skeleton--evidence" aria-hidden="true"></span>
@@ -833,6 +819,7 @@
             {#if isMounted && rainbowVisible}
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <RainbowPlanning
+                        {selectedDate}
                         location={selectedLocation}
                         model={weatherModel}
                         {timeZone}
@@ -1483,7 +1470,7 @@
         locationSearchNoticeTimer = setTimeout(clearLocationSearchNotice, 5_000);
         await tick();
         // The clicked button is gone; keep keyboard navigation in the primary controls.
-        panelElement?.querySelector<HTMLInputElement>('input[type="date"]')?.focus({ preventScroll: true });
+        panelElement?.querySelector<HTMLInputElement>('input[type="datetime-local"]')?.focus({ preventScroll: true });
     };
 
     const toggleLocationSearch = (event: Event) => {
@@ -1808,6 +1795,17 @@
     };
 
     /** Manual edits keep the selected body/long rays, but clear event highlighting. */
+    const selectPlanningDateTime = (value: string) => {
+        // Keep the civil date and clock together; the location resolver, not the
+        // browser's system zone, converts them to an instant once context is ready.
+        const [date, clock] = value.split('T');
+        selectedDate = date;
+        hostTimeSelectionActive = false;
+        planningTimePreview = false;
+        planningSelection = { mode: 'clock', clock };
+    };
+
+    /** Slider edits preview locally until committed. */
     const previewPlanningTime = (clock: string) => {
         hostTimeSelectionActive = false;
         planningTimePreview = true;
@@ -2668,8 +2666,8 @@
     const formatInterval = (interval: AstronomyInterval): string =>
         `${formatLocalClock(interval.start, timeZone)} ~ ${formatLocalClock(interval.end, timeZone)}`;
 
-    const formatIntervalDuration = (interval: AstronomyInterval, language = uiLanguage): string =>
-        formatRemaining(interval.end.getTime() - interval.start.getTime(), language);
+    const formatIntervalDuration = (interval: AstronomyInterval): string =>
+        formatRemaining(interval.end.getTime() - interval.start.getTime());
 
     const observationEvidenceState = (slot: ObservationWindow): ObservationEvidenceState =>
         resolveObservationEvidenceState({
@@ -2756,24 +2754,11 @@
         }).format(Date.UTC(year, month - 1, day, 12));
     };
 
-    const openDatePicker = (event: MouseEvent) => {
-        const input = event.currentTarget;
-        if (!(input instanceof HTMLInputElement)) {
-            return;
-        }
-        // The compact control renders its own date text over a transparent native input.
-        // Open the browser picker explicitly because appearance:none removes Chrome's calendar affordance.
-        input.showPicker();
-    };
-
-    const formatRemaining = (milliseconds: number, language = uiLanguage): string => {
+    const formatRemaining = (milliseconds: number): string => {
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        if (language === 'en') {
-            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-        }
-        return hours > 0 ? `${hours}小时${minutes}分钟` : `${minutes}分钟`;
+        return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     };
 
     const formatCompactRemaining = (milliseconds: number, language = uiLanguage): string => {
@@ -2987,6 +2972,7 @@
 </script>
 
 <style lang="less">
+    .sun-path-panel :global(select) { text-align: center; text-align-last: center; }
     :global(.live-direction-marker) { background: none; border: 0; pointer-events: none !important; }
     :global(.live-direction-marker > span) {
         box-sizing: border-box;
@@ -3004,20 +2990,11 @@
     :global(.live-direction-marker svg) { width: 20px; height: 20px; flex-shrink: 0; }
     /* One extra row grows the shell; the existing Tab content keeps its height. */
     .planning-datetime {
-        display: grid;
-        grid-template-columns: 62px minmax(0, 1fr);
+        display: flex;
         align-items: center;
         gap: 6px;
         min-height: 38px;
         margin-bottom: 6px;
-    }
-
-    .shared-planning-time {
-        box-sizing: border-box;
-        width: 100%;
-        min-width: 0;
-        display: flex;
-        align-items: center;
     }
 
     button.timeline-event {
@@ -3503,7 +3480,6 @@
         display: none;
     }
 
-    .control-field > .control-label,
     .event-selector > .control-label {
         display: none;
     }
@@ -3638,7 +3614,6 @@
     }
 
     .panel-title:focus-visible,
-    input[type='date']:focus-visible,
     button:focus-visible {
         outline: 2px solid var(--panel-accent);
         outline-offset: 2px;
@@ -3758,14 +3733,6 @@
         grid-template-columns: minmax(0, 1fr) max-content;
     }
 
-    .planning-datetime .date-control {
-        justify-content: center;
-        padding-right: 8px;
-        padding-left: 8px;
-        font-size: 13px;
-    }
-
-    .control-field,
     .event-selector {
         min-width: 0;
         margin: 0;
@@ -3778,63 +3745,6 @@
         margin-bottom: 5px;
         color: var(--panel-muted);
         font-size: 12px;
-    }
-
-    .date-control {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        box-sizing: border-box;
-        width: 100%;
-        min-width: 0;
-        height: 38px;
-        min-height: 38px;
-        padding: 0 11px;
-        overflow: hidden;
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        color: var(--panel-text);
-        background: #0e161f;
-        font-size: 14px;
-        cursor: pointer;
-    }
-
-    .date-control__text {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    input[type='date'] {
-        box-sizing: border-box;
-        width: 100%;
-        min-width: 0;
-        max-width: 100%;
-        min-height: 38px;
-        padding: 0 8px;
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        color: var(--panel-text);
-        background: #0e161f;
-        font: inherit;
-        font-size: 14px;
-        color-scheme: dark;
-    }
-
-    .date-control input[type='date'] {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        min-height: 0;
-        padding: 0;
-        border: 0;
-        opacity: 0;
-        appearance: none;
-        -webkit-appearance: none;
-        cursor: pointer;
     }
 
     .segmented-control {
@@ -5025,7 +4935,7 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 4px;
+        gap: 1px 6px;
         margin-top: 1px;
         padding-top: 3px;
         border-top: 1px solid rgba(153, 181, 235, 0.16);

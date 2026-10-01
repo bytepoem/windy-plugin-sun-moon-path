@@ -55,6 +55,8 @@ Open Clouds and select the Sun, Moon or galactic centre and a shooting time. Cho
 
 Choose **Rainbow** from the dropdown beside Clouds, select Sun or Moon, and adjust the time. The map shows bow directions and altitudes: solid arcs are above the horizon, dashed arcs below it. Bows are hidden when the selected light source is below the horizon.
 
+**Rainbow windows** lists local primary-bow geometric windows and their duration; Double also shows secondary-bow windows. These only indicate the source and part of the bow above the horizontal horizon, not a forecast of rainbow occurrence.
+
 Select **Assess selected time** to check rain and sunlight along primary-bow directions, with separate terrain and route low-visibility references. Adjust camera height above ground to explore terrain effects.
 
 **Bow geometry is a composition reference; condition grades are not probabilities.** Assessment uses hourly forecasts and limited samples, always with low confidence. It cannot prove that droplets are illuminated at the same instant; moonbows are not assessed. Terrain warnings do not prove the bow is blocked, and no detected obstruction does not guarantee a clear view. Seeing a double bow or full circle still depends on lit droplets and actual sightlines.

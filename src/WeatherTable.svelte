@@ -653,6 +653,8 @@
         50% { opacity: 1; transform: scaleX(1); }
     }
 
+    [role='columnheader'], [role='rowheader'] { font-weight: 700; }
+
     .weather-model-control {
         display: grid;
         grid-template-columns: repeat(3, minmax(44px, 1fr));

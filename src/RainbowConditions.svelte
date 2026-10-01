@@ -126,7 +126,7 @@
     .conditions :global(.assessment-table) { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; font-variant-numeric: tabular-nums; color: var(--panel-text); }
     .conditions :global(.assessment-table caption) { text-align: left; padding: 3px 0; color: var(--panel-muted); font-size: 11px; }
     .conditions :global(.assessment-table th), .conditions :global(.assessment-table td) { padding: 4px 3px; text-align: right; border-bottom: 1px solid var(--panel-border); overflow-wrap: anywhere; }
-    .conditions :global(.assessment-table th) { color: var(--panel-muted); font-weight: 400; }
+    .conditions :global(.assessment-table th) { color: var(--panel-muted); font-weight: 700; }
     .conditions :global(.assessment-table th:first-child), .conditions :global(.assessment-table td:first-child) { text-align: left; }
     /* Pair row tint with a text reason so risk is readable without colour perception. */
     .conditions :global(.assessment-table .evidence-good) { color: var(--weather-tone-good); background: rgba(96, 227, 124, .09); }

@@ -495,7 +495,8 @@
     .cloud-table th, .cloud-table td { padding: 4px 0; text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
     /* Inherit one computed row height, including the smaller unit text and guide button. */
     .cloud-table thead { color: #b9c2ce; font-size: 11px; line-height: 1.5em; }
-    .cloud-table thead th { font-weight: 500; overflow-wrap: anywhere; }
+    .cloud-table thead th { font-weight: 700; overflow-wrap: anywhere; }
+    .cloud-table thead small { font-weight: inherit; }
     .cloud-table th:first-child { width: 106px; }
     .cloud-panel--english .cloud-table thead th { overflow-wrap: normal; }
     .cloud-panel--english .cloud-table th:first-child { width: 24%; }

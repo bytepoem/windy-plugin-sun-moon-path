@@ -876,6 +876,8 @@
         font-variant-numeric: tabular-nums;
     }
 
+    thead th { font-weight: 700; }
+
     thead th:first-child,
     tbody th {
         width: 122px;

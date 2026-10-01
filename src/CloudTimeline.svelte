@@ -3,18 +3,24 @@
     import { cloudClockMinute, cloudMinuteClock } from './cloudTimeline';
 
     export let clock: string;
+    export let date: string;
+    export let dateLabel: string;
     export let zh: boolean;
-    const dispatch = createEventDispatcher<{ preview: string; commit: void; now: void }>();
+    const dispatch = createEventDispatcher<{ preview: string; datetime: string; commit: void; now: void }>();
     $: minute = cloudClockMinute(clock);
 </script>
 
 <div class="cloud-timeline" aria-label={zh ? '当地时间与天体升落' : 'Local time and celestial events'}>
     <div class="time-row">
-        <input class="time-entry" type="time" step="60" value={clock}
-            aria-label={zh ? '选择当地时间' : 'Choose local time'}
-            on:click={event => event.currentTarget.showPicker?.()}
-            on:input={event => dispatch('preview', event.currentTarget.value)}
-            on:change={() => dispatch('commit')} on:blur={() => dispatch('commit')} />
+        <label class="datetime-entry">
+            <span aria-hidden="true">{dateLabel} <span>{clock || '--:--'}</span></span>
+            <input type="datetime-local" step="60" value={clock ? `${date}T${clock}` : ''}
+                aria-label={zh ? '选择当地日期和时间' : 'Choose local date and time'}
+                on:click={event => event.currentTarget.showPicker?.()}
+                on:input={event => {
+                    if (event.currentTarget.value) { dispatch('datetime', event.currentTarget.value); }
+                }} />
+        </label>
         <button class="time-now" type="button"
             aria-label={zh ? '回到当前日期和时间' : 'Jump to the current date and time'}
             title={zh ? '回到当前日期和时间' : 'Jump to the current date and time'}
@@ -46,9 +52,10 @@
         border-radius:6px;
         background:#0e161f;
     }
-    .time-entry { box-sizing:border-box; width:82px; height:38px; flex-shrink:0; min-width:0; padding:0 5px; border:1px solid var(--panel-border,#485364); border-radius:6px; background:#0e161f; color:var(--panel-text,#f2f4fa); color-scheme:dark; font-family:inherit; font-size:13px; font-weight:500; line-height:1.2; font-variant-numeric:tabular-nums; }
-    .time-entry::-webkit-datetime-edit { padding:0; }
-    .time-entry::-webkit-calendar-picker-indicator { width:14px; margin:0; padding:0; flex-shrink:0; }
+    .datetime-entry { position:relative; display:flex; align-items:center; justify-content:center; flex:0 0 auto; min-width:104px; padding:0 10px; height:38px; box-sizing:border-box; border:1px solid var(--panel-border,#485364); border-radius:6px; background:#0e161f; color:var(--panel-text,#f2f4fa); font-size:13px; font-weight:500; font-variant-numeric:tabular-nums; cursor:pointer; }
+    .datetime-entry > span { display:flex; justify-content:center; gap:8px; }
+    .datetime-entry input { position:absolute; inset:0; width:100%; height:100%; min-width:0; box-sizing:border-box; border:0; padding:0; opacity:0; cursor:pointer; color-scheme:dark; }
+    .datetime-entry:focus-within { outline:2px solid #6ed9ee; outline-offset:2px; }
     .time-now {
         height:38px;
         flex-shrink:0;

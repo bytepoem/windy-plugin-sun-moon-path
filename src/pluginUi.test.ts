@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { translations } from './pluginTranslations';
 import guideSource from './PluginGuide.svelte?raw';
+import timelineSource from './CloudTimeline.svelte?raw';
 
 import favoriteComparisonSource from './FavoriteComparison.svelte?raw';
 import favoriteLocationsSource from './FavoriteLocations.svelte?raw';
@@ -762,10 +763,11 @@ describe('plugin astronomy loading presentation', () => {
         expect(placeholderStyle).not.toContain('animation');
     });
 
-    it('opens the native date picker when the compact date control is clicked', () => {
-        expect(pluginSource).toContain('on:click={openDatePicker}');
-        expect(pluginSource).toContain('const openDatePicker = (event: MouseEvent) => {');
-        expect(pluginSource).toContain('input.showPicker();');
+    it('opens one native date-time picker and retains a visible keyboard focus indicator', () => {
+        expect(timelineSource).toContain('type="datetime-local"');
+        expect(timelineSource).toContain('on:click={event => event.currentTarget.showPicker?.()}');
+        expect(timelineSource).toContain('.datetime-entry:focus-within');
+        expect(pluginSource).toContain('on:datetime={event => selectPlanningDateTime(event.detail)}');
     });
 
     it('uses one hidden search setting while exposing coordinate search in both languages', () => {
