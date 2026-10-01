@@ -14,12 +14,12 @@
 
 ## 安装与上手
 
-当前发布版本：**0.11.2** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.11.2)
+当前发布版本：**0.11.3** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.11.3)
 
 将以下地址填入 Windy 的外部插件加载入口，打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.11.2/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.11.3/plugin.min.js
 ```
 
 1. **选机位**：点击地图，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写自己的地图服务 API Key。

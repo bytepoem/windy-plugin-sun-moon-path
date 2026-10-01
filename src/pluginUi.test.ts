@@ -274,7 +274,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(aboutSource).toContain('{text.aboutAuthorLabel}');
         expect(aboutSource).toContain('{text.aboutVersionLabel}');
         expect(aboutSource).toContain('{text.aboutCurrentVersionDateLabel}');
-        expect(pluginConfigSource).toContain("export const currentVersionReleasedAt = '2026-09-30';");
+        expect(pluginConfigSource).toContain("export const currentVersionReleasedAt = '2026-10-01';");
         expect(aboutSource).toContain("import config, { currentVersionReleasedAt } from './pluginConfig';");
         expect(aboutSource).toContain('class="about-meta__date"');
         expect(aboutSource).toContain('<time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>');
@@ -300,7 +300,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(aboutSource).toMatch(
             /:global\(\.sun-path-panel\.mobile_ui\) \.about-update button\s*{[\s\S]*?min-height: 32px;/,
         );
-        expect(pluginConfigSource).toContain("version: '0.11.2'");
+        expect(pluginConfigSource).toContain("version: '0.11.3'");
         expect(pluginSource).toMatch(
             /\.summary-tab__badge\s*{[\s\S]*?white-space: nowrap;[\s\S]*?background: var\(--panel-accent\);/,
         );
