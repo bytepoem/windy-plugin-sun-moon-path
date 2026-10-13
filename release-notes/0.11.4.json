@@ -1,0 +1,24 @@
+{
+  "version": "0.11.4",
+  "releasedAt": "2026-10-13",
+  "zh": {
+    "title": "移动端日期兼容性修复",
+    "summary": "修复部分移动端浏览器因零点日期换算异常而无法打开插件的问题。",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "修复部分 Android 浏览器将零点格式化为 24:00 时，插件打开后仅显示关闭按钮的问题，并修正同类的午夜日进度计算。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Mobile date compatibility fix",
+    "summary": "Fixes plugin startup failures caused by midnight conversion on some mobile browsers.",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Fixes the plugin showing only a close button on Android browsers that format midnight as 24:00, and corrects the related day-progress calculation around midnight."
+      }
+    ]
+  }
+}
