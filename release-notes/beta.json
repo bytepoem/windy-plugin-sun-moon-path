@@ -1,39 +1,23 @@
 {
-  "version": "0.11.3",
-  "releasedAt": "2026-10-01",
+  "version": "0.11.4",
+  "releasedAt": "2026-10-13",
   "zh": {
-    "title": "彩虹时段与紧凑规划界面",
-    "summary": "新增彩虹几何时段，统一日期时间、表格和说明展示。",
+    "title": "移动端日期兼容性修复",
+    "summary": "修复部分移动端浏览器因零点日期换算异常而无法打开插件的问题。",
     "items": [
       {
-        "type": "new",
-        "text": "日虹与月虹新增主虹、副虹当日几何时段及持续时间，与角度横向并排展示；时段不保证彩虹出现。"
-      },
-      {
-        "type": "improved",
-        "text": "日期与时间合并为居中的一体选择器，压缩表格列宽和观测卡片间距，统一下拉居中、表头加粗与 h/m 时长单位。"
-      },
-      {
-        "type": "improved",
-        "text": "重新组织并精简中英文使用说明，天气图例按需展开；统一移动端导航 Tab 宽度。"
+        "type": "fixed",
+        "text": "修复部分 Android 浏览器将零点格式化为 24:00 时，插件打开后仅显示关闭按钮的问题，并修正同类的午夜日进度计算。"
       }
     ]
   },
   "en": {
-    "title": "Rainbow windows and compact planning",
-    "summary": "Adds geometric rainbow windows and streamlines date, time, tables and guidance.",
+    "title": "Mobile date compatibility fix",
+    "summary": "Fixes plugin startup failures caused by midnight conversion on some mobile browsers.",
     "items": [
       {
-        "type": "new",
-        "text": "Shows daily primary and secondary sunbow/moonbow windows and durations alongside angles. Geometric windows do not guarantee rainbow occurrence."
-      },
-      {
-        "type": "improved",
-        "text": "Combines date and time in one centred picker, tightens table columns and observing cards, and standardizes centred selectors, bold headers and h/m duration units."
-      },
-      {
-        "type": "improved",
-        "text": "Reorganizes and shortens the Chinese and English guide, makes weather legends expandable and equalizes mobile navigation tab widths."
+        "type": "fixed",
+        "text": "Fixes the plugin showing only a close button on Android browsers that format midnight as 24:00, and corrects the related day-progress calculation around midnight."
       }
     ]
   }

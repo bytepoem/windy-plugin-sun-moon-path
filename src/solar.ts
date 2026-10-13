@@ -193,7 +193,7 @@ const getTimeZoneOffsetMinutes = (instant: Date, timeZone: string): number => {
     try {
         const parts = new Intl.DateTimeFormat('en-US', {
             timeZone,
-            hour12: false,
+            // hour12 overrides hourCycle and selects h24 on older Chromium. Date.UTC needs 00..23.
             hourCycle: 'h23',
             year: 'numeric',
             month: '2-digit',
@@ -315,7 +315,7 @@ interface ZonedDateTimeParts {
 const getZonedDateTimeParts = (date: Date, timeZone: string): ZonedDateTimeParts => {
     const parts = new Intl.DateTimeFormat('en-US', {
         timeZone,
-        hour12: false,
+        // Keep midnight on the same civil date; hour12: false can override h23 with h24.
         hourCycle: 'h23',
         year: 'numeric',
         month: '2-digit',
