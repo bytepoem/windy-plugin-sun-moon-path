@@ -2,6 +2,7 @@
 tmp
 .DS_Store
 .vscode
+/.codex/config.toml
 .rollup.cache
 .secret-api-key.sh
 nohup.out
