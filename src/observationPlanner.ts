@@ -19,6 +19,9 @@ export type ObservationEvent = SolarEvent | 'all';
 
 export type ObservationLocationContext = {
     timeZone: string;
+    // Preserve source data separately from the nonnegative astronomy input.
+    // null means missing; a real zero or negative elevation remains distinguishable.
+    groundElevationM: number | null;
     elevationM: number;
 };
 
@@ -104,19 +107,21 @@ export const createObservationPlanner = (port: ObservationPlannerPort): Observat
     ): Promise<ObservationLocationContext> => {
         const key = locationKey(location);
         const elevationOverride = Number.isFinite(knownElevationM)
-            ? Math.max(0, knownElevationM as number)
+            ? knownElevationM as number
             : null;
         if (cachedContext?.key === key) {
             if (elevationOverride !== null) {
-                cachedContext = { ...cachedContext, elevationM: elevationOverride };
+                cachedContext = { ...cachedContext, groundElevationM: elevationOverride, elevationM: Math.max(0, elevationOverride) };
             }
-            return Promise.resolve(cachedContext);
+            if (cachedContext.groundElevationM !== null) {
+                return Promise.resolve(cachedContext);
+            }
         }
         if (pendingContext?.key === key) {
             return elevationOverride === null
                 ? pendingContext.promise
                 : pendingContext.promise.then(context => {
-                    const updatedContext = { ...context, elevationM: elevationOverride };
+                    const updatedContext = { ...context, groundElevationM: elevationOverride, elevationM: Math.max(0, elevationOverride) };
                     cachedContext = { key, ...updatedContext };
                     return updatedContext;
                 });
@@ -136,12 +141,13 @@ export const createObservationPlanner = (port: ObservationPlannerPort): Observat
                 throw new ObservationPlannerError('TIME_ZONE_INVALID');
             }
 
+            const groundElevationM = elevationResult.status === 'fulfilled' && Number.isFinite(elevationResult.value)
+                ? elevationResult.value : null;
             const context = {
                 key,
                 timeZone: timeZoneResult.value,
-                elevationM: elevationResult.status === 'fulfilled' && Number.isFinite(elevationResult.value)
-                    ? Math.max(0, elevationResult.value)
-                    : 0,
+                groundElevationM,
+                elevationM: Math.max(0, groundElevationM ?? 0),
             };
             cachedContext = context;
             return context;

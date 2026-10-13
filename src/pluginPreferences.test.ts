@@ -51,11 +51,13 @@ describe('existing plugin preferences', () => {
         expect(loadLanguagePreference()).toBeNull();
     });
 
-    it('remembers either planning dropdown choice and handles unavailable or invalid storage', () => {
+    it('remembers all three planning dropdown choices and handles unavailable or invalid storage', () => {
         storage();
         expect(loadPlanningViewPreference()).toBe('obstruction');
         savePlanningViewPreference('rainbow');
         expect(loadPlanningViewPreference()).toBe('rainbow');
+        savePlanningViewPreference('horizon');
+        expect(loadPlanningViewPreference()).toBe('horizon');
         savePlanningViewPreference('obstruction');
         expect(loadPlanningViewPreference()).toBe('obstruction');
         storage({ 'planning-view': 'invalid' });

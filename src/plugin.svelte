@@ -303,7 +303,7 @@
         locationName={locationDisplayName}
         locationNameResolved={locationNameResolved}
         distanceOrigin={favoriteDistanceOrigin}
-        currentElevationM={elevationLocationKey === locationKey ? elevationM : null}
+        currentElevationM={elevationLocationKey === locationKey ? groundElevationM : null}
         currentLightPollution={lightPollutionLoadedKey === locationKey ? lightPollutionPoint : null}
         {units}
         mobile={isMobileOrTablet}
@@ -834,6 +834,27 @@
                     />
                 </div>
             {/if}
+            {#if isMounted && horizonVisible}
+                <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
+                    <EventHorizon
+                        location={selectedLocation}
+                        paths={[...solarPaths, ...galacticPaths]}
+                        {selectedEvent}
+                        ready={eventSkyReadyKey === astronomyKey}
+                        language={uiLanguage}
+                        distanceUnit={units.distance}
+                        elevationM={horizonGroundElevationM}
+                        elevationLoading={status === 'loading'}
+                        bind:heightSource={horizonHeightSource}
+                        {horizonHeightM}
+                        on:heightchange={event => {
+                            horizonHeightSource = 'manual';
+                            horizonManualHeightM = event.detail;
+                        }}
+                        on:retry={() => refreshPaths(astronomyKey)}
+                    />
+                </div>
+            {/if}
         </div>
     </section>
 
@@ -963,6 +984,8 @@
     import { startPluginUsage } from './pluginUsage';
     import { createMapOverlayController } from './mapOverlayController';
     import { createEventSkyOverlay } from './eventSkyOverlay';
+    import EventHorizon from './EventHorizon.svelte';
+    import { createEventHorizonOverlay, eventHorizonPoints, horizonDistanceKm, horizonFitBounds } from './eventHorizon';
     import { buildDirectionLineFitBounds, calculateVisibleMapViewport } from './mapView';
     import {
         createRadarFrameTimeLabel,
@@ -1130,6 +1153,11 @@
     });
     const mapOverlayController = createMapOverlayController(map);
     const eventSkyOverlay = createEventSkyOverlay(map);
+    const eventHorizonOverlay = createEventHorizonOverlay(map);
+    let horizonHeightSource: 'elevation' | 'manual' = 'elevation';
+    let horizonManualHeightM: number | undefined;
+    let horizonHeightLocationKey = '';
+    let horizonFitRequestId = 0;
     let eventSkyReadyKey = '';
     let radarOverlayStatus: RadarOverlayStatus = 'disabled';
     let radarFrameTimeMs: number | null = null;
@@ -1151,6 +1179,7 @@
     let text = translations.zh;
     let timeZone = systemTimeZone;
     let elevationM = 0;
+    let groundElevationM: number | null = null;
     let solarPaths: SolarPath[] = [];
     let activeSolarPath: DirectionPath | null = null;
     let astronomyTimeline: AstronomyTimeline | null = null;
@@ -1187,10 +1216,11 @@
     let pluginUsage: ReturnType<typeof startPluginUsage> | null = null;
     // Programmatic switches update dwell time but are not user selections.
     $: pluginUsage?.setTab(summaryTab);
-    let cloudView: 'obstruction' | 'rainbow' = 'obstruction';
+    let cloudView: 'obstruction' | 'rainbow' | 'horizon' = 'obstruction';
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
     $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
+    $: horizonVisible = mapTab === 'clouds' && cloudView === 'horizon';
     let planningSelection: PlanningTimeSelection = { mode: 'instant', timestamp: Date.now() };
     let planningTimePreview = false;
     let hostTimeSelectionActive = false;
@@ -1204,7 +1234,7 @@
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let cloudTimelineEvent: CloudTimelineEventType = 'sunset';
-    $: highlightedEvent = planningSelection.mode === 'event' ? planningSelection.event
+    $: highlightedEvent = horizonVisible ? selectedEvent : planningSelection.mode === 'event' ? planningSelection.event
         : planningSelection.mode === 'current' ? 'all' : null;
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
@@ -1337,7 +1367,7 @@
 
     // The galactic overlay owns its direction; do not pair it with a solar/lunar event ray.
     $: if (isMounted && mapTab) {
-        const mapEvent = rainbowVisible ? null : cloudObstructionVisible ? cloudMapEvent : selectedEvent;
+        const mapEvent = rainbowVisible || horizonVisible ? null : cloudObstructionVisible ? cloudMapEvent : selectedEvent;
         renderMapFeatures(mapEvent === null ? [] : selectDirectionPaths(solarPaths, galacticPaths, mapEvent),
             cloudObstructionVisible ? cloudDirectionRangeKm : null, cloudPlanningTimestamp, cloudPlanningBody);
     }
@@ -1359,8 +1389,8 @@
 
     $: locationKey = buildWeatherLocationKey(selectedLocation);
 
-    $: locationElevationText = elevationLocationKey === locationKey
-        ? formatElevationLabel(elevationM, units.elevation)
+    $: locationElevationText = elevationLocationKey === locationKey && groundElevationM !== null
+        ? formatElevationLabel(groundElevationM, units.elevation)
         : '--';
 
     // Assign the synchronous snapshot explicitly: Svelte must order derived UI state after loading starts.
@@ -1405,6 +1435,28 @@
         && lightPollutionRequestKey !== lightPollutionLoadingKey
     ) {
         void refreshLightPollution(lightPollutionRequestKey);
+    }
+
+    // A manual height belongs to exactly one observing location. Date/tab
+    // changes preserve it; moving to a new location starts with its own elevation.
+    $: if (horizonHeightLocationKey !== `${selectedLocation.lat}|${selectedLocation.lon}`) {
+        horizonHeightLocationKey = `${selectedLocation.lat}|${selectedLocation.lon}`;
+        horizonHeightSource = 'elevation';
+        horizonManualHeightM = undefined;
+    }
+    $: horizonGroundElevationM = elevationLocationKey === locationKey ? groundElevationM : null;
+    $: horizonHeightM = horizonHeightSource === 'elevation' ? horizonGroundElevationM ?? undefined : horizonManualHeightM;
+    $: horizonDistance = horizonDistanceKm(horizonHeightM);
+    $: if (isMounted && horizonVisible) {
+        eventHorizonOverlay.render(
+            selectedLocation,
+            eventSkyReadyKey === astronomyKey
+                ? eventHorizonPoints(selectedLocation, [...solarPaths, ...galacticPaths], horizonDistance, selectedEvent) : [],
+            horizonDistance === null ? '—' : `${formatDistanceKm(horizonDistance, units.distance)} ${units.distance}`,
+            uiLanguage, directionLineOpacityPercent,
+        );
+    } else {
+        eventHorizonOverlay.destroy();
     }
 
     $: activeSolarPath = selectedEvent === 'all'
@@ -1640,13 +1692,22 @@
         pluginUpdateReminderVersion = null;
     };
 
-    const selectSummaryTab = (nextTab: SummaryTab) => {
+    const selectSummaryTab = async (nextTab: SummaryTab) => {
+        const fitRequestId = ++horizonFitRequestId;
         pluginUsage?.setTab(nextTab, true);
         summaryTab = nextTab;
         // Recheck on entry even if this mounted plugin previously found no update.
         // The update service reuses fresh results and revalidates expired metadata.
         if (nextTab === 'about' && pluginUpdateStatus !== 'loading') {
             void refreshPluginUpdate();
+        }
+        // Fit after the newly selected panel has committed its geometry. A later
+        // selection or plugin teardown invalidates this pending viewport change.
+        if (nextTab === 'clouds' && cloudView === 'horizon') {
+            await tick();
+            if (isMounted && fitRequestId === horizonFitRequestId && summaryTab === 'clouds' && horizonVisible) {
+                fitVisibleDirectionLines();
+            }
         }
     };
 
@@ -1678,12 +1739,13 @@
     };
 
     $: fitMapControlLabel = rainbowVisible ? (uiLanguage === 'zh' ? '居中彩虹方向图' : 'Centre rainbow sky chart')
+        : horizonVisible ? (uiLanguage === 'zh' ? '适配地平线范围' : 'Fit horizon radius')
         : cloudObstructionVisible ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
     $: detailMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
         : text.restoreSearchZoomLabel;
 
-    $: canFitDirectionLines = rainbowVisible || (cloudObstructionVisible ? cloudBounds !== null : buildDirectionLineFitBounds({
+    $: canFitDirectionLines = rainbowVisible || (horizonVisible ? horizonDistance !== null : cloudObstructionVisible ? cloudBounds !== null : buildDirectionLineFitBounds({
         location: selectedLocation,
         // Keep the reactive inputs explicit: Svelte cannot infer state read
         // from inside selectedMapPaths(), so an async path refresh would
@@ -1715,10 +1777,11 @@
         });
     };
 
-    /** Fits the currently rendered 400/600 km event lines into the unobscured map area. */
+    /** Fit the active planner's geographic extent into the unobscured map area. */
     const fitVisibleDirectionLines = (detail: boolean | MouseEvent = false) => {
         if (rainbowVisible) { recenterSelectedLocationInVisibleMap(map.getZoom()); return; }
-        const bounds = cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
+        const bounds = horizonVisible ? horizonFitBounds(selectedLocation, horizonDistance)
+            : cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
             location: selectedLocation,
             paths: selectedMapPaths(),
             showExtendedDistanceMarker,
@@ -2082,7 +2145,7 @@
     };
 
     /** Both full redraws and the periodic refresh honour the cloud preview instant. */
-    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => rainbowVisible
+    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => rainbowVisible || horizonVisible
         ? { currentSun: null, currentMoon: null, currentGalacticCenter: null }
         : cloudObstructionVisible
         ? cloudMapDirections(planningTimestamp, selectedLocation, planningBody)
@@ -2096,8 +2159,9 @@
 
     const renderMapFeatures = (paths: DirectionPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
         planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => {
-        // Rainbow owns a sky-angle chart; unrelated event rays would imply a different time and scale.
-        if (rainbowVisible) { mapOverlayController.destroy(); return; }
+        // These planners own their layers. Every redraw entry (including async
+        // completion and unit changes) must exclude event and live direction rays.
+        if (rainbowVisible || horizonVisible) { mapOverlayController.destroy(); return; }
         mapOverlayController.render({
             location: selectedLocation,
             paths,
@@ -2142,11 +2206,12 @@
         const requestId = ++latestRequestId;
         eventSkyReadyKey = '';
         eventSkyOverlay.destroy();
+        eventHorizonOverlay.destroy();
         const location = { ...selectedLocation };
         const dateInput = selectedDate;
         const contextLocationKey = buildWeatherLocationKey(location);
-        const knownElevation = elevationLocationKey === contextLocationKey && Number.isFinite(elevationM)
-            ? elevationM
+        const knownElevation = elevationLocationKey === contextLocationKey
+            ? groundElevationM
             : null;
 
         status = 'loading';
@@ -2165,11 +2230,23 @@
             resolvedContextLocationKey = contextLocationKey;
             elevationLocationKey = contextLocationKey;
             elevationM = plan.elevationM;
+            groundElevationM = plan.groundElevationM;
             solarPaths = plan.paths;
             astronomyTimeline = plan.timeline;
             // Only a successfully resolved snapshot may supply the chart's
             // local time. Event buttons can change status while a request runs.
             eventSkyReadyKey = key;
+            // Elevation may arrive after the Horizon tab was opened. Fit once
+            // for this accepted snapshot, never from a stale location request.
+            if (summaryTab === 'clouds' && horizonVisible && horizonHeightSource === 'elevation') {
+                const fitRequestId = ++horizonFitRequestId;
+                void tick().then(() => {
+                    if (isMounted && fitRequestId === horizonFitRequestId && requestId === latestRequestId
+                        && key === astronomyKey && summaryTab === 'clouds' && horizonVisible && horizonHeightSource === 'elevation') {
+                        fitVisibleDirectionLines();
+                    }
+                });
+            }
             const selectedPaths = selectedMapPaths(plan.paths);
             status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
             renderMapFeatures(selectedPaths);
@@ -2411,9 +2488,11 @@
         }
         if (Number.isFinite(knownElevationM)) {
             elevationM = Math.max(0, knownElevationM as number);
+            groundElevationM = knownElevationM as number;
             elevationLocationKey = nextLocationKey;
         } else {
             elevationLocationKey = '';
+            groundElevationM = null;
         }
         resolvedContextLocationKey = '';
         forecastController.invalidate();
@@ -2845,6 +2924,7 @@
             // Replacement mounts continue the logical use, with no live old resources.
             pluginUsage?.stop(true);
             isMounted = false;
+            horizonFitRequestId += 1;
             mobilePanelMode = 'compact';
             lastMobileNonFullscreenMode = 'compact';
             favoritesOpen = false;
@@ -2889,6 +2969,7 @@
             mapOverlayController.destroy();
             radarOverlayController.destroy();
             eventSkyOverlay.destroy();
+            eventHorizonOverlay.destroy();
             radarFrameTimeLabelController?.destroy();
             radarFrameTimeLabelController = null;
             if (radarTimestampSubscriptionId !== null) {

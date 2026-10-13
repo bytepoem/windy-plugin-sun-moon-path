@@ -36,8 +36,8 @@
             ? '先选地点，再调整顶部当地日期和时间；「现在」返回当前时刻，升落按钮可直接跳转。Windy 时间轴也会同步规划时间，切换 Tab 不会重置。重新打开插件从当前时刻开始。'
             : 'Choose a location, then set the local date and time above. Now returns to the current instant; rise/set shortcuts jump to events. The Windy timeline also updates planning time. Tabs preserve your selection; reopening starts at the current instant.'}</p>
         <p>{uiLanguage === 'zh'
-            ? '主导航下拉菜单切换云层遮挡与彩虹；语言、单位和其他偏好在设置中修改。'
-            : 'Use the navigation dropdown for Clouds or Rainbow. Change language, units and other preferences in Settings.'}</p>
+            ? '主导航下拉菜单切换云层遮挡、彩虹与地平线；语言、单位和其他偏好在设置中修改。'
+            : 'Use the navigation dropdown for Clouds, Rainbow or Horizon. Change language, units and other preferences in Settings.'}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="events-guide-heading">
@@ -48,6 +48,13 @@
         <p>{uiLanguage === 'zh'
             ? '天空盘北上东右，圆周为地平线、圆心为天顶；虚线与向下标记表示地平线下。银河带只示意走向，不保证可见；夜间卡片的云量、降水和能见度供拍摄参考。'
             : 'North is up, east is right, the rim is the horizon and the centre is the zenith. Dashes and downward markers indicate below-horizon directions. The galactic band is illustrative, not a visibility guarantee. Night cards summarize cloud, rain and visibility for planning.'}</p>
+    </section>
+
+    <section class="feature-guide" aria-labelledby="horizon-guide-heading">
+        <h3 id="horizon-guide-heading">{uiLanguage === 'zh' ? '地平线' : 'Horizon'}</h3>
+        <p>{uiLanguage === 'zh'
+            ? '在主导航下拉菜单选择「地平线」，默认读取并展示当前定位点海拔，填入高度框并适配地图范围。可手动修改视点总海拔以计入楼顶或相机离地高度，换地点后恢复自动海拔；读取失败可重试。顶部按钮筛选日、月和银心升落方向，「全部」显示六个方向；地图只保留所选方向的地平线方位线和距离。修改高度后可用范围按钮重新适配，计算方法见面板说明。这是到海平面切点的几何距离，不是最远可见物体的距离；不修改升落时刻，不含折射、地形、建筑和云层遮挡。'
+            : 'Select Horizon to read and display the current location elevation, fill the height field and fit the map. Manually enter total observer elevation to include rooftop or camera height; a new location restores auto elevation, and failed reads can be retried. The top buttons filter Sun, Moon and galactic centre rise/set directions; All shows all six. Only the selected horizon bearings and distances appear on the map. After changing height, use the fit button to fit again; see the panel guide for the calculation. This is geometric distance to the sea-level tangent point, not the farthest visible object. It does not adjust event times or include refraction, terrain, buildings or clouds.'}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="cloud-guide-heading">

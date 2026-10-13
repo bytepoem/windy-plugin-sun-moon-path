@@ -38,15 +38,16 @@ export const loadLanguagePreference = (): UiLanguage | null => {
 };
 
 /** Remember the dropdown function independently of the currently open top-level tab. */
-export const loadPlanningViewPreference = (): 'obstruction' | 'rainbow' => {
+export const loadPlanningViewPreference = (): 'obstruction' | 'rainbow' | 'horizon' => {
     try {
-        return localStorage.getItem(PLANNING_VIEW_STORAGE_KEY) === 'rainbow' ? 'rainbow' : 'obstruction';
+        const view = localStorage.getItem(PLANNING_VIEW_STORAGE_KEY);
+        return view === 'rainbow' || view === 'horizon' ? view : 'obstruction';
     } catch {
         return 'obstruction';
     }
 };
 
-export const savePlanningViewPreference = (view: 'obstruction' | 'rainbow'): void => {
+export const savePlanningViewPreference = (view: 'obstruction' | 'rainbow' | 'horizon'): void => {
     try {
         localStorage.setItem(PLANNING_VIEW_STORAGE_KEY, view);
     } catch {
