@@ -63,6 +63,8 @@ Select **Assess selected time** to check rain and sunlight along primary-bow dir
 
 ### Horizon
 
+Switch between total, low, middle or high clouds, cloud base and satellite imagery; select a forecast model and check the map's forecast time. With synchronization enabled, forecast maps follow the shared date and time controls; satellite image time follows the Windy timeline. Cloud map preferences are shared with Clouds.
+
 Choose **Horizon**, the third option in the dropdown beside Clouds. It reads and displays the current location elevation, fills the height field and fits the map to the horizon radius. Use the top buttons to filter Sun, Moon and galactic centre rise/set directions; All shows all six. The map draws only the selected horizon bearings and distances, without before/after-event or live direction lines. Manually enter total observer elevation to include rooftop or camera height; a new location restores auto elevation, and failed reads can be retried. After changing height, use the fit button to fit again; the panel guide explains the calculation. This estimates distance to the sea-level tangent point, not the farthest visible object. It does not adjust event times or account for refraction, terrain, buildings or clouds, and cannot guarantee a clear view.
 
 ### Weather and observing

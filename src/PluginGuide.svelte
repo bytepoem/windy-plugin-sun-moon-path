@@ -53,6 +53,9 @@
     <section class="feature-guide" aria-labelledby="horizon-guide-heading">
         <h3 id="horizon-guide-heading">{uiLanguage === 'zh' ? '地平线' : 'Horizon'}</h3>
         <p>{uiLanguage === 'zh'
+            ? '可切换总云、低云、中云、高云、云底高度或卫星云图，选择预报模型，并查看底图预报时次。开启同步后，预报云图跟随顶部日期和时间；卫星影像时间以 Windy 时间轴为准。云图选项与「云层遮挡」共用。'
+            : 'Switch between total, low, middle or high clouds, cloud base and satellite imagery; select a forecast model and check the map’s forecast time. With synchronization enabled, forecast maps follow the shared date and time controls; satellite image time follows the Windy timeline. Cloud map preferences are shared with Clouds.'}</p>
+        <p>{uiLanguage === 'zh'
             ? '在主导航下拉菜单选择「地平线」，默认读取并展示当前定位点海拔，填入高度框并适配地图范围。可手动修改视点总海拔以计入楼顶或相机离地高度，换地点后恢复自动海拔；读取失败可重试。顶部按钮筛选日、月和银心升落方向，「全部」显示六个方向；地图只保留所选方向的地平线方位线和距离。修改高度后可用范围按钮重新适配，计算方法见面板说明。这是到海平面切点的几何距离，不是最远可见物体的距离；不修改升落时刻，不含折射、地形、建筑和云层遮挡。'
             : 'Select Horizon to read and display the current location elevation, fill the height field and fit the map. Manually enter total observer elevation to include rooftop or camera height; a new location restores auto elevation, and failed reads can be retried. The top buttons filter Sun, Moon and galactic centre rise/set directions; All shows all six. Only the selected horizon bearings and distances appear on the map. After changing height, use the fit button to fit again; see the panel guide for the calculation. This is geometric distance to the sea-level tangent point, not the farthest visible object. It does not adjust event times or include refraction, terrain, buildings or clouds.'}</p>
     </section>

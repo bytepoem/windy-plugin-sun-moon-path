@@ -1,8 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher, onDestroy, onMount } from 'svelte';
     import { map } from '@windy/map';
-    import store from '@windy/store';
-    import plugins from '@windy/plugins';
     import metrics from '@windy/metrics';
     import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTwilightDistances, type CloudDirectionBody } from './cloudGeometry';
     import CloudHelp from './CloudHelp.svelte';
@@ -27,7 +25,7 @@
     export let settings: CloudSettings;
     export let lineOpacity: number;
 
-    const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void }>();
+    const dispatch = createEventDispatcher<{ modelchange: WeatherModel; retry: void; resync: void }>();
     const overlay = createCloudOverlayController(map);
     export let cloudMapEvent: SolarEvent | null = 'sunset';
     export let timelineEvent: CloudTimelineEventType = 'sunset';
@@ -40,13 +38,8 @@
     export let cloudBounds: [[number, number], [number, number]] | null = null;
     export let cloudDetailBounds: [[number, number], [number, number]] | null = null;
     let mounted = false;
-    let syncError = false;
-    let syncing = false;
-    let syncRevision = 0;
-    let syncQueue: Promise<void> = Promise.resolve();
-    let lastSyncKey = '';
-    const listeners: number[] = [];
-    const options = { UIident: 'windy-plugin-sun-moon-path', doNotStore: true, doNotSaveToCloud: true };
+    export let syncError: boolean;
+    export let syncing: boolean;
     const changeModel = (event: Event) => dispatch('modelchange', (event.currentTarget as HTMLSelectElement).value as WeatherModel);
 
     $: zh = language === 'zh';
@@ -100,23 +93,6 @@
                 layers: event.layers, twilight: true, opacity: lineOpacity, language, units });
         });
     }
-    $: if (mounted && (previewingTime || timestamp === null)) {
-        // Invalidate queued host writes on each preview before commit resumes synchronization.
-        lastSyncKey = `preview|${timestamp}`;
-        syncRevision += 1;
-        syncing = false;
-    }
-    $: if (mounted && !previewingTime && timestamp !== null) {
-        const key = `${model}|${timestamp}|${settings.overlay}|${settings.syncMap}`;
-        if (!settings.syncMap && key !== lastSyncKey) {
-            lastSyncKey = key;
-            syncRevision += 1;
-            syncing = false;
-        } else if (settings.syncMap && key !== lastSyncKey) {
-            lastSyncKey = key;
-            synchronizeMap(model, timestamp, settings.overlay);
-        }
-    }
 
     $: bandName = (band: CloudBand) => ({
         low: zh ? '低' : 'L', medium: zh ? '中' : 'M', high: zh ? '高' : 'H',
@@ -160,39 +136,6 @@
         visibleBands.forEach(band => changeHeightMode(band, mode));
     };
 
-    /** Serialize Windy's async setters. A superseded or destroyed session cannot enqueue later writes. */
-    const synchronizeMap = (nextModel: WeatherModel, instant: number | null, nextOverlay: CloudSettings['overlay']) => {
-        const revision = ++syncRevision;
-        syncing = true;
-        syncError = false;
-        syncQueue = syncQueue.then(async () => {
-            try {
-                if (!mounted || revision !== syncRevision) {return;}
-                // Satellite is an observation overlay: never force forecast model/time onto it.
-                // The satellite timeline keeps writing timestamps during its exit animation.
-                // Release it synchronously before restoring the forecast model and time.
-                if (nextOverlay !== 'satellite' && store.get('overlay') === 'satellite') {
-                    plugins['radar-plus']?.close({ disableClosingAnimation: true });
-                }
-                if (!mounted || revision !== syncRevision) {return;}
-                // Windy's overlay setter selects a compatible product. Leave satellite first,
-                // then select the forecast model; reversing this can re-open the satellite product.
-                if (store.get('overlay') !== nextOverlay) {await store.set('overlay', nextOverlay, options);}
-                if (!mounted || revision !== syncRevision) {return;}
-                if (nextOverlay !== 'satellite' && store.get('product') !== nextModel) {await store.set('product', nextModel, options);}
-                if (!mounted || revision !== syncRevision) {return;}
-                if (nextOverlay !== 'satellite' && instant !== null && store.get('timestamp') !== instant) {store.set('timestamp', instant, options);}
-                if (!mounted || revision !== syncRevision) {return;}
-                syncError = store.get('overlay') !== nextOverlay || (nextOverlay !== 'satellite'
-                    && ((instant !== null && Math.abs(store.get('timestamp') - instant) > 1_000) || store.get('product') !== nextModel));
-            } catch {
-                if (mounted && revision === syncRevision) {syncError = true;}
-            } finally {
-                if (mounted && revision === syncRevision) {syncing = false;}
-            }
-        });
-    };
-
     /** Fit the rendered geometry; unwrap longitude around the selected point for date-line crossings. */
     const planningBounds = (events: typeof scenarios, detail: boolean): typeof cloudBounds => {
         const points = events.flatMap(event => event.layers.flatMap(layer => {
@@ -209,36 +152,10 @@
     };
     onMount(() => {
         mounted = true;
-        listeners.push(store.on('timestamp', (value, source) => {
-            // A host scrub supersedes any queued plugin write immediately,
-            // before the parent's new planning timestamp reaches this component.
-            if (mounted && source !== options.UIident && typeof value === 'number' && Number.isFinite(value) && value !== timestamp) {
-                syncRevision += 1;
-                syncing = false;
-                lastSyncKey = '';
-            }
-            if (mounted && settings.syncMap && !syncing && settings.overlay !== 'satellite' && typeof value === 'number') {
-                syncError = (timestamp !== null && Math.abs(value - timestamp) > 1_000)
-                    || store.get('product') !== model || store.get('overlay') !== settings.overlay;
-            }
-        }));
-        listeners.push(store.on('product', value => {
-            if (!mounted || !settings.syncMap || syncing) {return;}
-            if (value === 'ecmwf' || value === 'gfs' || value === 'icon') {dispatch('modelchange', value);}
-            else if (value !== 'satellite') { syncError = true; }
-        }));
-        listeners.push(store.on('overlay', value => {
-            if (!mounted || !settings.syncMap || syncing) {return;}
-            if (['clouds', 'lclouds', 'mclouds', 'hclouds', 'cbase', 'satellite'].includes(value)) {
-                settings = { ...settings, overlay: value as CloudSettings['overlay'] };
-            } else { syncError = true; }
-        }));
     });
 
     onDestroy(() => {
         mounted = false;
-        syncRevision += 1;
-        listeners.forEach(id => store.off(id));
         overlay.destroy();
     });
 </script>
@@ -425,7 +342,7 @@
         <div class="cloud-map-row" tabindex="0" role="region" aria-label={zh ? '云图设置' : 'Cloud map settings'}>
         <label title={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'}><input type="checkbox" bind:checked={settings.syncMap} aria-label={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'} /> {zh ? '同步 Windy 模型与时间' : 'Sync Windy'}</label>
         {#if settings.syncMap && syncError && !previewingTime}
-        <button class="cloud-resync" type="button" on:click={() => { lastSyncKey = ''; }}>{zh ? '重新同步' : 'Sync again'}</button>
+        <button class="cloud-resync" type="button" on:click={() => dispatch('resync')}>{zh ? '重新同步' : 'Sync again'}</button>
         {/if}
         </div>
         {#if !settings.syncMap || syncError || syncing || previewingTime}<div class="cloud-sync-status">

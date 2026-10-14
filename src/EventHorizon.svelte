@@ -3,6 +3,8 @@
     import CelestialIcon from './CelestialIcon.svelte';
     import { eventHorizonPoints, horizonDistanceKm, MAX_OBSERVER_HEIGHT_M } from './eventHorizon';
     import { formatDistanceKm, type DistanceUnit } from './unitPreferences';
+    import type { CloudSettings } from './cloudProfile';
+    import type { WeatherModel } from './weather';
     import type { Coordinates } from './solar';
     import type { DirectionEvent, DirectionPath } from './eventDirections';
 
@@ -16,10 +18,23 @@
     export let heightSource: 'elevation' | 'manual';
     export let elevationM: number | null;
     export let elevationLoading: boolean;
+    export let settings: CloudSettings;
+    export let model: WeatherModel;
+    export let previewingTime: boolean;
+    export let timeZone: string;
+    export let syncError: boolean;
+    export let syncing: boolean;
+    export let mapTimestamp: number | null;
+    export let mapOverlay: string;
 
-    const dispatch = createEventDispatcher<{ heightchange: number | undefined; retry: void }>();
+    const dispatch = createEventDispatcher<{ heightchange: number | undefined; retry: void; modelchange: WeatherModel; resync: void }>();
     let showHelp = false;
     $: zh = language === 'zh';
+    // Display the map's accepted forecast time, including any host range clamp,
+    // rather than labelling an unsynchronized planning time as map evidence.
+    $: forecastTimeLabel = mapTimestamp === null ? '—' : new Intl.DateTimeFormat(zh ? 'zh-CN' : 'en-GB', {
+        timeZone, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).format(mapTimestamp);
     $: distanceKm = horizonDistanceKm(horizonHeightM);
     $: missingElevation = heightSource === 'elevation' && elevationM === null;
     $: distanceLabel = distanceKm === null ? '—' : `${formatDistanceKm(distanceKm, distanceUnit)} ${distanceUnit}`;
@@ -37,9 +52,50 @@
         const input = event.currentTarget as HTMLInputElement;
         dispatch('heightchange', input.value === '' ? undefined : input.valueAsNumber);
     };
+    const changeModel = (event: Event) => {
+        dispatch('modelchange', (event.currentTarget as HTMLSelectElement).value as WeatherModel);
+    };
 </script>
 
 <section class="event-horizon" aria-label={zh ? '地平线' : 'Horizon'}>
+    <div class="horizon-weather-controls">
+        <label class="control-pair">{zh ? '云图' : 'Cloud map'}
+            <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
+                <option value="clouds">{zh ? '总云' : 'Total'}</option>
+                <option value="lclouds">{zh ? '低云' : 'Low'}</option>
+                <option value="mclouds">{zh ? '中云' : 'Middle'}</option>
+                <option value="hclouds">{zh ? '高云' : 'High'}</option>
+                <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
+                <option value="satellite">{zh ? '卫星云图' : 'Satellite'}</option>
+            </select>
+        </label>
+        <label class="control-pair">{zh ? '模型' : 'Model'}
+            <select value={model} aria-label={zh ? '云层预报模型' : 'Cloud forecast model'}
+                on:change={changeModel}>
+                <option value="ecmwf">EC</option><option value="gfs">GFS</option><option value="icon">ICON</option>
+            </select>
+        </label>
+    </div>
+    <div class="horizon-map-time" role="status">
+        {#if mapOverlay === 'satellite'}
+            {zh ? '卫星实况 · 影像时间以 Windy 时间轴为准' : 'Satellite observations · Image time follows the Windy timeline'}
+        {:else}
+            {settings.syncMap && !syncError ? (zh ? '预报时次' : 'Forecast time') : (zh ? 'Windy 时间' : 'Windy time')}：{forecastTimeLabel} <span>({timeZone})</span>
+        {/if}
+    </div>
+    <div class="horizon-map-sync">
+        <label class="control-pair"><input type="checkbox" bind:checked={settings.syncMap} />{zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'}</label>
+        {#if settings.syncMap && syncError && !previewingTime}
+            <button class="retry-button" type="button" on:click={() => dispatch('resync')}>{zh ? '重新同步' : 'Sync again'}</button>
+        {/if}
+    </div>
+    {#if !settings.syncMap || previewingTime || syncError || syncing}
+        <p class="map-status" role="status">{!settings.syncMap
+            ? (zh ? '独立几何规划 · 底图天气未同步' : 'Independent geometry · Map weather is not synchronized')
+            : previewingTime ? (zh ? '时间预览 · 预报云图松开后同步，卫星时间独立' : 'Time preview · Forecast maps sync on release; satellite time stays independent')
+            : syncError ? (zh ? '底图模型或时刻未同步，请核对 Windy 时间轴' : 'Map model or time differs; check the Windy timeline')
+            : (zh ? '正在同步云图…' : 'Synchronizing cloud map…')}</p>
+    {/if}
     <div class="horizon-controls">
         <div class="control-pair">
             <label for="horizon-height-source">{zh ? '高度来源' : 'Height source'}</label>
@@ -138,6 +194,11 @@
 <style>
     /* Match the surrounding planning views: compact controls and a plain data table. */
     .event-horizon { box-sizing: border-box; height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 8px 10px; color: var(--panel-text); font-size: 12px; }
+    .horizon-weather-controls, .horizon-map-sync { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 6px; }
+    .horizon-map-time { color: var(--panel-muted); font-size: 11px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; margin-bottom: 6px; }
+    .horizon-map-sync { color: var(--panel-muted); font-size: 11px; }
+    .horizon-map-sync input { width: 16px; height: 16px; padding: 0; accent-color: var(--panel-accent); }
+    .map-status { margin: 0 0 6px; color: var(--panel-muted); font-size: 11px; }
     .horizon-controls { position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding-right: 34px; margin-bottom: 6px; }
     .control-pair { display: flex; align-items: center; gap: 6px; }
     .horizon-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 5px; }

@@ -385,6 +385,13 @@
             </div>
         {/if}
     </div>
+    <!-- Keep one host-write queue when switching between cloud planning and Horizon. -->
+    {#if isMounted && (cloudObstructionVisible || horizonVisible)}
+        <CloudMapSync bind:settings={cloudSettings} model={weatherModel} timestamp={planningTime.timestamp}
+            previewingTime={planningTimePreview} bind:syncError={cloudMapSyncError} bind:syncing={cloudMapSyncing}
+            bind:mapTimestamp={cloudMapTimestamp} bind:mapOverlay={cloudMapOverlay} retryRevision={cloudMapRetryRevision}
+            on:modelchange={handleWeatherModelChange} />
+    {/if}
 
     <section
         class="map-bottom-module"
@@ -794,6 +801,9 @@
                 <!-- Collapsing hides the controls, but preserves their time and live map ownership. -->
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <CloudObstruction
+                        syncError={cloudMapSyncError}
+                        syncing={cloudMapSyncing}
+                        on:resync={() => cloudMapRetryRevision += 1}
                         timelineEvent={cloudTimelineEvent}
                         timestamp={planningTime.timestamp}
                         previewingTime={planningTimePreview}
@@ -837,6 +847,16 @@
             {#if isMounted && horizonVisible}
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <EventHorizon
+                        bind:settings={cloudSettings}
+                        model={weatherModel}
+                        previewingTime={planningTimePreview}
+                        {timeZone}
+                        on:modelchange={handleWeatherModelChange}
+                        syncError={cloudMapSyncError}
+                        syncing={cloudMapSyncing}
+                        mapTimestamp={cloudMapTimestamp}
+                        mapOverlay={cloudMapOverlay}
+                        on:resync={() => cloudMapRetryRevision += 1}
                         location={selectedLocation}
                         paths={[...solarPaths, ...galacticPaths]}
                         {selectedEvent}
@@ -951,6 +971,7 @@
     import PluginSettings from './PluginSettings.svelte';
     import PluginAbout from './PluginAbout.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
+    import CloudMapSync from './CloudMapSync.svelte';
     import RainbowPlanning from './RainbowPlanning.svelte';
     import { cloudTimelineLabel, galacticCenterEvents, type CloudTimelineEventType } from './cloudTimeline';
     import {
@@ -1228,6 +1249,11 @@
     let rainbowSecondary = false;
     let rainbowFullCircle = false;
     let cloudSettings = createCloudSettings();
+    let cloudMapSyncError = false;
+    let cloudMapSyncing = false;
+    let cloudMapTimestamp: number | null = null;
+    let cloudMapOverlay = '';
+    let cloudMapRetryRevision = 0;
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
     let pluginUpdateResult: PluginUpdateResult | null = null;
     let pluginUpdateNotesRetrying = false;
