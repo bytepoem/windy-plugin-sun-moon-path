@@ -1,4 +1,5 @@
 import { destinationPoint, EARTH_RADIUS_KM, splitPolylineAtDateLine, type Coordinates } from './solar';
+import { renderHorizonIcon } from './horizonIcon';
 import type { DirectionEvent, DirectionPath } from './eventDirections';
 import type { DirectionLineFitBounds } from './mapView';
 
@@ -182,10 +183,11 @@ export const createEventHorizonOverlay = (map: L.LeafletGlMap) => {
                     }).addTo(group);
                 }
                 const icon = new L.DivIcon({
-                    className: 'event-horizon-marker', iconSize: [12, 12], iconAnchor: [6, 6],
+                    // Anchor the symbol's horizon midpoint to the geographic endpoint.
+                    className: 'event-horizon-marker', iconSize: [20, 20], iconAnchor: [10, 15],
                     // Prefer labels just above and inward from their endpoints;
                     // layoutLabels resolves actual screen collisions after mounting.
-                    html: `<span role="img" aria-label="${label}" style="display:block;width:10px;height:10px;border:2px solid ${color};border-radius:50%;background:#17212a;box-sizing:border-box"><span class="event-horizon-label" aria-hidden="true" style="position:absolute;${labelSide}:16px;top:-34px;white-space:nowrap;text-align:center;padding:2px 5px;color:${color};font:12px/15px sans-serif">${shortName}<br>${escapeText(distanceLabel)}</span></span>`,
+                    html: `<span role="img" aria-label="${label}" style="display:block;width:20px;height:20px;filter:drop-shadow(0 1px 1px #17212a)">${renderHorizonIcon(definition.body, 20, color)}</span><span class="event-horizon-label" aria-hidden="true" style="position:absolute;${labelSide}:24px;top:-28px;white-space:nowrap;text-align:center;padding:2px 5px;color:${color};font:12px/15px sans-serif">${shortName}<br>${escapeText(distanceLabel)}</span>`,
                 });
                 // Apply opacity once to the entire marker, including its text label.
                 markers.push(new L.Marker([item.point.lat, item.point.lon], { icon, opacity, interactive: false, keyboard: false }).addTo(group));

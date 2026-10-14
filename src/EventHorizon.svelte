@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import CelestialIcon from './CelestialIcon.svelte';
+    import { renderHorizonIcon } from './horizonIcon';
     import { eventHorizonPoints, horizonDistanceKm, MAX_OBSERVER_HEIGHT_M } from './eventHorizon';
     import { formatDistanceKm, type DistanceUnit } from './unitPreferences';
     import type { CloudSettings } from './cloudProfile';
@@ -42,9 +42,9 @@
     // its cell while independently filtering the geographic overlay.
     $: points = ready ? eventHorizonPoints(location, paths, distanceKm) : [];
     const bodies = [
-        { body: 'sun', zh: '太阳', en: 'Sun', rise: 'sunrise', set: 'sunset' },
-        { body: 'moon', zh: '月亮', en: 'Moon', rise: 'moonrise', set: 'moonset' },
-        { body: 'galactic', zh: '银心', en: 'Galactic centre', rise: 'milkywayrise', set: 'milkywayset' },
+        { body: 'sun', color: '#ffb347', zh: '太阳', en: 'Sun', rise: 'sunrise', set: 'sunset' },
+        { body: 'moon', color: '#f5efcf', zh: '月亮', en: 'Moon', rise: 'moonrise', set: 'moonset' },
+        { body: 'galactic', color: '#9de0b7', zh: '银心', en: 'Galactic centre', rise: 'milkywayrise', set: 'milkywayset' },
     ] as const;
 
     /** Editing makes this a manual observer elevation; later fetch completion cannot overwrite it. */
@@ -170,14 +170,7 @@
             {#each bodies as body}
                 <tr>
                     <th scope="row"><span class="event-name">
-                        {#if body.body === 'galactic'}
-                            <svg class="galactic-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 9c-5-5-10 1-6 6s14 3 13-3S9 2 5 7m7 8c5 5 10-1 6-6S4 6 5 12s10 10 14 5" />
-                                <circle cx="12" cy="12" r="1.5" />
-                            </svg>
-                        {:else}
-                            <CelestialIcon body={body.body} size={14} />
-                        {/if}
+                        {@html renderHorizonIcon(body.body, 14, body.color)}
                         {zh ? body.zh : body.en}
                     </span></th>
                     {#each [body.rise, body.set] as event}
@@ -226,7 +219,6 @@
     thead th { font-weight: 700; }
     td.selected { color: var(--panel-accent); background: rgba(99, 185, 238, .08); }
     .event-name { display: inline-flex; align-items: center; gap: 4px; }
-    .galactic-icon { flex-shrink: 0; fill: none; stroke: #9de0b7; stroke-width: 1.6; stroke-linecap: round; }
     p { margin: 7px 0 0; line-height: 1.5; }
     .caption { color: var(--panel-muted); font-size: 11px; }
     .status { color: #edcf90; }
