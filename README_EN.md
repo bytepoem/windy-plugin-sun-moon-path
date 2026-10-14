@@ -2,7 +2,7 @@
 
 [中文](README.md) · **English**
 
-Plan sunrise, sunset, Moon and Milky Way photography on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Available in Chinese and English on desktop and mobile.
+Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glow, fiery clouds and rainbows on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Available in Chinese and English on desktop and mobile.
 
 **Mobile**
 
@@ -35,7 +35,7 @@ Language and display options are in Settings; detailed legends are under Setting
 | Feature | Purpose |
 | --- | --- |
 | Sun, Moon and Milky Way | Rise/set times, direction lines, Moon phase, moonless and Milky Way observing windows, plus a sky chart for composition |
-| Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections; supports single/layered views and satellite comparison |
+| Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections as cloud-region references for sunrise/sunset glow, fiery clouds and other photography; supports single/layered views and satellite comparison |
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
 | Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position |
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
@@ -50,6 +50,8 @@ Choose a location and date, then open Events for Sun/Moon rise and set times, Mo
 ### Cloud planning
 
 Open Clouds and select the Sun, Moon or galactic centre and a shooting time. Choose a single or layered view and a forecast cloud-height source, or enter a known cloud altitude manually. Use sightline intersections, distance references and forecast cloud maps to identify cloud regions of interest; satellite imagery provides a comparison with current observations.
+
+For sunrise/sunset glow or fiery cloud photography, select the Sun and use sunrise/set times to explore cloud regions and weather in your shooting direction. This does not forecast the occurrence of colorful skies or fiery clouds.
 
 ### Rainbow planning
 
@@ -77,7 +79,7 @@ In Settings, select the RainViewer radar source and adjust its opacity. Use Wind
 
 - **Planning time differs from now.** The shared time strip uses the location's time zone and resets to the current time when refreshed or reopened. Sun/Moon lines labeled `now` always show the actual current instant.
 - **Sky charts show directions, not distances.** Milky Way bands and rainbow arcs are geometric illustrations; stroke widths are not actual angular widths or visibility guarantees.
-- **Cloud distances are geometric references.** Local cloud heights do not describe distant clouds. Cloud-distance calculations do not check weather, terrain or cloud thickness along the path and cannot guarantee visibility or colorful twilight. See [cloud calculation principles and limits](docs/cloud-obstruction.md) (Chinese).
+- **Cloud distances are geometric references.** Local cloud heights do not describe distant clouds. Cloud-distance calculations do not check weather, terrain or cloud thickness along the path and cannot guarantee visibility, sunrise/sunset glow or fiery clouds. See [cloud calculation principles and limits](docs/cloud-obstruction.md) (Chinese).
 - **Sources and timestamps differ.** Weather, observing windows and favorite comparisons share the selected source. Automatic cloud heights come from Windy; satellite and radar show their own observation times. Missing data remain unknown without automatic source switching.
 - **Forecasts are not observations.** Open-Meteo hourly precipitation covers the preceding hour; past model data are not on-site observations. Check current weather and conditions in the field.
 
