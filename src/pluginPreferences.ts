@@ -4,6 +4,7 @@ import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys
 import type { UiLanguage } from './pluginTranslations';
 
 export type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
+export type MinimizeScope = 'standard' | 'hide-times' | 'hide-summary';
 export const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
 
 // Keep established storage keys and parsing semantics so upgrades and rollback need no migration.
@@ -11,6 +12,7 @@ const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
 const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
 const PLANNING_VIEW_STORAGE_KEY = 'windy-plugin-sun-moon-path:planning-view';
 const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-mode';
+const MINIMIZE_SCOPE_STORAGE_KEY = 'windy-plugin-sun-moon-path:minimize-scope';
 const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
 const SHOW_SKY_CHART_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-sky-chart';
 const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
@@ -26,6 +28,16 @@ const LOCATION_PROVIDER_API_KEY_STORAGE_KEYS: Record<LocationProvider, string> =
     amap: 'windy-plugin-sun-moon-path:amap-api-key',
     baidu: 'windy-plugin-sun-moon-path:baidu-api-key',
     tencent: 'windy-plugin-sun-moon-path:tencent-api-key',
+};
+
+/** Return persistence success for the key-save indicator; callers still update in-memory state. */
+const write = (key: string, value: string): boolean => {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch {
+        return false;
+    }
 };
 
 /** Missing or invalid choices require first-use confirmation; do not silently persist a default. */
@@ -79,6 +91,26 @@ export const saveMobilePanelModePreference = (value: MobileNonFullscreenPanelMod
         localStorage.setItem(MOBILE_PANEL_MODE_STORAGE_KEY, value);
     } catch {
         // Storage can be unavailable in hardened browser modes; the panel mode still works for this session.
+    }
+};
+
+/** Missing or unknown preferences retain the established minimized layout. */
+export const normalizeMinimizeScope = (value: unknown): MinimizeScope =>
+    value === 'hide-times' || value === 'hide-summary' ? value : 'standard';
+
+export const loadMinimizeScopePreference = (): MinimizeScope => {
+    try {
+        return normalizeMinimizeScope(localStorage.getItem(MINIMIZE_SCOPE_STORAGE_KEY));
+    } catch {
+        return 'standard';
+    }
+};
+
+export const saveMinimizeScopePreference = (value: MinimizeScope) => {
+    try {
+        localStorage.setItem(MINIMIZE_SCOPE_STORAGE_KEY, value);
+    } catch {
+        // Keep the selected scope usable for this session when storage is unavailable.
     }
 };
 
@@ -214,16 +246,6 @@ export const loadLocationApiKeys = (): LocationProviderApiKeys => {
         ])) as LocationProviderApiKeys;
     } catch {
         return { amap: '', baidu: '', tencent: '' };
-    }
-};
-
-/** Return persistence success for the key-save indicator; callers still update in-memory state. */
-const write = (key: string, value: string): boolean => {
-    try {
-        localStorage.setItem(key, value);
-        return true;
-    } catch {
-        return false;
     }
 };
 

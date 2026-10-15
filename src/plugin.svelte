@@ -427,6 +427,7 @@
     <section
         class="map-bottom-module"
         class:map-bottom-module--mobile-collapsed={isMobileCollapsed}
+        class:mobile-collapsed-hidden={isMobileCollapsed && minimizeScope === 'hide-summary'}
         aria-label={text.sunMoonPanelLabel}
     >
         <nav class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
@@ -640,6 +641,7 @@
 
                     <div
                         class="timeline-events"
+                        class:mobile-collapsed-hidden={isMobileCollapsed && minimizeScope !== 'standard'}
                         aria-label={text.astronomyEventsLabel(accessibleSelectedDateLabel, selectedDateIsToday)}
                     >
                         {#if status === 'loading'}
@@ -799,6 +801,8 @@
                     {radarOverlayStatus}
                     {radarOpacityPercent}
                     {hideLocationSearch}
+                    {minimizeScope}
+                    {changeMinimizeScope}
                     {showSkyChart}
                     {toggleSkyChart}
                     {directionLineOpacityPercent}
@@ -978,6 +982,9 @@
         saveLanguagePreference,
         loadMobilePanelModePreference,
         saveMobilePanelModePreference,
+        loadMinimizeScopePreference,
+        saveMinimizeScopePreference,
+        normalizeMinimizeScope,
         loadHideLocationSearchPreference,
         saveHideLocationSearchPreference,
         loadShowSkyChartPreference,
@@ -1001,6 +1008,7 @@
         removeLocationApiKey,
         DEFAULT_DIRECTION_LINE_OPACITY_PERCENT,
         type MobileNonFullscreenPanelMode,
+        type MinimizeScope,
     } from './pluginPreferences';
     import config from './pluginConfig';
     import PluginSettings from './PluginSettings.svelte';
@@ -1351,6 +1359,7 @@
     let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let hideLocationSearch = false;
+    let minimizeScope: MinimizeScope = 'standard';
     let showSkyChart = true;
     let locationSearchHiddenNotice = false;
     let locationSearchNoticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1585,6 +1594,12 @@
         await tick();
         // The clicked button is gone; keep keyboard navigation in the primary controls.
         panelElement?.querySelector<HTMLInputElement>('input[type="datetime-local"]')?.focus({ preventScroll: true });
+    };
+
+    /** Scope only affects the collapsed layout; panel mode owns map recentering. */
+    const changeMinimizeScope = (event: Event) => {
+        minimizeScope = normalizeMinimizeScope((event.currentTarget as HTMLSelectElement).value);
+        saveMinimizeScopePreference(minimizeScope);
     };
 
     const toggleLocationSearch = (event: Event) => {
@@ -3080,6 +3095,7 @@
         lastMobileNonFullscreenMode = mobilePanelMode;
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
         hideLocationSearch = loadHideLocationSearchPreference();
+        minimizeScope = loadMinimizeScopePreference();
         showSkyChart = loadShowSkyChartPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();

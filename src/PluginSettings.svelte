@@ -5,6 +5,7 @@
     import { RADAR_PROVIDERS, RAINVIEWER_WEBSITE_URL, type RadarProvider, type RadarOverlayStatus } from './radarOverlay';
     import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
     import { formatDistanceKm, type UnitPreferences } from './unitPreferences';
+    import type { MinimizeScope } from './pluginPreferences';
 
     // Controlled settings: the shell owns persistence and map side effects.
     export let uiLanguage: UiLanguage;
@@ -17,6 +18,8 @@
     export let radarOverlayStatus: RadarOverlayStatus;
     export let radarOpacityPercent: number;
     export let hideLocationSearch: boolean;
+    export let minimizeScope: MinimizeScope;
+    export let changeMinimizeScope: (event: Event) => void;
     export let showSkyChart: boolean;
     export let toggleSkyChart: () => void;
     export let directionLineOpacityPercent: number;
@@ -65,6 +68,15 @@
     <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
 {:else}
 <section class="module-about module-settings" aria-label={text.settingsHeading}>
+    <div class="settings-select">
+        <label for="minimize-scope">{text.minimizeScopeLabel}</label>
+        <select id="minimize-scope" value={minimizeScope} on:change={changeMinimizeScope} aria-describedby="minimize-scope-description">
+            <option value="standard">{text.minimizeScopeStandard}</option>
+            <option value="hide-times">{text.minimizeScopeHideTimes}</option>
+            <option value="hide-summary">{text.minimizeScopeHideSummary}</option>
+        </select>
+        <span id="minimize-scope-description" class="settings-select__description">{text.minimizeScopeDescription}</span>
+    </div>
     <label class="settings-toggle">
         <span class="settings-toggle__copy">
             <strong>{text.showSkyChartLabel}</strong>

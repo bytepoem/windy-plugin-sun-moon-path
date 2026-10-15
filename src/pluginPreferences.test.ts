@@ -11,6 +11,7 @@ import {
     loadLocationApiKeys,
     loadLocationSearchProvider,
     loadMobilePanelModePreference,
+    loadMinimizeScopePreference,
     loadRadarOpacityPreference,
     loadRadarProvider,
     removeLocationApiKey,
@@ -21,6 +22,7 @@ import {
     saveLanguagePreference,
     saveLocationSearchProvider,
     saveMobilePanelModePreference,
+    saveMinimizeScopePreference,
     saveRadarOpacityPreference,
     saveRadarProvider,
     writeLocationApiKey,
@@ -39,6 +41,24 @@ const storage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('existing plugin preferences', () => {
+    it('restores minimize scope independently of panel mode and preserves the old default', () => {
+        storage({ 'mobile-panel-mode': 'collapsed' });
+        expect(loadMinimizeScopePreference()).toBe('standard');
+        for (const scope of ['hide-times', 'hide-summary', 'standard'] as const) {
+            saveMinimizeScopePreference(scope);
+            expect(loadMinimizeScopePreference()).toBe(scope);
+            expect(loadMobilePanelModePreference()).toBe('collapsed');
+        }
+        storage({ 'minimize-scope': 'unknown' });
+        expect(loadMinimizeScopePreference()).toBe('standard');
+        vi.stubGlobal('localStorage', {
+            getItem: () => { throw Error('blocked'); },
+            setItem: () => { throw Error('blocked'); },
+        });
+        expect(loadMinimizeScopePreference()).toBe('standard');
+        expect(() => saveMinimizeScopePreference('hide-summary')).not.toThrow();
+    });
+
     it('distinguishes a first visit from either confirmed language without saving on read', () => {
         const entries = storage();
         expect(loadLanguagePreference()).toBeNull();

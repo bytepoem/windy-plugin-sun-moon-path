@@ -92,6 +92,11 @@ export const translations: Record<UiLanguage, {
     >;
     settingsGuideHeading: string;
     settingsHeading: string;
+    minimizeScopeLabel: string;
+    minimizeScopeStandard: string;
+    minimizeScopeHideTimes: string;
+    minimizeScopeHideSummary: string;
+    minimizeScopeDescription: string;
     initialOverlayLabel: string;
     initialOverlayDescription: string;
     keepCurrentOverlayLabel: string;
@@ -300,7 +305,7 @@ export const translations: Record<UiLanguage, {
             },
             mobileMode: {
                 title: '移动端方位线模式',
-                description: '收起面板后保留搜索、日期、事件、实时方位和当天事件时间，并记住方位线模式或小窗口的选择。',
+                description: '收起面板默认保留搜索、日期、事件、实时方位和当天事件时间。在设置的“最小化范围”中可进一步隐藏时间栏，或同时隐藏地点日月栏。展开后恢复完整内容，并记住方位线模式或小窗口的选择。',
             },
             mapControls: {
                 title: '地图视图按钮',
@@ -313,6 +318,11 @@ export const translations: Record<UiLanguage, {
         },
         settingsGuideHeading: '设置说明',
         settingsHeading: '插件设置',
+        minimizeScopeLabel: '最小化范围',
+        minimizeScopeStandard: '默认：保留时间栏与地点日月栏',
+        minimizeScopeHideTimes: '更小：隐藏时间栏',
+        minimizeScopeHideSummary: '最小：同时隐藏时间栏与地点日月栏',
+        minimizeScopeDescription: '控制手机或平板点击最小化按钮后隐藏的内容，展开后恢复完整显示。设置会保存在当前浏览器。',
         initialOverlayLabel: '打开插件时的图层',
         initialOverlayDescription: '选择后立即切换到对应 Windy 图层，并在以后打开插件时继续使用；选择“保持 Windy 当前图层”则不自动切换。设置会保存在当前浏览器。',
         keepCurrentOverlayLabel: '保持 Windy 当前图层',
@@ -562,7 +572,7 @@ export const translations: Record<UiLanguage, {
             },
             mobileMode: {
                 title: 'Mobile direction-line mode',
-                description: 'Collapse the panel while keeping search, date, event, live directions, and daily event times. The direction-line or compact choice is remembered.',
+                description: 'Collapsing keeps search, date, event, live directions, and daily event times by default. In Settings, Minimize scope can also hide event times, or both event times and the location / Sun / Moon row. Expanding restores all content. The direction-line or compact choice is remembered.',
             },
             mapControls: {
                 title: 'Map view controls',
@@ -575,6 +585,11 @@ export const translations: Record<UiLanguage, {
         },
         settingsGuideHeading: 'Settings guide',
         settingsHeading: 'Plugin settings',
+        minimizeScopeLabel: 'Minimize scope',
+        minimizeScopeStandard: 'Default: keep event times and location / Sun / Moon',
+        minimizeScopeHideTimes: 'Smaller: hide event times',
+        minimizeScopeHideSummary: 'Smallest: also hide location / Sun / Moon',
+        minimizeScopeDescription: 'Choose what the minimize button hides on phones and tablets. Expanding restores all content. This setting is saved in this browser.',
         initialOverlayLabel: 'Layer when opening the plugin',
         initialOverlayDescription: 'Switch to the selected Windy layer immediately and keep using it whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
         keepCurrentOverlayLabel: 'Keep Windy’s current layer',
