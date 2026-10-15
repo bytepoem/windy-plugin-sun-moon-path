@@ -47,6 +47,8 @@ Language and display options are in Settings; detailed legends are under Setting
 
 Choose a location and date, then open Events for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
 
+Toggle “Show sky chart” in Settings or use the first window button; both controls stay synchronized and remember your choice.
+
 ### Cloud planning
 
 Open Clouds and select the Sun, Moon or galactic centre and a shooting time. Choose a single or layered view and a forecast cloud-height source, or enter a known cloud altitude manually. Use sightline intersections, distance references and forecast cloud maps to identify cloud regions of interest; satellite imagery provides a comparison with current observations.

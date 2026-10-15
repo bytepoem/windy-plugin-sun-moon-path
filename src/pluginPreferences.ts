@@ -12,6 +12,7 @@ const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
 const PLANNING_VIEW_STORAGE_KEY = 'windy-plugin-sun-moon-path:planning-view';
 const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-mode';
 const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
+const SHOW_SKY_CHART_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-sky-chart';
 const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
 const INITIAL_OVERLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:initial-overlay';
 const RADAR_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-provider';
@@ -95,6 +96,19 @@ export const saveHideLocationSearchPreference = (value: boolean) => {
     } catch {
         // Storage can be unavailable in hardened browser modes; the setting still works for this session.
     }
+};
+
+/** Keep the sky chart visible until the user explicitly hides it. */
+export const loadShowSkyChartPreference = (): boolean => {
+    try {
+        return localStorage.getItem(SHOW_SKY_CHART_STORAGE_KEY) !== 'false';
+    } catch {
+        return true;
+    }
+};
+
+export const saveShowSkyChartPreference = (value: boolean): void => {
+    write(SHOW_SKY_CHART_STORAGE_KEY, String(value));
 };
 
 export const loadInitialOverlayPreference = (availableInitialOverlays: ReadonlyArray<WindyOverlay>): InitialOverlayPreference => {

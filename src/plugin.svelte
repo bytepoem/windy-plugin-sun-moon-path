@@ -19,6 +19,20 @@
             <span class="desktop-map-controls">
                 <button
                     type="button"
+                    class="desktop-map-control desktop-sky-chart-toggle"
+                    aria-label={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                    aria-pressed={showSkyChart}
+                    title={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                    on:click|stopPropagation={toggleSkyChart}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <ellipse cx="12" cy="12" rx="4" ry="9"></ellipse>
+                        <path d="M3 12h18M12 3v18"></path>
+                    </svg>
+                </button>
+                <button
+                    type="button"
                     class="desktop-map-control desktop-radar-toggle"
                     class:radar-toggle--error={radarProvider === 'rainviewer' && radarOverlayStatus === 'error'}
                     aria-label={radarProvider === 'rainviewer'
@@ -64,6 +78,23 @@
 
     {#if isMobileOrTablet}
         {#if !isMobileFullscreen}
+            <button
+                type="button"
+                class="mobile-window-control mobile-sky-chart-toggle"
+                aria-label={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                aria-pressed={showSkyChart}
+                title={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                on:click={toggleSkyChart}
+            >
+                <span class="mobile-window-control__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <ellipse cx="12" cy="12" rx="4" ry="9"></ellipse>
+                        <path d="M3 12h18M12 3v18"></path>
+                    </svg>
+                </span>
+            </button>
+
             <button
                 type="button"
                 class="mobile-window-control mobile-radar-toggle"
@@ -768,6 +799,8 @@
                     {radarOverlayStatus}
                     {radarOpacityPercent}
                     {hideLocationSearch}
+                    {showSkyChart}
+                    {toggleSkyChart}
                     {directionLineOpacityPercent}
                     {showExtendedDistanceMarker}
                     {savedApiKeyProvider}
@@ -947,6 +980,8 @@
         saveMobilePanelModePreference,
         loadHideLocationSearchPreference,
         saveHideLocationSearchPreference,
+        loadShowSkyChartPreference,
+        saveShowSkyChartPreference,
         loadInitialOverlayPreference,
         saveInitialOverlayPreference,
         loadRadarProvider,
@@ -1316,6 +1351,7 @@
     let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let hideLocationSearch = false;
+    let showSkyChart = true;
     let locationSearchHiddenNotice = false;
     let locationSearchNoticeTimer: ReturnType<typeof setTimeout> | null = null;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
@@ -1496,7 +1532,7 @@
         events: summaryTimelineItems, ready: eventSkyReadyKey === astronomyKey,
     });
     $: eventSkyTimestamp = planningTime.timestamp;
-    $: if (isMounted && mapTab === 'events' && eventSkyReadyKey === astronomyKey && eventSkyTimestamp !== null) {
+    $: if (isMounted && showSkyChart && mapTab === 'events' && eventSkyReadyKey === astronomyKey && eventSkyTimestamp !== null) {
         eventSkyOverlay.render({
             location: selectedLocation,
             timestamp: eventSkyTimestamp,
@@ -1555,6 +1591,12 @@
         clearLocationSearchNotice();
         hideLocationSearch = (event.currentTarget as HTMLInputElement).checked;
         saveHideLocationSearchPreference(hideLocationSearch);
+    };
+
+    /** Both controls update one preference; the reactive map branch owns drawing and removal. */
+    const toggleSkyChart = () => {
+        showSkyChart = !showSkyChart;
+        saveShowSkyChartPreference(showSkyChart);
     };
 
     const suspendMobileDetailRequests = () => {
@@ -3038,6 +3080,7 @@
         lastMobileNonFullscreenMode = mobilePanelMode;
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
         hideLocationSearch = loadHideLocationSearchPreference();
+        showSkyChart = loadShowSkyChartPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         initialOverlayPreference = loadInitialOverlayPreference(availableInitialOverlays);
@@ -3367,6 +3410,13 @@
         );
     }
 
+    .mobile-sky-chart-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) +
+                6 * (var(--mobile-window-control-width) + var(--mobile-window-control-gap))
+        );
+    }
+
     .mobile-radar-toggle {
         right: calc(
             var(--mobile-window-control-edge) + var(--mobile-window-control-width) +
@@ -3406,6 +3456,7 @@
         background: var(--panel-surface-hover);
     }
 
+    .mobile-sky-chart-toggle[aria-pressed='true'] .mobile-window-control__icon,
     .mobile-radar-toggle[aria-pressed='true'] .mobile-window-control__icon {
         border-color: var(--panel-accent);
         background: rgba(99, 185, 238, 0.2);
@@ -3697,6 +3748,7 @@
         background: var(--panel-surface-hover);
     }
 
+    .desktop-sky-chart-toggle[aria-pressed='true'],
     .desktop-radar-toggle[aria-pressed='true'] {
         border-color: var(--panel-accent);
         background: rgba(99, 185, 238, 0.2);

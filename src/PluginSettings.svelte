@@ -17,6 +17,8 @@
     export let radarOverlayStatus: RadarOverlayStatus;
     export let radarOpacityPercent: number;
     export let hideLocationSearch: boolean;
+    export let showSkyChart: boolean;
+    export let toggleSkyChart: () => void;
     export let directionLineOpacityPercent: number;
     export let showExtendedDistanceMarker: boolean;
     export let savedApiKeyProvider: LocationProvider | null;
@@ -63,6 +65,64 @@
     <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
 {:else}
 <section class="module-about module-settings" aria-label={text.settingsHeading}>
+    <label class="settings-toggle">
+        <span class="settings-toggle__copy">
+            <strong>{text.showSkyChartLabel}</strong>
+            <span>{text.showSkyChartDescription}</span>
+        </span>
+        <input
+            type="checkbox"
+            checked={showSkyChart}
+            aria-label={text.showSkyChartLabel}
+            on:change={toggleSkyChart}
+        />
+        <span class="settings-toggle__control" aria-hidden="true"></span>
+    </label>
+    <label class="settings-toggle">
+        <span class="settings-toggle__copy">
+            <strong>{text.hideLocationSearchLabel}</strong>
+            <span>{text.hideLocationSearchDescription}</span>
+        </span>
+        <input
+            type="checkbox"
+            checked={hideLocationSearch}
+            aria-label={text.hideLocationSearchLabel}
+            on:change={toggleLocationSearch}
+        />
+        <span class="settings-toggle__control" aria-hidden="true"></span>
+    </label>
+    <label class="settings-toggle">
+        <span class="settings-toggle__copy">
+            <strong>{text.show600Label(extendedDistanceLabel)}</strong>
+            <span>{text.show600Description(extendedDistanceLabel)}</span>
+        </span>
+        <input
+            type="checkbox"
+            checked={showExtendedDistanceMarker}
+            aria-label={text.show600Label(extendedDistanceLabel)}
+            on:change={toggleExtendedDistanceMarker}
+        />
+        <span class="settings-toggle__control" aria-hidden="true"></span>
+    </label>
+    <div class="settings-range">
+        <div class="settings-range__header">
+            <label for="direction-line-opacity">{text.lineOpacityLabel}</label>
+            <output for="direction-line-opacity">{directionLineOpacityPercent}%</output>
+        </div>
+        <input
+            id="direction-line-opacity"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={directionLineOpacityPercent}
+            aria-describedby="direction-line-opacity-description"
+            on:input={changeDirectionLineOpacity}
+        />
+        <span id="direction-line-opacity-description" class="settings-range__description">
+            {text.lineOpacityDescription}
+        </span>
+    </div>
     <div class="settings-select">
         <label for="initial-overlay">{text.initialOverlayLabel}</label>
         <select
@@ -133,19 +193,6 @@
             {text.radarOpacityDescription}
         </span>
     </div>
-    <label class="settings-toggle">
-        <span class="settings-toggle__copy">
-            <strong>{text.hideLocationSearchLabel}</strong>
-            <span>{text.hideLocationSearchDescription}</span>
-        </span>
-        <input
-            type="checkbox"
-            checked={hideLocationSearch}
-            aria-label={text.hideLocationSearchLabel}
-            on:change={toggleLocationSearch}
-        />
-        <span class="settings-toggle__control" aria-hidden="true"></span>
-    </label>
     {#if uiLanguage === 'zh'}
         <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
             {#each LOCATION_PROVIDERS as providerOption}
@@ -206,38 +253,6 @@
             {/each}
         </div>
     {/if}
-    <div class="settings-range">
-        <div class="settings-range__header">
-            <label for="direction-line-opacity">{text.lineOpacityLabel}</label>
-            <output for="direction-line-opacity">{directionLineOpacityPercent}%</output>
-        </div>
-        <input
-            id="direction-line-opacity"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value={directionLineOpacityPercent}
-            aria-describedby="direction-line-opacity-description"
-            on:input={changeDirectionLineOpacity}
-        />
-        <span id="direction-line-opacity-description" class="settings-range__description">
-            {text.lineOpacityDescription}
-        </span>
-    </div>
-    <label class="settings-toggle">
-        <span class="settings-toggle__copy">
-            <strong>{text.show600Label(extendedDistanceLabel)}</strong>
-            <span>{text.show600Description(extendedDistanceLabel)}</span>
-        </span>
-        <input
-            type="checkbox"
-            checked={showExtendedDistanceMarker}
-            aria-label={text.show600Label(extendedDistanceLabel)}
-            on:change={toggleExtendedDistanceMarker}
-        />
-        <span class="settings-toggle__control" aria-hidden="true"></span>
-    </label>
 </section>
 {/if}
 

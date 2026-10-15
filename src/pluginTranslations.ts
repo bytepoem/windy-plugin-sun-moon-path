@@ -20,6 +20,9 @@ export const translations: Record<UiLanguage, {
     fitDirectionLinesLabel: (distance: string) => string;
     restoreSearchZoomLabel: string;
     enableRadarOverlayLabel: string;
+    showSkyChartLabel: string;
+    hideSkyChartLabel: string;
+    showSkyChartDescription: string;
     disableRadarOverlayLabel: string;
     panelIntro: string;
     sunMoonPanelLabel: string;
@@ -204,6 +207,9 @@ export const translations: Record<UiLanguage, {
         fitDirectionLinesLabel: distance => `完整显示 ${distance} 方位线`,
         restoreSearchZoomLabel: '回到搜索定位缩放',
         enableRadarOverlayLabel: '开启气象雷达叠加',
+        showSkyChartLabel: '显示天空盘',
+        hideSkyChartLabel: '隐藏天空盘',
+        showSkyChartDescription: '控制事件视图的天空盘显示，与窗口栏首个按钮同步，并记住选择。',
         disableRadarOverlayLabel: '关闭气象雷达叠加',
         panelIntro: '日月关键时刻、事件前后 30m方位线和夜间观测时段。',
         sunMoonPanelLabel: '日月信息面板',
@@ -463,6 +469,9 @@ export const translations: Record<UiLanguage, {
         fitDirectionLinesLabel: distance => `Fit ${distance} direction lines`,
         restoreSearchZoomLabel: 'Restore search-location zoom',
         enableRadarOverlayLabel: 'Enable radar overlay',
+        showSkyChartLabel: 'Show sky chart',
+        hideSkyChartLabel: 'Hide sky chart',
+        showSkyChartDescription: 'Show the sky chart in the Events view. This setting stays synchronized with the first window button and remembers your choice.',
         disableRadarOverlayLabel: 'Disable radar overlay',
         panelIntro: 'Key sun and moon times, direction lines 30m before and after each event, and night observing windows.',
         sunMoonPanelLabel: 'Sun and moon information panel',
