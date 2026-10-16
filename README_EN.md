@@ -37,6 +37,7 @@ Language and display options are in Settings; detailed legends are under Setting
 | Sun, Moon and Milky Way | Rise/set times, direction lines, Moon phase, moonless and Milky Way observing windows, plus a sky chart for composition |
 | Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections as cloud-region references for sunrise/sunset glow, fiery clouds and other photography; supports single/layered views and satellite comparison |
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
+| Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
 | Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position |
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
 | Radar and display | RainViewer radar overlays, Windy units, and collapsed, compact or fullscreen mobile views |
@@ -70,6 +71,14 @@ Select **Assess selected time** to check rain and sunlight along primary-bow dir
 Switch between total, low, middle or high clouds, cloud base and satellite imagery; select a forecast model and check the map's forecast time. With synchronization enabled, forecast maps follow the shared date and time controls; satellite image time follows the Windy timeline. Cloud map preferences are shared with Clouds.
 
 Choose **Horizon**, the third option in the dropdown beside Clouds. It reads and displays the current location elevation, fills the height field and fits the map to the horizon radius. Use the top buttons to filter Sun, Moon and galactic centre rise/set directions; All shows all six. The map draws only the selected horizon bearings and distances, without before/after-event or live direction lines. Manually enter total observer elevation to include rooftop or camera height; a new location restores auto elevation, and failed reads can be retried. After changing height, use the fit button to fit again; the panel guide explains the calculation. This estimates distance to the sea-level tangent point, not the farthest visible object. It does not adjust event times or account for refraction, terrain, buildings or clouds, and cannot guarantee a clear view.
+
+### Tide planning
+
+Select **Tides** from the planning dropdown to automatically load Open-Meteo model water levels for the camera location. No registration or API key is needed. Compare the curve with sunlight events and use the top time strip to adjust shooting time. Selecting estimated high/low levels or sunlight events also updates the shared shooting time. Use the top-right icon to switch between curve and table; the table shows all available hourly readings for the day in two or three groups depending on panel width.
+
+Choose dates within ten days from today at the camera location; actual coverage depends on model availability. Inland locations, some estuaries or dates may have no data; sunlight events remain available. Data comes from the [Open-Meteo Marine API](https://open-meteo.com/en/docs/marine-weather-api). Its free API is for non-commercial use with request limits, subject to its [terms](https://open-meteo.com/en/terms) and [attribution licence](https://open-meteo.com/en/license).
+
+**Model water levels are for photography reference, not camera-location water depth or access safety.** Levels are relative to global mean sea level (MSL), including tides and pressure effects, not port tide tables or wave heights. Model resolution is about 8 km, with limited coastal accuracy. High/low times are estimated from hourly samples and marked approximately; they must not be used for navigation.
 
 ### Weather and observing
 

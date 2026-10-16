@@ -834,6 +834,52 @@
                     {retryPluginUpdateNotes}
                 />
             {/if}
+            {#if mapTab === 'clouds' && cloudView === 'tide'}
+                <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
+                    <TidePlanning location={selectedLocation}
+                        date={selectedDate} {timeZone} timestamp={planningTime.timestamp}
+                        now={currentInstant.getTime()} language={uiLanguage}
+                        active={isMounted && !isMobileCollapsed && summaryTab === 'clouds'}
+                        ready={eventSkyReadyKey === astronomyKey} events={summaryTimelineItems}
+                        on:time={event => selectTideTime(event.detail)}>
+                        <div slot="astronomy-events" class="timeline-events tide-timeline"
+                            class:astronomy-panel--loading={status === 'loading'}
+                            aria-label={text.astronomyEventsLabel(accessibleSelectedDateLabel, selectedDateIsToday)}>
+                            {#if status === 'loading'}
+                                {#each timelineSkeletonSlots as _}
+                                    <div class="timeline-event timeline-event--skeleton" aria-hidden="true">
+                                        <span class="astronomy-skeleton astronomy-skeleton--label"></span>
+                                        <span class="astronomy-skeleton astronomy-skeleton--time"></span>
+                                    </div>
+                                {/each}
+                            {:else}
+                                <div class="timeline-event timeline-event--countdown">
+                                    <span class="timeline-event__label" title={timelineLeadLabel}>
+                                        <TimelineEventIcon kind={selectedDateIsToday ? 'countdown' : 'date'} label={timelineLeadLabel} />
+                                    </span>
+                                    <strong>{timelineLeadTime || '--'}</strong>
+                                </div>
+                                {#each summaryTimelineItems as item}
+                                    <button type="button" class="timeline-event"
+                                        disabled={!item.time || eventSkyReadyKey !== astronomyKey}
+                                        on:click={() => jumpPlanningEvent(item.kind)}
+                                        title={timelineEventLabel(item, text)}
+                                        class:item-milkyway={item.body === 'milkyway'}
+                                        class:item-moon={item.body === 'moon'}
+                                        class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
+                                        class:timeline-event--missing={!item.time}
+                                        class:timeline-event--next={item === nextTimelineEvent}>
+                                        <span class="timeline-event__label">
+                                            <TimelineEventIcon kind={item.kind} label={timelineEventLabel(item, text)} />
+                                        </span>
+                                        <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
+                                    </button>
+                                {/each}
+                            {/if}
+                        </div>
+                    </TidePlanning>
+                </div>
+            {/if}
             {#if cloudObstructionVisible}
                 <!-- Collapsing hides the controls, but preserves their time and live map ownership. -->
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
@@ -1012,6 +1058,7 @@
     } from './pluginPreferences';
     import config from './pluginConfig';
     import PluginSettings from './PluginSettings.svelte';
+    import TidePlanning from './TidePlanning.svelte';
     import PluginAbout from './PluginAbout.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
     import CloudMapSync from './CloudMapSync.svelte';
@@ -1280,7 +1327,7 @@
     let pluginUsage: ReturnType<typeof startPluginUsage> | null = null;
     // Programmatic switches update dwell time but are not user selections.
     $: pluginUsage?.setTab(summaryTab);
-    let cloudView: 'obstruction' | 'rainbow' | 'horizon' = 'obstruction';
+    let cloudView: 'obstruction' | 'rainbow' | 'horizon' | 'tide' = 'obstruction';
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
     $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
@@ -1541,7 +1588,7 @@
         events: summaryTimelineItems, ready: eventSkyReadyKey === astronomyKey,
     });
     $: eventSkyTimestamp = planningTime.timestamp;
-    $: if (isMounted && showSkyChart && mapTab === 'events' && eventSkyReadyKey === astronomyKey && eventSkyTimestamp !== null) {
+    $: if (isMounted && showSkyChart && (mapTab === 'events' || (mapTab === 'clouds' && cloudView === 'tide')) && eventSkyReadyKey === astronomyKey && eventSkyTimestamp !== null) {
         eventSkyOverlay.render({
             location: selectedLocation,
             timestamp: eventSkyTimestamp,
@@ -1927,6 +1974,13 @@
         hostTimeSelectionActive = false;
         planningTimePreview = false;
         planningSelection = { mode: 'instant', timestamp: Date.now() };
+    };
+
+    /** Model samples and estimated events use UTC timestamps; preserve that instant in the shared clock. */
+    const selectTideTime = (timestamp: number) => {
+        hostTimeSelectionActive = false;
+        planningTimePreview = false;
+        planningSelection = { mode: 'instant', timestamp };
     };
 
     /** A manual date edit releases an absolute instant but retains its displayed clock. */
@@ -3083,6 +3137,8 @@
         uiLanguage = savedLanguage ?? 'zh';
         showLanguageChoice = savedLanguage === null;
         cloudView = loadPlanningViewPreference();
+        // Retire the previous provider's browser credential without reading or retaining its value.
+        try { localStorage.removeItem('windy-plugin-sun-moon-path:qweather'); } catch { /* Storage may be disabled. */ }
         units = currentUnitPreferences();
         try { cloudSettings = loadCloudPreferences(localStorage); } catch { /* Storage access may be blocked. */ }
         try {
@@ -4489,14 +4545,22 @@
         background: #1d263d;
     }
 
-    .astronomy-panel {
+    .astronomy-panel, .tide-timeline {
         --astronomy-bg: #1d263d;
         --astronomy-muted: #a8b1c1;
         --astronomy-text: #f2f4fa;
         --astronomy-sun: #ff9138;
         --astronomy-moon: #4e91ed;
         --astronomy-blue-hour: #c4b5fd;
+    }
 
+    .timeline-events.tide-timeline {
+        flex-shrink: 0;
+        margin-top: 0;
+        padding: 4px 0;
+    }
+
+    .astronomy-panel {
         box-sizing: border-box;
         height: 100%;
         min-height: 100%;

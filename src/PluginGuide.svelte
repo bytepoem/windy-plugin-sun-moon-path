@@ -36,8 +36,8 @@
             ? '先选地点，再调整顶部当地日期和时间；「现在」返回当前时刻，升落按钮可直接跳转。Windy 时间轴也会同步规划时间，切换 Tab 不会重置。重新打开插件从当前时刻开始。'
             : 'Choose a location, then set the local date and time above. Now returns to the current instant; rise/set shortcuts jump to events. The Windy timeline also updates planning time. Tabs preserve your selection; reopening starts at the current instant.'}</p>
         <p>{uiLanguage === 'zh'
-            ? '主导航下拉菜单切换云层遮挡、彩虹与地平线；语言、单位和其他偏好在设置中修改。'
-            : 'Use the navigation dropdown for Clouds, Rainbow or Horizon. Change language, units and other preferences in Settings.'}</p>
+            ? '主导航下拉菜单切换云层遮挡、彩虹、地平线与潮汐；语言、单位和其他偏好在设置中修改。'
+            : 'Use the navigation dropdown for Clouds, Rainbow, Horizon or Tides. Change language, units and other preferences in Settings.'}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="events-guide-heading">
@@ -82,6 +82,22 @@
         <p>{uiLanguage === 'zh'
             ? '「评估当前时刻」单独检查白天主虹的小时雨光条件，并展示地形、能见度风险。结果可信度低，不是出现概率，也不能证明同一瞬间雨滴受光；月虹不参与评估。山体提示不等于一定遮挡，未发现风险也不等于视线畅通。'
             : 'Assess selected time separately screens hourly rain/light for daytime primary bows, with terrain and visibility risks. Confidence is low: grades are not probabilities or proof of simultaneous illumination. Moonbows are not assessed. Terrain warnings do not prove obstruction, and no detected risk does not establish a clear view.'}</p>
+    </section>
+
+    <section class="feature-guide" aria-labelledby="tide-guide-heading">
+        <h3 id="tide-guide-heading">{uiLanguage === 'zh' ? '潮汐规划' : 'Tide planning'}</h3>
+        <p>{uiLanguage === 'zh'
+            ? '右上角图标切换曲线与表格；表格按面板宽度分两组或三组展示当天全部可用小时数据，每组从上往下阅读。'
+            : 'The top-right icon switches between curve and table. All available hourly readings for the day appear in two or three groups depending on panel width; read each group from top to bottom.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? '从主导航下拉菜单选择「潮汐」，自动加载当前机位的 Open-Meteo 模型水位，无需 Key。统一使用顶部时间条调整拍摄时间；点击估算高低水位或日光事件也可同步顶部拍摄时间。可选择机位当地今天起 10 天内的日期，实际覆盖以模型数据为准。无数据时仍可使用日光时刻。'
+            : 'Select Tides from the navigation dropdown to automatically load Open-Meteo model water levels without an API key. Use the top time strip to adjust shooting time; selecting estimated high/low levels or sunlight events also updates the shared time. Choose dates within ten days from today at the camera location; actual coverage depends on model availability. Sunlight events remain available without water data.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? 'Open-Meteo 免费接口限非商业用途并有请求限额。水位相对全球平均海平面（MSL），包含潮汐及气压等影响，不是港口潮汐表或浪高。'
+            : 'The free Open-Meteo API is for non-commercial use with request limits. Levels are relative to global mean sea level (MSL), including tides and pressure effects, not port tide tables or wave heights.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? '模型分辨率约 8 km，河口与近岸误差可能较大；高低水位时刻由逐小时曲线估算，以「约」标示。仅供摄影参考，不代表机位水深或通行安全，不能用于航行。'
+            : 'Model resolution is about 8 km, with limited accuracy near coasts and estuaries. High/low times are estimated from hourly samples and marked approximately. For photography reference only, not local depth, access safety or navigation.'}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="feature-guide-heading">
