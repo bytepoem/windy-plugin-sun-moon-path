@@ -43,8 +43,8 @@
     <section class="feature-guide" aria-labelledby="events-guide-heading">
         <h3 id="events-guide-heading">{uiLanguage === 'zh' ? '事件与天空盘' : 'Events and sky chart'}</h3>
         <p>{uiLanguage === 'zh'
-            ? '在设置中切换「显示天空盘」，或点击窗口栏首个天空盘按钮；两处同步并记住选择。'
-            : 'Toggle “Show sky chart” in Settings or use the first window button. Both controls stay synchronized and remember your choice.'}</p>
+            ? '在设置中切换「显示天空盘」，或点击窗口栏首个天体轨道图标按钮；两处同步并记住选择。'
+            : 'Toggle “Show sky chart” in Settings or use the first window button with the orbit icon. Both controls stay synchronized and remember your choice.'}</p>
         <p>{uiLanguage === 'zh'
             ? '查看日月、银心升落和无月黑夜／银河时段，点击事件时刻跳转。今天的高亮与倒计时指向下一个真实事件。天空盘跟随规划时间；标有 now 的日月长线始终表示现在。'
             : 'View Sun, Moon and galactic centre events, moonless nights and Milky Way windows. Click an event time to jump. Today’s highlight and countdown identify the next real event. The sky chart follows planning time; Sun/Moon bearings labelled now always mean the current instant.'}</p>

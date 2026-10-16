@@ -40,7 +40,8 @@ Language and display options are in Settings; detailed legends are under Setting
 | Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
 | Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position |
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
-| Radar and display | RainViewer radar overlays, Windy units, and collapsed, compact or fullscreen mobile views |
+| Light pollution map | Overlay Lorenz 2025 sky brightness and use location SQM and estimated Bortle values to shortlist dark-sky photography sites |
+| Radar and display | RainViewer overlays using the China NMC stepped reflectivity palette, Windy units, and collapsed, compact or fullscreen mobile views |
 
 ## How to use the features
 
@@ -48,7 +49,7 @@ Language and display options are in Settings; detailed legends are under Setting
 
 Choose a location and date, then open Events for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
 
-Toggle “Show sky chart” in Settings or use the first window button; both controls stay synchronized and remember your choice.
+Toggle “Show sky chart” in Settings or use the first window button with the orbit icon; both controls stay synchronized and remember your choice.
 
 ### Cloud planning
 
@@ -90,9 +91,9 @@ Use the top favorites button to save the current location or search and open exi
 
 ### Light pollution map, radar and display
 
-Use the sparkles button beside radar to overlay the Lorenz 2025 light pollution map. Adjust opacity, check loading status or retry in Settings. Selecting a location still shows its light pollution details. The map and location query use the same annual data, covering 65°S–75°N independently of the weather timeline. This is a zenith sky brightness model, not a live observation or measured Bortle classification. Data and color key: [David Lorenz](https://djlorenz.github.io/astronomy/lp/).
+Use the sparkles button beside the rain-cloud icon to overlay the Lorenz 2025 light pollution map. It defaults to off with 50% opacity when enabled. Adjust opacity, check loading status or retry in Settings; the toggle and opacity remember your choices. Selecting a location still shows its SQM and estimated Bortle values. The map and location query use the same annual data, covering 65°S–75°N independently of the weather timeline. This is a zenith sky brightness model, not a live observation or measured Bortle classification. Data and color key: [David Lorenz](https://djlorenz.github.io/astronomy/lp/).
 
-In Settings, select the RainViewer radar source and adjust its opacity. Use Windy's timeline and the displayed radar timestamp to examine changes in rainfall. Settings also contains language and display options, while measurement units follow Windy. On mobile, use the panel controls to switch between collapsed, compact and fullscreen views.
+Use the rain-cloud button to toggle RainViewer radar, or select the source and adjust opacity in Settings. Echoes use the China NMC stepped reflectivity palette; use Windy's timeline and the displayed radar timestamp to examine changes in rainfall. Recoloring does not change the data source, so echo coverage and update times may differ from Windy's native radar. Settings also contains language and display options, while measurement units follow Windy. On mobile, use the panel controls to switch between collapsed, compact and fullscreen views.
 
 Minimize scope keeps the standard collapsed layout by default. You can also hide the daily event times, or hide both event times and the location, Sun/Moon directions and Moon phase row. Expanding restores all content, and your choice is saved in this browser.
 
