@@ -14,6 +14,10 @@ import {
     loadMinimizeScopePreference,
     loadRadarOpacityPreference,
     loadRadarProvider,
+    loadLightPollutionEnabled,
+    loadLightPollutionOpacity,
+    saveLightPollutionEnabled,
+    saveLightPollutionOpacity,
     removeLocationApiKey,
     saveDirectionLineOpacityPreference,
     saveExtendedDistancePreference,
@@ -41,6 +45,29 @@ const storage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('existing plugin preferences', () => {
+    it('keeps atlas defaults and persistence independent of radar and handles unavailable storage', () => {
+        storage({ 'radar-provider': 'rainviewer' });
+        expect(loadLightPollutionEnabled()).toBe(false);
+        expect(loadLightPollutionOpacity()).toBe(50);
+        saveLightPollutionEnabled(true);
+        saveLightPollutionOpacity(0);
+        expect(loadLightPollutionEnabled()).toBe(true);
+        expect(loadLightPollutionOpacity()).toBe(0);
+        expect(loadRadarProvider()).toBe('rainviewer');
+        storage({ 'light-pollution-opacity': 'bad' });
+        expect(loadLightPollutionOpacity()).toBe(50);
+        storage({ 'light-pollution-opacity': '120' });
+        expect(loadLightPollutionOpacity()).toBe(100);
+        vi.stubGlobal('localStorage', {
+            getItem: () => { throw Error('blocked'); },
+            setItem: () => { throw Error('blocked'); },
+        });
+        expect(loadLightPollutionEnabled()).toBe(false);
+        expect(loadLightPollutionOpacity()).toBe(50);
+        expect(() => saveLightPollutionEnabled(true)).not.toThrow();
+        expect(() => saveLightPollutionOpacity(70)).not.toThrow();
+    });
+
     it('restores minimize scope independently of panel mode and preserves the old default', () => {
         storage({ 'mobile-panel-mode': 'collapsed' });
         expect(loadMinimizeScopePreference()).toBe('standard');

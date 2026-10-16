@@ -50,7 +50,7 @@ const opaqueRadarColor = (color: RadarRgba): RadarRgba => [
 ];
 
 /**
- * CPU reference for the GPU shader. RainViewer's unsmoothed Universal Blue tiles encode
+ * RainViewer's unsmoothed Universal Blue tiles encode
  * low reflectivity in alpha and higher reflectivity in discrete RGB bands.
  */
 export const mapRainViewerPixelToNmc = ([red, green, blue, alpha]: RadarRgba): RadarRgba => {
@@ -107,75 +107,3 @@ export const mapRainViewerPixelToNmc = ([red, green, blue, alpha]: RadarRgba): R
     }
     return [0, 0, 0, 0];
 };
-
-const glslColor = (minDbz: number): string => {
-    const [red, green, blue] = colorForBandStart(minDbz);
-    return `vec3(${red}.0 / 255.0, ${green}.0 / 255.0, ${blue}.0 / 255.0)`;
-};
-
-/** GPU equivalent of mapRainViewerPixelToNmc for Windy's LeafletGl raster layer. */
-export const NMC_RADAR_PIXEL_TRANSFORM = `
-vec4 nmcRadarOutput(vec3 rgb) {
-    return vec4(rgb, 1.0);
-}
-
-vec4 pixelTransform(vec4 color, bool isPrimary) {
-    if (color.a <= 0.001) {
-        return vec4(0.0);
-    }
-
-    vec3 source = color.rgb / color.a;
-    float red = source.r * 255.0;
-    float green = source.g * 255.0;
-    float blue = source.b * 255.0;
-
-    if (color.a < 0.999) {
-        if (color.a <= 73.5 / 255.0) {
-            return nmcRadarOutput(${glslColor(0)});
-        }
-        if (color.a <= 94.5 / 255.0) {
-            return nmcRadarOutput(${glslColor(0.1)});
-        }
-        if (color.a <= 140.5 / 255.0) {
-            return nmcRadarOutput(${glslColor(5)});
-        }
-        return nmcRadarOutput(${glslColor(10)});
-    }
-
-    if (red >= 250.0 && green >= 250.0 && blue >= 250.0) {
-        return nmcRadarOutput(${glslColor(65)});
-    }
-    if (red <= 5.0 && green >= 250.0 && blue <= 5.0) {
-        return nmcRadarOutput(${glslColor(70)});
-    }
-    if (red >= 230.0 && blue >= 230.0) {
-        return nmcRadarOutput(green >= 125.0 ? ${glslColor(55)} : ${glslColor(60)});
-    }
-    if (blue <= 5.0 && red >= 80.0) {
-        if (green >= 175.0) {
-            return nmcRadarOutput(${glslColor(35)});
-        }
-        if (green >= 100.0) {
-            return nmcRadarOutput(${glslColor(40)});
-        }
-        if (green > 0.0) {
-            return nmcRadarOutput(${glslColor(45)});
-        }
-        return nmcRadarOutput(${glslColor(50)});
-    }
-    if (blue >= 100.0 && green >= 65.0) {
-        if (red > 10.0) {
-            return nmcRadarOutput(${glslColor(15)});
-        }
-        if (blue >= 175.0) {
-            return nmcRadarOutput(${glslColor(20)});
-        }
-        if (blue >= 139.0) {
-            return nmcRadarOutput(${glslColor(25)});
-        }
-        return nmcRadarOutput(${glslColor(30)});
-    }
-
-    return vec4(0.0);
-}
-`;

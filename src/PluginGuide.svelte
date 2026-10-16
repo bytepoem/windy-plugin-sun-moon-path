@@ -128,6 +128,10 @@
                 <dd>{text.featureGuide.radarOverlay.description}</dd>
             </div>
             <div>
+                <dt>{text.featureGuide.lightPollutionOverlay.title}</dt>
+                <dd>{text.featureGuide.lightPollutionOverlay.description}</dd>
+            </div>
+            <div>
                 <dt>{text.featureGuide.observationEvidence.title}</dt>
                 <dd>{text.featureGuide.observationEvidence.description}</dd>
             </div>

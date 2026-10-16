@@ -1,6 +1,7 @@
 import type { ObservationEvent as DirectionEvent } from './observationPlanner';
 import type { AstronomyInterval } from './solar';
 import type { RadarProvider, RadarOverlayStatus } from './radarOverlay';
+import type { LightPollutionOverlayStatus } from './lightPollutionOverlay';
 import type { LocationProvider } from './locationProvider';
 import type { UpdateNoteKind } from './pluginUpdate';
 import type { TemperatureUnit, PrecipitationUnit, WindUnit, DistanceUnit } from './unitPreferences';
@@ -85,6 +86,7 @@ export const translations: Record<UiLanguage, {
         | 'mobileMode'
         | 'mapControls'
         | 'radarOverlay'
+        | 'lightPollutionOverlay'
         | 'cloudPlanning'
         | 'weatherSources'
         | 'units',
@@ -107,6 +109,13 @@ export const translations: Record<UiLanguage, {
     rainViewerDescription: string;
     radarOpacityLabel: string;
     radarOpacityDescription: string;
+    lightPollutionOverlayLabel: string;
+    enableLightPollutionLabel: string;
+    disableLightPollutionLabel: string;
+    lightPollutionOverlayDescription: string;
+    lightPollutionOpacityLabel: string;
+    lightPollutionOpacityDescription: string;
+    lightPollutionOverlayStatuses: Record<LightPollutionOverlayStatus, string>;
     lineOpacityLabel: string;
     lineOpacityDescription: string;
     show600Label: (distance: string) => string;
@@ -315,6 +324,10 @@ export const translations: Record<UiLanguage, {
                 title: '气象雷达叠加',
                 description: '使用标题栏或移动端窗口上方的雷达按钮快速开关 RainViewer；开启后按钮高亮，雷达图层会跟随 Windy 时间条切换，透明度可在设置中调整。',
             },
+            lightPollutionOverlay: {
+                title: '光污染地图',
+                description: '使用雷达旁的星光按钮开关 Lorenz 2025 天空亮度图层，在设置中调整不透明度、查看加载状态或重试。覆盖南纬 65° 至北纬 75°；年度模型不随天气时间轴变化，不能代表实时观测或实测 Bortle 等级。点选机位仍使用现有光污染卡片。',
+            },
         },
         settingsGuideHeading: '设置说明',
         settingsHeading: '插件设置',
@@ -327,6 +340,20 @@ export const translations: Record<UiLanguage, {
         initialOverlayDescription: '选择后立即切换到对应 Windy 图层，并在以后打开插件时继续使用；选择“保持 Windy 当前图层”则不自动切换。设置会保存在当前浏览器。',
         keepCurrentOverlayLabel: '保持 Windy 当前图层',
         radarProviderLabel: '叠加雷达数据',
+        lightPollutionOverlayLabel: '光污染地图',
+        enableLightPollutionLabel: '开启光污染地图',
+        disableLightPollutionLabel: '关闭光污染地图',
+        lightPollutionOverlayDescription: 'Lorenz · 2025 天空亮度模型，与机位查询同源；不随天气时间轴变化。',
+        lightPollutionOpacityLabel: '光污染地图不透明度',
+        lightPollutionOpacityDescription: '0% 完全透明，100% 完全不透明。降低不透明度可看清底图；设置保存在当前浏览器。',
+        lightPollutionOverlayStatuses: {
+            disabled: '光污染图层已关闭',
+            transparent: '光污染图层已开启，当前完全透明（0%）',
+            loading: '正在加载光污染图层…',
+            ready: '光污染图层已加载',
+            'out-of-range': '地图中心超出覆盖范围（65°S–75°N）',
+            error: '光污染图层加载失败，请重试。',
+        },
         radarProviderDescription: '窗口雷达按钮与此设置同步，任一处都可直接开关；开启后会在当前 Windy 图层上叠加 RainViewer，并跟随时间条切换时次。设置仅保存在当前浏览器。',
         radarProviderLabels: {
             none: '不叠加',
@@ -582,6 +609,10 @@ export const translations: Record<UiLanguage, {
                 title: 'Weather radar overlay',
                 description: 'Use the radar button in the title bar or above the mobile window to toggle RainViewer. The active button is highlighted, radar follows Windy’s timeline, and opacity is adjustable in Settings.',
             },
+            lightPollutionOverlay: {
+                title: 'Light pollution map',
+                description: 'Use the sparkles button beside radar to toggle the Lorenz 2025 sky brightness map. Adjust opacity, check loading status or retry in Settings. Coverage is 65°S–75°N. This annual model is independent of the weather timeline and is neither a live observation nor measured Bortle. Selecting a location still updates the existing light pollution card.',
+            },
         },
         settingsGuideHeading: 'Settings guide',
         settingsHeading: 'Plugin settings',
@@ -594,6 +625,20 @@ export const translations: Record<UiLanguage, {
         initialOverlayDescription: 'Switch to the selected Windy layer immediately and keep using it whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
         keepCurrentOverlayLabel: 'Keep Windy’s current layer',
         radarProviderLabel: 'Radar data overlay',
+        lightPollutionOverlayLabel: 'Light pollution map',
+        enableLightPollutionLabel: 'Show light pollution map',
+        disableLightPollutionLabel: 'Hide light pollution map',
+        lightPollutionOverlayDescription: 'Lorenz · 2025 sky brightness model, matching the location query. Independent of the weather timeline.',
+        lightPollutionOpacityLabel: 'Light pollution map opacity',
+        lightPollutionOpacityDescription: '0% is transparent; 100% is opaque. Lower opacity reveals the base map. Saved in this browser.',
+        lightPollutionOverlayStatuses: {
+            disabled: 'Light pollution overlay is off',
+            transparent: 'Light pollution overlay is on but fully transparent (0%)',
+            loading: 'Loading light pollution overlay…',
+            ready: 'Light pollution overlay loaded',
+            'out-of-range': 'Map centre is outside coverage (65°S–75°N)',
+            error: 'Light pollution overlay failed to load. Please retry.',
+        },
         radarProviderDescription: 'The window radar button and this setting stay synchronized, and either one directly toggles the overlay. When enabled, RainViewer follows Windy’s timeline. The setting stays in this browser.',
         radarProviderLabels: {
             none: 'Off',

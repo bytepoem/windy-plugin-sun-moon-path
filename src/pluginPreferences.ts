@@ -1,6 +1,7 @@
 import { DEFAULT_INITIAL_OVERLAY, normalizeInitialOverlayPreference, type InitialOverlayPreference, type WindyOverlay } from './initialOverlay';
 import { DEFAULT_RADAR_OPACITY_PERCENT, normalizeRadarOpacityPercent, normalizeRadarProvider, type RadarProvider } from './radarOverlay';
 import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
+import { DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT, normalizeLightPollutionOpacity } from './lightPollutionOverlay';
 import type { UiLanguage } from './pluginTranslations';
 
 export type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
@@ -19,6 +20,8 @@ const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction
 const INITIAL_OVERLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:initial-overlay';
 const RADAR_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-provider';
 const RADAR_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-opacity';
+const LIGHT_POLLUTION_ENABLED_STORAGE_KEY = 'windy-plugin-sun-moon-path:light-pollution-enabled';
+const LIGHT_POLLUTION_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:light-pollution-opacity';
 const REMOVED_RADAR_CREDENTIAL_STORAGE_KEYS = [
     'windy-plugin-sun-moon-path:xweather-client-id',
     'windy-plugin-sun-moon-path:xweather-client-secret',
@@ -168,6 +171,34 @@ export const loadRadarProvider = (): RadarProvider => {
     } catch {
         return 'none';
     }
+};
+
+/** Independent keys leave existing point-query caches and older builds unchanged. */
+export const loadLightPollutionEnabled = (): boolean => {
+    try {
+        return localStorage.getItem(LIGHT_POLLUTION_ENABLED_STORAGE_KEY) === 'true';
+    } catch {
+        return false;
+    }
+};
+
+export const loadLightPollutionOpacity = (): number => {
+    try {
+        const stored = localStorage.getItem(LIGHT_POLLUTION_OPACITY_STORAGE_KEY);
+        return stored === null || stored.trim() === ''
+            ? DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT
+            : normalizeLightPollutionOpacity(Number(stored));
+    } catch {
+        return DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT;
+    }
+};
+
+export const saveLightPollutionEnabled = (value: boolean): void => {
+    write(LIGHT_POLLUTION_ENABLED_STORAGE_KEY, String(value));
+};
+
+export const saveLightPollutionOpacity = (value: number): void => {
+    write(LIGHT_POLLUTION_OPACITY_STORAGE_KEY, String(normalizeLightPollutionOpacity(value)));
 };
 
 export const loadRadarOpacityPreference = (): number => {

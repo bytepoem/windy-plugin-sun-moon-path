@@ -88,7 +88,9 @@ Open Weather and choose a data source and forecast model in the weather table. C
 
 Use the top favorites button to save the current location or search and open existing Windy favorites. Select Compare, choose 2–5 locations and start the comparison to check weather, observing windows, elevation and light pollution for the same date and shortlist alternative shooting locations.
 
-### Radar and display
+### Light pollution map, radar and display
+
+Use the sparkles button beside radar to overlay the Lorenz 2025 light pollution map. Adjust opacity, check loading status or retry in Settings. Selecting a location still shows its light pollution details. The map and location query use the same annual data, covering 65°S–75°N independently of the weather timeline. This is a zenith sky brightness model, not a live observation or measured Bortle classification. Data and color key: [David Lorenz](https://djlorenz.github.io/astronomy/lp/).
 
 In Settings, select the RainViewer radar source and adjust its opacity. Use Windy's timeline and the displayed radar timestamp to examine changes in rainfall. Settings also contains language and display options, while measurement units follow Windy. On mobile, use the panel controls to switch between collapsed, compact and fullscreen views.
 

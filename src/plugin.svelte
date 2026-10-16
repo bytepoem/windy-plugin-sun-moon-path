@@ -26,9 +26,11 @@
                     on:click|stopPropagation={toggleSkyChart}
                 >
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="12" cy="12" r="9"></circle>
-                        <ellipse cx="12" cy="12" rx="4" ry="9"></ellipse>
-                        <path d="M3 12h18M12 3v18"></path>
+                        <path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"></path>
+                        <path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <circle cx="19" cy="5" r="2"></circle>
+                        <circle cx="5" cy="19" r="2"></circle>
                     </svg>
                 </button>
                 <button
@@ -45,8 +47,23 @@
                     on:click|stopPropagation={toggleRadarOverlay}
                 >
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
-                        <path d="m12 12 6.2-6.2M5.6 18.4a9 9 0 0 1 12.8-12.8M8.4 15.6a5 5 0 0 1 7.2-7.2"></path>
+                        <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                        <path d="M16 14v6M8 14v6M12 16v6"></path>
+                    </svg>
+                </button>
+                <button
+                    type="button"
+                    class="desktop-map-control desktop-light-pollution-toggle"
+                    class:atlas-toggle--error={lightPollutionEnabled && lightPollutionOverlayStatus === 'error'}
+                    aria-label={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                    aria-pressed={lightPollutionEnabled}
+                    title={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                    on:click|stopPropagation={toggleLightPollutionOverlay}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                        <path d="M20 2v4M22 4h-4"></path>
+                        <circle cx="4" cy="20" r="2"></circle>
                     </svg>
                 </button>
                 <button
@@ -88,9 +105,11 @@
             >
                 <span class="mobile-window-control__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false">
-                        <circle cx="12" cy="12" r="9"></circle>
-                        <ellipse cx="12" cy="12" rx="4" ry="9"></ellipse>
-                        <path d="M3 12h18M12 3v18"></path>
+                        <path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"></path>
+                        <path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <circle cx="19" cy="5" r="2"></circle>
+                        <circle cx="5" cy="19" r="2"></circle>
                     </svg>
                 </span>
             </button>
@@ -110,8 +129,26 @@
             >
                 <span class="mobile-window-control__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false">
-                        <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
-                        <path d="m12 12 6.2-6.2M5.6 18.4a9 9 0 0 1 12.8-12.8M8.4 15.6a5 5 0 0 1 7.2-7.2"></path>
+                        <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                        <path d="M16 14v6M8 14v6M12 16v6"></path>
+                    </svg>
+                </span>
+            </button>
+
+            <button
+                type="button"
+                class="mobile-window-control mobile-light-pollution-toggle"
+                class:atlas-toggle--error={lightPollutionEnabled && lightPollutionOverlayStatus === 'error'}
+                aria-label={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                aria-pressed={lightPollutionEnabled}
+                title={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                on:click={toggleLightPollutionOverlay}
+            >
+                <span class="mobile-window-control__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                        <path d="M20 2v4M22 4h-4"></path>
+                        <circle cx="4" cy="20" r="2"></circle>
                     </svg>
                 </span>
             </button>
@@ -800,6 +837,12 @@
                     {radarProvider}
                     {radarOverlayStatus}
                     {radarOpacityPercent}
+                    {lightPollutionEnabled}
+                    {lightPollutionOverlayStatus}
+                    {lightPollutionOpacityPercent}
+                    {toggleLightPollutionOverlay}
+                    {changeLightPollutionOpacity}
+                    {retryLightPollutionOverlay}
                     {hideLocationSearch}
                     {minimizeScope}
                     {changeMinimizeScope}
@@ -1039,6 +1082,10 @@
         saveInitialOverlayPreference,
         loadRadarProvider,
         loadRadarOpacityPreference,
+        loadLightPollutionEnabled,
+        loadLightPollutionOpacity,
+        saveLightPollutionEnabled,
+        saveLightPollutionOpacity,
         clearRemovedRadarCredentials,
         loadExtendedDistancePreference,
         saveExtendedDistancePreference,
@@ -1120,6 +1167,12 @@
         type ObservationWindow,
     } from './observationPlanner';
     import LightPollutionSummary from './LightPollutionSummary.svelte';
+    import {
+        createLightPollutionOverlayController,
+        DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT,
+        normalizeLightPollutionOpacity,
+        type LightPollutionOverlayStatus,
+    } from './lightPollutionOverlay';
     import LocationSearch from './LocationSearch.svelte';
     import WeatherTable from './WeatherTable.svelte';
     import {
@@ -1271,6 +1324,12 @@
     let horizonFitRequestId = 0;
     let eventSkyReadyKey = '';
     let radarOverlayStatus: RadarOverlayStatus = 'disabled';
+    let lightPollutionEnabled = false;
+    let lightPollutionOpacityPercent = DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT;
+    let lightPollutionOverlayStatus: LightPollutionOverlayStatus = 'disabled';
+    const lightPollutionOverlayController = createLightPollutionOverlayController(map, nextStatus => {
+        lightPollutionOverlayStatus = nextStatus;
+    });
     let radarFrameTimeMs: number | null = null;
     let radarFrameTimeLabelController: RadarFrameTimeLabelController | null = null;
     let radarOverlayController: RadarOverlayController;
@@ -2132,6 +2191,21 @@
     const toggleRadarOverlay = () => {
         setRadarProvider(radarProvider === 'rainviewer' ? 'none' : 'rainviewer');
     };
+
+    /** Both entry points share one persisted state; the annual atlas has no time subscription. */
+    const toggleLightPollutionOverlay = () => {
+        lightPollutionEnabled = !lightPollutionEnabled;
+        saveLightPollutionEnabled(lightPollutionEnabled);
+        lightPollutionOverlayController.setEnabled(lightPollutionEnabled);
+    };
+
+    const changeLightPollutionOpacity = (event: Event) => {
+        lightPollutionOpacityPercent = normalizeLightPollutionOpacity(Number((event.currentTarget as HTMLInputElement).value));
+        saveLightPollutionOpacity(lightPollutionOpacityPercent);
+        lightPollutionOverlayController.setOpacity(lightPollutionOpacityPercent);
+    };
+
+    const retryLightPollutionOverlay = () => lightPollutionOverlayController.retry();
 
     const setShowExtendedDistanceMarker = (value: boolean) => {
         showExtendedDistanceMarker = value;
@@ -3105,6 +3179,7 @@
             }
             mapOverlayController.destroy();
             radarOverlayController.destroy();
+            lightPollutionOverlayController.destroy();
             eventSkyOverlay.destroy();
             eventHorizonOverlay.destroy();
             radarFrameTimeLabelController?.destroy();
@@ -3161,6 +3236,9 @@
         radarOpacityPercent = loadRadarOpacityPreference();
         radarOverlayController.setOpacity(radarOpacityPercent);
         radarOverlayController.setTimestamp(store.get('timestamp'));
+        lightPollutionEnabled = loadLightPollutionEnabled();
+        lightPollutionOpacityPercent = loadLightPollutionOpacity();
+        lightPollutionOverlayController.setOpacity(lightPollutionOpacityPercent);
         locationSearchProvider = loadLocationSearchProvider();
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
@@ -3169,6 +3247,7 @@
         radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
         void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
+        lightPollutionOverlayController.setEnabled(lightPollutionEnabled);
         bcast.on('back2home', handleBackToHome);
         bcast.on('metricChanged', handleMetricChange);
         map.on('dragstart', handleMapDragStart);
@@ -3485,6 +3564,13 @@
     .mobile-sky-chart-toggle {
         right: calc(
             var(--mobile-window-control-edge) +
+                7 * (var(--mobile-window-control-width) + var(--mobile-window-control-gap))
+        );
+    }
+
+    .mobile-light-pollution-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) +
                 6 * (var(--mobile-window-control-width) + var(--mobile-window-control-gap))
         );
     }
@@ -3529,13 +3615,15 @@
     }
 
     .mobile-sky-chart-toggle[aria-pressed='true'] .mobile-window-control__icon,
+    .mobile-light-pollution-toggle[aria-pressed='true'] .mobile-window-control__icon,
     .mobile-radar-toggle[aria-pressed='true'] .mobile-window-control__icon {
         border-color: var(--panel-accent);
         background: rgba(99, 185, 238, 0.2);
         color: var(--panel-accent);
     }
 
-    .mobile-radar-toggle.radar-toggle--error .mobile-window-control__icon {
+    .mobile-radar-toggle.radar-toggle--error .mobile-window-control__icon,
+    .mobile-light-pollution-toggle.atlas-toggle--error .mobile-window-control__icon {
         border-color: var(--panel-warning);
         color: var(--panel-warning);
     }
@@ -3821,13 +3909,15 @@
     }
 
     .desktop-sky-chart-toggle[aria-pressed='true'],
+    .desktop-light-pollution-toggle[aria-pressed='true'],
     .desktop-radar-toggle[aria-pressed='true'] {
         border-color: var(--panel-accent);
         background: rgba(99, 185, 238, 0.2);
         color: var(--panel-accent);
     }
 
-    .desktop-radar-toggle.radar-toggle--error {
+    .desktop-radar-toggle.radar-toggle--error,
+    .desktop-light-pollution-toggle.atlas-toggle--error {
         border-color: var(--panel-warning);
         color: var(--panel-warning);
     }
