@@ -1,0 +1,88 @@
+{
+  "version": "0.12.0",
+  "releasedAt": "2026-10-19",
+  "zh": {
+    "title": "地平线、潮汐与暗夜拍摄规划",
+    "summary": "新增地平线距离、潮汐和光污染地图，完善快捷按钮与移动端显示，并修复雷达配色。",
+    "items": [
+      {
+        "type": "new",
+        "text": "新增可查看和复制的脱敏诊断报告，通过「关于」底部的紧凑按钮展开或收起；界面显示不完整或初始化失败时，可提供版本、运行环境和错误摘要，方便反馈排查。"
+      },
+      {
+        "type": "new",
+        "text": "新增地平线规划：自动读取机位海拔，查看日、月和银心升落方向的地平线距离，可手动调整视点总海拔并切换云图与预报模型；结果为几何参考，不保证实际视线畅通。"
+      },
+      {
+        "type": "new",
+        "text": "新增 Open-Meteo 潮汐规划，无需 Key；曲线与表格展示模型水位，可结合日光事件调整拍摄时间。水位与估算高低潮仅供摄影参考，不代表机位水深或通行安全。"
+      },
+      {
+        "type": "new",
+        "text": "新增 Lorenz 2025 光污染地图，使用星光按钮开关，在设置中调整不透明度、查看加载状态或重试。年度天空亮度模型覆盖 65°S–75°N，不随天气时间轴变化；机位卡片显示 SQM 与估算 Bortle。"
+      },
+      {
+        "type": "improved",
+        "text": "新增可记住选择的天空盘显示开关；桌面和手机快捷按钮分别使用天体轨道、降雨云、星光图标表示天空盘、气象雷达与光污染地图。"
+      },
+      {
+        "type": "improved",
+        "text": "移动端新增三档最小化范围，可进一步隐藏事件时间栏及地点、日月方位和月相栏，展开后恢复完整内容。"
+      },
+      {
+        "type": "improved",
+        "text": "擦地云距虚线增加距离标注，地平线方向标记改用对应天体图标，方便辨认拍摄方向与参考距离。"
+      },
+      {
+        "type": "fixed",
+        "text": "修复 RainViewer 叠加雷达未应用中央气象台分段色阶及透明度调整不生效的问题；数据来源仍为 RainViewer，回波范围和更新时间可能与 Windy 原生雷达不同。"
+      },
+      {
+        "type": "fixed",
+        "text": "修复光污染图层在后台完成加载后，返回页面仍误报加载超时的问题。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Horizon, tide and dark-sky photography planning",
+    "summary": "Adds horizon distances, tides and a light pollution map, improves shortcuts and mobile display, and fixes radar colors.",
+    "items": [
+      {
+        "type": "new",
+        "text": "Adds viewable, copyable sanitized diagnostic reports that expand or collapse using a compact button at the bottom of About, with version, environment and error summaries to help investigate incomplete displays and initialization failures."
+      },
+      {
+        "type": "new",
+        "text": "Adds Horizon planning with automatic location elevation, horizon distances along Sun, Moon and galactic centre rise/set directions, manual observer elevation, and cloud-map/model selection. Results are geometric references, not guarantees of clear sightlines."
+      },
+      {
+        "type": "new",
+        "text": "Adds Open-Meteo tide planning without an API key. View model water levels in a curve or table and adjust shooting time alongside sunlight events. Levels and estimated highs/lows are photography references, not local depth or access safety."
+      },
+      {
+        "type": "new",
+        "text": "Adds the Lorenz 2025 light pollution map with a sparkles toggle, opacity controls, loading status and retry in Settings. The annual sky brightness model covers 65°S–75°N independently of the weather timeline; location cards show SQM and estimated Bortle values."
+      },
+      {
+        "type": "improved",
+        "text": "Adds a sky-chart visibility toggle that remembers your choice. Desktop and mobile shortcuts use orbit, rain-cloud and sparkles icons for the sky chart, weather radar and light pollution map."
+      },
+      {
+        "type": "improved",
+        "text": "Adds three mobile minimize scopes, optionally hiding the event-time row and the location, celestial bearings and Moon-phase row. Expanding restores the full content."
+      },
+      {
+        "type": "improved",
+        "text": "Adds distance labels to grazing cloud-distance dashed lines and celestial icons to horizon direction markers, making bearings and reference distances easier to identify."
+      },
+      {
+        "type": "fixed",
+        "text": "Fixes RainViewer overlays failing to apply the China NMC stepped reflectivity palette and opacity changes. Data still comes from RainViewer, so echo coverage and update times may differ from Windy’s native radar."
+      },
+      {
+        "type": "fixed",
+        "text": "Fixes a false loading timeout when returning to a tab after light pollution tiles finished loading in the background."
+      }
+    ]
+  }
+}
