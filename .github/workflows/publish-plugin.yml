@@ -2,6 +2,11 @@ name: publish-plugin
 
 on:
     workflow_dispatch:
+        inputs:
+            verify_only:
+                description: 'Only verify published update mirrors; do not build, upload or write mirrors'
+                type: boolean
+                default: false
 
 concurrency:
     group: publish-plugin
@@ -9,6 +14,7 @@ concurrency:
 
 jobs:
     publish-plugin:
+        if: ${{ !inputs.verify_only }}
         runs-on: ubuntu-latest
         permissions:
             contents: write
@@ -32,6 +38,7 @@ jobs:
                   # npm 10.9.8 crashes while resolving the current Vitest peer dependency tree.
                   npm exec --yes --package=npm@11.12.1 -- npm install
                   npm test
+                  node --test scripts/verify-update-site.test.mjs
                   python3 scripts/test_publish_update_mirrors.py
                   npm run build
                   node scripts/build-update-site.mjs "$RUNNER_TEMP/update-site"
@@ -73,7 +80,26 @@ jobs:
                   curl -s --fail-with-body -XPOST 'https://node.windy.com/plugins/v1.0/upload' -H "x-windy-api-key: ${WINDY_API_KEY}" -F "plugin_archive=@../plugin.tar"
             - name: Publish regional update mirrors
               run: python3 scripts/publish-update-mirrors.py "$RUNNER_TEMP/update-site"
+
+    verify-update-metadata:
+        needs: publish-plugin
+        if: ${{ always() && !cancelled() && (needs.publish-plugin.result == 'success' || inputs.verify_only) }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: read
+        strategy:
+            fail-fast: false
+            matrix:
+                source: [gitee, github]
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            - name: Test update verification
+              run: node --test scripts/verify-update-site.test.mjs
             - name: Verify live update metadata
-              run: |
-                  node scripts/verify-update-site.mjs --source=gitee
-                  node scripts/verify-update-site.mjs --source=github
+              env:
+                  UPDATE_SOURCE: ${{ matrix.source }}
+              run: node scripts/verify-update-site.mjs --source="$UPDATE_SOURCE"
