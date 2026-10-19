@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { createEventDispatcher, onDestroy } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
+    import { onPluginDestroy as onDestroy } from './pluginLifecycle';
     import { addDaysToDateInput, dateInputToUtcMidnight, formatLocalClock, type Coordinates } from './solar';
     import { createTideController, emptyTideState, tideHeightAt, type TideErrorCode } from './openMeteoTide';
     import { layoutTideLabels, TIDE_LABEL_HEIGHT, TIDE_LABEL_TOP_OFFSET, TIDE_LABEL_WIDTH } from './tideChartLabels';

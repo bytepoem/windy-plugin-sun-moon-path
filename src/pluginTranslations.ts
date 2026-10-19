@@ -53,6 +53,12 @@ export const translations: Record<UiLanguage, {
     guideTab: string;
     settingsTab: string;
     aboutTab: string;
+    diagnosticTitle: string;
+    diagnosticHint: string;
+    diagnosticCopy: string;
+    diagnosticCopied: string;
+    diagnosticCopyError: string;
+    diagnosticStartupFailed: string;
     aboutTabUpdateBadge: string;
     aboutTabUpdateLabel: (version: string) => string;
     retry: string;
@@ -257,6 +263,12 @@ export const translations: Record<UiLanguage, {
         guideTab: '说明',
         settingsTab: '设置',
         aboutTab: '关于',
+        diagnosticTitle: '查看诊断信息',
+        diagnosticHint: '报告包含版本、运行环境、加载状态和脱敏错误。可复制后随问题反馈发送；不包含机位坐标、收藏或 API Key。',
+        diagnosticCopy: '复制诊断信息',
+        diagnosticCopied: '已复制',
+        diagnosticCopyError: '复制失败，请选择文本手动复制',
+        diagnosticStartupFailed: '插件未能完成初始化。请复制诊断信息并反馈，关闭后可重新打开。',
         aboutTabUpdateBadge: '新',
         aboutTabUpdateLabel: version => `关于，发现新版本 ${version}`,
         retry: '重试',
@@ -542,6 +554,12 @@ export const translations: Record<UiLanguage, {
         guideTab: 'Guide',
         settingsTab: 'Settings',
         aboutTab: 'About',
+        diagnosticTitle: 'View diagnostics',
+        diagnosticHint: 'The report includes the version, environment, loading states and sanitized errors. Copy it to include with your issue report. It excludes location coordinates, favorites and API keys.',
+        diagnosticCopy: 'Copy diagnostics',
+        diagnosticCopied: 'Copied',
+        diagnosticCopyError: 'Copy failed. Select and copy the text manually.',
+        diagnosticStartupFailed: 'The plugin could not finish initializing. Copy the diagnostics to report the problem. Close and reopen to try again.',
         aboutTabUpdateBadge: 'NEW',
         aboutTabUpdateLabel: version => `About, version ${version} is available`,
         retry: 'Retry',

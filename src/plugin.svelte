@@ -866,6 +866,7 @@
                 />
             {:else}
                 <PluginAbout
+                    diagnosticReport={diagnosticRuntime?.report ?? null}
                     {uiLanguage}
                     {pluginUpdateStatus}
                     {pluginUpdateResult}
@@ -1054,8 +1055,9 @@
     import { setUrl } from '@windy/location';
     import { singleclick } from '@windy/singleclick';
     import store from '@windy/store';
-    import { onDestroy, onMount, tick } from 'svelte';
+    import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
+    import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
     import CloudNavigation from './CloudNavigation.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
@@ -1237,11 +1239,25 @@
         type PrecipitationUnit,
         type UnitPreferences,
     } from './unitPreferences';
+    import type { DiagnosticRuntime } from './diagnosticRuntime';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
 
     import type { LatLon } from '@windy/interfaces.d';
 
+    export let diagnosticRuntime: DiagnosticRuntime | null = null;
+    export let startupFailed: (error: unknown) => void = error => { throw error; };
+    const lifecycle = currentPluginLifecycle();
+
     const { name, repository: repositoryUrl, title, version: pluginVersion } = config;
+    /** Record the earliest calculation failure without replacing its business behavior. */
+    const diagnosticGalacticEvents = (date: string, zone: string, location: Coordinates) => {
+        try {
+            return galacticCenterEvents(date, zone, location);
+        } catch (error) {
+            diagnosticRuntime?.error('galactic', error, diagnosticRuntime.diagnostics.state === 'starting');
+            throw error;
+        }
+    };
     const systemTimeZone = (() => {
         try {
             return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -1262,7 +1278,7 @@
         { value: 'moonset' },
     ];
     const galacticShortcutEvents = ['milkywayrise', 'milkywayset'] as const;
-    $: galacticEvents = galacticCenterEvents(selectedDate, timeZone, selectedLocation);
+    $: galacticEvents = diagnosticGalacticEvents(selectedDate, timeZone, selectedLocation);
     // Reuse the shortcut crossings; missing events stay visible without inventing a time.
     $: summaryTimelineItems = [
         ...(astronomyTimeline?.items || []),
@@ -1442,11 +1458,17 @@
         atmosphere: request => fetchOpenMeteoAtmosphere(request),
     }, state => {
         forecastState = state;
-    });
+    }, (kind, error) => diagnosticRuntime?.error(kind, error));
     let locationKey = '';
     let resolvedContextLocationKey = '';
     let elevationLocationKey = '';
     $: weatherPoints = forecastState.points;
+    $: diagnosticRuntime?.diagnostics.context({
+        tab: summaryTab, view: cloudView,
+        mode: isMobileOrTablet ? mobilePanelMode : 'desktop', source: weatherSource,
+        astronomy: status, weather: forecastState.weatherStatus,
+        atmosphere: forecastState.atmosphereStatus, clouds: forecastState.cloudStatus,
+    });
     $: weatherStatus = forecastState.weatherStatus;
     $: weatherRequestKey = forecastState.requestKey;
     $: weatherErrorMessage = weatherStatus === 'error'
@@ -2373,18 +2395,23 @@
         // These planners own their layers. Every redraw entry (including async
         // completion and unit changes) must exclude event and live direction rays.
         if (rainbowVisible || horizonVisible) { mapOverlayController.destroy(); return; }
-        mapOverlayController.render({
-            location: selectedLocation,
-            paths,
-            ...mapCurrentDirections(planningTimestamp, planningBody),
-            showExtendedDistanceMarker,
-            opacityPercent: directionLineOpacityPercent,
-            showDistanceMarkers: !cloudObstructionVisible,
-            directionRangeKm,
-            originLabel: text.legend.origin,
-            eventNames: text.events,
-            formatDistance: distanceKm => formatDistanceLabel(distanceKm, units.distance),
-        });
+        try {
+            mapOverlayController.render({
+                location: selectedLocation,
+                paths,
+                ...mapCurrentDirections(planningTimestamp, planningBody),
+                showExtendedDistanceMarker,
+                opacityPercent: directionLineOpacityPercent,
+                showDistanceMarkers: !cloudObstructionVisible,
+                directionRangeKm,
+                originLabel: text.legend.origin,
+                eventNames: text.events,
+                formatDistance: distanceKm => formatDistanceLabel(distanceKm, units.distance),
+            });
+        } catch (error) {
+            diagnosticRuntime?.error('map', error);
+            throw error;
+        }
     };
 
     const refreshCurrentDirectionValues = () => {
@@ -2398,7 +2425,8 @@
                 date: currentInstant,
                 location: selectedLocation,
             });
-        } catch {
+        } catch (error) {
+            diagnosticRuntime?.error('astronomy', error);
             currentSolarDirection = null;
             currentMoonInfo = null;
         }
@@ -2414,6 +2442,7 @@
     };
 
     const refreshPaths = async (key: string) => {
+        const diagnosticOperation = diagnosticRuntime?.diagnostics.begin('astronomy') ?? 0;
         const requestId = ++latestRequestId;
         eventSkyReadyKey = '';
         eventSkyOverlay.destroy();
@@ -2434,6 +2463,7 @@
         try {
             const plan = await observationPlanner.plan({ location, dateInput, knownElevationM: knownElevation });
             if (requestId !== latestRequestId || key !== astronomyKey) {
+                diagnosticRuntime?.diagnostics.end('astronomy', diagnosticOperation, 'cancelled');
                 return;
             }
 
@@ -2461,11 +2491,12 @@
             const selectedPaths = selectedMapPaths(plan.paths);
             status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
             renderMapFeatures(selectedPaths);
+            diagnosticRuntime?.diagnostics.end('astronomy', diagnosticOperation, status === 'empty' ? 'empty' : 'ready');
         } catch (error) {
             if (requestId !== latestRequestId || key !== astronomyKey) {
                 return;
             }
-
+            diagnosticRuntime?.diagnostics.error('astronomy', error, diagnosticOperation);
             status = 'error';
             solarPaths = [];
             astronomyTimeline = null;
@@ -2515,6 +2546,9 @@
                 return;
             }
 
+            if (!(error instanceof LightPollutionOutOfBoundsError)) {
+                diagnosticRuntime?.error('light-pollution', error);
+            }
             lightPollutionPoint = null;
             lightPollutionStatus = 'error';
             lightPollutionErrorKind = error instanceof LightPollutionOutOfBoundsError
@@ -2595,6 +2629,7 @@
                 return;
             }
             // Update metadata is optional. A failed request must not affect core plugin features.
+            diagnosticRuntime?.error('update', error);
             if (!preserveAvailableResult) {
                 pluginUpdateStatus = 'error';
             }
@@ -2929,6 +2964,7 @@
             void tick().then(update);
         };
         const observer = new ResizeObserver(update);
+        const disconnect = lifecycle?.own(() => observer.disconnect()) ?? (() => observer.disconnect());
         observer.observe(node);
         if (value) {
             observer.observe(value);
@@ -2936,7 +2972,7 @@
         scheduleUpdate();
         return {
             update: scheduleUpdate,
-            destroy: () => observer.disconnect(),
+            destroy: disconnect,
         };
     };
 
@@ -3132,6 +3168,7 @@
 
     const overlayOwner = {
         deactivateForReplacement: () => {
+            if (diagnosticRuntime?.diagnostics.state !== 'failed') { diagnosticRuntime?.stop('replacement'); }
             // Replacement mounts continue the logical use, with no live old resources.
             pluginUsage?.stop(true);
             isMounted = false;
@@ -3200,7 +3237,7 @@
         },
     };
 
-    onMount(() => {
+    const mountPlugin = () => {
         jumpToNow();
         releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
         radarFrameTimeLabelController = createRadarFrameTimeLabel();
@@ -3258,10 +3295,20 @@
         document.addEventListener('keydown', handleHostTimeInput, true);
         updateCurrentDirections();
         currentDirectionTimer = setInterval(updateCurrentDirections, 5_000);
+    };
+
+    onMount(() => {
+        try {
+            mountPlugin();
+        } catch (error) {
+            // Let the constructor finish, then the entry destroys the complete Svelte subtree.
+            startupFailed(error);
+        }
     });
 
     onDestroy(() => {
         const shouldReopenAfterHome = reopenAfterHome;
+        diagnosticRuntime?.stop(shouldReopenAfterHome ? 'replacement' : 'close');
         pluginUsage?.stop(shouldReopenAfterHome);
         overlayOwner.deactivateForReplacement();
         releaseOverlayOwnership?.();

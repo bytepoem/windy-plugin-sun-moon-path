@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy } from 'svelte';
+    import { onPluginDestroy as onDestroy } from './pluginLifecycle';
     import RainbowSightlineEvidence from './RainbowSightlineEvidence.svelte';
     import { createRainbowConditionsLoader, rainbowSampleSignal, type RainbowConditions } from './rainbowConditions';
     import { PRIMARY_RAINBOW_RADIUS, type SkyDirection } from './rainbowGeometry';

@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { createEventDispatcher, onMount } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
+    import { onPluginMount as onMount } from './pluginLifecycle';
     import type { UiLanguage } from './pluginTranslations';
 
     const dispatch = createEventDispatcher<{ confirm: UiLanguage }>();

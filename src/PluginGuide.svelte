@@ -38,6 +38,9 @@
         <p>{uiLanguage === 'zh'
             ? '主导航下拉菜单切换云层遮挡、彩虹、地平线与潮汐；语言、单位和其他偏好在设置中修改。'
             : 'Use the navigation dropdown for Clouds, Rainbow, Horizon or Tides. Change language, units and other preferences in Settings.'}</p>
+        <p>{uiLanguage === 'zh'
+            ? '显示不完整或加载异常时，展开「关于」底部的「查看诊断信息」，复制报告并随问题反馈提供。初始化失败时也会显示诊断入口；文件本身无法加载时，请提供截图与浏览器错误。'
+            : 'For incomplete displays or loading errors, expand View diagnostics at the bottom of About, copy the report and include it with your issue. Initialization failures also show this entry. If the file itself cannot load, provide screenshots and browser errors.'}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="events-guide-heading">

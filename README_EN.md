@@ -121,4 +121,6 @@ Run `npm run build` to generate `dist/`, including scripts, `plugin.json` and th
 
 ## Feedback and license
 
+If the interface is incomplete or loading fails, expand **View diagnostics** at the bottom of **About**, copy the report and include it with your issue. A diagnostic entry is also shown when initialization fails. Reports include the version, environment, loading states and sanitized errors, excluding location coordinates, favorites and API keys. If the plugin file itself cannot load, provide screenshots and browser errors instead.
+
 [Report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [RedNote](https://xhslink.cn/o/rXpBcBK0Qy) · [Optional support on Afdian](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)

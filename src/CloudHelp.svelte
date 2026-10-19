@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { createEventDispatcher, onMount } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
+    import { onPluginMount as onMount } from './pluginLifecycle';
 
     export let zh: boolean;
 

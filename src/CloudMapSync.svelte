@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
     import store from '@windy/store';
     import plugins from '@windy/plugins';
+    import { onPluginDestroy as onDestroy, onPluginMount as onMount } from './pluginLifecycle';
     import type { CloudSettings } from './cloudProfile';
     import type { WeatherModel } from './weather';
 

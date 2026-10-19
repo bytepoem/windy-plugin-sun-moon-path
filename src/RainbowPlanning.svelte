@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { onMount, onDestroy } from 'svelte';
     import { map } from '@windy/map';
+    import { onPluginMount as onMount, onPluginDestroy as onDestroy } from './pluginLifecycle';
     import CelestialIcon from './CelestialIcon.svelte';
     import RainbowConditions from './RainbowConditions.svelte';
     import { cloudBodyPosition } from './cloudGeometry';

@@ -1,10 +1,14 @@
 {
   "version": "0.12.0",
-  "releasedAt": "2026-10-16",
+  "releasedAt": "2026-10-18",
   "zh": {
     "title": "地平线、潮汐与暗夜拍摄规划",
     "summary": "新增地平线距离、潮汐和光污染地图，完善快捷按钮与移动端显示，并修复雷达配色。",
     "items": [
+      {
+        "type": "new",
+        "text": "新增可查看和复制的脱敏诊断报告，通过「关于」底部的紧凑按钮展开或收起；界面显示不完整或初始化失败时，可提供版本、运行环境和错误摘要，方便反馈排查。"
+      },
       {
         "type": "new",
         "text": "新增地平线规划：自动读取机位海拔，查看日、月和银心升落方向的地平线距离，可手动调整视点总海拔并切换云图与预报模型；结果为几何参考，不保证实际视线畅通。"
@@ -43,6 +47,10 @@
     "title": "Horizon, tide and dark-sky photography planning",
     "summary": "Adds horizon distances, tides and a light pollution map, improves shortcuts and mobile display, and fixes radar colors.",
     "items": [
+      {
+        "type": "new",
+        "text": "Adds viewable, copyable sanitized diagnostic reports that expand or collapse using a compact button at the bottom of About, with version, environment and error summaries to help investigate incomplete displays and initialization failures."
+      },
       {
         "type": "new",
         "text": "Adds Horizon planning with automatic location elevation, horizon distances along Sun, Moon and galactic centre rise/set directions, manual observer elevation, and cloud-map/model selection. Results are geometric references, not guarantees of clear sightlines."

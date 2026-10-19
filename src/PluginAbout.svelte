@@ -1,6 +1,7 @@
 <script lang="ts">
     import config, { currentVersionReleasedAt } from './pluginConfig';
     import { translations, type UiLanguage } from './pluginTranslations';
+    import DiagnosticReport from './DiagnosticReport.svelte';
     import type { PluginUpdateResult } from './pluginUpdate';
 
     // Presentation only: update requests and clipboard results stay in the shell.
@@ -13,6 +14,7 @@
     export let copyLatestPluginLink: () => void;
     export let retryPluginUpdate: () => void;
     export let retryPluginUpdateNotes: () => void;
+    export let diagnosticReport: (() => string) | null = null;
 
     const { author: pluginAuthor, repository: repositoryUrl, title, version: pluginVersion } = config;
     const issuesUrl = `${repositoryUrl}/issues`;
@@ -159,6 +161,9 @@
         </div>
 
     </div>
+    {#if diagnosticReport}
+        <DiagnosticReport report={diagnosticReport} {uiLanguage} />
+    {/if}
 </section>
 
 <style>

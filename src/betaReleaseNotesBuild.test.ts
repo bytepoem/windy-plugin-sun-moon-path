@@ -18,9 +18,11 @@ describe('beta release notes development asset', () => {
         };
         const formalNotes = JSON.parse(formalNotesSource) as typeof notes;
 
-        expect(notes.version).toBe('0.11.4');
-        expect(notes.releasedAt).toBe('2026-10-13');
-        expect(formalNotes).toEqual(notes);
+        expect(notes.version).toBe('0.12.0');
+        expect(notes.releasedAt).toBe('2026-10-18');
+        // Development notes evolve independently of the immutable last formal release.
+        expect(formalNotes.version).toBe('0.11.4');
+        expect(formalNotes.releasedAt).toBe('2026-10-13');
         expect(notes.zh.items.length).toBeGreaterThan(0);
         expect(notes.en.items.length).toBeGreaterThan(0);
         expect(pluginSource).toContain("import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';");

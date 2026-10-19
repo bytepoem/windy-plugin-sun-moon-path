@@ -36,6 +36,16 @@ jobs:
                   npm run build
                   node scripts/build-update-site.mjs "$RUNNER_TEMP/update-site"
                   node scripts/verify-update-site.mjs "$RUNNER_TEMP/update-site"
+            - name: Retain exact diagnostic build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: plugin-diagnostics-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+                  path: |
+                      dist/plugin.min.js
+                      dist/plugin.min.js.map
+                      dist/plugin.min.js.build.json
+                  if-no-files-found: error
+                  retention-days: 90
             - name: Publish Plugin
               run: |
                   if [ -z "$WINDY_API_KEY" ]; then

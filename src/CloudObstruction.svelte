@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
     import { map } from '@windy/map';
     import metrics from '@windy/metrics';
+    import { onPluginDestroy as onDestroy, onPluginMount as onMount } from './pluginLifecycle';
     import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTwilightDistances, type CloudDirectionBody } from './cloudGeometry';
     import CloudHelp from './CloudHelp.svelte';
     import { cloudEventBody, type CloudTimelineEventType } from './cloudTimeline';

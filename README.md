@@ -121,4 +121,6 @@ npm start
 
 ## 反馈与许可
 
+界面显示不完整或加载异常时，可展开「关于」底部的「查看诊断信息」并复制报告，随问题反馈提供。初始化失败时也会显示诊断入口。报告包含版本、运行环境、加载状态和脱敏错误，不包含机位坐标、收藏或 API Key；插件文件本身未能加载时，仍需提供截图和浏览器错误信息。
+
 [提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [作者 bytepoem](https://github.com/bytepoem) · [小红书关注](https://xhslink.cn/o/rXpBcBK0Qy) · [爱发电自愿打赏](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)
