@@ -59,6 +59,9 @@
     <section class="feature-guide" aria-labelledby="horizon-guide-heading">
         <h3 id="horizon-guide-heading">{uiLanguage === 'zh' ? '地平线' : 'Horizon'}</h3>
         <p>{uiLanguage === 'zh'
+            ? '事件表同时显示太阳、月亮和银心的升落方位与时间，时间按当前地点时区显示；当天没有发生的事件会单独提示。'
+            : 'The event table shows rise/set bearings and times for the Sun, Moon and galactic centre in the current location’s time zone, with a notice when an event does not occur that day.'}</p>
+        <p>{uiLanguage === 'zh'
             ? '可切换总云、低云、中云、高云、云底高度或卫星云图，选择预报模型，并查看底图预报时次。开启同步后，预报云图跟随顶部日期和时间；卫星影像时间以 Windy 时间轴为准。云图选项与「云层遮挡」共用。'
             : 'Switch between total, low, middle or high clouds, cloud base and satellite imagery; select a forecast model and check the map’s forecast time. With synchronization enabled, forecast maps follow the shared date and time controls; satellite image time follows the Windy timeline. Cloud map preferences are shared with Clouds.'}</p>
         <p>{uiLanguage === 'zh'

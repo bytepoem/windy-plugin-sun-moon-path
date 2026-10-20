@@ -1,0 +1,24 @@
+{
+  "version": "0.12.1",
+  "releasedAt": "2026-10-20",
+  "zh": {
+    "title": "地平线事件时间",
+    "summary": "地平线事件表新增日、月和银心的升落时间。",
+    "items": [
+      {
+        "type": "improved",
+        "text": "地平线事件表新增太阳、月亮和银心的升落时间，按当前地点时区显示，方便对照方位安排拍摄。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Horizon event times",
+    "summary": "Adds Sun, Moon and galactic centre rise/set times to the Horizon event table.",
+    "items": [
+      {
+        "type": "improved",
+        "text": "The Horizon event table now shows Sun, Moon and galactic centre rise/set times in the current location’s time zone for planning alongside their bearings."
+      }
+    ]
+  }
+}

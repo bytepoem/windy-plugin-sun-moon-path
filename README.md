@@ -14,12 +14,12 @@
 
 ## 安装与上手
 
-当前发布版本：**0.12.0** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.0)
+当前发布版本：**0.12.1** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.1)
 
 将以下地址填入 Windy 的外部插件加载入口，打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.0/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.1/plugin.min.js
 ```
 
 1. **选机位**：点击地图，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写自己的地图服务 API Key。
@@ -68,6 +68,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.0/plugin.min.
 **虹弧只用于几何构图，条件等级不是出现概率。** 评估使用小时预报和有限采样，可信度低，不证明同一瞬间雨滴受到光照；月虹不参与条件评估。山体提示不代表彩虹一定被挡，“未发现遮挡”也不代表视线畅通。双虹或完整圆圈能否看到，仍取决于受光水滴和现场视线。
 
 ### 地平线
+
+事件表同时列出太阳、月亮和银心的升落方位与时间，时间按当前地点时区显示；当天没有发生的事件会单独提示。
 
 可切换总云、低云、中云、高云、云底高度或卫星云图，选择预报模型，并查看底图预报时次。开启同步后，预报云图跟随顶部日期和时间；卫星影像时间以 Windy 时间轴为准。云图选项与「云层遮挡」共用。
 

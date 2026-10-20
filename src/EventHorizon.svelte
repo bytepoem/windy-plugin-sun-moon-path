@@ -3,9 +3,9 @@
     import { renderHorizonIcon } from './horizonIcon';
     import { eventHorizonPoints, horizonDistanceKm, MAX_OBSERVER_HEIGHT_M } from './eventHorizon';
     import { formatDistanceKm, type DistanceUnit } from './unitPreferences';
+    import { formatLocalClock, type Coordinates } from './solar';
     import type { CloudSettings } from './cloudProfile';
     import type { WeatherModel } from './weather';
-    import type { Coordinates } from './solar';
     import type { DirectionEvent, DirectionPath } from './eventDirections';
 
     export let location: Coordinates;
@@ -164,8 +164,8 @@
                 : 'Distance excludes refraction, terrain, buildings and cloud obstruction, so a clear view is not guaranteed.'}</p>
         </div>
     {/if}
-    <table aria-label={zh ? '地平线标记方位' : 'Horizon marker bearings'}>
-        <thead><tr><th scope="col">{zh ? '天体' : 'Body'}</th><th scope="col">{zh ? '升起方位' : 'Rise azimuth'}</th><th scope="col">{zh ? '落下方位' : 'Set azimuth'}</th></tr></thead>
+    <table aria-label={zh ? '地平线事件方位与时间' : 'Horizon event bearings and times'}>
+        <thead><tr><th scope="col">{zh ? '天体' : 'Body'}</th><th scope="col">{zh ? '升起方位 / 时间' : 'Rise azimuth / time'}</th><th scope="col">{zh ? '落下方位 / 时间' : 'Set azimuth / time'}</th></tr></thead>
         <tbody>
             {#each bodies as body}
                 <tr>
@@ -175,13 +175,24 @@
                     </span></th>
                     {#each [body.rise, body.set] as event}
                         {@const point = points.find(item => item.event === event)}
-                        <td class:selected={selectedEvent === event}>{point ? `${point.azimuth.toFixed(1)}°` : !ready ? (zh ? '待计算' : 'Pending') : distanceKm === null ? '—' : (zh ? '当日无此事件' : 'No event this day')}</td>
+                        {@const path = paths.find(item => item.event === event)}
+                        <td class:selected={selectedEvent === event}>
+                            {#if !ready}
+                                {zh ? '待计算' : 'Pending'}
+                            {:else if path?.status === 'ok'}
+                                <span>{point ? `${point.azimuth.toFixed(1)}°` : '—'}</span>
+                                <!-- Event times remain available even when observer height is missing or invalid. -->
+                                <time datetime={path.eventTime.toISOString()}>{formatLocalClock(path.eventTime, timeZone)}</time>
+                            {:else}
+                                {zh ? '当日无此事件' : 'No event this day'}
+                            {/if}
+                        </td>
                     {/each}
                 </tr>
             {/each}
         </tbody>
     </table>
-    <p class="caption">{zh ? '几何距离参考，不包含地形与云层遮挡。' : 'Geometric distance only; terrain and cloud obstruction are excluded.'}</p>
+    <p class="caption">{zh ? '事件时间时区：' : 'Event time zone: '}{timeZone} · {zh ? '几何距离参考，不包含地形与云层遮挡。' : 'Geometric distance only; terrain and cloud obstruction are excluded.'}</p>
 </section>
 
 <style>
@@ -218,6 +229,7 @@
     th { color: var(--panel-muted); font-weight: 400; }
     thead th { font-weight: 700; }
     td.selected { color: var(--panel-accent); background: rgba(99, 185, 238, .08); }
+    td time { display: block; margin-top: 2px; white-space: nowrap; }
     .event-name { display: inline-flex; align-items: center; gap: 4px; }
     p { margin: 7px 0 0; line-height: 1.5; }
     .caption { color: var(--panel-muted); font-size: 11px; }
