@@ -17,5 +17,5 @@ windy-regression-*.jpeg
 
 output/
 
-# Local maintenance notes; never publish or force-add.
+# Local maintenance notes and unpublished copy drafts; never publish or force-add.
 /docs/local/

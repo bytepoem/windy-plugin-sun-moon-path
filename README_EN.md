@@ -1,5 +1,10 @@
 # Sun & Moon Path for Windy
 
+[![Latest release](https://img.shields.io/github/v/release/bytepoem/windy-plugin-sun-moon-path?style=flat-square&label=release)](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/latest)
+[![CI (main)](https://img.shields.io/github/actions/workflow/status/bytepoem/windy-plugin-sun-moon-path/validate.yml?branch=main&style=flat-square&label=CI%20%28main%29)](https://github.com/bytepoem/windy-plugin-sun-moon-path/actions/workflows/validate.yml?query=branch%3Amain)
+[![GitHub Stars](https://img.shields.io/github/stars/bytepoem/windy-plugin-sun-moon-path?style=flat-square&logo=github&label=Stars)](https://github.com/bytepoem/windy-plugin-sun-moon-path/stargazers)
+[![MIT License](https://img.shields.io/github/license/bytepoem/windy-plugin-sun-moon-path?style=flat-square)](LICENSE)
+
 [中文](README.md) · **English**
 
 Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glow, fiery clouds and rainbows on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Available in Chinese and English on desktop and mobile.

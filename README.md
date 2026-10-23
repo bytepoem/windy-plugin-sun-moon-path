@@ -1,5 +1,10 @@
 # Sun & Moon Path for Windy
 
+[![最新版本](https://img.shields.io/github/v/release/bytepoem/windy-plugin-sun-moon-path?style=flat-square&label=release)](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/latest)
+[![CI（main）](https://img.shields.io/github/actions/workflow/status/bytepoem/windy-plugin-sun-moon-path/validate.yml?branch=main&style=flat-square&label=CI%20%28main%29)](https://github.com/bytepoem/windy-plugin-sun-moon-path/actions/workflows/validate.yml?query=branch%3Amain)
+[![GitHub Stars](https://img.shields.io/github/stars/bytepoem/windy-plugin-sun-moon-path?style=flat-square&logo=github&label=Stars)](https://github.com/bytepoem/windy-plugin-sun-moon-path/stargazers)
+[![MIT 许可证](https://img.shields.io/github/license/bytepoem/windy-plugin-sun-moon-path?style=flat-square)](LICENSE)
+
 **中文** · [English](README_EN.md)
 
 在 Windy 地图上规划日出、日落、月亮、银河、朝晚霞、火烧云与彩虹拍摄，结合天体方向、云层距离、天气与收藏机位选择拍摄时机。支持中英文、桌面端与移动端。
