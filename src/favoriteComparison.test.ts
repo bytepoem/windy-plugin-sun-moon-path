@@ -40,18 +40,6 @@ const weatherPoint = (timestamp: number): WeatherPoint => ({
     visibilityKm: null,
 });
 
-it('keeps daytime forecast samples when the selected night window has already passed', async () => {
-    const port = createPort();
-    const daytime = weatherPoint(Date.UTC(2026, 9, 23, 6));
-    port.getWeather = vi.fn().mockResolvedValue([daytime, weatherPoint(Date.UTC(2026, 9, 24, 6))]);
-    const session = await createFavoriteComparisonPlanner(port).prepare({
-        targets, dateInput: '2026-10-23', requestedAt: Date.UTC(2026, 9, 23, 7),
-        signal: new AbortController().signal,
-    });
-    const results = await session.loadModel('ecmwf', new AbortController().signal);
-    expect(results[0].dailyWeatherPoints).toEqual([daytime]);
-});
-
 const targets: FavoriteComparisonTarget[] = [
     {
         id: 'a',
@@ -91,6 +79,18 @@ const createPort = (): FavoriteComparisonPlannerPort => ({
 });
 
 describe('favorite comparison planner', () => {
+    it('keeps daytime forecast samples when the selected night window has already passed', async () => {
+        const port = createPort();
+        const daytime = weatherPoint(Date.UTC(2026, 9, 23, 6));
+        port.getWeather = vi.fn().mockResolvedValue([daytime, weatherPoint(Date.UTC(2026, 9, 24, 6))]);
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-10-23', requestedAt: Date.UTC(2026, 9, 23, 7),
+            signal: new AbortController().signal,
+        });
+        const results = await session.loadModel('ecmwf', new AbortController().signal);
+        expect(results[0].dailyWeatherPoints).toEqual([daytime]);
+    });
+
     it('carries the provider to each target and never overwrites missing model visibility', async () => {
         const port = createPort();
         const signal = new AbortController().signal;
