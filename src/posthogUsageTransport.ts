@@ -1,3 +1,4 @@
+import { readUsageEnvironment, type UsageEnvironment } from './usageEnvironment';
 import type { UsageEvent } from './usageMetrics';
 import type { DiagnosticEvent } from './pluginDiagnostics';
 
@@ -18,7 +19,9 @@ export const postHogUsagePayload = (event: UsageEvent, distinctId: string, confi
         : event.category === 'tab' ? 'tab_select' : event.action,
     properties: {
         $process_person_profile: false,
-        $geoip_disable: true,
+        // PostHog enriches consented usage from the request IP; no GPS or map location is sent.
+        // Configure server-side IP discard after enrichment to avoid retaining raw IPs.
+        $geoip_disable: false,
         plugin: 'windy-plugin-sun-moon-path',
         plugin_version: config.pluginVersion,
         environment: config.environment,
@@ -39,6 +42,7 @@ export const createPostHogUsageTransport = (
     onIdle: () => void = () => undefined,
 ) => {
     let disposed = false;
+    let usageEnvironment: UsageEnvironment | null = null;
     const inFlight = new Set<AbortController>();
     const sendPayload = (payload: ReturnType<typeof postHogUsagePayload> | {
         api_key: string; distinct_id: string; event: string; properties: Record<string, unknown>;
@@ -74,7 +78,12 @@ export const createPostHogUsageTransport = (
     return {
         get pending() { return inFlight.size; },
         send(event: UsageEvent) {
-            sendPayload(postHogUsagePayload(event, distinctId, config));
+            if (disposed || !isAllowed() || !config.projectToken) {
+                return;
+            }
+            usageEnvironment ??= readUsageEnvironment();
+            const payload = postHogUsagePayload(event, distinctId, config);
+            sendPayload({ ...payload, properties: { ...payload.properties, ...usageEnvironment } });
         },
         /** Ordinary diagnostic events, not PostHog's SDK-specific $exception contract. */
         sendDiagnostic(event: DiagnosticEvent, environment: {

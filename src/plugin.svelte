@@ -1401,7 +1401,7 @@
     $: if (summaryTab === 'events' || summaryTab === 'clouds') { mapTab = summaryTab; }
     let pluginUsage: ReturnType<typeof startPluginUsage> | null = null;
     // Programmatic switches update dwell time but are not user selections.
-    $: pluginUsage?.setTab(summaryTab);
+    $: pluginUsage?.setTab(summaryTab, false, cloudView);
     let cloudView: 'obstruction' | 'rainbow' | 'horizon' | 'tide' = 'obstruction';
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
@@ -1905,7 +1905,7 @@
 
     const selectSummaryTab = async (nextTab: SummaryTab) => {
         const fitRequestId = ++horizonFitRequestId;
-        pluginUsage?.setTab(nextTab, true);
+        pluginUsage?.setTab(nextTab, true, cloudView);
         summaryTab = nextTab;
         // Recheck on entry even if this mounted plugin previously found no update.
         // The update service reuses fresh results and revalidates expired metadata.
@@ -3282,7 +3282,7 @@
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
         isMounted = true;
-        pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab });
+        pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab, cloudView });
         radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
         void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
