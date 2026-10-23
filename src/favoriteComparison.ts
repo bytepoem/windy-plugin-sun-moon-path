@@ -53,6 +53,7 @@ export type FavoriteComparisonResult = {
     prepared: FavoriteComparisonPreparedTarget;
     weatherStatus: 'ready' | 'empty' | 'error';
     dateSelection: WeatherDateSelection;
+    dailyWeatherPoints: WeatherPoint[];
     windows: ObservationWindow[];
 };
 
@@ -308,6 +309,7 @@ export const createFavoriteComparisonPlanner = (
                                     prepared,
                                     weatherStatus: 'error',
                                     dateSelection: emptyDateSelection(),
+                                    dailyWeatherPoints: [],
                                     windows: [],
                                 } satisfies FavoriteComparisonResult;
                             }
@@ -341,6 +343,9 @@ export const createFavoriteComparisonPlanner = (
                                     prepared,
                                     weatherStatus: baseWeatherPoints.length > 0 ? 'ready' : 'empty',
                                     dateSelection,
+                                    // Weather rows describe the selected local date, independently of night windows.
+                                    dailyWeatherPoints: weatherPoints.filter(point =>
+                                        dateInputForInstant(new Date(point.timestamp), prepared.timeZone) === dateInput),
                                     windows: buildObservationWindows({
                                         timeline: prepared.timeline,
                                         weatherPoints,
@@ -369,6 +374,8 @@ export const createFavoriteComparisonPlanner = (
                                     prepared,
                                     weatherStatus: 'error',
                                     dateSelection,
+                                    dailyWeatherPoints: atmosphereOnlyPoints.filter(point =>
+                                        dateInputForInstant(new Date(point.timestamp), prepared.timeZone) === dateInput),
                                     windows: buildObservationWindows({
                                         timeline: prepared.timeline,
                                         weatherPoints: atmosphereOnlyPoints,

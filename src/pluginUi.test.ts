@@ -161,7 +161,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('<path d="M7 12h10"></path>');
         expect(pluginSource).toContain('<path d="M7 12h10M12 7v10"></path>');
         expect(pluginSource).toContain('disabled={!canFitDirectionLines}');
-        expect(pluginSource).toContain('paths: selectDirectionPaths(solarPaths, galacticPaths, selectedEvent)');
+        expect(pluginSource).toContain('selectDirectionPaths(solarPaths, galacticPaths, cloudObstructionVisible ? cloudMapEvent! : selectedEvent)');
         expect(pluginSource).toContain(
             'aria-label={fitMapControlLabel}',
         );

@@ -6,6 +6,10 @@
     "summary": "地平线事件表新增日、月和银心的升落时间。",
     "items": [
       {
+        "type": "fixed",
+        "text": "修复收藏对比在夜间窗口无预报时天气行空白，按所选当地日期展示可用天气；修复云层高度未知时地图范围按钮无响应，以及离开云层页后「全部」仍不可点击。"
+      },
+      {
         "type": "improved",
         "text": "地平线事件表新增太阳、月亮和银心的升落时间，按当前地点时区显示，方便对照方位安排拍摄。"
       }
@@ -15,6 +19,10 @@
     "title": "Horizon event times",
     "summary": "Adds Sun, Moon and galactic centre rise/set times to the Horizon event table.",
     "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed empty comparison weather rows when night windows lack forecasts by using available forecasts for the selected local date. Fixed map controls when cloud heights are unknown and restored All after leaving cloud planning."
+      },
       {
         "type": "improved",
         "text": "The Horizon event table now shows Sun, Moon and galactic centre rise/set times in the current location’s time zone for planning alongside their bearings."

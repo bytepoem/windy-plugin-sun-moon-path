@@ -46,6 +46,9 @@
     <section class="feature-guide" aria-labelledby="events-guide-heading">
         <h3 id="events-guide-heading">{uiLanguage === 'zh' ? '事件与天空盘' : 'Events and sky chart'}</h3>
         <p>{uiLanguage === 'zh'
+            ? '离开云层规划后，点击「全部」可恢复事件方向。云层高度未知时，范围按钮适配已有方向线，放大按钮恢复机位缩放。'
+            : 'After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.'}</p>
+        <p>{uiLanguage === 'zh'
             ? '在设置中切换「显示天空盘」，或点击窗口栏首个天体轨道图标按钮；两处同步并记住选择。'
             : 'Toggle “Show sky chart” in Settings or use the first window button with the orbit icon. Both controls stay synchronized and remember your choice.'}</p>
         <p>{uiLanguage === 'zh'

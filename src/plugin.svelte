@@ -275,10 +275,10 @@
                         class:active={highlightedEvent === option.value}
                         aria-pressed={highlightedEvent === option.value}
                         disabled={eventSkyReadyKey !== astronomyKey || (option.value === 'all'
-                            ? cloudObstructionVisible || rainbowVisible
+                            ? summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)
                             : !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
                         aria-label={text.events[option.value]}
-                        title={(cloudObstructionVisible || rainbowVisible) && option.value === 'all'
+                        title={summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible) && option.value === 'all'
                             ? (rainbowVisible
                                 ? (uiLanguage === 'zh' ? '彩虹规划需选择单个事件' : 'Rainbow planning requires a single event')
                                 : (uiLanguage === 'zh' ? '云层规划需选择单个事件' : 'Cloud planning requires a single event'))
@@ -1951,19 +1951,23 @@
 
     $: fitMapControlLabel = rainbowVisible ? (uiLanguage === 'zh' ? '居中彩虹方向图' : 'Centre rainbow sky chart')
         : horizonVisible ? (uiLanguage === 'zh' ? '适配地平线范围' : 'Fit horizon radius')
-        : cloudObstructionVisible ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
+        : cloudObstructionVisible && cloudBounds ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
-    $: detailMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
+    $: detailMapControlLabel = cloudObstructionVisible && cloudDetailBounds ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
         : text.restoreSearchZoomLabel;
 
-    $: canFitDirectionLines = rainbowVisible || (horizonVisible ? horizonDistance !== null : cloudObstructionVisible ? cloudBounds !== null : buildDirectionLineFitBounds({
+    // Event rays remain visible when cloud heights are unavailable; fit those real lines independently.
+    $: directionFitBounds = buildDirectionLineFitBounds({
         location: selectedLocation,
         // Keep the reactive inputs explicit: Svelte cannot infer state read
         // from inside selectedMapPaths(), so an async path refresh would
         // otherwise leave the toolbar button in its initial disabled state.
-        paths: selectDirectionPaths(solarPaths, galacticPaths, selectedEvent),
+        paths: cloudObstructionVisible && cloudMapEvent === null ? []
+            : selectDirectionPaths(solarPaths, galacticPaths, cloudObstructionVisible ? cloudMapEvent! : selectedEvent),
         showExtendedDistanceMarker,
-    }) !== null);
+    });
+    $: canFitDirectionLines = rainbowVisible || (horizonVisible ? horizonDistance !== null
+        : cloudObstructionVisible ? cloudBounds !== null || directionFitBounds !== null : directionFitBounds !== null);
 
     /** Returns fit and center offsets for the map pixels not covered by Windy's UI. */
     const currentVisibleMapViewport = () => {
@@ -1992,11 +1996,7 @@
     const fitVisibleDirectionLines = (detail: boolean | MouseEvent = false) => {
         if (rainbowVisible) { recenterSelectedLocationInVisibleMap(map.getZoom()); return; }
         const bounds = horizonVisible ? horizonFitBounds(selectedLocation, horizonDistance)
-            : cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
-            location: selectedLocation,
-            paths: selectedMapPaths(),
-            showExtendedDistanceMarker,
-        });
+            : cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) ?? directionFitBounds : directionFitBounds;
         if (!bounds) {
             return;
         }
@@ -2046,7 +2046,7 @@
 
     /** Restores the selected location to the exact zoom used after a search result is chosen. */
     const restoreSearchLocationZoom = () => {
-        if (cloudObstructionVisible) {fitVisibleDirectionLines(true); return;}
+        if (cloudObstructionVisible && cloudDetailBounds) {fitVisibleDirectionLines(true); return;}
         recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
@@ -2111,7 +2111,9 @@
 
     const selectEvent = (event: ObservationEvent) => {
         if (event === 'all') {
-            if (cloudObstructionVisible || rainbowVisible) {return;}
+            if (summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)) {return;}
+            // Explicitly requesting all directions releases the previous hidden cloud planner.
+            if (summaryTab !== 'clouds') {mapTab = 'events';}
             hostTimeSelectionActive = false;
             selectedEvent = event;
             planningSelection = { mode: 'current' };

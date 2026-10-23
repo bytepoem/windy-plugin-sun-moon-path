@@ -91,6 +91,8 @@ Open Weather and choose a data source and forecast model in the weather table. C
 
 Use the top favorites button to save the current location or search and open existing Windy favorites. Select Compare, choose 2–5 locations and start the comparison to check weather, observing windows, elevation and light pollution for the same date and shortlist alternative shooting locations.
 
+Weather rows summarize available forecasts for each location's selected local date, independently of moonless or Milky Way windows. Coverage may be partial; missing values remain unknown. After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.
+
 ### Light pollution map, radar and display
 
 Use the sparkles button beside the rain-cloud icon to overlay the Lorenz 2025 light pollution map. It defaults to off with 50% opacity when enabled. Adjust opacity, check loading status or retry in Settings; the toggle and opacity remember your choices. Selecting a location still shows its SQM and estimated Bortle values. The map and location query use the same annual data, covering 65°S–75°N independently of the weather timeline. This is a zenith sky brightness model, not a live observation or measured Bortle classification. Data and color key: [David Lorenz](https://djlorenz.github.io/astronomy/lp/).
