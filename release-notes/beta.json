@@ -1,14 +1,10 @@
 {
-  "version": "0.12.1",
-  "releasedAt": "2026-10-20",
+  "version": "0.12.2",
+  "releasedAt": "2026-10-24",
   "zh": {
-    "title": "地平线事件时间",
-    "summary": "地平线事件表新增日、月和银心的升落时间。",
+    "title": "航海时区与加载修复",
+    "summary": "修复海洋位置时区、收藏天气与云层按钮问题，并完善异常诊断。",
     "items": [
-      {
-        "type": "improved",
-        "text": "完善时区和收藏对比加载异常的诊断信息，便于排查失败原因。"
-      },
       {
         "type": "fixed",
         "text": "修复选择海洋位置时航海时区无法识别，导致天文事件和收藏对比加载失败的问题。"
@@ -19,18 +15,14 @@
       },
       {
         "type": "improved",
-        "text": "地平线事件表新增太阳、月亮和银心的升落时间，按当前地点时区显示，方便对照方位安排拍摄。"
+        "text": "完善时区和收藏对比加载异常的诊断信息，便于排查失败原因。"
       }
     ]
   },
   "en": {
-    "title": "Horizon event times",
-    "summary": "Adds Sun, Moon and galactic centre rise/set times to the Horizon event table.",
+    "title": "Nautical time zones and loading fixes",
+    "summary": "Fixes ocean time zones, comparison weather and cloud controls, with improved diagnostics.",
     "items": [
-      {
-        "type": "improved",
-        "text": "Improved diagnostics for time zone and favorite comparison loading failures to help identify their causes."
-      },
       {
         "type": "fixed",
         "text": "Fixed astronomy events and favorite comparisons failing to load at ocean locations with nautical time zones."
@@ -41,7 +33,7 @@
       },
       {
         "type": "improved",
-        "text": "The Horizon event table now shows Sun, Moon and galactic centre rise/set times in the current location’s time zone for planning alongside their bearings."
+        "text": "Improved diagnostics for time zone and favorite comparison loading failures to help identify their causes."
       }
     ]
   }

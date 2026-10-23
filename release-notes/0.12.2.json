@@ -1,0 +1,40 @@
+{
+  "version": "0.12.2",
+  "releasedAt": "2026-10-24",
+  "zh": {
+    "title": "航海时区与加载修复",
+    "summary": "修复海洋位置时区、收藏天气与云层按钮问题，并完善异常诊断。",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "修复选择海洋位置时航海时区无法识别，导致天文事件和收藏对比加载失败的问题。"
+      },
+      {
+        "type": "fixed",
+        "text": "修复收藏对比在夜间窗口无预报时天气行空白，按所选当地日期展示可用天气；修复云层高度未知时地图范围按钮无响应，以及离开云层页后「全部」仍不可点击。"
+      },
+      {
+        "type": "improved",
+        "text": "完善时区和收藏对比加载异常的诊断信息，便于排查失败原因。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Nautical time zones and loading fixes",
+    "summary": "Fixes ocean time zones, comparison weather and cloud controls, with improved diagnostics.",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed astronomy events and favorite comparisons failing to load at ocean locations with nautical time zones."
+      },
+      {
+        "type": "fixed",
+        "text": "Fixed empty comparison weather rows when night windows lack forecasts by using available forecasts for the selected local date. Fixed map controls when cloud heights are unknown and restored All after leaving cloud planning."
+      },
+      {
+        "type": "improved",
+        "text": "Improved diagnostics for time zone and favorite comparison loading failures to help identify their causes."
+      }
+    ]
+  }
+}
