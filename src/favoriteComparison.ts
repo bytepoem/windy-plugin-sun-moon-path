@@ -16,8 +16,9 @@ import {
     type WeatherSource,
     type WeatherPoint,
 } from './weather';
+import { LightPollutionOutOfBoundsError, type LightPollutionPoint } from './lightPollution';
+import { ObservationPlannerError, resolveObservationTimeZone } from './observationTimeZone';
 import type { OpenMeteoAtmospherePoint } from './openMeteo';
-import type { LightPollutionPoint } from './lightPollution';
 
 export const FAVORITE_COMPARISON_MIN_TARGETS = 2;
 export const FAVORITE_COMPARISON_MAX_TARGETS = 5;
@@ -42,14 +43,17 @@ export type FavoriteComparisonPreparedTarget = {
     lightPollutionStatus: 'ready' | 'error';
     atmospherePoints: OpenMeteoAtmospherePoint[];
     atmosphereStatus: 'ready' | 'empty' | 'error';
+    diagnosticErrors?: unknown[];
     timeline: AstronomyTimeline;
 } | {
     target: FavoriteComparisonTarget;
     status: 'error';
     errorCode: FavoriteComparisonPrepareErrorCode;
+    diagnosticError?: ObservationPlannerError;
 };
 
 export type FavoriteComparisonResult = {
+    diagnosticError?: unknown;
     prepared: FavoriteComparisonPreparedTarget;
     weatherStatus: 'ready' | 'empty' | 'error';
     dateSelection: WeatherDateSelection;
@@ -91,15 +95,6 @@ export type FavoriteComparisonPlanner = {
         requestedAt: number;
         signal: AbortSignal;
     }) => Promise<FavoriteComparisonSession>;
-};
-
-const isValidTimeZone = (candidate: string): boolean => {
-    try {
-        new Intl.DateTimeFormat(undefined, { timeZone: candidate }).format();
-        return true;
-    } catch {
-        return false;
-    }
 };
 
 const abortError = (): Error => {
@@ -250,13 +245,19 @@ export const createFavoriteComparisonPlanner = (
                             target,
                             status: 'error',
                             errorCode: 'TIME_ZONE_UNAVAILABLE',
+                            diagnosticError: new ObservationPlannerError('TIME_ZONE_UNAVAILABLE'),
                         } satisfies FavoriteComparisonPreparedTarget;
                     }
-                    if (!timeZoneResult.value || !isValidTimeZone(timeZoneResult.value)) {
+                    let timeZone: string;
+                    try {
+                        timeZone = resolveObservationTimeZone(timeZoneResult.value);
+                    } catch (error) {
+                        if (!(error instanceof ObservationPlannerError)) { throw error; }
                         return {
                             target,
                             status: 'error',
                             errorCode: 'TIME_ZONE_INVALID',
+                            diagnosticError: error,
                         } satisfies FavoriteComparisonPreparedTarget;
                     }
 
@@ -274,7 +275,7 @@ export const createFavoriteComparisonPlanner = (
                     return {
                         target,
                         status: 'ready',
-                        timeZone: timeZoneResult.value,
+                        timeZone,
                         elevationM,
                         lightPollution,
                         lightPollutionStatus: lightPollutionResult.status === 'fulfilled' ? 'ready' : 'error',
@@ -282,9 +283,15 @@ export const createFavoriteComparisonPlanner = (
                         atmosphereStatus: atmosphereResult.status === 'rejected'
                             ? 'error'
                             : atmospherePoints.length > 0 ? 'ready' : 'empty',
+                        // Keep failures local until the UI accepts this request's result.
+                        diagnosticErrors: [atmosphereResult, lightPollutionResult]
+                            .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+                            .map(result => result.reason)
+                            .filter(error => !(error instanceof LightPollutionOutOfBoundsError)
+                                && !(error instanceof Error && error.name === 'AbortError')),
                         timeline: calculateAstronomyTimeline({
                             dateInput,
-                            timeZone: timeZoneResult.value,
+                            timeZone,
                             location: target.location,
                             elevationM,
                         }),
@@ -374,6 +381,7 @@ export const createFavoriteComparisonPlanner = (
                                     prepared,
                                     weatherStatus: 'error',
                                     dateSelection,
+                                    diagnosticError: error,
                                     dailyWeatherPoints: atmosphereOnlyPoints.filter(point =>
                                         dateInputForInstant(new Date(point.timestamp), prepared.timeZone) === dateInput),
                                     windows: buildObservationWindows({

@@ -383,6 +383,7 @@
     />
     <FavoriteComparison
         bind:open={favoriteComparisonOpen}
+        diagnostics={diagnosticRuntime?.diagnostics ?? null}
         bind:selectedDate
         on:datechange={selectPlanningDate}
         currentInstant={currentInstant}

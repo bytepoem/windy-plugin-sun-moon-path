@@ -31,8 +31,10 @@
         dateInputForInstant,
         type AstronomyIntervalKind,
     } from './solar';
+    import type { PluginDiagnostics } from './pluginDiagnostics';
 
     export let open = false;
+    export let diagnostics: PluginDiagnostics | null = null;
     export let targets: FavoriteComparisonTarget[] = [];
     export let selectedDate = '';
     export let currentInstant: Date;
@@ -211,6 +213,7 @@
         const abortController = new AbortController();
         modelAbortController = abortController;
         const requestId = ++modelRequestId;
+        const operation = diagnostics?.begin('comparison') ?? 0;
         modelLoading = true;
         try {
             const nextResults = await nextSession.loadModel(nextModel, abortController.signal);
@@ -221,12 +224,25 @@
                 || requestId !== modelRequestId
                 || session !== nextSession
             ) {
+                diagnostics?.end('comparison', operation, 'cancelled');
                 return;
             }
             results = nextResults;
+            // Only accepted results may report failures; cancelled or superseded work stays silent.
+            for (const result of nextResults) {
+                if (result.diagnosticError !== undefined) {
+                    diagnostics?.error('comparison', result.diagnosticError, operation);
+                }
+            }
+            diagnostics?.end('comparison', operation);
         } catch (error) {
-            if (!(error instanceof Error && error.name === 'AbortError')) {
+            if (!destroyed && open && !abortController.signal.aborted
+                && requestId === modelRequestId && session === nextSession
+                && !(error instanceof Error && error.name === 'AbortError')) {
+                diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';
+            } else {
+                diagnostics?.end('comparison', operation, 'cancelled');
             }
         } finally {
             if (requestId === modelRequestId) {
@@ -241,6 +257,7 @@
         const abortController = new AbortController();
         prepareAbortController = abortController;
         const requestId = ++prepareRequestId;
+        const operation = diagnostics?.begin('comparison') ?? 0;
         prepareStatus = 'loading';
         results = [];
         session = null;
@@ -258,9 +275,20 @@
                 || abortController.signal.aborted
                 || requestId !== prepareRequestId
             ) {
+                diagnostics?.end('comparison', operation, 'cancelled');
                 return;
             }
             session = nextSession;
+            for (const prepared of nextSession.preparedTargets) {
+                if (prepared.status === 'error' && prepared.diagnosticError) {
+                    diagnostics?.error('comparison', prepared.diagnosticError, operation);
+                } else if (prepared.status === 'ready') {
+                    for (const error of prepared.diagnosticErrors ?? []) {
+                        diagnostics?.error('comparison', error, operation);
+                    }
+                }
+            }
+            diagnostics?.end('comparison', operation);
             prepareAbortController = null;
             await loadModel(nextSession, model);
             if (
@@ -276,10 +304,14 @@
             if (
                 !destroyed
                 && open
+                && !abortController.signal.aborted
                 && requestId === prepareRequestId
                 && !(error instanceof Error && error.name === 'AbortError')
             ) {
+                diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';
+            } else {
+                diagnostics?.end('comparison', operation, 'cancelled');
             }
         }
     };

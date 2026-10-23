@@ -6,6 +6,14 @@
     "summary": "地平线事件表新增日、月和银心的升落时间。",
     "items": [
       {
+        "type": "improved",
+        "text": "完善时区和收藏对比加载异常的诊断信息，便于排查失败原因。"
+      },
+      {
+        "type": "fixed",
+        "text": "修复选择海洋位置时航海时区无法识别，导致天文事件和收藏对比加载失败的问题。"
+      },
+      {
         "type": "fixed",
         "text": "修复收藏对比在夜间窗口无预报时天气行空白，按所选当地日期展示可用天气；修复云层高度未知时地图范围按钮无响应，以及离开云层页后「全部」仍不可点击。"
       },
@@ -19,6 +27,14 @@
     "title": "Horizon event times",
     "summary": "Adds Sun, Moon and galactic centre rise/set times to the Horizon event table.",
     "items": [
+      {
+        "type": "improved",
+        "text": "Improved diagnostics for time zone and favorite comparison loading failures to help identify their causes."
+      },
+      {
+        "type": "fixed",
+        "text": "Fixed astronomy events and favorite comparisons failing to load at ocean locations with nautical time zones."
+      },
       {
         "type": "fixed",
         "text": "Fixed empty comparison weather rows when night windows lack forecasts by using available forecasts for the selected local date. Fixed map controls when cloud heights are unknown and restored All after leaving cloud planning."

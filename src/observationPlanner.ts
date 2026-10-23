@@ -10,8 +10,11 @@ import {
     type SolarEvent,
     type SolarPath,
 } from './solar';
+import { ObservationPlannerError, resolveObservationTimeZone } from './observationTimeZone';
 import type { LightPollutionPoint } from './lightPollution';
 import type { WeatherPoint } from './weather';
+
+export { ObservationPlannerError, type ObservationPlannerErrorCode } from './observationTimeZone';
 
 const CELESTIAL_EVENTS: SolarEvent[] = ['sunrise', 'sunset', 'moonrise', 'moonset'];
 
@@ -42,15 +45,6 @@ export type ObservationPlanner = {
         knownElevationM?: number | null;
     }) => Promise<ObservationPlan>;
 };
-
-export type ObservationPlannerErrorCode = 'TIME_ZONE_UNAVAILABLE' | 'TIME_ZONE_INVALID';
-
-export class ObservationPlannerError extends Error {
-    constructor(readonly code: ObservationPlannerErrorCode) {
-        super(code);
-        this.name = 'ObservationPlannerError';
-    }
-}
 
 export type ObservationMetricRange = {
     minimum: number;
@@ -86,15 +80,6 @@ export type ObservationWindow = {
 };
 
 const locationKey = (location: Coordinates): string => `${location.lat}|${location.lon}`;
-
-const isValidTimeZone = (candidate: string): boolean => {
-    try {
-        new Intl.DateTimeFormat(undefined, { timeZone: candidate }).format();
-        return true;
-    } catch {
-        return false;
-    }
-};
 
 export const createObservationPlanner = (port: ObservationPlannerPort): ObservationPlanner => {
     let cachedContext: (ObservationLocationContext & { key: string }) | null = null;
@@ -137,15 +122,13 @@ export const createObservationPlanner = (port: ObservationPlannerPort): Observat
             if (timeZoneResult.status !== 'fulfilled') {
                 throw new ObservationPlannerError('TIME_ZONE_UNAVAILABLE');
             }
-            if (!timeZoneResult.value || !isValidTimeZone(timeZoneResult.value)) {
-                throw new ObservationPlannerError('TIME_ZONE_INVALID');
-            }
+            const timeZone = resolveObservationTimeZone(timeZoneResult.value);
 
             const groundElevationM = elevationResult.status === 'fulfilled' && Number.isFinite(elevationResult.value)
                 ? elevationResult.value : null;
             const context = {
                 key,
-                timeZone: timeZoneResult.value,
+                timeZone,
                 groundElevationM,
                 elevationM: Math.max(0, groundElevationM ?? 0),
             };

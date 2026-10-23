@@ -5,7 +5,7 @@ import {
     type FavoriteComparisonPlannerPort,
     type FavoriteComparisonTarget,
 } from './favoriteComparison';
-import type { LightPollutionPoint } from './lightPollution';
+import { LightPollutionOutOfBoundsError, type LightPollutionPoint } from './lightPollution';
 import type { WeatherPoint } from './weather';
 
 const lightPollution = (estimatedBortle: number): LightPollutionPoint => ({
@@ -79,6 +79,38 @@ const createPort = (): FavoriteComparisonPlannerPort => ({
 });
 
 describe('favorite comparison planner', () => {
+    it('retains partial failures but excludes expected no-coverage errors', async () => {
+        const port = createPort();
+        const failure = new TypeError('Failed to fetch');
+        port.getAtmosphere = vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce([]);
+        port.getLightPollution = vi.fn().mockRejectedValue(new LightPollutionOutOfBoundsError());
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets: targets.map(target => ({ ...target, knownLightPollution: undefined })),
+            dateInput: '2026-10-19', requestedAt: Date.UTC(2026, 9, 19, 12),
+            signal: new AbortController().signal,
+        });
+        expect(session.preparedTargets[0]).toMatchObject({ status: 'ready', diagnosticErrors: [failure] });
+        expect(session.preparedTargets[1]).toMatchObject({ status: 'ready', diagnosticErrors: [] });
+    });
+
+    it('uses nautical zones for comparisons and retains classified failures for accepted results', async () => {
+        const port = createPort();
+        port.getTimeZone = vi.fn().mockResolvedValueOnce('Nautical: Etc/GMT+9').mockResolvedValueOnce('private-zone');
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-10-19', requestedAt: Date.UTC(2026, 9, 19, 12),
+            signal: new AbortController().signal,
+        });
+        expect(session.preparedTargets[0]).toMatchObject({ status: 'ready', timeZone: 'Etc/GMT+9' });
+        expect(session.preparedTargets[1]).toMatchObject({
+            status: 'error', errorCode: 'TIME_ZONE_INVALID',
+            diagnosticError: { details: { reason: 'intl_rejected', inputType: 'string' } },
+        });
+        port.getWeather = vi.fn().mockRejectedValue(new TypeError('Failed to fetch private-url'));
+        const results = await session.loadModel('ecmwf', new AbortController().signal);
+        expect(results[0].diagnosticError).toBeInstanceOf(TypeError);
+        expect(results[1].diagnosticError).toBeUndefined();
+    });
+
     it('keeps daytime forecast samples when the selected night window has already passed', async () => {
         const port = createPort();
         const daytime = weatherPoint(Date.UTC(2026, 9, 23, 6));

@@ -1,11 +1,38 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPostHogUsageTransport, postHogUsagePayload } from './posthogUsageTransport';
+import { createPluginDiagnostics } from './pluginDiagnostics';
+import { resolveObservationTimeZone } from './observationTimeZone';
 import type { UsageEvent } from './usageMetrics';
 
 const config = { projectToken: 'phc_test', pluginVersion: '0.10.4', environment: 'test' as const };
 const open: UsageEvent = { category: 'plugin', action: 'open' };
 
 describe('PostHog event transport', () => {
+    it('sends classified failures and breadcrumbs without the raw input', () => {
+        const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+        const transport = createPostHogUsageTransport(() => true, 'instance', config, fetchMock);
+        const diagnostics = createPluginDiagnostics({
+            build: { id: 'test', local: false, commit: 'test' }, version: 'test',
+            send: event => transport.sendDiagnostic(event, {
+                browser: 'Chrome', browserVersion: '152', system: 'Android',
+                viewport: { width: 400, height: 800 }, visible: true, midnightHour: '00',
+            }),
+        });
+        const operation = diagnostics.begin('comparison');
+        try { resolveObservationTimeZone('Nautical: private-zone'); }
+        catch (error) { diagnostics.error('comparison', error, operation); }
+        const body = fetchMock.mock.calls[0][1].body;
+        expect(body).not.toContain('private-zone');
+        const payload = JSON.parse(body);
+        expect(payload.properties).toMatchObject({
+            diagnostic_schema: 2, stage: 'comparison', operation,
+            error: { code: 'TIME_ZONE_INVALID', details: { reason: 'nautical_label' } },
+            $geoip_disable: true, $process_person_profile: false,
+        });
+        expect(payload.properties.breadcrumbs.at(-1)).toMatchObject({ stage: 'comparison', result: 'error', operation });
+        transport.destroy();
+    });
+
     afterEach(() => vi.unstubAllGlobals());
 
     it('reads coarse device information only after consent and sends no raw user agent', () => {
@@ -87,9 +114,10 @@ describe('PostHog event transport', () => {
         transport.sendDiagnostic({
             event: 'plugin_runtime_error',
             properties: {
-                diagnostic_schema: 1, build_id: 'test', instance_id: 'instance',
+                diagnostic_schema: 2, build_id: 'test', instance_id: 'instance',
                 stage: 'runtime', operation: 1, fingerprint: 'runtime|Error',
                 error: { name: 'Error', message: 'Network request failed', frames: [] }, context: {},
+                state: 'ready', elapsedMs: 100, breadcrumbs: [],
             },
         }, {
             browser: 'test', browserVersion: '1', system: 'test',

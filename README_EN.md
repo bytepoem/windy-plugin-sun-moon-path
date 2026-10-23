@@ -74,7 +74,7 @@ Select **Assess selected time** to check rain and sunlight along primary-bow dir
 
 ### Horizon
 
-The event table lists rise/set bearings and times for the Sun, Moon and galactic centre in the current location’s time zone, with a notice when an event does not occur that day.
+The event table lists rise/set bearings and times for the Sun, Moon and galactic centre in the current location’s time zone; ocean locations use the nautical time zone provided by Windy. A notice appears when an event does not occur that day.
 
 Switch between total, low, middle or high clouds, cloud base and satellite imagery; select a forecast model and check the map's forecast time. With synchronization enabled, forecast maps follow the shared date and time controls; satellite image time follows the Windy timeline. Cloud map preferences are shared with Clouds.
 

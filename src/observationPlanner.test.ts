@@ -31,6 +31,31 @@ const weatherPoint = (timestamp: number, overrides: Partial<WeatherPoint> = {}):
 });
 
 describe('observation planner', () => {
+    it.each([
+        ['Nautical: Etc/GMT+9', 'Etc/GMT+9', '2026-10-19T09:00:00.000Z'],
+        ['Nautical: Etc/GMT-12', 'Etc/GMT-12', '2026-10-18T12:00:00.000Z'],
+        ['Nautical: Etc/GMT', 'Etc/GMT', '2026-10-19T00:00:00.000Z'],
+    ])('plans the correct local day for Windy ocean zone %s', async (rawZone, timeZone, dayStart) => {
+        const getTimeZone = vi.fn().mockResolvedValue(rawZone);
+        const planner = createObservationPlanner({ getTimeZone, getElevation: async () => 0 });
+        const ocean = { lat: 0, lon: -140 };
+        const plan = await planner.plan({ location: ocean, dateInput: '2026-10-19' });
+        expect(plan.timeZone).toBe(timeZone);
+        expect(plan.timeline.dayStart.toISOString()).toBe(dayStart);
+        expect(plan.paths).toHaveLength(4);
+        const next = await planner.plan({ location: ocean, dateInput: '2026-10-20' });
+        expect(next.timeZone).toBe(timeZone);
+        expect(getTimeZone).toHaveBeenCalledOnce();
+    });
+
+    it.each(['Nautical: Not/A_Timezone', 'Nautical: Etc/GMT+25', ''])('rejects invalid zone %s without caching the failure', async invalidZone => {
+        const getTimeZone = vi.fn().mockResolvedValueOnce(invalidZone).mockResolvedValueOnce('Asia/Shanghai');
+        const planner = createObservationPlanner({ getTimeZone, getElevation: async () => 0 });
+        await expect(planner.plan({ location, dateInput: '2026-10-19' })).rejects.toMatchObject({ code: 'TIME_ZONE_INVALID' });
+        expect((await planner.plan({ location, dateInput: '2026-10-19' })).timeZone).toBe('Asia/Shanghai');
+        expect(getTimeZone).toHaveBeenCalledTimes(2);
+    });
+
     it('matches hourly rain against its preceding interval, excluding touching boundaries', () => {
         const hour = 3_600_000;
         const start = Date.UTC(2026, 8, 8, 10);
