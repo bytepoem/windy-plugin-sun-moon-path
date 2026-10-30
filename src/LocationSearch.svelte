@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getElevation } from '@windy/fetch';
-    import { createEventDispatcher, onDestroy, tick } from 'svelte';
+    import { createEventDispatcher, tick } from 'svelte';
+    import { onPluginDestroy as onDestroy } from './pluginLifecycle';
 
     import {
         suggestAmapLocations,

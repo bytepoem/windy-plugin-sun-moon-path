@@ -20,6 +20,76 @@ const durations = (events: UsageEvent[], action = 'foreground_seconds') => event
     .reduce((total, event) => total + event.value, 0);
 
 describe('authorized plugin usage', () => {
+    it('reports each cloud subview instead of an aggregate cloud tab', () => {
+        const { metrics, events, advance } = fixture();
+        metrics.setTab('clouds', true, 'obstruction');
+        advance(10_000);
+        metrics.setTab('clouds', true, 'rainbow');
+        metrics.setTab('clouds', true, 'rainbow');
+        advance(20_000);
+        metrics.setTab('clouds', true, 'horizon');
+        advance(30_000);
+        metrics.setTab('clouds', true, 'tide');
+        advance(40_000);
+        metrics.setTab('settings', true, 'tide');
+        advance(50_000);
+        metrics.stop();
+        expect(events.filter(event => event.category === 'tab').map(event => event.label))
+            .toEqual(['obstruction', 'rainbow', 'horizon', 'tide', 'settings']);
+        expect(events.filter(event => event.action === 'tab_seconds')).toEqual([
+            { category: 'usage', action: 'tab_seconds', label: 'obstruction', value: 10 },
+            { category: 'usage', action: 'tab_seconds', label: 'rainbow', value: 20 },
+            { category: 'usage', action: 'tab_seconds', label: 'horizon', value: 30 },
+            { category: 'usage', action: 'tab_seconds', label: 'tide', value: 40 },
+            { category: 'usage', action: 'tab_seconds', label: 'settings', value: 50 },
+        ]);
+        expect(durations(events, 'tab_seconds')).toBe(durations(events));
+    });
+
+    it('excludes hidden and unauthorized subview use and does not count automatic restoration', () => {
+        const { metrics, events, advance } = fixture(false);
+        metrics.setTab('clouds', true, 'rainbow');
+        advance(50_000);
+        metrics.setConsent(true);
+        advance(10_000);
+        metrics.setVisible(false);
+        metrics.setTab('clouds', true, 'horizon');
+        advance(60_000);
+        metrics.setVisible(true);
+        advance(20_000);
+        metrics.setConsent(false); // Discard the unfinished horizon segment.
+        advance(30_000);
+        metrics.setConsent(true);
+        metrics.setTab('events');
+        advance(40_000);
+        metrics.setTab('clouds', false, 'tide');
+        advance(5_000);
+        metrics.stop();
+        metrics.setTab('clouds', true, 'obstruction');
+        expect(events.filter(event => event.category === 'tab')).toEqual([]);
+        expect(events.filter(event => event.action === 'tab_seconds')).toEqual([
+            { category: 'usage', action: 'tab_seconds', label: 'rainbow', value: 10 },
+            { category: 'usage', action: 'tab_seconds', label: 'events', value: 40 },
+            { category: 'usage', action: 'tab_seconds', label: 'tide', value: 5 },
+        ]);
+    });
+
+    it('attributes initial and remounted cloud dwell to the restored view without selections', () => {
+        const events: UsageEvent[] = [];
+        let now = 0;
+        const options = { now: () => now, send: (event: UsageEvent) => events.push(event), allowed: true, visible: true, tab: 'clouds' as const, cloudView: 'tide' as const };
+        const first = createUsageMetrics(options);
+        now = 15_000;
+        const resume = first.stop();
+        const second = createUsageMetrics({ ...options, resume });
+        now = 25_000;
+        second.stop();
+        expect(durations(events, 'tab_seconds')).toBe(25);
+        expect(events.filter(event => event.action === 'tab_seconds').every(event => event.label === 'tide')).toBe(true);
+        expect(events.filter(event => event.category === 'tab')).toEqual([]);
+        expect(events.filter(event => event.action === 'open')).toHaveLength(1);
+    });
+
     it('does not backfill an opening, time or selections before consent', () => {
         const { metrics, events, advance } = fixture(false);
         advance(40_000);
@@ -63,14 +133,14 @@ describe('authorized plugin usage', () => {
         metrics.setTab('about', true); // Same entry point for keyboard navigation.
         metrics.stop();
         expect(events.filter(event => event.category === 'tab')).toEqual([
-            { category: 'tab', action: 'select', label: 'clouds' },
+            { category: 'tab', action: 'select', label: 'obstruction' },
             { category: 'tab', action: 'select', label: 'about' },
         ]);
         expect(events.filter(event => event.action === 'tab_seconds')).toEqual([
             { category: 'usage', action: 'tab_seconds', label: 'events', value: 10 },
-            { category: 'usage', action: 'tab_seconds', label: 'clouds', value: 20 },
+            { category: 'usage', action: 'tab_seconds', label: 'obstruction', value: 20 },
             { category: 'usage', action: 'tab_seconds', label: 'events', value: 5 },
-            { category: 'usage', action: 'tab_seconds', label: 'clouds', value: 15 },
+            { category: 'usage', action: 'tab_seconds', label: 'obstruction', value: 15 },
         ]);
         expect(durations(events)).toBe(50);
     });

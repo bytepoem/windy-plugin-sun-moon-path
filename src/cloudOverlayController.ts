@@ -98,7 +98,11 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
             line(cloudArc(state.location, geometry.horizonKm, 180, 360 - gap), { color: '#ffffff' });
             if (!state.twilight) {continue;}
             const bandColor = CLOUD_BAND_COLORS[layer.band];
-            line(cloudArc(state.location, geometry.tangentKm, state.sunAzimuth, 12), { color: bandColor, dashArray: '4 4', weight: 3 });
+            const tangentArc = cloudArc(state.location, geometry.tangentKm, state.sunAzimuth, 12);
+            line(tangentArc, { color: bandColor, dashArray: '4 4', weight: 3 });
+            // Match the farthest-clear label placement at the visual top of the arc.
+            label(tangentArc.reduce((highest, point) => point.lat > highest.lat ? point : highest),
+                formatDistanceKm(geometry.tangentKm, state.units.distance), bandColor, `${height} · ${state.language === 'zh' ? '擦地云距' : 'Tangent distance'} · ${distanceLabel(geometry.tangentKm)}`);
             const farArc = cloudArc(state.location, geometry.clearKm, state.sunAzimuth, 36);
             line(farArc, { color: bandColor, weight: 3 });
             // Northmost sampled point is the visual top in Windy's north-up map.

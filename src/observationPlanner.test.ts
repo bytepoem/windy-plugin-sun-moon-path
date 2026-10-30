@@ -31,6 +31,31 @@ const weatherPoint = (timestamp: number, overrides: Partial<WeatherPoint> = {}):
 });
 
 describe('observation planner', () => {
+    it.each([
+        ['Nautical: Etc/GMT+9', 'Etc/GMT+9', '2026-10-19T09:00:00.000Z'],
+        ['Nautical: Etc/GMT-12', 'Etc/GMT-12', '2026-10-18T12:00:00.000Z'],
+        ['Nautical: Etc/GMT', 'Etc/GMT', '2026-10-19T00:00:00.000Z'],
+    ])('plans the correct local day for Windy ocean zone %s', async (rawZone, timeZone, dayStart) => {
+        const getTimeZone = vi.fn().mockResolvedValue(rawZone);
+        const planner = createObservationPlanner({ getTimeZone, getElevation: async () => 0 });
+        const ocean = { lat: 0, lon: -140 };
+        const plan = await planner.plan({ location: ocean, dateInput: '2026-10-19' });
+        expect(plan.timeZone).toBe(timeZone);
+        expect(plan.timeline.dayStart.toISOString()).toBe(dayStart);
+        expect(plan.paths).toHaveLength(4);
+        const next = await planner.plan({ location: ocean, dateInput: '2026-10-20' });
+        expect(next.timeZone).toBe(timeZone);
+        expect(getTimeZone).toHaveBeenCalledOnce();
+    });
+
+    it.each(['Nautical: Not/A_Timezone', 'Nautical: Etc/GMT+25', ''])('rejects invalid zone %s without caching the failure', async invalidZone => {
+        const getTimeZone = vi.fn().mockResolvedValueOnce(invalidZone).mockResolvedValueOnce('Asia/Shanghai');
+        const planner = createObservationPlanner({ getTimeZone, getElevation: async () => 0 });
+        await expect(planner.plan({ location, dateInput: '2026-10-19' })).rejects.toMatchObject({ code: 'TIME_ZONE_INVALID' });
+        expect((await planner.plan({ location, dateInput: '2026-10-19' })).timeZone).toBe('Asia/Shanghai');
+        expect(getTimeZone).toHaveBeenCalledTimes(2);
+    });
+
     it('matches hourly rain against its preceding interval, excluding touching boundaries', () => {
         const hour = 3_600_000;
         const start = Date.UTC(2026, 8, 8, 10);
@@ -53,6 +78,7 @@ describe('observation planner', () => {
         expect(first.paths.map(path => path.event)).toEqual(['sunrise', 'sunset', 'moonrise', 'moonset']);
         expect(second.timeZone).toBe('Asia/Shanghai');
         expect(second.elevationM).toBe(12);
+        expect(second.groundElevationM).toBe(12);
     });
 
     it('lets later known elevation override a pending context request', async () => {
@@ -72,6 +98,7 @@ describe('observation planner', () => {
         expect(getElevation).toHaveBeenCalledOnce();
         expect(firstPlan.elevationM).toBe(99);
         expect(secondPlan.elevationM).toBe(18);
+        expect(secondPlan.groundElevationM).toBe(18);
     });
 
     it('lets later known elevation replace a cached elevation', async () => {
@@ -85,6 +112,48 @@ describe('observation planner', () => {
         expect(getTimeZone).toHaveBeenCalledOnce();
         expect(getElevation).toHaveBeenCalledOnce();
         expect(updated.elevationM).toBe(18);
+        expect(updated.groundElevationM).toBe(18);
+    });
+
+    it.each([0, -400])('preserves source elevation %s separately from the astronomy input', async ground => {
+        const getElevation = vi.fn().mockResolvedValue(ground);
+        const planner = createObservationPlanner({ getTimeZone: async () => 'Asia/Shanghai', getElevation });
+        const first = await planner.plan({ location, dateInput: '2026-10-13' });
+        const second = await planner.plan({ location, dateInput: '2026-10-14' });
+        expect(first.groundElevationM).toBe(ground);
+        expect(second.groundElevationM).toBe(ground);
+        expect(first.elevationM).toBe(0);
+        expect(getElevation).toHaveBeenCalledOnce();
+    });
+
+    it.each(['failure', 'nonfinite'])('keeps missing elevation unknown and retryable after %s', async failure => {
+        const getElevation = vi.fn();
+        if (failure === 'failure') {
+            getElevation.mockRejectedValueOnce(new Error('offline'));
+        } else {
+            getElevation.mockResolvedValueOnce(NaN);
+        }
+        getElevation.mockResolvedValueOnce(250);
+        const planner = createObservationPlanner({ getTimeZone: async () => 'Asia/Shanghai', getElevation });
+        const first = await planner.plan({ location, dateInput: '2026-10-13' });
+        expect(first.elevationM).toBe(0);
+        expect(first.groundElevationM).toBeNull();
+        const retry = await planner.plan({ location, dateInput: '2026-10-13', knownElevationM: first.groundElevationM });
+        expect(retry.groundElevationM).toBe(250);
+        expect(getElevation).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps elevations tied to each location when requests finish out of order', async () => {
+        let completeFirst!: (value: number) => void;
+        const other = { lat: 30, lon: 120 };
+        const getElevation = vi.fn().mockImplementationOnce(() => new Promise<number>(resolve => { completeFirst = resolve; }))
+            .mockResolvedValueOnce(800);
+        const planner = createObservationPlanner({ getTimeZone: async () => 'Asia/Shanghai', getElevation });
+        const pending = planner.plan({ location, dateInput: '2026-10-13' });
+        const second = await planner.plan({ location: other, dateInput: '2026-10-13' });
+        completeFirst(10);
+        expect((await pending).groundElevationM).toBe(10);
+        expect(second.groundElevationM).toBe(800);
     });
 
     it('reports invalid time zones through a stable error code', async () => {

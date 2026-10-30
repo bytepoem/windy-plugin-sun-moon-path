@@ -2,7 +2,7 @@ import store from '@windy/store';
 import { createBaiduUsageTransport } from './baiduUsageTransport';
 import { createPostHogUsageTransport } from './posthogUsageTransport';
 import { postHogUsageConfig } from './posthogUsageConfig';
-import { analyticsEnvironmentEnabled, createUsageMetrics, type UsageSession, type UsageTab } from './usageMetrics';
+import { analyticsEnvironmentEnabled, createUsageMetrics, type UsageCloudView, type UsageSession, type UsageTab } from './usageMetrics';
 
 const CHECKPOINT_INTERVAL_MS = 30_000;
 // Internal remounts are immediate. Never resume a later manual opening.
@@ -10,7 +10,7 @@ const INTERNAL_REOPEN_WINDOW_MS = 2_000;
 let continuation: { session: UsageSession; time: number; distinctId: string | null } | null = null;
 
 /** Bind one component lifetime to Windy consent and browser visibility. */
-export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab }) => {
+export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; cloudView?: UsageCloudView }) => {
     const enabled = analyticsEnvironmentEnabled(options.localBuild, window.location.href);
     let active = true;
     let pageActive = true;
@@ -28,6 +28,7 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab }
         allowed: allowed(),
         visible: document.visibilityState === 'visible',
         tab: options.tab,
+        cloudView: options.cloudView,
         resume: resume?.session,
         send: event => {
             if (allowed()) {
@@ -94,9 +95,9 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab }
     }
 
     return {
-        setTab(tab: UsageTab, userInitiated = false) {
+        setTab(tab: UsageTab, userInitiated = false, cloudView?: UsageCloudView) {
             metrics.setConsent(allowed());
-            metrics.setTab(tab, userInitiated);
+            metrics.setTab(tab, userInitiated, cloudView);
         },
         stop(resumeAfterInternalReopen = false) {
             if (!active) {

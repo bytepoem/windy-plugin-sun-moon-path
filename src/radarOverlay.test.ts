@@ -246,10 +246,8 @@ describe('radar overlay controller', () => {
         expect(statuses).toEqual(['loading']);
         expect(layers).toHaveLength(1);
         expect(layers[0].url).toContain('/v2/radar/latest/256/{z}/{x}/{y}/2/0_0.png');
-        expect(layers[0].options.customShader?.pixelTransform).toContain('vec4 pixelTransform');
         expect(layers[0].options.maxNativeZoom).toBe(7);
         expect(layers[0].options.opacity).toBe(0.9);
-        expect(layers[0].options.tileFilter).toBe(9728);
         expect(timers).toHaveLength(1);
         expect(controller.getActiveFrameTime()).toBe(200_000);
         expect(statuses).toEqual(['loading']);

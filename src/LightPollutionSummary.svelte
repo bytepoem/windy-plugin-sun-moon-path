@@ -14,7 +14,7 @@
         zh: {
             heading: '光污染',
             sqm: 'SQM',
-            bortle: '光污染等级',
+            bortle: '估算 Bortle',
             milkyWay: '银河',
             zodiacalLight: '黄道光',
             andromedaGalaxy: '仙女座星系',

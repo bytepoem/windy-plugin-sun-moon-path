@@ -1,6 +1,7 @@
 import type { ObservationEvent as DirectionEvent } from './observationPlanner';
 import type { AstronomyInterval } from './solar';
 import type { RadarProvider, RadarOverlayStatus } from './radarOverlay';
+import type { LightPollutionOverlayStatus } from './lightPollutionOverlay';
 import type { LocationProvider } from './locationProvider';
 import type { UpdateNoteKind } from './pluginUpdate';
 import type { TemperatureUnit, PrecipitationUnit, WindUnit, DistanceUnit } from './unitPreferences';
@@ -20,6 +21,9 @@ export const translations: Record<UiLanguage, {
     fitDirectionLinesLabel: (distance: string) => string;
     restoreSearchZoomLabel: string;
     enableRadarOverlayLabel: string;
+    showSkyChartLabel: string;
+    hideSkyChartLabel: string;
+    showSkyChartDescription: string;
     disableRadarOverlayLabel: string;
     panelIntro: string;
     sunMoonPanelLabel: string;
@@ -49,6 +53,12 @@ export const translations: Record<UiLanguage, {
     guideTab: string;
     settingsTab: string;
     aboutTab: string;
+    diagnosticTitle: string;
+    diagnosticHint: string;
+    diagnosticCopy: string;
+    diagnosticCopied: string;
+    diagnosticCopyError: string;
+    diagnosticStartupFailed: string;
     aboutTabUpdateBadge: string;
     aboutTabUpdateLabel: (version: string) => string;
     retry: string;
@@ -82,6 +92,7 @@ export const translations: Record<UiLanguage, {
         | 'mobileMode'
         | 'mapControls'
         | 'radarOverlay'
+        | 'lightPollutionOverlay'
         | 'cloudPlanning'
         | 'weatherSources'
         | 'units',
@@ -89,6 +100,11 @@ export const translations: Record<UiLanguage, {
     >;
     settingsGuideHeading: string;
     settingsHeading: string;
+    minimizeScopeLabel: string;
+    minimizeScopeStandard: string;
+    minimizeScopeHideTimes: string;
+    minimizeScopeHideSummary: string;
+    minimizeScopeDescription: string;
     initialOverlayLabel: string;
     initialOverlayDescription: string;
     keepCurrentOverlayLabel: string;
@@ -99,6 +115,13 @@ export const translations: Record<UiLanguage, {
     rainViewerDescription: string;
     radarOpacityLabel: string;
     radarOpacityDescription: string;
+    lightPollutionOverlayLabel: string;
+    enableLightPollutionLabel: string;
+    disableLightPollutionLabel: string;
+    lightPollutionOverlayDescription: string;
+    lightPollutionOpacityLabel: string;
+    lightPollutionOpacityDescription: string;
+    lightPollutionOverlayStatuses: Record<LightPollutionOverlayStatus, string>;
     lineOpacityLabel: string;
     lineOpacityDescription: string;
     show600Label: (distance: string) => string;
@@ -204,6 +227,9 @@ export const translations: Record<UiLanguage, {
         fitDirectionLinesLabel: distance => `完整显示 ${distance} 方位线`,
         restoreSearchZoomLabel: '回到搜索定位缩放',
         enableRadarOverlayLabel: '开启气象雷达叠加',
+        showSkyChartLabel: '显示天空盘',
+        hideSkyChartLabel: '隐藏天空盘',
+        showSkyChartDescription: '控制事件视图的天空盘显示，与窗口栏首个按钮同步，并记住选择。',
         disableRadarOverlayLabel: '关闭气象雷达叠加',
         panelIntro: '日月关键时刻、事件前后 30m方位线和夜间观测时段。',
         sunMoonPanelLabel: '日月信息面板',
@@ -237,6 +263,12 @@ export const translations: Record<UiLanguage, {
         guideTab: '说明',
         settingsTab: '设置',
         aboutTab: '关于',
+        diagnosticTitle: '查看诊断信息',
+        diagnosticHint: '报告包含版本、运行环境、加载状态和脱敏错误。可复制后随问题反馈发送；不包含机位坐标、收藏或 API Key。',
+        diagnosticCopy: '复制诊断信息',
+        diagnosticCopied: '已复制',
+        diagnosticCopyError: '复制失败，请选择文本手动复制',
+        diagnosticStartupFailed: '插件未能完成初始化。请复制诊断信息并反馈，关闭后可重新打开。',
         aboutTabUpdateBadge: '新',
         aboutTabUpdateLabel: version => `关于，发现新版本 ${version}`,
         retry: '重试',
@@ -282,7 +314,7 @@ export const translations: Record<UiLanguage, {
             },
             comparison: {
                 title: '收藏地点对比',
-                description: '从收藏中选择 2–5 个地点，在同一观测日期下对比无月、银河时段、天气、光污染和月相。',
+                description: '从收藏中选择 2–5 个地点，在同一观测日期下对比无月、银河时段、天气、光污染和月相。天气统计所选当地日期的可用预报，不限于夜间窗口；覆盖可能不完整，缺测保持未知。',
             },
             coordinates: {
                 title: '坐标精确定位',
@@ -294,7 +326,7 @@ export const translations: Record<UiLanguage, {
             },
             mobileMode: {
                 title: '移动端方位线模式',
-                description: '收起面板后保留搜索、日期、事件、实时方位和当天事件时间，并记住方位线模式或小窗口的选择。',
+                description: '收起面板默认保留搜索、日期、事件、实时方位和当天事件时间。在设置的“最小化范围”中可进一步隐藏时间栏，或同时隐藏地点日月栏。展开后恢复完整内容，并记住方位线模式或小窗口的选择。',
             },
             mapControls: {
                 title: '地图视图按钮',
@@ -302,15 +334,38 @@ export const translations: Record<UiLanguage, {
             },
             radarOverlay: {
                 title: '气象雷达叠加',
-                description: '使用标题栏或移动端窗口上方的雷达按钮快速开关 RainViewer；开启后按钮高亮，雷达图层会跟随 Windy 时间条切换，透明度可在设置中调整。',
+                description: '使用标题栏或移动端窗口上方的降雨云按钮快速开关 RainViewer；开启后按钮高亮，雷达跟随 Windy 时间条切换，透明度可在设置中调整。回波按中央气象台分段色阶显示，数据来源仍为 RainViewer，回波范围和更新时间可能与 Windy 原生雷达不同。',
+            },
+            lightPollutionOverlay: {
+                title: '光污染地图',
+                description: '使用降雨云图标旁的星光按钮开关 Lorenz 2025 天空亮度图层。默认关闭、不透明度 50%，开关和不透明度会记住选择；在设置中调整、查看加载状态或重试。覆盖南纬 65° 至北纬 75°，年度模型不随天气时间轴变化，不能代表实时观测或实测 Bortle 等级。点选机位仍可查看 SQM 与估算 Bortle。',
             },
         },
         settingsGuideHeading: '设置说明',
         settingsHeading: '插件设置',
+        minimizeScopeLabel: '最小化范围',
+        minimizeScopeStandard: '默认：保留时间栏与地点日月栏',
+        minimizeScopeHideTimes: '更小：隐藏时间栏',
+        minimizeScopeHideSummary: '最小：同时隐藏时间栏与地点日月栏',
+        minimizeScopeDescription: '控制手机或平板点击最小化按钮后隐藏的内容，展开后恢复完整显示。设置会保存在当前浏览器。',
         initialOverlayLabel: '打开插件时的图层',
         initialOverlayDescription: '选择后立即切换到对应 Windy 图层，并在以后打开插件时继续使用；选择“保持 Windy 当前图层”则不自动切换。设置会保存在当前浏览器。',
         keepCurrentOverlayLabel: '保持 Windy 当前图层',
         radarProviderLabel: '叠加雷达数据',
+        lightPollutionOverlayLabel: '光污染地图',
+        enableLightPollutionLabel: '开启光污染地图',
+        disableLightPollutionLabel: '关闭光污染地图',
+        lightPollutionOverlayDescription: 'Lorenz · 2025 天空亮度模型，与机位查询同源；不随天气时间轴变化。',
+        lightPollutionOpacityLabel: '光污染地图不透明度',
+        lightPollutionOpacityDescription: '0% 完全透明，100% 完全不透明。降低不透明度可看清底图；设置保存在当前浏览器。',
+        lightPollutionOverlayStatuses: {
+            disabled: '光污染图层已关闭',
+            transparent: '光污染图层已开启，当前完全透明（0%）',
+            loading: '正在加载光污染图层…',
+            ready: '光污染图层已加载',
+            'out-of-range': '地图中心超出覆盖范围（65°S–75°N）',
+            error: '光污染图层加载失败，请重试。',
+        },
         radarProviderDescription: '窗口雷达按钮与此设置同步，任一处都可直接开关；开启后会在当前 Windy 图层上叠加 RainViewer，并跟随时间条切换时次。设置仅保存在当前浏览器。',
         radarProviderLabels: {
             none: '不叠加',
@@ -463,6 +518,9 @@ export const translations: Record<UiLanguage, {
         fitDirectionLinesLabel: distance => `Fit ${distance} direction lines`,
         restoreSearchZoomLabel: 'Restore search-location zoom',
         enableRadarOverlayLabel: 'Enable radar overlay',
+        showSkyChartLabel: 'Show sky chart',
+        hideSkyChartLabel: 'Hide sky chart',
+        showSkyChartDescription: 'Show the sky chart in the Events view. This setting stays synchronized with the first window button and remembers your choice.',
         disableRadarOverlayLabel: 'Disable radar overlay',
         panelIntro: 'Key sun and moon times, direction lines 30m before and after each event, and night observing windows.',
         sunMoonPanelLabel: 'Sun and moon information panel',
@@ -496,6 +554,12 @@ export const translations: Record<UiLanguage, {
         guideTab: 'Guide',
         settingsTab: 'Settings',
         aboutTab: 'About',
+        diagnosticTitle: 'View diagnostics',
+        diagnosticHint: 'The report includes the version, environment, loading states and sanitized errors. Copy it to include with your issue report. It excludes location coordinates, favorites and API keys.',
+        diagnosticCopy: 'Copy diagnostics',
+        diagnosticCopied: 'Copied',
+        diagnosticCopyError: 'Copy failed. Select and copy the text manually.',
+        diagnosticStartupFailed: 'The plugin could not finish initializing. Copy the diagnostics to report the problem. Close and reopen to try again.',
         aboutTabUpdateBadge: 'NEW',
         aboutTabUpdateLabel: version => `About, version ${version} is available`,
         retry: 'Retry',
@@ -541,7 +605,7 @@ export const translations: Record<UiLanguage, {
             },
             comparison: {
                 title: 'Favorite location comparison',
-                description: 'Select 2–5 favorites to compare moonless and Milky Way windows, weather, light pollution, and moon phase for the same observing date.',
+                description: 'Select 2–5 favorites to compare moonless and Milky Way windows, weather, light pollution, and moon phase for the same observing date. Weather summarizes available forecasts for the selected local date, independently of night windows; coverage may be partial and missing values remain unknown.',
             },
             coordinates: {
                 title: 'Exact coordinate location',
@@ -553,7 +617,7 @@ export const translations: Record<UiLanguage, {
             },
             mobileMode: {
                 title: 'Mobile direction-line mode',
-                description: 'Collapse the panel while keeping search, date, event, live directions, and daily event times. The direction-line or compact choice is remembered.',
+                description: 'Collapsing keeps search, date, event, live directions, and daily event times by default. In Settings, Minimize scope can also hide event times, or both event times and the location / Sun / Moon row. Expanding restores all content. The direction-line or compact choice is remembered.',
             },
             mapControls: {
                 title: 'Map view controls',
@@ -561,15 +625,38 @@ export const translations: Record<UiLanguage, {
             },
             radarOverlay: {
                 title: 'Weather radar overlay',
-                description: 'Use the radar button in the title bar or above the mobile window to toggle RainViewer. The active button is highlighted, radar follows Windy’s timeline, and opacity is adjustable in Settings.',
+                description: 'Use the rain-cloud button in the title bar or above the mobile window to toggle RainViewer. The active button is highlighted, radar follows Windy’s timeline, and opacity is adjustable in Settings. Echoes use the China NMC stepped reflectivity palette; data still comes from RainViewer, so coverage and update times may differ from Windy’s native radar.',
+            },
+            lightPollutionOverlay: {
+                title: 'Light pollution map',
+                description: 'Use the sparkles button beside the rain-cloud icon to toggle the Lorenz 2025 sky brightness map. Defaults are off and 50% opacity; both settings remember your choices. Adjust opacity, check loading status or retry in Settings. Coverage is 65°S–75°N. This annual model is independent of the weather timeline and is neither a live observation nor measured Bortle. Selecting a location still shows SQM and estimated Bortle values.',
             },
         },
         settingsGuideHeading: 'Settings guide',
         settingsHeading: 'Plugin settings',
+        minimizeScopeLabel: 'Minimize scope',
+        minimizeScopeStandard: 'Default: keep event times and location / Sun / Moon',
+        minimizeScopeHideTimes: 'Smaller: hide event times',
+        minimizeScopeHideSummary: 'Smallest: also hide location / Sun / Moon',
+        minimizeScopeDescription: 'Choose what the minimize button hides on phones and tablets. Expanding restores all content. This setting is saved in this browser.',
         initialOverlayLabel: 'Layer when opening the plugin',
         initialOverlayDescription: 'Switch to the selected Windy layer immediately and keep using it whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
         keepCurrentOverlayLabel: 'Keep Windy’s current layer',
         radarProviderLabel: 'Radar data overlay',
+        lightPollutionOverlayLabel: 'Light pollution map',
+        enableLightPollutionLabel: 'Show light pollution map',
+        disableLightPollutionLabel: 'Hide light pollution map',
+        lightPollutionOverlayDescription: 'Lorenz · 2025 sky brightness model, matching the location query. Independent of the weather timeline.',
+        lightPollutionOpacityLabel: 'Light pollution map opacity',
+        lightPollutionOpacityDescription: '0% is transparent; 100% is opaque. Lower opacity reveals the base map. Saved in this browser.',
+        lightPollutionOverlayStatuses: {
+            disabled: 'Light pollution overlay is off',
+            transparent: 'Light pollution overlay is on but fully transparent (0%)',
+            loading: 'Loading light pollution overlay…',
+            ready: 'Light pollution overlay loaded',
+            'out-of-range': 'Map centre is outside coverage (65°S–75°N)',
+            error: 'Light pollution overlay failed to load. Please retry.',
+        },
         radarProviderDescription: 'The window radar button and this setting stay synchronized, and either one directly toggles the overlay. When enabled, RainViewer follows Windy’s timeline. The setting stays in this browser.',
         radarProviderLabels: {
             none: 'Off',

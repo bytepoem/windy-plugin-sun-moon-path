@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
     mapRainViewerPixelToNmc,
     NMC_RADAR_COLOR_BANDS,
-    NMC_RADAR_PIXEL_TRANSFORM,
     nmcRadarColorForDbz,
     type RadarRgba,
 } from './radarPalette';
@@ -64,12 +63,5 @@ describe('NMC radar color bands', () => {
     it('maps RainViewer collapsed extreme colors to the nearest recoverable NMC classes', () => {
         expectMapped([255, 255, 255, 255], 65);
         expectMapped([0, 255, 0, 255], 70);
-    });
-
-    it('provides the Windy custom raster shader contract', () => {
-        expect(NMC_RADAR_PIXEL_TRANSFORM).toContain('vec4 pixelTransform(vec4 color, bool isPrimary)');
-        expect(NMC_RADAR_PIXEL_TRANSFORM).toContain('color.rgb / color.a');
-        expect(NMC_RADAR_PIXEL_TRANSFORM).toContain('150.0 / 255.0, 0.0 / 255.0, 180.0 / 255.0');
-        expect(NMC_RADAR_PIXEL_TRANSFORM).toContain('175.0 / 255.0, 145.0 / 255.0, 240.0 / 255.0');
     });
 });

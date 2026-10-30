@@ -2,7 +2,8 @@
     import bcast from '@windy/broadcast';
     import { getElevation } from '@windy/fetch';
     import * as userFavs from '@windy/userFavs';
-    import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
+    import { createEventDispatcher, tick } from 'svelte';
+    import { onPluginDestroy as onDestroy, onPluginMount as onMount } from './pluginLifecycle';
 
     import {
         createFavoriteMetricsCache,

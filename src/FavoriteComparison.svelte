@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
-    import { createEventDispatcher, onDestroy, tick } from 'svelte';
+    import { createEventDispatcher, tick } from 'svelte';
+    import { onPluginDestroy as onDestroy } from './pluginLifecycle';
 
     import {
         createFavoriteComparisonPlanner,
@@ -30,8 +31,10 @@
         dateInputForInstant,
         type AstronomyIntervalKind,
     } from './solar';
+    import type { PluginDiagnostics } from './pluginDiagnostics';
 
     export let open = false;
+    export let diagnostics: PluginDiagnostics | null = null;
     export let targets: FavoriteComparisonTarget[] = [];
     export let selectedDate = '';
     export let currentInstant: Date;
@@ -58,7 +61,7 @@
             dateControl: '观测日期',
             moonless: '无月',
             milkyWay: '银河',
-            conditions: '窗口内条件',
+            conditions: '天气按所选当地日期的可用预报统计，可能仅覆盖部分时段。',
             modelLabel: '预报模型',
             weather: '天气',
             cloud: '云量',
@@ -91,7 +94,7 @@
             dateControl: 'Observing date',
             moonless: 'Moonless',
             milkyWay: 'Milky Way',
-            conditions: 'Conditions in window',
+            conditions: 'Weather uses available forecasts for the selected local date; coverage may be partial.',
             modelLabel: 'Forecast model',
             weather: 'Weather',
             cloud: 'Cloud cover',
@@ -210,6 +213,7 @@
         const abortController = new AbortController();
         modelAbortController = abortController;
         const requestId = ++modelRequestId;
+        const operation = diagnostics?.begin('comparison') ?? 0;
         modelLoading = true;
         try {
             const nextResults = await nextSession.loadModel(nextModel, abortController.signal);
@@ -220,12 +224,25 @@
                 || requestId !== modelRequestId
                 || session !== nextSession
             ) {
+                diagnostics?.end('comparison', operation, 'cancelled');
                 return;
             }
             results = nextResults;
+            // Only accepted results may report failures; cancelled or superseded work stays silent.
+            for (const result of nextResults) {
+                if (result.diagnosticError !== undefined) {
+                    diagnostics?.error('comparison', result.diagnosticError, operation);
+                }
+            }
+            diagnostics?.end('comparison', operation);
         } catch (error) {
-            if (!(error instanceof Error && error.name === 'AbortError')) {
+            if (!destroyed && open && !abortController.signal.aborted
+                && requestId === modelRequestId && session === nextSession
+                && !(error instanceof Error && error.name === 'AbortError')) {
+                diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';
+            } else {
+                diagnostics?.end('comparison', operation, 'cancelled');
             }
         } finally {
             if (requestId === modelRequestId) {
@@ -240,6 +257,7 @@
         const abortController = new AbortController();
         prepareAbortController = abortController;
         const requestId = ++prepareRequestId;
+        const operation = diagnostics?.begin('comparison') ?? 0;
         prepareStatus = 'loading';
         results = [];
         session = null;
@@ -257,9 +275,20 @@
                 || abortController.signal.aborted
                 || requestId !== prepareRequestId
             ) {
+                diagnostics?.end('comparison', operation, 'cancelled');
                 return;
             }
             session = nextSession;
+            for (const prepared of nextSession.preparedTargets) {
+                if (prepared.status === 'error' && prepared.diagnosticError) {
+                    diagnostics?.error('comparison', prepared.diagnosticError, operation);
+                } else if (prepared.status === 'ready') {
+                    for (const error of prepared.diagnosticErrors ?? []) {
+                        diagnostics?.error('comparison', error, operation);
+                    }
+                }
+            }
+            diagnostics?.end('comparison', operation);
             prepareAbortController = null;
             await loadModel(nextSession, model);
             if (
@@ -275,10 +304,14 @@
             if (
                 !destroyed
                 && open
+                && !abortController.signal.aborted
                 && requestId === prepareRequestId
                 && !(error instanceof Error && error.name === 'AbortError')
             ) {
+                diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';
+            } else {
+                diagnostics?.end('comparison', operation, 'cancelled');
             }
         }
     };
@@ -367,15 +400,16 @@
             | 'visibilityKm' | 'aod550',
         selectedUnits: UnitPreferences,
     ): string => {
-        // 无月与银河窗口合并展示后，条件表同步统计两个有效窗口的完整范围。
-        const ranges = result.windows.flatMap(window => {
-            const windowRange = window.interval ? window.evidence[field] : null;
-            return windowRange ? [windowRange] : [];
+        // Night windows may precede the forecast; weather rows use available samples on the local date.
+        const metric = field === 'precipitationMm' ? 'precipMm' : field;
+        const values = result.dailyWeatherPoints.flatMap(point => {
+            const value = point[metric];
+            return value === null || !Number.isFinite(value) ? [] : [value];
         });
-        const range = ranges.length > 0
+        const range = values.length > 0
             ? {
-                minimum: Math.min(...ranges.map(item => item.minimum)),
-                maximum: Math.max(...ranges.map(item => item.maximum)),
+                minimum: Math.min(...values),
+                maximum: Math.max(...values),
             }
             : null;
         if (!range) {
@@ -419,8 +453,8 @@
     };
 
     const weatherLabel = (result: FavoriteComparisonResult): string => {
-        const codes = result.windows.flatMap(window => {
-            const code = window.interval ? window.evidence.dominantWeatherIconCode : null;
+        const codes = result.dailyWeatherPoints.flatMap(point => {
+            const code = point.iconCode;
             return code === null ? [] : [code];
         });
         if (codes.length > 0) {
@@ -554,6 +588,7 @@
             </div>
         {:else}
             <section class="favorite-comparison__conditions" class:loading={modelLoading} aria-label={text.conditions}>
+                <p class="favorite-comparison__forecast-note">{text.conditions}</p>
                 {#if modelLoading}
                     <p class="favorite-comparison__model-status" role="status">
                         <span class="favorite-comparison__spinner" aria-hidden="true"></span>
@@ -816,6 +851,12 @@
     .favorite-comparison__conditions {
         position: relative;
         padding: 5px 8px 4px;
+    }
+
+    .favorite-comparison__forecast-note {
+        margin: 2px 0 6px;
+        font-size: 11px;
+        color: #a9b8c9;
     }
 
     .favorite-comparison__models {

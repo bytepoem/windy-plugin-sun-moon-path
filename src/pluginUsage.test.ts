@@ -65,6 +65,31 @@ describe('plugin usage lifecycle', () => {
         state.listeners.forEach(listener => listener());
     };
 
+    it('forwards restored and selected subviews through timing, background and close', async () => {
+        let now = 0;
+        vi.spyOn(performance, 'now').mockImplementation(() => now);
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'clouds', cloudView: 'tide' });
+        now = 10_000;
+        usage.setTab('clouds', true, 'rainbow');
+        now = 25_000;
+        page.visibilityState = 'hidden';
+        page.dispatchEvent(new Event('visibilitychange'));
+        now = 100_000;
+        usage.stop();
+        const events = state.transports[0].send.mock.calls.map(([event]) => event);
+        expect(events.filter(event => event.action === 'tab_seconds')).toEqual([
+            { category: 'usage', action: 'tab_seconds', label: 'tide', value: 10 },
+            { category: 'usage', action: 'tab_seconds', label: 'rainbow', value: 15 },
+        ]);
+        expect(events.filter(event => event.category === 'tab')).toEqual([
+            { category: 'tab', action: 'select', label: 'rainbow' },
+        ]);
+        expect(events.some(event => event.label === 'clouds')).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
+        expect(state.listeners.size).toBe(0);
+    });
+
     it('never loads the SDK or installs listeners/timers in local development', async () => {
         const { startPluginUsage } = await import('./pluginUsage');
         const usage = startPluginUsage({ localBuild: true, tab: 'events' });
@@ -88,7 +113,7 @@ describe('plugin usage lifecycle', () => {
         expect(vi.getTimerCount()).toBe(0);
         consent(true);
         usage.setTab('clouds', true);
-        expect(state.transports[1].send).toHaveBeenCalledExactlyOnceWith({ category: 'tab', action: 'select', label: 'clouds' });
+        expect(state.transports[1].send).toHaveBeenCalledExactlyOnceWith({ category: 'tab', action: 'select', label: 'obstruction' });
         expect(state.identities[1]).not.toBe(state.identities[0]);
         expect(state.pageviews).toHaveLength(1);
         usage.stop();
@@ -161,7 +186,7 @@ describe('plugin usage lifecycle', () => {
         const usage = startPluginUsage({ localBuild: false, tab: 'events' });
         expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'plugin', action: 'open' });
         usage.setTab('clouds', true);
-        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'tab', action: 'select', label: 'clouds' });
+        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'tab', action: 'select', label: 'obstruction' });
         usage.stop();
     });
 

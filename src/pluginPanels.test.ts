@@ -82,6 +82,7 @@ const settingsProps = {
     initialOverlayPreference: 'satellite', initialOverlayOptions: [{ value: 'satellite' }],
     radarProvider: 'none', radarOverlayStatus: 'disabled', radarOpacityPercent: 65,
     hideLocationSearch: false, directionLineOpacityPercent: 85, showExtendedDistanceMarker: false,
+    minimizeScope: 'standard', changeMinimizeScope: () => undefined,
     savedApiKeyProvider: null, locationApiKeyDrafts: { amap: '', baidu: '', tencent: '' },
     locationApiKeys: { amap: '', baidu: '', tencent: '' },
     toggleLanguage: () => undefined, changeInitialOverlayPreference: () => undefined,

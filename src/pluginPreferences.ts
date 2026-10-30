@@ -1,9 +1,11 @@
 import { DEFAULT_INITIAL_OVERLAY, normalizeInitialOverlayPreference, type InitialOverlayPreference, type WindyOverlay } from './initialOverlay';
 import { DEFAULT_RADAR_OPACITY_PERCENT, normalizeRadarOpacityPercent, normalizeRadarProvider, type RadarProvider } from './radarOverlay';
 import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
+import { DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT, normalizeLightPollutionOpacity } from './lightPollutionOverlay';
 import type { UiLanguage } from './pluginTranslations';
 
 export type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
+export type MinimizeScope = 'standard' | 'hide-times' | 'hide-summary';
 export const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
 
 // Keep established storage keys and parsing semantics so upgrades and rollback need no migration.
@@ -11,11 +13,15 @@ const SHOW_600_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-600km';
 const UI_LANGUAGE_STORAGE_KEY = 'windy-plugin-sun-moon-path:ui-language';
 const PLANNING_VIEW_STORAGE_KEY = 'windy-plugin-sun-moon-path:planning-view';
 const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-mode';
+const MINIMIZE_SCOPE_STORAGE_KEY = 'windy-plugin-sun-moon-path:minimize-scope';
 const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
+const SHOW_SKY_CHART_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-sky-chart';
 const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
 const INITIAL_OVERLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:initial-overlay';
 const RADAR_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-provider';
 const RADAR_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-opacity';
+const LIGHT_POLLUTION_ENABLED_STORAGE_KEY = 'windy-plugin-sun-moon-path:light-pollution-enabled';
+const LIGHT_POLLUTION_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:light-pollution-opacity';
 const REMOVED_RADAR_CREDENTIAL_STORAGE_KEYS = [
     'windy-plugin-sun-moon-path:xweather-client-id',
     'windy-plugin-sun-moon-path:xweather-client-secret',
@@ -25,6 +31,16 @@ const LOCATION_PROVIDER_API_KEY_STORAGE_KEYS: Record<LocationProvider, string> =
     amap: 'windy-plugin-sun-moon-path:amap-api-key',
     baidu: 'windy-plugin-sun-moon-path:baidu-api-key',
     tencent: 'windy-plugin-sun-moon-path:tencent-api-key',
+};
+
+/** Return persistence success for the key-save indicator; callers still update in-memory state. */
+const write = (key: string, value: string): boolean => {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch {
+        return false;
+    }
 };
 
 /** Missing or invalid choices require first-use confirmation; do not silently persist a default. */
@@ -38,15 +54,16 @@ export const loadLanguagePreference = (): UiLanguage | null => {
 };
 
 /** Remember the dropdown function independently of the currently open top-level tab. */
-export const loadPlanningViewPreference = (): 'obstruction' | 'rainbow' => {
+export const loadPlanningViewPreference = (): 'obstruction' | 'rainbow' | 'horizon' | 'tide' => {
     try {
-        return localStorage.getItem(PLANNING_VIEW_STORAGE_KEY) === 'rainbow' ? 'rainbow' : 'obstruction';
+        const view = localStorage.getItem(PLANNING_VIEW_STORAGE_KEY);
+        return view === 'rainbow' || view === 'horizon' || view === 'tide' ? view : 'obstruction';
     } catch {
         return 'obstruction';
     }
 };
 
-export const savePlanningViewPreference = (view: 'obstruction' | 'rainbow'): void => {
+export const savePlanningViewPreference = (view: 'obstruction' | 'rainbow' | 'horizon' | 'tide'): void => {
     try {
         localStorage.setItem(PLANNING_VIEW_STORAGE_KEY, view);
     } catch {
@@ -80,6 +97,26 @@ export const saveMobilePanelModePreference = (value: MobileNonFullscreenPanelMod
     }
 };
 
+/** Missing or unknown preferences retain the established minimized layout. */
+export const normalizeMinimizeScope = (value: unknown): MinimizeScope =>
+    value === 'hide-times' || value === 'hide-summary' ? value : 'standard';
+
+export const loadMinimizeScopePreference = (): MinimizeScope => {
+    try {
+        return normalizeMinimizeScope(localStorage.getItem(MINIMIZE_SCOPE_STORAGE_KEY));
+    } catch {
+        return 'standard';
+    }
+};
+
+export const saveMinimizeScopePreference = (value: MinimizeScope) => {
+    try {
+        localStorage.setItem(MINIMIZE_SCOPE_STORAGE_KEY, value);
+    } catch {
+        // Keep the selected scope usable for this session when storage is unavailable.
+    }
+};
+
 export const loadHideLocationSearchPreference = (): boolean => {
     try {
         return localStorage.getItem(HIDE_LOCATION_SEARCH_STORAGE_KEY) === 'true';
@@ -94,6 +131,19 @@ export const saveHideLocationSearchPreference = (value: boolean) => {
     } catch {
         // Storage can be unavailable in hardened browser modes; the setting still works for this session.
     }
+};
+
+/** Keep the sky chart visible until the user explicitly hides it. */
+export const loadShowSkyChartPreference = (): boolean => {
+    try {
+        return localStorage.getItem(SHOW_SKY_CHART_STORAGE_KEY) !== 'false';
+    } catch {
+        return true;
+    }
+};
+
+export const saveShowSkyChartPreference = (value: boolean): void => {
+    write(SHOW_SKY_CHART_STORAGE_KEY, String(value));
 };
 
 export const loadInitialOverlayPreference = (availableInitialOverlays: ReadonlyArray<WindyOverlay>): InitialOverlayPreference => {
@@ -121,6 +171,34 @@ export const loadRadarProvider = (): RadarProvider => {
     } catch {
         return 'none';
     }
+};
+
+/** Independent keys leave existing point-query caches and older builds unchanged. */
+export const loadLightPollutionEnabled = (): boolean => {
+    try {
+        return localStorage.getItem(LIGHT_POLLUTION_ENABLED_STORAGE_KEY) === 'true';
+    } catch {
+        return false;
+    }
+};
+
+export const loadLightPollutionOpacity = (): number => {
+    try {
+        const stored = localStorage.getItem(LIGHT_POLLUTION_OPACITY_STORAGE_KEY);
+        return stored === null || stored.trim() === ''
+            ? DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT
+            : normalizeLightPollutionOpacity(Number(stored));
+    } catch {
+        return DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT;
+    }
+};
+
+export const saveLightPollutionEnabled = (value: boolean): void => {
+    write(LIGHT_POLLUTION_ENABLED_STORAGE_KEY, String(value));
+};
+
+export const saveLightPollutionOpacity = (value: number): void => {
+    write(LIGHT_POLLUTION_OPACITY_STORAGE_KEY, String(normalizeLightPollutionOpacity(value)));
 };
 
 export const loadRadarOpacityPreference = (): number => {
@@ -199,16 +277,6 @@ export const loadLocationApiKeys = (): LocationProviderApiKeys => {
         ])) as LocationProviderApiKeys;
     } catch {
         return { amap: '', baidu: '', tencent: '' };
-    }
-};
-
-/** Return persistence success for the key-save indicator; callers still update in-memory state. */
-const write = (key: string, value: string): boolean => {
-    try {
-        localStorage.setItem(key, value);
-        return true;
-    } catch {
-        return false;
     }
 };
 

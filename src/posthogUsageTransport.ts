@@ -1,4 +1,6 @@
+import { readUsageEnvironment, type UsageEnvironment } from './usageEnvironment';
 import type { UsageEvent } from './usageMetrics';
+import type { DiagnosticEvent } from './pluginDiagnostics';
 
 export interface PostHogUsageConfig {
     projectToken: string;
@@ -17,7 +19,9 @@ export const postHogUsagePayload = (event: UsageEvent, distinctId: string, confi
         : event.category === 'tab' ? 'tab_select' : event.action,
     properties: {
         $process_person_profile: false,
-        $geoip_disable: true,
+        // PostHog enriches consented usage from the request IP; no GPS or map location is sent.
+        // Configure server-side IP discard after enrichment to avoid retaining raw IPs.
+        $geoip_disable: false,
         plugin: 'windy-plugin-sun-moon-path',
         plugin_version: config.pluginVersion,
         environment: config.environment,
@@ -35,33 +39,71 @@ export const createPostHogUsageTransport = (
     distinctId: string,
     config: PostHogUsageConfig,
     fetchImpl: typeof fetch = fetch,
+    onIdle: () => void = () => undefined,
 ) => {
     let disposed = false;
+    let usageEnvironment: UsageEnvironment | null = null;
     const inFlight = new Set<AbortController>();
+    const sendPayload = (payload: ReturnType<typeof postHogUsagePayload> | {
+        api_key: string; distinct_id: string; event: string; properties: Record<string, unknown>;
+    }) => {
+        if (disposed || !isAllowed() || !config.projectToken || inFlight.size >= MAX_IN_FLIGHT_REQUESTS) {
+            return;
+        }
+        const controller = new AbortController();
+        inFlight.add(controller);
+        try {
+            void fetchImpl(CAPTURE_URL, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'omit',
+                referrerPolicy: 'no-referrer',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                keepalive: true,
+                signal: controller.signal,
+            }).catch(() => {
+                // Failed telemetry is dropped; no later replay after revocation.
+            }).finally(() => {
+                inFlight.delete(controller);
+                if (inFlight.size === 0) {
+                    try { onIdle(); } catch { /* Completion bookkeeping cannot reject globally. */ }
+                }
+            });
+        } catch {
+            inFlight.delete(controller);
+        }
+    };
 
     return {
+        get pending() { return inFlight.size; },
         send(event: UsageEvent) {
-            if (disposed || !isAllowed() || !config.projectToken || inFlight.size >= MAX_IN_FLIGHT_REQUESTS) {
+            if (disposed || !isAllowed() || !config.projectToken) {
                 return;
             }
-            const controller = new AbortController();
-            inFlight.add(controller);
-            try {
-                void fetchImpl(CAPTURE_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    credentials: 'omit',
-                    referrerPolicy: 'no-referrer',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(postHogUsagePayload(event, distinctId, config)),
-                    keepalive: true,
-                    signal: controller.signal,
-                }).catch(() => {
-                    // Failed telemetry is dropped; no later replay after revocation.
-                }).finally(() => inFlight.delete(controller));
-            } catch {
-                inFlight.delete(controller);
-            }
+            usageEnvironment ??= readUsageEnvironment();
+            const payload = postHogUsagePayload(event, distinctId, config);
+            sendPayload({ ...payload, properties: { ...payload.properties, ...usageEnvironment } });
+        },
+        /** Ordinary diagnostic events, not PostHog's SDK-specific $exception contract. */
+        sendDiagnostic(event: DiagnosticEvent, environment: {
+            browser: string; browserVersion: string; system: string;
+            viewport: { width: number; height: number }; visible: boolean; midnightHour: string | null;
+        }) {
+            sendPayload({
+                api_key: config.projectToken,
+                distinct_id: distinctId,
+                event: event.event,
+                properties: {
+                    ...event.properties,
+                    runtime: environment,
+                    $process_person_profile: false,
+                    $geoip_disable: true,
+                    plugin: 'windy-plugin-sun-moon-path',
+                    plugin_version: config.pluginVersion,
+                    environment: config.environment,
+                },
+            });
         },
         destroy(abortPending = false) {
             disposed = true;

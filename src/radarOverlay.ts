@@ -1,4 +1,4 @@
-import { NMC_RADAR_PIXEL_TRANSFORM } from './radarPalette';
+import { createRadarTileLayer } from './radarTileLayer';
 
 export const RADAR_PROVIDERS = ['none', 'rainviewer'] as const;
 
@@ -61,7 +61,7 @@ export const DEFAULT_RADAR_OPACITY_PERCENT = 90;
 const browserRuntime: RadarOverlayRuntime = {
     cancelAnimationFrame: frameId => cancelAnimationFrame(frameId),
     clearInterval: timer => clearInterval(timer),
-    createTileLayer: (url, options) => new L.TileLayer(url, options) as unknown as RadarTileLayer,
+    createTileLayer: createRadarTileLayer,
     fetch: (...args) => fetch(...args),
     now: () => Date.now(),
     requestAnimationFrame: callback => requestAnimationFrame(callback),
@@ -355,11 +355,9 @@ export const createRadarOverlayController = (
             }
             installLayer(tileUrl, {
                 attribution: `<a href="${RAINVIEWER_WEBSITE_URL}" target="_blank" rel="noreferrer">Weather data by RainViewer</a>`,
-                customShader: { pixelTransform: NMC_RADAR_PIXEL_TRANSFORM },
                 maxNativeZoom: 7,
                 maxZoom: 22,
                 opacity: frameVisible ? opacityPercent / 100 : 0,
-                tileFilter: 9728,
             }, ownGeneration);
             if (!frameVisible) {
                 onStatus('out-of-range');

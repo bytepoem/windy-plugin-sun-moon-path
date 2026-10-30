@@ -2,16 +2,16 @@
     import { createEventDispatcher, tick } from 'svelte';
 
     export let active: boolean;
-    export let view: 'obstruction' | 'rainbow' = 'obstruction';
+    export let view: 'obstruction' | 'rainbow' | 'horizon' | 'tide' = 'obstruction';
     export let language: 'zh' | 'en';
 
     const dispatch = createEventDispatcher<{ activate: void; tabkeydown: KeyboardEvent }>();
-    const views = ['obstruction', 'rainbow'] as const;
+    const views = ['obstruction', 'rainbow', 'horizon', 'tide'] as const;
     let open = false;
     let root: HTMLDivElement;
     let trigger: HTMLButtonElement;
     let menu: HTMLDivElement;
-    $: labels = language === 'zh' ? ['云层遮挡', '彩虹'] : ['Clouds', 'Rainbow'];
+    $: labels = language === 'zh' ? ['云层遮挡', '彩虹', '地平线', '潮汐'] : ['Clouds', 'Rainbow', 'Horizon', 'Tides'];
     $: if (!active) { open = false; }
 
     // Opening only exposes choices; selecting an item activates its planning tab.
@@ -77,7 +77,7 @@
         class="arrow"
         bind:this={trigger}
         type="button"
-        aria-label={language === 'zh' ? '选择云层或彩虹功能' : 'Choose clouds or rainbow'}
+        aria-label={language === 'zh' ? '选择云层、彩虹、地平线或潮汐功能' : 'Choose clouds, rainbow, horizon or tides'}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="cloud-function-menu"

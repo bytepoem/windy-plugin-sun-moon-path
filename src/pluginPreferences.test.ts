@@ -11,8 +11,13 @@ import {
     loadLocationApiKeys,
     loadLocationSearchProvider,
     loadMobilePanelModePreference,
+    loadMinimizeScopePreference,
     loadRadarOpacityPreference,
     loadRadarProvider,
+    loadLightPollutionEnabled,
+    loadLightPollutionOpacity,
+    saveLightPollutionEnabled,
+    saveLightPollutionOpacity,
     removeLocationApiKey,
     saveDirectionLineOpacityPreference,
     saveExtendedDistancePreference,
@@ -21,6 +26,7 @@ import {
     saveLanguagePreference,
     saveLocationSearchProvider,
     saveMobilePanelModePreference,
+    saveMinimizeScopePreference,
     saveRadarOpacityPreference,
     saveRadarProvider,
     writeLocationApiKey,
@@ -39,6 +45,47 @@ const storage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('existing plugin preferences', () => {
+    it('keeps atlas defaults and persistence independent of radar and handles unavailable storage', () => {
+        storage({ 'radar-provider': 'rainviewer' });
+        expect(loadLightPollutionEnabled()).toBe(false);
+        expect(loadLightPollutionOpacity()).toBe(50);
+        saveLightPollutionEnabled(true);
+        saveLightPollutionOpacity(0);
+        expect(loadLightPollutionEnabled()).toBe(true);
+        expect(loadLightPollutionOpacity()).toBe(0);
+        expect(loadRadarProvider()).toBe('rainviewer');
+        storage({ 'light-pollution-opacity': 'bad' });
+        expect(loadLightPollutionOpacity()).toBe(50);
+        storage({ 'light-pollution-opacity': '120' });
+        expect(loadLightPollutionOpacity()).toBe(100);
+        vi.stubGlobal('localStorage', {
+            getItem: () => { throw Error('blocked'); },
+            setItem: () => { throw Error('blocked'); },
+        });
+        expect(loadLightPollutionEnabled()).toBe(false);
+        expect(loadLightPollutionOpacity()).toBe(50);
+        expect(() => saveLightPollutionEnabled(true)).not.toThrow();
+        expect(() => saveLightPollutionOpacity(70)).not.toThrow();
+    });
+
+    it('restores minimize scope independently of panel mode and preserves the old default', () => {
+        storage({ 'mobile-panel-mode': 'collapsed' });
+        expect(loadMinimizeScopePreference()).toBe('standard');
+        for (const scope of ['hide-times', 'hide-summary', 'standard'] as const) {
+            saveMinimizeScopePreference(scope);
+            expect(loadMinimizeScopePreference()).toBe(scope);
+            expect(loadMobilePanelModePreference()).toBe('collapsed');
+        }
+        storage({ 'minimize-scope': 'unknown' });
+        expect(loadMinimizeScopePreference()).toBe('standard');
+        vi.stubGlobal('localStorage', {
+            getItem: () => { throw Error('blocked'); },
+            setItem: () => { throw Error('blocked'); },
+        });
+        expect(loadMinimizeScopePreference()).toBe('standard');
+        expect(() => saveMinimizeScopePreference('hide-summary')).not.toThrow();
+    });
+
     it('distinguishes a first visit from either confirmed language without saving on read', () => {
         const entries = storage();
         expect(loadLanguagePreference()).toBeNull();
@@ -51,11 +98,15 @@ describe('existing plugin preferences', () => {
         expect(loadLanguagePreference()).toBeNull();
     });
 
-    it('remembers either planning dropdown choice and handles unavailable or invalid storage', () => {
+    it('remembers planning dropdown choices and handles unavailable or invalid storage', () => {
         storage();
         expect(loadPlanningViewPreference()).toBe('obstruction');
         savePlanningViewPreference('rainbow');
         expect(loadPlanningViewPreference()).toBe('rainbow');
+        savePlanningViewPreference('horizon');
+        expect(loadPlanningViewPreference()).toBe('horizon');
+        savePlanningViewPreference('tide');
+        expect(loadPlanningViewPreference()).toBe('tide');
         savePlanningViewPreference('obstruction');
         expect(loadPlanningViewPreference()).toBe('obstruction');
         storage({ 'planning-view': 'invalid' });

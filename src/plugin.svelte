@@ -19,6 +19,22 @@
             <span class="desktop-map-controls">
                 <button
                     type="button"
+                    class="desktop-map-control desktop-sky-chart-toggle"
+                    aria-label={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                    aria-pressed={showSkyChart}
+                    title={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                    on:click|stopPropagation={toggleSkyChart}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"></path>
+                        <path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <circle cx="19" cy="5" r="2"></circle>
+                        <circle cx="5" cy="19" r="2"></circle>
+                    </svg>
+                </button>
+                <button
+                    type="button"
                     class="desktop-map-control desktop-radar-toggle"
                     class:radar-toggle--error={radarProvider === 'rainviewer' && radarOverlayStatus === 'error'}
                     aria-label={radarProvider === 'rainviewer'
@@ -31,8 +47,23 @@
                     on:click|stopPropagation={toggleRadarOverlay}
                 >
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
-                        <path d="m12 12 6.2-6.2M5.6 18.4a9 9 0 0 1 12.8-12.8M8.4 15.6a5 5 0 0 1 7.2-7.2"></path>
+                        <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                        <path d="M16 14v6M8 14v6M12 16v6"></path>
+                    </svg>
+                </button>
+                <button
+                    type="button"
+                    class="desktop-map-control desktop-light-pollution-toggle"
+                    class:atlas-toggle--error={lightPollutionEnabled && lightPollutionOverlayStatus === 'error'}
+                    aria-label={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                    aria-pressed={lightPollutionEnabled}
+                    title={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                    on:click|stopPropagation={toggleLightPollutionOverlay}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                        <path d="M20 2v4M22 4h-4"></path>
+                        <circle cx="4" cy="20" r="2"></circle>
                     </svg>
                 </button>
                 <button
@@ -66,6 +97,25 @@
         {#if !isMobileFullscreen}
             <button
                 type="button"
+                class="mobile-window-control mobile-sky-chart-toggle"
+                aria-label={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                aria-pressed={showSkyChart}
+                title={showSkyChart ? text.hideSkyChartLabel : text.showSkyChartLabel}
+                on:click={toggleSkyChart}
+            >
+                <span class="mobile-window-control__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"></path>
+                        <path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <circle cx="19" cy="5" r="2"></circle>
+                        <circle cx="5" cy="19" r="2"></circle>
+                    </svg>
+                </span>
+            </button>
+
+            <button
+                type="button"
                 class="mobile-window-control mobile-radar-toggle"
                 class:radar-toggle--error={radarProvider === 'rainviewer' && radarOverlayStatus === 'error'}
                 aria-label={radarProvider === 'rainviewer'
@@ -79,8 +129,26 @@
             >
                 <span class="mobile-window-control__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false">
-                        <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
-                        <path d="m12 12 6.2-6.2M5.6 18.4a9 9 0 0 1 12.8-12.8M8.4 15.6a5 5 0 0 1 7.2-7.2"></path>
+                        <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                        <path d="M16 14v6M8 14v6M12 16v6"></path>
+                    </svg>
+                </span>
+            </button>
+
+            <button
+                type="button"
+                class="mobile-window-control mobile-light-pollution-toggle"
+                class:atlas-toggle--error={lightPollutionEnabled && lightPollutionOverlayStatus === 'error'}
+                aria-label={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                aria-pressed={lightPollutionEnabled}
+                title={lightPollutionEnabled ? text.disableLightPollutionLabel : text.enableLightPollutionLabel}
+                on:click={toggleLightPollutionOverlay}
+            >
+                <span class="mobile-window-control__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                        <path d="M20 2v4M22 4h-4"></path>
+                        <circle cx="4" cy="20" r="2"></circle>
                     </svg>
                 </span>
             </button>
@@ -207,10 +275,10 @@
                         class:active={highlightedEvent === option.value}
                         aria-pressed={highlightedEvent === option.value}
                         disabled={eventSkyReadyKey !== astronomyKey || (option.value === 'all'
-                            ? cloudObstructionVisible || rainbowVisible
+                            ? summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)
                             : !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
                         aria-label={text.events[option.value]}
-                        title={(cloudObstructionVisible || rainbowVisible) && option.value === 'all'
+                        title={summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible) && option.value === 'all'
                             ? (rainbowVisible
                                 ? (uiLanguage === 'zh' ? '彩虹规划需选择单个事件' : 'Rainbow planning requires a single event')
                                 : (uiLanguage === 'zh' ? '云层规划需选择单个事件' : 'Cloud planning requires a single event'))
@@ -303,7 +371,7 @@
         locationName={locationDisplayName}
         locationNameResolved={locationNameResolved}
         distanceOrigin={favoriteDistanceOrigin}
-        currentElevationM={elevationLocationKey === locationKey ? elevationM : null}
+        currentElevationM={elevationLocationKey === locationKey ? groundElevationM : null}
         currentLightPollution={lightPollutionLoadedKey === locationKey ? lightPollutionPoint : null}
         {units}
         mobile={isMobileOrTablet}
@@ -315,6 +383,7 @@
     />
     <FavoriteComparison
         bind:open={favoriteComparisonOpen}
+        diagnostics={diagnosticRuntime?.diagnostics ?? null}
         bind:selectedDate
         on:datechange={selectPlanningDate}
         currentInstant={currentInstant}
@@ -385,10 +454,18 @@
             </div>
         {/if}
     </div>
+    <!-- Keep one host-write queue when switching between cloud planning and Horizon. -->
+    {#if isMounted && (cloudObstructionVisible || horizonVisible)}
+        <CloudMapSync bind:settings={cloudSettings} model={weatherModel} timestamp={planningTime.timestamp}
+            previewingTime={planningTimePreview} bind:syncError={cloudMapSyncError} bind:syncing={cloudMapSyncing}
+            bind:mapTimestamp={cloudMapTimestamp} bind:mapOverlay={cloudMapOverlay} retryRevision={cloudMapRetryRevision}
+            on:modelchange={handleWeatherModelChange} />
+    {/if}
 
     <section
         class="map-bottom-module"
         class:map-bottom-module--mobile-collapsed={isMobileCollapsed}
+        class:mobile-collapsed-hidden={isMobileCollapsed && minimizeScope === 'hide-summary'}
         aria-label={text.sunMoonPanelLabel}
     >
         <nav class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
@@ -602,6 +679,7 @@
 
                     <div
                         class="timeline-events"
+                        class:mobile-collapsed-hidden={isMobileCollapsed && minimizeScope !== 'standard'}
                         aria-label={text.astronomyEventsLabel(accessibleSelectedDateLabel, selectedDateIsToday)}
                     >
                         {#if status === 'loading'}
@@ -760,7 +838,17 @@
                     {radarProvider}
                     {radarOverlayStatus}
                     {radarOpacityPercent}
+                    {lightPollutionEnabled}
+                    {lightPollutionOverlayStatus}
+                    {lightPollutionOpacityPercent}
+                    {toggleLightPollutionOverlay}
+                    {changeLightPollutionOpacity}
+                    {retryLightPollutionOverlay}
                     {hideLocationSearch}
+                    {minimizeScope}
+                    {changeMinimizeScope}
+                    {showSkyChart}
+                    {toggleSkyChart}
                     {directionLineOpacityPercent}
                     {showExtendedDistanceMarker}
                     {savedApiKeyProvider}
@@ -779,6 +867,7 @@
                 />
             {:else}
                 <PluginAbout
+                    diagnosticReport={diagnosticRuntime?.report ?? null}
                     {uiLanguage}
                     {pluginUpdateStatus}
                     {pluginUpdateResult}
@@ -790,10 +879,59 @@
                     {retryPluginUpdateNotes}
                 />
             {/if}
+            {#if mapTab === 'clouds' && cloudView === 'tide'}
+                <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
+                    <TidePlanning location={selectedLocation}
+                        date={selectedDate} {timeZone} timestamp={planningTime.timestamp}
+                        now={currentInstant.getTime()} language={uiLanguage}
+                        active={isMounted && !isMobileCollapsed && summaryTab === 'clouds'}
+                        ready={eventSkyReadyKey === astronomyKey} events={summaryTimelineItems}
+                        on:time={event => selectTideTime(event.detail)}>
+                        <div slot="astronomy-events" class="timeline-events tide-timeline"
+                            class:astronomy-panel--loading={status === 'loading'}
+                            aria-label={text.astronomyEventsLabel(accessibleSelectedDateLabel, selectedDateIsToday)}>
+                            {#if status === 'loading'}
+                                {#each timelineSkeletonSlots as _}
+                                    <div class="timeline-event timeline-event--skeleton" aria-hidden="true">
+                                        <span class="astronomy-skeleton astronomy-skeleton--label"></span>
+                                        <span class="astronomy-skeleton astronomy-skeleton--time"></span>
+                                    </div>
+                                {/each}
+                            {:else}
+                                <div class="timeline-event timeline-event--countdown">
+                                    <span class="timeline-event__label" title={timelineLeadLabel}>
+                                        <TimelineEventIcon kind={selectedDateIsToday ? 'countdown' : 'date'} label={timelineLeadLabel} />
+                                    </span>
+                                    <strong>{timelineLeadTime || '--'}</strong>
+                                </div>
+                                {#each summaryTimelineItems as item}
+                                    <button type="button" class="timeline-event"
+                                        disabled={!item.time || eventSkyReadyKey !== astronomyKey}
+                                        on:click={() => jumpPlanningEvent(item.kind)}
+                                        title={timelineEventLabel(item, text)}
+                                        class:item-milkyway={item.body === 'milkyway'}
+                                        class:item-moon={item.body === 'moon'}
+                                        class:item-blue-hour={item.kind === 'dawn' || item.kind === 'dusk'}
+                                        class:timeline-event--missing={!item.time}
+                                        class:timeline-event--next={item === nextTimelineEvent}>
+                                        <span class="timeline-event__label">
+                                            <TimelineEventIcon kind={item.kind} label={timelineEventLabel(item, text)} />
+                                        </span>
+                                        <strong>{item.time ? formatLocalClock(item.time, timeZone) : '--:--'}</strong>
+                                    </button>
+                                {/each}
+                            {/if}
+                        </div>
+                    </TidePlanning>
+                </div>
+            {/if}
             {#if cloudObstructionVisible}
                 <!-- Collapsing hides the controls, but preserves their time and live map ownership. -->
                 <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
                     <CloudObstruction
+                        syncError={cloudMapSyncError}
+                        syncing={cloudMapSyncing}
+                        on:resync={() => cloudMapRetryRevision += 1}
                         timelineEvent={cloudTimelineEvent}
                         timestamp={planningTime.timestamp}
                         previewingTime={planningTimePreview}
@@ -831,6 +969,37 @@
                         bind:body={rainbowBody}
                         bind:secondary={rainbowSecondary}
                         bind:fullCircle={rainbowFullCircle}
+                    />
+                </div>
+            {/if}
+            {#if isMounted && horizonVisible}
+                <div class="cloud-view" hidden={isMobileCollapsed || summaryTab !== 'clouds'}>
+                    <EventHorizon
+                        bind:settings={cloudSettings}
+                        model={weatherModel}
+                        previewingTime={planningTimePreview}
+                        {timeZone}
+                        on:modelchange={handleWeatherModelChange}
+                        syncError={cloudMapSyncError}
+                        syncing={cloudMapSyncing}
+                        mapTimestamp={cloudMapTimestamp}
+                        mapOverlay={cloudMapOverlay}
+                        on:resync={() => cloudMapRetryRevision += 1}
+                        location={selectedLocation}
+                        paths={[...solarPaths, ...galacticPaths]}
+                        {selectedEvent}
+                        ready={eventSkyReadyKey === astronomyKey}
+                        language={uiLanguage}
+                        distanceUnit={units.distance}
+                        elevationM={horizonGroundElevationM}
+                        elevationLoading={status === 'loading'}
+                        bind:heightSource={horizonHeightSource}
+                        {horizonHeightM}
+                        on:heightchange={event => {
+                            horizonHeightSource = 'manual';
+                            horizonManualHeightM = event.detail;
+                        }}
+                        on:retry={() => refreshPaths(astronomyKey)}
                     />
                 </div>
             {/if}
@@ -887,8 +1056,9 @@
     import { setUrl } from '@windy/location';
     import { singleclick } from '@windy/singleclick';
     import store from '@windy/store';
-    import { onDestroy, onMount, tick } from 'svelte';
+    import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
+    import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
     import CloudNavigation from './CloudNavigation.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
@@ -904,12 +1074,21 @@
         saveLanguagePreference,
         loadMobilePanelModePreference,
         saveMobilePanelModePreference,
+        loadMinimizeScopePreference,
+        saveMinimizeScopePreference,
+        normalizeMinimizeScope,
         loadHideLocationSearchPreference,
         saveHideLocationSearchPreference,
+        loadShowSkyChartPreference,
+        saveShowSkyChartPreference,
         loadInitialOverlayPreference,
         saveInitialOverlayPreference,
         loadRadarProvider,
         loadRadarOpacityPreference,
+        loadLightPollutionEnabled,
+        loadLightPollutionOpacity,
+        saveLightPollutionEnabled,
+        saveLightPollutionOpacity,
         clearRemovedRadarCredentials,
         loadExtendedDistancePreference,
         saveExtendedDistancePreference,
@@ -925,11 +1104,14 @@
         removeLocationApiKey,
         DEFAULT_DIRECTION_LINE_OPACITY_PERCENT,
         type MobileNonFullscreenPanelMode,
+        type MinimizeScope,
     } from './pluginPreferences';
     import config from './pluginConfig';
     import PluginSettings from './PluginSettings.svelte';
+    import TidePlanning from './TidePlanning.svelte';
     import PluginAbout from './PluginAbout.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
+    import CloudMapSync from './CloudMapSync.svelte';
     import RainbowPlanning from './RainbowPlanning.svelte';
     import { cloudTimelineLabel, galacticCenterEvents, type CloudTimelineEventType } from './cloudTimeline';
     import {
@@ -963,6 +1145,8 @@
     import { startPluginUsage } from './pluginUsage';
     import { createMapOverlayController } from './mapOverlayController';
     import { createEventSkyOverlay } from './eventSkyOverlay';
+    import EventHorizon from './EventHorizon.svelte';
+    import { createEventHorizonOverlay, eventHorizonPoints, horizonDistanceKm, horizonFitBounds } from './eventHorizon';
     import { buildDirectionLineFitBounds, calculateVisibleMapViewport } from './mapView';
     import {
         createRadarFrameTimeLabel,
@@ -986,6 +1170,12 @@
         type ObservationWindow,
     } from './observationPlanner';
     import LightPollutionSummary from './LightPollutionSummary.svelte';
+    import {
+        createLightPollutionOverlayController,
+        DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT,
+        normalizeLightPollutionOpacity,
+        type LightPollutionOverlayStatus,
+    } from './lightPollutionOverlay';
     import LocationSearch from './LocationSearch.svelte';
     import WeatherTable from './WeatherTable.svelte';
     import {
@@ -1050,11 +1240,25 @@
         type PrecipitationUnit,
         type UnitPreferences,
     } from './unitPreferences';
+    import type { DiagnosticRuntime } from './diagnosticRuntime';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
 
     import type { LatLon } from '@windy/interfaces.d';
 
+    export let diagnosticRuntime: DiagnosticRuntime | null = null;
+    export let startupFailed: (error: unknown) => void = error => { throw error; };
+    const lifecycle = currentPluginLifecycle();
+
     const { name, repository: repositoryUrl, title, version: pluginVersion } = config;
+    /** Record the earliest calculation failure without replacing its business behavior. */
+    const diagnosticGalacticEvents = (date: string, zone: string, location: Coordinates) => {
+        try {
+            return galacticCenterEvents(date, zone, location);
+        } catch (error) {
+            diagnosticRuntime?.error('galactic', error, diagnosticRuntime.diagnostics.state === 'starting');
+            throw error;
+        }
+    };
     const systemTimeZone = (() => {
         try {
             return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -1075,7 +1279,7 @@
         { value: 'moonset' },
     ];
     const galacticShortcutEvents = ['milkywayrise', 'milkywayset'] as const;
-    $: galacticEvents = galacticCenterEvents(selectedDate, timeZone, selectedLocation);
+    $: galacticEvents = diagnosticGalacticEvents(selectedDate, timeZone, selectedLocation);
     // Reuse the shortcut crossings; missing events stay visible without inventing a time.
     $: summaryTimelineItems = [
         ...(astronomyTimeline?.items || []),
@@ -1130,8 +1334,19 @@
     });
     const mapOverlayController = createMapOverlayController(map);
     const eventSkyOverlay = createEventSkyOverlay(map);
+    const eventHorizonOverlay = createEventHorizonOverlay(map);
+    let horizonHeightSource: 'elevation' | 'manual' = 'elevation';
+    let horizonManualHeightM: number | undefined;
+    let horizonHeightLocationKey = '';
+    let horizonFitRequestId = 0;
     let eventSkyReadyKey = '';
     let radarOverlayStatus: RadarOverlayStatus = 'disabled';
+    let lightPollutionEnabled = false;
+    let lightPollutionOpacityPercent = DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT;
+    let lightPollutionOverlayStatus: LightPollutionOverlayStatus = 'disabled';
+    const lightPollutionOverlayController = createLightPollutionOverlayController(map, nextStatus => {
+        lightPollutionOverlayStatus = nextStatus;
+    });
     let radarFrameTimeMs: number | null = null;
     let radarFrameTimeLabelController: RadarFrameTimeLabelController | null = null;
     let radarOverlayController: RadarOverlayController;
@@ -1151,6 +1366,7 @@
     let text = translations.zh;
     let timeZone = systemTimeZone;
     let elevationM = 0;
+    let groundElevationM: number | null = null;
     let solarPaths: SolarPath[] = [];
     let activeSolarPath: DirectionPath | null = null;
     let astronomyTimeline: AstronomyTimeline | null = null;
@@ -1186,11 +1402,12 @@
     $: if (summaryTab === 'events' || summaryTab === 'clouds') { mapTab = summaryTab; }
     let pluginUsage: ReturnType<typeof startPluginUsage> | null = null;
     // Programmatic switches update dwell time but are not user selections.
-    $: pluginUsage?.setTab(summaryTab);
-    let cloudView: 'obstruction' | 'rainbow' = 'obstruction';
+    $: pluginUsage?.setTab(summaryTab, false, cloudView);
+    let cloudView: 'obstruction' | 'rainbow' | 'horizon' | 'tide' = 'obstruction';
     let settingsPage: 'preferences' | 'guide' = 'preferences';
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
     $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
+    $: horizonVisible = mapTab === 'clouds' && cloudView === 'horizon';
     let planningSelection: PlanningTimeSelection = { mode: 'instant', timestamp: Date.now() };
     let planningTimePreview = false;
     let hostTimeSelectionActive = false;
@@ -1198,13 +1415,18 @@
     let rainbowSecondary = false;
     let rainbowFullCircle = false;
     let cloudSettings = createCloudSettings();
+    let cloudMapSyncError = false;
+    let cloudMapSyncing = false;
+    let cloudMapTimestamp: number | null = null;
+    let cloudMapOverlay = '';
+    let cloudMapRetryRevision = 0;
     let pluginUpdateStatus: 'idle' | 'loading' | 'current' | 'available' | 'error' = 'idle';
     let pluginUpdateResult: PluginUpdateResult | null = null;
     let pluginUpdateNotesRetrying = false;
     let pluginLinkCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let coordinateCopyStatus: 'idle' | 'copied' | 'error' = 'idle';
     let cloudTimelineEvent: CloudTimelineEventType = 'sunset';
-    $: highlightedEvent = planningSelection.mode === 'event' ? planningSelection.event
+    $: highlightedEvent = horizonVisible ? selectedEvent : planningSelection.mode === 'event' ? planningSelection.event
         : planningSelection.mode === 'current' ? 'all' : null;
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
@@ -1237,11 +1459,17 @@
         atmosphere: request => fetchOpenMeteoAtmosphere(request),
     }, state => {
         forecastState = state;
-    });
+    }, (kind, error) => diagnosticRuntime?.error(kind, error));
     let locationKey = '';
     let resolvedContextLocationKey = '';
     let elevationLocationKey = '';
     $: weatherPoints = forecastState.points;
+    $: diagnosticRuntime?.diagnostics.context({
+        tab: summaryTab, view: cloudView,
+        mode: isMobileOrTablet ? mobilePanelMode : 'desktop', source: weatherSource,
+        astronomy: status, weather: forecastState.weatherStatus,
+        atmosphere: forecastState.atmosphereStatus, clouds: forecastState.cloudStatus,
+    });
     $: weatherStatus = forecastState.weatherStatus;
     $: weatherRequestKey = forecastState.requestKey;
     $: weatherErrorMessage = weatherStatus === 'error'
@@ -1260,6 +1488,8 @@
     let lightPollutionAbortController: AbortController | null = null;
     let showExtendedDistanceMarker = false;
     let hideLocationSearch = false;
+    let minimizeScope: MinimizeScope = 'standard';
+    let showSkyChart = true;
     let locationSearchHiddenNotice = false;
     let locationSearchNoticeTimer: ReturnType<typeof setTimeout> | null = null;
     let directionLineOpacityPercent = DEFAULT_DIRECTION_LINE_OPACITY_PERCENT;
@@ -1337,7 +1567,7 @@
 
     // The galactic overlay owns its direction; do not pair it with a solar/lunar event ray.
     $: if (isMounted && mapTab) {
-        const mapEvent = rainbowVisible ? null : cloudObstructionVisible ? cloudMapEvent : selectedEvent;
+        const mapEvent = rainbowVisible || horizonVisible ? null : cloudObstructionVisible ? cloudMapEvent : selectedEvent;
         renderMapFeatures(mapEvent === null ? [] : selectDirectionPaths(solarPaths, galacticPaths, mapEvent),
             cloudObstructionVisible ? cloudDirectionRangeKm : null, cloudPlanningTimestamp, cloudPlanningBody);
     }
@@ -1359,8 +1589,8 @@
 
     $: locationKey = buildWeatherLocationKey(selectedLocation);
 
-    $: locationElevationText = elevationLocationKey === locationKey
-        ? formatElevationLabel(elevationM, units.elevation)
+    $: locationElevationText = elevationLocationKey === locationKey && groundElevationM !== null
+        ? formatElevationLabel(groundElevationM, units.elevation)
         : '--';
 
     // Assign the synchronous snapshot explicitly: Svelte must order derived UI state after loading starts.
@@ -1407,6 +1637,28 @@
         void refreshLightPollution(lightPollutionRequestKey);
     }
 
+    // A manual height belongs to exactly one observing location. Date/tab
+    // changes preserve it; moving to a new location starts with its own elevation.
+    $: if (horizonHeightLocationKey !== `${selectedLocation.lat}|${selectedLocation.lon}`) {
+        horizonHeightLocationKey = `${selectedLocation.lat}|${selectedLocation.lon}`;
+        horizonHeightSource = 'elevation';
+        horizonManualHeightM = undefined;
+    }
+    $: horizonGroundElevationM = elevationLocationKey === locationKey ? groundElevationM : null;
+    $: horizonHeightM = horizonHeightSource === 'elevation' ? horizonGroundElevationM ?? undefined : horizonManualHeightM;
+    $: horizonDistance = horizonDistanceKm(horizonHeightM);
+    $: if (isMounted && horizonVisible) {
+        eventHorizonOverlay.render(
+            selectedLocation,
+            eventSkyReadyKey === astronomyKey
+                ? eventHorizonPoints(selectedLocation, [...solarPaths, ...galacticPaths], horizonDistance, selectedEvent) : [],
+            horizonDistance === null ? '—' : `${formatDistanceKm(horizonDistance, units.distance)} ${units.distance}`,
+            uiLanguage, directionLineOpacityPercent,
+        );
+    } else {
+        eventHorizonOverlay.destroy();
+    }
+
     $: activeSolarPath = selectedEvent === 'all'
         ? null
         : selectDirectionPaths(solarPaths, galacticPaths, selectedEvent)[0] || null;
@@ -1418,7 +1670,7 @@
         events: summaryTimelineItems, ready: eventSkyReadyKey === astronomyKey,
     });
     $: eventSkyTimestamp = planningTime.timestamp;
-    $: if (isMounted && mapTab === 'events' && eventSkyReadyKey === astronomyKey && eventSkyTimestamp !== null) {
+    $: if (isMounted && showSkyChart && (mapTab === 'events' || (mapTab === 'clouds' && cloudView === 'tide')) && eventSkyReadyKey === astronomyKey && eventSkyTimestamp !== null) {
         eventSkyOverlay.render({
             location: selectedLocation,
             timestamp: eventSkyTimestamp,
@@ -1473,10 +1725,22 @@
         panelElement?.querySelector<HTMLInputElement>('input[type="datetime-local"]')?.focus({ preventScroll: true });
     };
 
+    /** Scope only affects the collapsed layout; panel mode owns map recentering. */
+    const changeMinimizeScope = (event: Event) => {
+        minimizeScope = normalizeMinimizeScope((event.currentTarget as HTMLSelectElement).value);
+        saveMinimizeScopePreference(minimizeScope);
+    };
+
     const toggleLocationSearch = (event: Event) => {
         clearLocationSearchNotice();
         hideLocationSearch = (event.currentTarget as HTMLInputElement).checked;
         saveHideLocationSearchPreference(hideLocationSearch);
+    };
+
+    /** Both controls update one preference; the reactive map branch owns drawing and removal. */
+    const toggleSkyChart = () => {
+        showSkyChart = !showSkyChart;
+        saveShowSkyChartPreference(showSkyChart);
     };
 
     const suspendMobileDetailRequests = () => {
@@ -1640,13 +1904,22 @@
         pluginUpdateReminderVersion = null;
     };
 
-    const selectSummaryTab = (nextTab: SummaryTab) => {
-        pluginUsage?.setTab(nextTab, true);
+    const selectSummaryTab = async (nextTab: SummaryTab) => {
+        const fitRequestId = ++horizonFitRequestId;
+        pluginUsage?.setTab(nextTab, true, cloudView);
         summaryTab = nextTab;
         // Recheck on entry even if this mounted plugin previously found no update.
         // The update service reuses fresh results and revalidates expired metadata.
         if (nextTab === 'about' && pluginUpdateStatus !== 'loading') {
             void refreshPluginUpdate();
+        }
+        // Fit after the newly selected panel has committed its geometry. A later
+        // selection or plugin teardown invalidates this pending viewport change.
+        if (nextTab === 'clouds' && cloudView === 'horizon') {
+            await tick();
+            if (isMounted && fitRequestId === horizonFitRequestId && summaryTab === 'clouds' && horizonVisible) {
+                fitVisibleDirectionLines();
+            }
         }
     };
 
@@ -1678,19 +1951,24 @@
     };
 
     $: fitMapControlLabel = rainbowVisible ? (uiLanguage === 'zh' ? '居中彩虹方向图' : 'Centre rainbow sky chart')
-        : cloudObstructionVisible ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
+        : horizonVisible ? (uiLanguage === 'zh' ? '适配地平线范围' : 'Fit horizon radius')
+        : cloudObstructionVisible && cloudBounds ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
-    $: detailMapControlLabel = cloudObstructionVisible ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
+    $: detailMapControlLabel = cloudObstructionVisible && cloudDetailBounds ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
         : text.restoreSearchZoomLabel;
 
-    $: canFitDirectionLines = rainbowVisible || (cloudObstructionVisible ? cloudBounds !== null : buildDirectionLineFitBounds({
+    // Event rays remain visible when cloud heights are unavailable; fit those real lines independently.
+    $: directionFitBounds = buildDirectionLineFitBounds({
         location: selectedLocation,
         // Keep the reactive inputs explicit: Svelte cannot infer state read
         // from inside selectedMapPaths(), so an async path refresh would
         // otherwise leave the toolbar button in its initial disabled state.
-        paths: selectDirectionPaths(solarPaths, galacticPaths, selectedEvent),
+        paths: cloudObstructionVisible && cloudMapEvent === null ? []
+            : selectDirectionPaths(solarPaths, galacticPaths, cloudObstructionVisible ? cloudMapEvent! : selectedEvent),
         showExtendedDistanceMarker,
-    }) !== null);
+    });
+    $: canFitDirectionLines = rainbowVisible || (horizonVisible ? horizonDistance !== null
+        : cloudObstructionVisible ? cloudBounds !== null || directionFitBounds !== null : directionFitBounds !== null);
 
     /** Returns fit and center offsets for the map pixels not covered by Windy's UI. */
     const currentVisibleMapViewport = () => {
@@ -1715,14 +1993,11 @@
         });
     };
 
-    /** Fits the currently rendered 400/600 km event lines into the unobscured map area. */
+    /** Fit the active planner's geographic extent into the unobscured map area. */
     const fitVisibleDirectionLines = (detail: boolean | MouseEvent = false) => {
         if (rainbowVisible) { recenterSelectedLocationInVisibleMap(map.getZoom()); return; }
-        const bounds = cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) : buildDirectionLineFitBounds({
-            location: selectedLocation,
-            paths: selectedMapPaths(),
-            showExtendedDistanceMarker,
-        });
+        const bounds = horizonVisible ? horizonFitBounds(selectedLocation, horizonDistance)
+            : cloudObstructionVisible ? (detail === true ? cloudDetailBounds : cloudBounds) ?? directionFitBounds : directionFitBounds;
         if (!bounds) {
             return;
         }
@@ -1772,7 +2047,7 @@
 
     /** Restores the selected location to the exact zoom used after a search result is chosen. */
     const restoreSearchLocationZoom = () => {
-        if (cloudObstructionVisible) {fitVisibleDirectionLines(true); return;}
+        if (cloudObstructionVisible && cloudDetailBounds) {fitVisibleDirectionLines(true); return;}
         recenterSelectedLocationInVisibleMap(SEARCH_LOCATION_ZOOM);
     };
 
@@ -1781,6 +2056,13 @@
         hostTimeSelectionActive = false;
         planningTimePreview = false;
         planningSelection = { mode: 'instant', timestamp: Date.now() };
+    };
+
+    /** Model samples and estimated events use UTC timestamps; preserve that instant in the shared clock. */
+    const selectTideTime = (timestamp: number) => {
+        hostTimeSelectionActive = false;
+        planningTimePreview = false;
+        planningSelection = { mode: 'instant', timestamp };
     };
 
     /** A manual date edit releases an absolute instant but retains its displayed clock. */
@@ -1830,7 +2112,9 @@
 
     const selectEvent = (event: ObservationEvent) => {
         if (event === 'all') {
-            if (cloudObstructionVisible || rainbowVisible) {return;}
+            if (summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)) {return;}
+            // Explicitly requesting all directions releases the previous hidden cloud planner.
+            if (summaryTab !== 'clouds') {mapTab = 'events';}
             hostTimeSelectionActive = false;
             selectedEvent = event;
             planningSelection = { mode: 'current' };
@@ -1932,6 +2216,21 @@
     const toggleRadarOverlay = () => {
         setRadarProvider(radarProvider === 'rainviewer' ? 'none' : 'rainviewer');
     };
+
+    /** Both entry points share one persisted state; the annual atlas has no time subscription. */
+    const toggleLightPollutionOverlay = () => {
+        lightPollutionEnabled = !lightPollutionEnabled;
+        saveLightPollutionEnabled(lightPollutionEnabled);
+        lightPollutionOverlayController.setEnabled(lightPollutionEnabled);
+    };
+
+    const changeLightPollutionOpacity = (event: Event) => {
+        lightPollutionOpacityPercent = normalizeLightPollutionOpacity(Number((event.currentTarget as HTMLInputElement).value));
+        saveLightPollutionOpacity(lightPollutionOpacityPercent);
+        lightPollutionOverlayController.setOpacity(lightPollutionOpacityPercent);
+    };
+
+    const retryLightPollutionOverlay = () => lightPollutionOverlayController.retry();
 
     const setShowExtendedDistanceMarker = (value: boolean) => {
         showExtendedDistanceMarker = value;
@@ -2082,7 +2381,7 @@
     };
 
     /** Both full redraws and the periodic refresh honour the cloud preview instant. */
-    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => rainbowVisible
+    const mapCurrentDirections = (planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => rainbowVisible || horizonVisible
         ? { currentSun: null, currentMoon: null, currentGalacticCenter: null }
         : cloudObstructionVisible
         ? cloudMapDirections(planningTimestamp, selectedLocation, planningBody)
@@ -2096,20 +2395,26 @@
 
     const renderMapFeatures = (paths: DirectionPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
         planningTimestamp = cloudPlanningTimestamp, planningBody = cloudPlanningBody) => {
-        // Rainbow owns a sky-angle chart; unrelated event rays would imply a different time and scale.
-        if (rainbowVisible) { mapOverlayController.destroy(); return; }
-        mapOverlayController.render({
-            location: selectedLocation,
-            paths,
-            ...mapCurrentDirections(planningTimestamp, planningBody),
-            showExtendedDistanceMarker,
-            opacityPercent: directionLineOpacityPercent,
-            showDistanceMarkers: !cloudObstructionVisible,
-            directionRangeKm,
-            originLabel: text.legend.origin,
-            eventNames: text.events,
-            formatDistance: distanceKm => formatDistanceLabel(distanceKm, units.distance),
-        });
+        // These planners own their layers. Every redraw entry (including async
+        // completion and unit changes) must exclude event and live direction rays.
+        if (rainbowVisible || horizonVisible) { mapOverlayController.destroy(); return; }
+        try {
+            mapOverlayController.render({
+                location: selectedLocation,
+                paths,
+                ...mapCurrentDirections(planningTimestamp, planningBody),
+                showExtendedDistanceMarker,
+                opacityPercent: directionLineOpacityPercent,
+                showDistanceMarkers: !cloudObstructionVisible,
+                directionRangeKm,
+                originLabel: text.legend.origin,
+                eventNames: text.events,
+                formatDistance: distanceKm => formatDistanceLabel(distanceKm, units.distance),
+            });
+        } catch (error) {
+            diagnosticRuntime?.error('map', error);
+            throw error;
+        }
     };
 
     const refreshCurrentDirectionValues = () => {
@@ -2123,7 +2428,8 @@
                 date: currentInstant,
                 location: selectedLocation,
             });
-        } catch {
+        } catch (error) {
+            diagnosticRuntime?.error('astronomy', error);
             currentSolarDirection = null;
             currentMoonInfo = null;
         }
@@ -2139,14 +2445,16 @@
     };
 
     const refreshPaths = async (key: string) => {
+        const diagnosticOperation = diagnosticRuntime?.diagnostics.begin('astronomy') ?? 0;
         const requestId = ++latestRequestId;
         eventSkyReadyKey = '';
         eventSkyOverlay.destroy();
+        eventHorizonOverlay.destroy();
         const location = { ...selectedLocation };
         const dateInput = selectedDate;
         const contextLocationKey = buildWeatherLocationKey(location);
-        const knownElevation = elevationLocationKey === contextLocationKey && Number.isFinite(elevationM)
-            ? elevationM
+        const knownElevation = elevationLocationKey === contextLocationKey
+            ? groundElevationM
             : null;
 
         status = 'loading';
@@ -2158,6 +2466,7 @@
         try {
             const plan = await observationPlanner.plan({ location, dateInput, knownElevationM: knownElevation });
             if (requestId !== latestRequestId || key !== astronomyKey) {
+                diagnosticRuntime?.diagnostics.end('astronomy', diagnosticOperation, 'cancelled');
                 return;
             }
 
@@ -2165,19 +2474,32 @@
             resolvedContextLocationKey = contextLocationKey;
             elevationLocationKey = contextLocationKey;
             elevationM = plan.elevationM;
+            groundElevationM = plan.groundElevationM;
             solarPaths = plan.paths;
             astronomyTimeline = plan.timeline;
             // Only a successfully resolved snapshot may supply the chart's
             // local time. Event buttons can change status while a request runs.
             eventSkyReadyKey = key;
+            // Elevation may arrive after the Horizon tab was opened. Fit once
+            // for this accepted snapshot, never from a stale location request.
+            if (summaryTab === 'clouds' && horizonVisible && horizonHeightSource === 'elevation') {
+                const fitRequestId = ++horizonFitRequestId;
+                void tick().then(() => {
+                    if (isMounted && fitRequestId === horizonFitRequestId && requestId === latestRequestId
+                        && key === astronomyKey && summaryTab === 'clouds' && horizonVisible && horizonHeightSource === 'elevation') {
+                        fitVisibleDirectionLines();
+                    }
+                });
+            }
             const selectedPaths = selectedMapPaths(plan.paths);
             status = selectedPaths.some(path => path.status === 'ok') ? 'ready' : 'empty';
             renderMapFeatures(selectedPaths);
+            diagnosticRuntime?.diagnostics.end('astronomy', diagnosticOperation, status === 'empty' ? 'empty' : 'ready');
         } catch (error) {
             if (requestId !== latestRequestId || key !== astronomyKey) {
                 return;
             }
-
+            diagnosticRuntime?.diagnostics.error('astronomy', error, diagnosticOperation);
             status = 'error';
             solarPaths = [];
             astronomyTimeline = null;
@@ -2227,6 +2549,9 @@
                 return;
             }
 
+            if (!(error instanceof LightPollutionOutOfBoundsError)) {
+                diagnosticRuntime?.error('light-pollution', error);
+            }
             lightPollutionPoint = null;
             lightPollutionStatus = 'error';
             lightPollutionErrorKind = error instanceof LightPollutionOutOfBoundsError
@@ -2307,6 +2632,7 @@
                 return;
             }
             // Update metadata is optional. A failed request must not affect core plugin features.
+            diagnosticRuntime?.error('update', error);
             if (!preserveAvailableResult) {
                 pluginUpdateStatus = 'error';
             }
@@ -2411,9 +2737,11 @@
         }
         if (Number.isFinite(knownElevationM)) {
             elevationM = Math.max(0, knownElevationM as number);
+            groundElevationM = knownElevationM as number;
             elevationLocationKey = nextLocationKey;
         } else {
             elevationLocationKey = '';
+            groundElevationM = null;
         }
         resolvedContextLocationKey = '';
         forecastController.invalidate();
@@ -2639,6 +2967,7 @@
             void tick().then(update);
         };
         const observer = new ResizeObserver(update);
+        const disconnect = lifecycle?.own(() => observer.disconnect()) ?? (() => observer.disconnect());
         observer.observe(node);
         if (value) {
             observer.observe(value);
@@ -2646,7 +2975,7 @@
         scheduleUpdate();
         return {
             update: scheduleUpdate,
-            destroy: () => observer.disconnect(),
+            destroy: disconnect,
         };
     };
 
@@ -2842,9 +3171,11 @@
 
     const overlayOwner = {
         deactivateForReplacement: () => {
+            if (diagnosticRuntime?.diagnostics.state !== 'failed') { diagnosticRuntime?.stop('replacement'); }
             // Replacement mounts continue the logical use, with no live old resources.
             pluginUsage?.stop(true);
             isMounted = false;
+            horizonFitRequestId += 1;
             mobilePanelMode = 'compact';
             lastMobileNonFullscreenMode = 'compact';
             favoritesOpen = false;
@@ -2888,7 +3219,9 @@
             }
             mapOverlayController.destroy();
             radarOverlayController.destroy();
+            lightPollutionOverlayController.destroy();
             eventSkyOverlay.destroy();
+            eventHorizonOverlay.destroy();
             radarFrameTimeLabelController?.destroy();
             radarFrameTimeLabelController = null;
             if (radarTimestampSubscriptionId !== null) {
@@ -2907,7 +3240,7 @@
         },
     };
 
-    onMount(() => {
+    const mountPlugin = () => {
         jumpToNow();
         releaseOverlayOwnership = claimOverlayOwner(overlayOwner);
         radarFrameTimeLabelController = createRadarFrameTimeLabel();
@@ -2919,6 +3252,8 @@
         uiLanguage = savedLanguage ?? 'zh';
         showLanguageChoice = savedLanguage === null;
         cloudView = loadPlanningViewPreference();
+        // Retire the previous provider's browser credential without reading or retaining its value.
+        try { localStorage.removeItem('windy-plugin-sun-moon-path:qweather'); } catch { /* Storage may be disabled. */ }
         units = currentUnitPreferences();
         try { cloudSettings = loadCloudPreferences(localStorage); } catch { /* Storage access may be blocked. */ }
         try {
@@ -2931,6 +3266,8 @@
         lastMobileNonFullscreenMode = mobilePanelMode;
         mobilePluginRoot?.classList.toggle('sun-path-mobile-collapsed', mobilePanelMode === 'collapsed');
         hideLocationSearch = loadHideLocationSearchPreference();
+        minimizeScope = loadMinimizeScopePreference();
+        showSkyChart = loadShowSkyChartPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         initialOverlayPreference = loadInitialOverlayPreference(availableInitialOverlays);
@@ -2939,14 +3276,18 @@
         radarOpacityPercent = loadRadarOpacityPreference();
         radarOverlayController.setOpacity(radarOpacityPercent);
         radarOverlayController.setTimestamp(store.get('timestamp'));
+        lightPollutionEnabled = loadLightPollutionEnabled();
+        lightPollutionOpacityPercent = loadLightPollutionOpacity();
+        lightPollutionOverlayController.setOpacity(lightPollutionOpacityPercent);
         locationSearchProvider = loadLocationSearchProvider();
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
         isMounted = true;
-        pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab });
+        pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab, cloudView });
         radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
         void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
+        lightPollutionOverlayController.setEnabled(lightPollutionEnabled);
         bcast.on('back2home', handleBackToHome);
         bcast.on('metricChanged', handleMetricChange);
         map.on('dragstart', handleMapDragStart);
@@ -2957,10 +3298,20 @@
         document.addEventListener('keydown', handleHostTimeInput, true);
         updateCurrentDirections();
         currentDirectionTimer = setInterval(updateCurrentDirections, 5_000);
+    };
+
+    onMount(() => {
+        try {
+            mountPlugin();
+        } catch (error) {
+            // Let the constructor finish, then the entry destroys the complete Svelte subtree.
+            startupFailed(error);
+        }
     });
 
     onDestroy(() => {
         const shouldReopenAfterHome = reopenAfterHome;
+        diagnosticRuntime?.stop(shouldReopenAfterHome ? 'replacement' : 'close');
         pluginUsage?.stop(shouldReopenAfterHome);
         overlayOwner.deactivateForReplacement();
         releaseOverlayOwnership?.();
@@ -3260,6 +3611,20 @@
         );
     }
 
+    .mobile-sky-chart-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) +
+                7 * (var(--mobile-window-control-width) + var(--mobile-window-control-gap))
+        );
+    }
+
+    .mobile-light-pollution-toggle {
+        right: calc(
+            var(--mobile-window-control-edge) +
+                6 * (var(--mobile-window-control-width) + var(--mobile-window-control-gap))
+        );
+    }
+
     .mobile-radar-toggle {
         right: calc(
             var(--mobile-window-control-edge) + var(--mobile-window-control-width) +
@@ -3299,13 +3664,16 @@
         background: var(--panel-surface-hover);
     }
 
+    .mobile-sky-chart-toggle[aria-pressed='true'] .mobile-window-control__icon,
+    .mobile-light-pollution-toggle[aria-pressed='true'] .mobile-window-control__icon,
     .mobile-radar-toggle[aria-pressed='true'] .mobile-window-control__icon {
         border-color: var(--panel-accent);
         background: rgba(99, 185, 238, 0.2);
         color: var(--panel-accent);
     }
 
-    .mobile-radar-toggle.radar-toggle--error .mobile-window-control__icon {
+    .mobile-radar-toggle.radar-toggle--error .mobile-window-control__icon,
+    .mobile-light-pollution-toggle.atlas-toggle--error .mobile-window-control__icon {
         border-color: var(--panel-warning);
         color: var(--panel-warning);
     }
@@ -3590,13 +3958,16 @@
         background: var(--panel-surface-hover);
     }
 
+    .desktop-sky-chart-toggle[aria-pressed='true'],
+    .desktop-light-pollution-toggle[aria-pressed='true'],
     .desktop-radar-toggle[aria-pressed='true'] {
         border-color: var(--panel-accent);
         background: rgba(99, 185, 238, 0.2);
         color: var(--panel-accent);
     }
 
-    .desktop-radar-toggle.radar-toggle--error {
+    .desktop-radar-toggle.radar-toggle--error,
+    .desktop-light-pollution-toggle.atlas-toggle--error {
         border-color: var(--panel-warning);
         color: var(--panel-warning);
     }
@@ -4314,14 +4685,22 @@
         background: #1d263d;
     }
 
-    .astronomy-panel {
+    .astronomy-panel, .tide-timeline {
         --astronomy-bg: #1d263d;
         --astronomy-muted: #a8b1c1;
         --astronomy-text: #f2f4fa;
         --astronomy-sun: #ff9138;
         --astronomy-moon: #4e91ed;
         --astronomy-blue-hour: #c4b5fd;
+    }
 
+    .timeline-events.tide-timeline {
+        flex-shrink: 0;
+        margin-top: 0;
+        padding: 4px 0;
+    }
+
+    .astronomy-panel {
         box-sizing: border-box;
         height: 100%;
         min-height: 100%;

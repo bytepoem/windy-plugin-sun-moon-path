@@ -68,6 +68,7 @@ export const createForecastController = (
         ) => Promise<OpenMeteoAtmospherePoint[]>;
     },
     onChange: (state: ForecastState) => void,
+    onError: (kind: 'weather' | 'atmosphere' | 'clouds', error: unknown) => void = () => undefined,
 ) => {
     const weather = channel<WeatherResult>();
     const atmosphere = channel<OpenMeteoAtmospherePoint[]>();
@@ -110,6 +111,7 @@ export const createForecastController = (
         target: Channel<Value>,
         fetchValue: (signal: AbortSignal) => Promise<Value>,
         resultStatus: (value: Value) => WeatherLoadStatus,
+        kind: 'weather' | 'atmosphere' | 'clouds',
     ) => {
         target.controller?.abort();
         const controller = new AbortController();
@@ -133,6 +135,7 @@ export const createForecastController = (
             }
             target.status = 'error';
             target.error = error instanceof Error ? error.message : '';
+            try { onError(kind, error); } catch { /* Diagnostic failure cannot change forecast state. */ }
         } finally {
             // A superseded request must not clear the new request's loading state.
             if (isCurrent()) {
@@ -152,6 +155,7 @@ export const createForecastController = (
                 weather,
                 signal => provider.weather({ ...request, signal }),
                 result => (result.points.length ? 'ready' : 'empty'),
+                'weather',
             );
         } else if (kind === 'atmosphere') {
             void load(
@@ -163,12 +167,14 @@ export const createForecastController = (
                         includeVisibility: request.source === 'windy',
                     }),
                 result => (result.length ? 'ready' : 'error'),
+                'atmosphere',
             );
         } else {
             void load(
                 clouds,
                 signal => provider.clouds({ ...request, signal }),
                 () => 'ready',
+                'clouds',
             );
         }
     };

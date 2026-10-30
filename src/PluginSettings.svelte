@@ -5,6 +5,8 @@
     import { RADAR_PROVIDERS, RAINVIEWER_WEBSITE_URL, type RadarProvider, type RadarOverlayStatus } from './radarOverlay';
     import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
     import { formatDistanceKm, type UnitPreferences } from './unitPreferences';
+    import { LIGHT_POLLUTION_ATLAS_URL, type LightPollutionOverlayStatus } from './lightPollutionOverlay';
+    import type { MinimizeScope } from './pluginPreferences';
 
     // Controlled settings: the shell owns persistence and map side effects.
     export let uiLanguage: UiLanguage;
@@ -16,7 +18,17 @@
     export let radarProvider: RadarProvider;
     export let radarOverlayStatus: RadarOverlayStatus;
     export let radarOpacityPercent: number;
+    export let lightPollutionEnabled: boolean;
+    export let lightPollutionOverlayStatus: LightPollutionOverlayStatus;
+    export let lightPollutionOpacityPercent: number;
+    export let toggleLightPollutionOverlay: () => void;
+    export let changeLightPollutionOpacity: (event: Event) => void;
+    export let retryLightPollutionOverlay: () => void;
     export let hideLocationSearch: boolean;
+    export let minimizeScope: MinimizeScope;
+    export let changeMinimizeScope: (event: Event) => void;
+    export let showSkyChart: boolean;
+    export let toggleSkyChart: () => void;
     export let directionLineOpacityPercent: number;
     export let showExtendedDistanceMarker: boolean;
     export let savedApiKeyProvider: LocationProvider | null;
@@ -63,6 +75,73 @@
     <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
 {:else}
 <section class="module-about module-settings" aria-label={text.settingsHeading}>
+    <div class="settings-select">
+        <label for="minimize-scope">{text.minimizeScopeLabel}</label>
+        <select id="minimize-scope" value={minimizeScope} on:change={changeMinimizeScope} aria-describedby="minimize-scope-description">
+            <option value="standard">{text.minimizeScopeStandard}</option>
+            <option value="hide-times">{text.minimizeScopeHideTimes}</option>
+            <option value="hide-summary">{text.minimizeScopeHideSummary}</option>
+        </select>
+        <span id="minimize-scope-description" class="settings-select__description">{text.minimizeScopeDescription}</span>
+    </div>
+    <label class="settings-toggle">
+        <span class="settings-toggle__copy">
+            <strong>{text.showSkyChartLabel}</strong>
+            <span>{text.showSkyChartDescription}</span>
+        </span>
+        <input
+            type="checkbox"
+            checked={showSkyChart}
+            aria-label={text.showSkyChartLabel}
+            on:change={toggleSkyChart}
+        />
+        <span class="settings-toggle__control" aria-hidden="true"></span>
+    </label>
+    <label class="settings-toggle">
+        <span class="settings-toggle__copy">
+            <strong>{text.hideLocationSearchLabel}</strong>
+            <span>{text.hideLocationSearchDescription}</span>
+        </span>
+        <input
+            type="checkbox"
+            checked={hideLocationSearch}
+            aria-label={text.hideLocationSearchLabel}
+            on:change={toggleLocationSearch}
+        />
+        <span class="settings-toggle__control" aria-hidden="true"></span>
+    </label>
+    <label class="settings-toggle">
+        <span class="settings-toggle__copy">
+            <strong>{text.show600Label(extendedDistanceLabel)}</strong>
+            <span>{text.show600Description(extendedDistanceLabel)}</span>
+        </span>
+        <input
+            type="checkbox"
+            checked={showExtendedDistanceMarker}
+            aria-label={text.show600Label(extendedDistanceLabel)}
+            on:change={toggleExtendedDistanceMarker}
+        />
+        <span class="settings-toggle__control" aria-hidden="true"></span>
+    </label>
+    <div class="settings-range">
+        <div class="settings-range__header">
+            <label for="direction-line-opacity">{text.lineOpacityLabel}</label>
+            <output for="direction-line-opacity">{directionLineOpacityPercent}%</output>
+        </div>
+        <input
+            id="direction-line-opacity"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={directionLineOpacityPercent}
+            aria-describedby="direction-line-opacity-description"
+            on:input={changeDirectionLineOpacity}
+        />
+        <span id="direction-line-opacity-description" class="settings-range__description">
+            {text.lineOpacityDescription}
+        </span>
+    </div>
     <div class="settings-select">
         <label for="initial-overlay">{text.initialOverlayLabel}</label>
         <select
@@ -135,17 +214,30 @@
     </div>
     <label class="settings-toggle">
         <span class="settings-toggle__copy">
-            <strong>{text.hideLocationSearchLabel}</strong>
-            <span>{text.hideLocationSearchDescription}</span>
+            <strong>{text.lightPollutionOverlayLabel}</strong>
+            <span>{text.lightPollutionOverlayDescription}</span>
         </span>
-        <input
-            type="checkbox"
-            checked={hideLocationSearch}
-            aria-label={text.hideLocationSearchLabel}
-            on:change={toggleLocationSearch}
-        />
+        <input type="checkbox" checked={lightPollutionEnabled} aria-label={text.lightPollutionOverlayLabel} on:change={toggleLightPollutionOverlay} />
         <span class="settings-toggle__control" aria-hidden="true"></span>
     </label>
+    <div class="settings-range">
+        <div class="settings-range__header">
+            <label for="light-pollution-opacity">{text.lightPollutionOpacityLabel}</label>
+            <output for="light-pollution-opacity">{lightPollutionOpacityPercent}%</output>
+        </div>
+        <input id="light-pollution-opacity" type="range" min="0" max="100" step="1"
+            value={lightPollutionOpacityPercent} disabled={!lightPollutionEnabled}
+            aria-describedby="light-pollution-opacity-description" on:input={changeLightPollutionOpacity} />
+        <span id="light-pollution-opacity-description" class="settings-range__description">{text.lightPollutionOpacityDescription}</span>
+        <span class="settings-radar-status" class:settings-radar-status--ready={lightPollutionOverlayStatus === 'ready'}
+            class:settings-radar-status--error={lightPollutionOverlayStatus === 'error'} role="status" aria-live="polite">
+            <span aria-hidden="true"></span>{text.lightPollutionOverlayStatuses[lightPollutionOverlayStatus]}
+        </span>
+        {#if lightPollutionOverlayStatus === 'error'}
+            <button class="atlas-retry" type="button" on:click={retryLightPollutionOverlay}>{text.retry}</button>
+        {/if}
+        <a class="atlas-source" href={LIGHT_POLLUTION_ATLAS_URL} target="_blank" rel="noreferrer">Light Pollution Atlas · David Lorenz · 2025</a>
+    </div>
     {#if uiLanguage === 'zh'}
         <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
             {#each LOCATION_PROVIDERS as providerOption}
@@ -206,42 +298,28 @@
             {/each}
         </div>
     {/if}
-    <div class="settings-range">
-        <div class="settings-range__header">
-            <label for="direction-line-opacity">{text.lineOpacityLabel}</label>
-            <output for="direction-line-opacity">{directionLineOpacityPercent}%</output>
-        </div>
-        <input
-            id="direction-line-opacity"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value={directionLineOpacityPercent}
-            aria-describedby="direction-line-opacity-description"
-            on:input={changeDirectionLineOpacity}
-        />
-        <span id="direction-line-opacity-description" class="settings-range__description">
-            {text.lineOpacityDescription}
-        </span>
-    </div>
-    <label class="settings-toggle">
-        <span class="settings-toggle__copy">
-            <strong>{text.show600Label(extendedDistanceLabel)}</strong>
-            <span>{text.show600Description(extendedDistanceLabel)}</span>
-        </span>
-        <input
-            type="checkbox"
-            checked={showExtendedDistanceMarker}
-            aria-label={text.show600Label(extendedDistanceLabel)}
-            on:change={toggleExtendedDistanceMarker}
-        />
-        <span class="settings-toggle__control" aria-hidden="true"></span>
-    </label>
 </section>
 {/if}
 
 <style>
+    .atlas-source {
+        color: var(--panel-accent);
+        font-size: 12px;
+    }
+    .atlas-retry {
+        align-self: start;
+        min-height: 36px;
+        padding: 4px 10px;
+        color: var(--panel-text);
+        background: var(--panel-surface);
+        border: 1px solid var(--panel-border);
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .atlas-retry:focus-visible, .atlas-source:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
 
     .language-toggle {
         min-height: 36px;
