@@ -237,8 +237,7 @@
             diagnostics?.end('comparison', operation);
         } catch (error) {
             if (!destroyed && open && !abortController.signal.aborted
-                && requestId === modelRequestId && session === nextSession
-                && !(error instanceof Error && error.name === 'AbortError')) {
+                && requestId === modelRequestId && session === nextSession) {
                 diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';
             } else {
@@ -306,7 +305,6 @@
                 && open
                 && !abortController.signal.aborted
                 && requestId === prepareRequestId
-                && !(error instanceof Error && error.name === 'AbortError')
             ) {
                 diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';

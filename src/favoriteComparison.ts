@@ -287,8 +287,7 @@ export const createFavoriteComparisonPlanner = (
                         diagnosticErrors: [atmosphereResult, lightPollutionResult]
                             .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
                             .map(result => result.reason)
-                            .filter(error => !(error instanceof LightPollutionOutOfBoundsError)
-                                && !(error instanceof Error && error.name === 'AbortError')),
+                            .filter(error => !(error instanceof LightPollutionOutOfBoundsError)),
                         timeline: calculateAstronomyTimeline({
                             dateInput,
                             timeZone,
@@ -361,10 +360,9 @@ export const createFavoriteComparisonPlanner = (
                                     }),
                                 } satisfies FavoriteComparisonResult;
                             } catch (error) {
-                                if (
-                                    modelSignal.aborted
-                                    || (error instanceof Error && error.name === 'AbortError')
-                                ) {
+                                // Only this owner can confirm cancellation. A provider's AbortError
+                                // with an active signal is a failed current request, not a silent exit.
+                                if (modelSignal.aborted) {
                                     throw abortError();
                                 }
                                 const atmosphereOnlyPoints = mergeComparisonWeather(

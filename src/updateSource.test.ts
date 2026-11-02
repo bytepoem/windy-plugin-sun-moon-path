@@ -54,14 +54,27 @@ describe('regional update sources', () => {
         expect(fetchImpl).toHaveBeenCalledTimes(4);
     });
 
-    it('propagates cancellation and never switches source on a failed manifest', async () => {
+    it('does not start a manifest request when already cancelled', async () => {
         const controller = new AbortController();
         controller.abort();
         const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
         await expect(checkPluginUpdate({ source: 'gitee', currentVersion: '0.11.0', repositoryUrl, fetchImpl, sessionCache: null, signal: controller.signal }))
             .rejects.toMatchObject({ name: 'AbortError' });
-        expect(fetchImpl).toHaveBeenCalledTimes(1);
-        expect(fetchImpl.mock.calls[0][1]?.signal).toBe(controller.signal);
+        expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    it('propagates an in-flight cancellation without switching source', async () => {
+        const controller = new AbortController();
+        const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+            expect(init?.signal).toBe(controller.signal);
+            controller.abort();
+            throw controller.signal.reason;
+        });
+        await expect(checkPluginUpdate({ source: 'gitee', currentVersion: '0.11.0', repositoryUrl, fetchImpl,
+            sessionCache: null, signal: controller.signal })).rejects.toMatchObject({
+            name: 'AbortError', requestDetails: { request: 'update-manifest', kind: 'cancelled' },
+        });
+        expect(fetchImpl).toHaveBeenCalledOnce();
     });
 
     it.each([

@@ -146,6 +146,115 @@ describe('Lorenz light pollution atlas', () => {
         );
     });
 
+    it('does not start a request after its owner has cancelled', async () => {
+        const controller = new AbortController();
+        controller.abort();
+        const fetchMock = vi.fn(async () => new Response(await gzipTile(new Int8Array(360001))));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(fetchLightPollutionPoint({ lat: -10, lon: 15 }, controller.signal))
+            .rejects.toMatchObject({ name: 'AbortError' });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('does not return a cached result to a cancelled owner', async () => {
+        const fetchMock = vi.fn(async () => new Response(await gzipTile(new Int8Array(360001))));
+        vi.stubGlobal('fetch', fetchMock);
+        await fetchLightPollutionPoint({ lat: -15, lon: 20 });
+        const controller = new AbortController();
+        controller.abort();
+
+        await expect(fetchLightPollutionPoint({ lat: -15, lon: 20 }, controller.signal))
+            .rejects.toMatchObject({ name: 'AbortError' });
+        expect(fetchMock).toHaveBeenCalledOnce();
+    });
+
+    it('owns a response-body cancellation and does not cache partial bytes', async () => {
+        const controller = new AbortController();
+        let body!: ReadableStreamDefaultController<Uint8Array>;
+        const responseBody = new ReadableStream<Uint8Array>({ start(stream) { body = stream; } });
+        const tileResponse = new Response(responseBody);
+        let reading!: () => void;
+        const readStarted = new Promise<void>(resolve => { reading = resolve; });
+        const read = tileResponse.arrayBuffer.bind(tileResponse);
+        vi.spyOn(tileResponse, 'arrayBuffer').mockImplementation(() => {
+            reading();
+            return read();
+        });
+        vi.stubGlobal('fetch', vi.fn(async () => tileResponse));
+        const pending = fetchLightPollutionPoint({ lat: -20, lon: 25 }, controller.signal);
+        const rejected = expect(pending).rejects.toMatchObject({
+            name: 'AbortError',
+            requestDetails: { request: 'light-pollution', phase: 'response', kind: 'cancelled' },
+        });
+        await readStarted;
+        controller.abort();
+        body.error(controller.signal.reason);
+        await rejected;
+
+        const fetchMock = vi.fn(async () => new Response(await gzipTile(new Int8Array(360001))));
+        vi.stubGlobal('fetch', fetchMock);
+        await expect(fetchLightPollutionPoint({ lat: -20, lon: 25 })).resolves.toMatchObject({ year: 2025 });
+        expect(fetchMock).toHaveBeenCalledOnce();
+    });
+
+    it('discards a tile cancelled during decompression without warming the cache', async () => {
+        const controller = new AbortController();
+        const nativeDecompression = DecompressionStream;
+        vi.stubGlobal('DecompressionStream', class extends TransformStream<Uint8Array, Uint8Array> {
+            constructor() {
+                super({ transform(_chunk, output) {
+                    controller.abort();
+                    output.enqueue(new Uint8Array(360001));
+                } });
+            }
+        });
+        const compressed = await gzipTile(new Int8Array(360001));
+        const fetchMock = vi.fn(async () => new Response(compressed));
+        vi.stubGlobal('fetch', fetchMock);
+        await expect(fetchLightPollutionPoint({ lat: -25, lon: 30 }, controller.signal)).rejects.toMatchObject({
+            name: 'AbortError', requestDetails: { phase: 'decompress', kind: 'cancelled' },
+        });
+        vi.stubGlobal('DecompressionStream', nativeDecompression);
+        await expect(fetchLightPollutionPoint({ lat: -25, lon: 30 })).resolves.toMatchObject({ year: 2025 });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('reports corrupt gzip data as decompression failure', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(new Uint8Array([1, 2, 3]))));
+        await expect(fetchLightPollutionPoint({ lat: -30, lon: 35 })).rejects.toMatchObject({
+            requestDetails: { request: 'light-pollution', phase: 'decompress', kind: 'decompress' },
+        });
+    });
+
+    it('checks ownership again between the decompression helper and cache write', async () => {
+        const controller = new AbortController();
+        const nativeDecompression = DecompressionStream;
+        let decompressionFinished = false;
+        vi.stubGlobal('DecompressionStream', class extends TransformStream<Uint8Array, Uint8Array> {
+            constructor() {
+                super({
+                    transform(_chunk, output) { output.enqueue(new Uint8Array(360001)); },
+                    flush() { decompressionFinished = true; },
+                });
+            }
+        });
+        const checkCancellation = controller.signal.throwIfAborted.bind(controller.signal);
+        vi.spyOn(controller.signal, 'throwIfAborted').mockImplementation(() => {
+            checkCancellation();
+            // Cancel after the helper's final check, before its caller resumes.
+            if (decompressionFinished) { queueMicrotask(() => controller.abort()); }
+        });
+        const compressed = await gzipTile(new Int8Array(360001));
+        const fetchMock = vi.fn(async () => new Response(compressed));
+        vi.stubGlobal('fetch', fetchMock);
+        await expect(fetchLightPollutionPoint({ lat: -35, lon: 40 }, controller.signal))
+            .rejects.toMatchObject({ name: 'AbortError' });
+        vi.stubGlobal('DecompressionStream', nativeDecompression);
+        await fetchLightPollutionPoint({ lat: -35, lon: 40 });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
     it('rejects aborted, superseded, and stale-location responses', () => {
         const current = {
             aborted: false,

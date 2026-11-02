@@ -101,6 +101,24 @@ describe('diagnostic lifecycle and consent', () => {
         runtime.stop();
     });
 
+    it('keeps unexpected DOM cancellations visible and distinguishes global capture sources', async () => {
+        const { startDiagnosticRuntime } = await import('./diagnosticRuntime');
+        const runtime = startDiagnosticRuntime();
+        for (const type of ['error', 'unhandledrejection'] as const) {
+            const error = new DOMException('private cancellation message', 'AbortError');
+            Object.defineProperty(error, 'stack', {
+                value: `at https://windy-plugins.com/1/windy-plugin-sun-moon-path/0.12.2/plugin.min.js:1:${type === 'error' ? 2 : 3}`,
+            });
+            browser.dispatchEvent(Object.assign(new Event(type), type === 'error' ? { error } : { reason: error }));
+        }
+        const calls = state.transports[0].sendDiagnostic.mock.calls;
+        expect(calls).toHaveLength(2);
+        expect(calls.map(call => call[0].properties.error.capture)).toEqual(['error', 'unhandledrejection']);
+        expect(calls[1][0].properties.error).toMatchObject({ name: 'AbortError', message: 'Operation aborted' });
+        expect(JSON.stringify(calls)).not.toContain('private');
+        runtime.stop();
+    });
+
     it('counts only visible startup time and never labels a hidden panel as incomplete', async () => {
         const { startDiagnosticRuntime } = await import('./diagnosticRuntime');
         const runtime = startDiagnosticRuntime();

@@ -171,6 +171,25 @@ describe('Open-Meteo atmosphere data', () => {
         expect(fetcher).toHaveBeenCalledTimes(2);
     });
 
+    it('identifies AOD and visibility failures without retaining coordinates in metadata', async () => {
+        for (const failingHost of ['air-quality-api.open-meteo.com', 'api.open-meteo.com']) {
+            const fetcher = vi.fn(async (input: RequestInfo | URL) =>
+                response({}, new URL(String(input)).hostname === failingHost ? 429 : 200));
+            await expect(fetchOpenMeteoAtmosphere({ location: { lat: 23.1291, lon: 113.2644 }, fetcher }))
+                .rejects.toMatchObject({ requestDetails: {
+                    request: failingHost.startsWith('air-quality') ? 'open-meteo-aod' : 'open-meteo-visibility',
+                    phase: 'request', kind: 'http', status: 429,
+                } });
+        }
+    });
+
+    it('identifies malformed model responses as parsing failures', async () => {
+        await expect(fetchOpenMeteoWeather({
+            location: { lat: 1, lon: 2 }, model: 'icon',
+            fetcher: vi.fn(async () => new Response('private malformed response')),
+        })).rejects.toMatchObject({ requestDetails: { request: 'open-meteo-weather', phase: 'parse', kind: 'parse' } });
+    });
+
     it('merges only exact timestamps and leaves unavailable metrics unknown', () => {
         const start = Date.UTC(2026, 7, 23, 0);
         expect(mergeOpenMeteoAtmosphere(

@@ -2561,6 +2561,7 @@
         } finally {
             if (requestId === latestLightPollutionRequestId) {
                 lightPollutionLoadingKey = '';
+                lightPollutionAbortController = null;
             }
         }
     };
@@ -2605,6 +2606,11 @@
                 repositoryUrl,
                 betaNotesUrl: betaReleaseNotesUrl,
                 signal: abortController.signal,
+                onNotesError: error => {
+                    if (!abortController.signal.aborted && requestId === latestPluginUpdateRequestId && isMounted) {
+                        diagnosticRuntime?.error('update', error);
+                    }
+                },
             });
             if (
                 abortController.signal.aborted

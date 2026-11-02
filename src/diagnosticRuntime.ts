@@ -5,6 +5,7 @@ import { createPluginDiagnostics, diagnosticId, type DiagnosticStage } from './p
 import { createPostHogUsageTransport } from './posthogUsageTransport';
 import { postHogUsageConfig } from './posthogUsageConfig';
 import { analyticsEnvironmentEnabled } from './usageMetrics';
+import { diagnosticException } from './requestDiagnostics';
 
 const STARTUP_VISIBLE_MS = 15_000;
 let continuation: { sessionId: string; time: number } | null = null;
@@ -78,13 +79,13 @@ export const startDiagnosticRuntime = () => {
     // Require this plugin's full path, not just a common name such as plugin.js.
     const owned = (value: string) => /https:\/\/(?:windy-plugins\.com\/[^\s)]+\/windy-plugin-sun-moon-path\/[^\s)]+\/plugin(?:\.min)?\.js|localhost:9999\/plugin(?:\.min)?\.js)(?=[:?\s)]|$)/.test(value);
     const runtimeError = (event: ErrorEvent) => {
-        if (owned(event.filename ?? '') || (event.error instanceof Error && owned(event.error.stack ?? ''))) {
-            diagnostics.error('runtime', event.error);
+        if (owned(event.filename ?? '') || owned(diagnosticException(event.error)?.stack ?? '')) {
+            diagnostics.error('runtime', event.error, 0, false, 'error');
         }
     };
     const rejected = (event: PromiseRejectionEvent) => {
-        if (event.reason instanceof Error && owned(event.reason.stack ?? '')) {
-            diagnostics.error('runtime', event.reason);
+        if (owned(diagnosticException(event.reason)?.stack ?? '')) {
+            diagnostics.error('runtime', event.reason, 0, false, 'unhandledrejection');
         }
     };
     window.addEventListener('error', runtimeError);

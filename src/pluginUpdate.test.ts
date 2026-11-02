@@ -245,8 +245,11 @@ describe('checkPluginUpdate', () => {
     });
 
     it('propagates cancellation instead of showing a retryable notes error', async () => {
-        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest())).mockRejectedValueOnce(new DOMException('cancelled', 'AbortError'));
-        await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache: null })).rejects.toMatchObject({ name: 'AbortError' });
+        const controller = new AbortController();
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest()))
+            .mockImplementationOnce(async () => { controller.abort(); throw controller.signal.reason; });
+        await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl, sessionCache: null,
+            signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
     });
 
     it('discovers a release after the current-result cache expires', async () => {
@@ -298,6 +301,40 @@ describe('checkPluginUpdate', () => {
         expect((await checkPluginUpdate(options)).notesStatus).toBe('loaded');
         expect((await checkPluginUpdate(options)).notesStatus).toBe('loaded');
         expect(fetchImpl).toHaveBeenCalledTimes(4);
+    });
+
+    it('reports a failed notes request without discarding the available version', async () => {
+        const onNotesError = vi.fn();
+        const fetchImpl = vi.fn<typeof fetch>()
+            .mockResolvedValueOnce(jsonResponse(manifest())).mockResolvedValueOnce(jsonResponse({}, 429));
+        const result = await checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl,
+            sessionCache: null, onNotesError });
+        expect(result).toMatchObject({ status: 'available', notesStatus: 'error' });
+        expect(onNotesError).toHaveBeenCalledOnce();
+        expect(onNotesError.mock.calls[0][0]).toMatchObject({
+            requestDetails: { request: 'update-notes', phase: 'request', kind: 'http', status: 429 },
+        });
+    });
+
+    it('reports an unexpected notes AbortError when the request owner did not cancel', async () => {
+        const onNotesError = vi.fn((_error: unknown) => { throw new Error('diagnostics unavailable'); });
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest()))
+            .mockRejectedValueOnce(new DOMException('private', 'AbortError'));
+        const result = await checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl,
+            sessionCache: null, signal: new AbortController().signal, onNotesError });
+        expect(result.notesStatus).toBe('error');
+        expect(onNotesError).toHaveBeenCalledOnce();
+        expect(onNotesError.mock.calls[0][0]).toMatchObject({ requestDetails: { kind: 'abort' } });
+    });
+
+    it('does not report a notes failure after the owner cancels', async () => {
+        const controller = new AbortController();
+        const onNotesError = vi.fn();
+        const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(manifest()))
+            .mockImplementationOnce(async () => { controller.abort(); throw controller.signal.reason; });
+        await expect(checkPluginUpdate({ currentVersion: '0.8.1', repositoryUrl, fetchImpl,
+            sessionCache: null, signal: controller.signal, onNotesError })).rejects.toMatchObject({ name: 'AbortError' });
+        expect(onNotesError).not.toHaveBeenCalled();
     });
 
     it('does not cache an older manifest for a newer installed version', async () => {

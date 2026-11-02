@@ -6,6 +6,7 @@ import {
     type FavoriteComparisonTarget,
 } from './favoriteComparison';
 import { LightPollutionOutOfBoundsError, type LightPollutionPoint } from './lightPollution';
+import { RequestFailure } from './requestDiagnostics';
 import type { WeatherPoint } from './weather';
 
 const lightPollution = (estimatedBortle: number): LightPollutionPoint => ({
@@ -313,6 +314,21 @@ describe('favorite comparison planner', () => {
         timeZoneResolvers.splice(0).forEach(resolve => resolve());
         await Promise.all([firstPrepare, secondPrepare]);
         expect(peakActiveTimeZones).toBe(2);
+    });
+
+    it('retains unexpected cancellation failures when neither owner cancelled', async () => {
+        const port = createPort();
+        const failure = new RequestFailure(new DOMException('private', 'AbortError'), 'windy-weather', 'request');
+        vi.mocked(port.getAtmosphere).mockRejectedValue(failure);
+        vi.mocked(port.getWeather).mockRejectedValue(failure);
+        const signal = new AbortController().signal;
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-08-28', requestedAt: Date.UTC(2026, 7, 27, 17), signal,
+        });
+        expect(session.preparedTargets[0]).toMatchObject({ diagnosticErrors: expect.arrayContaining([failure]) });
+        const results = await session.loadModel('ecmwf', signal);
+        expect(results.map(result => result.weatherStatus)).toEqual(['error', 'error']);
+        expect(results[0].diagnosticError).toBe(failure);
     });
 
     it('does not start model requests when the model signal is already aborted', async () => {

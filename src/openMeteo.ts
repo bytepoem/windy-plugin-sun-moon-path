@@ -1,4 +1,5 @@
 import { WEATHER_PAST_WINDOW_MS, WEATHER_FUTURE_WINDOW_MS, type WeatherModel, type WeatherPoint } from './weather';
+import { RequestFailure, withRequestDiagnostics, type DiagnosticRequest } from './requestDiagnostics';
 import type { Coordinates } from './solar';
 
 const AIR_QUALITY_API_URL = 'https://air-quality-api.open-meteo.com/v1/air-quality';
@@ -45,11 +46,16 @@ const buildUrl = (baseUrl: string, location: Coordinates, variable: string): URL
 };
 
 const fetchPayload = async (url: URL, signal: AbortSignal | undefined, fetcher: FetchLike): Promise<OpenMeteoPayload> => {
-    const response = await fetcher(url, { signal });
-    if (!response.ok) {
-        throw new Error(`Open-Meteo HTTP ${response.status}`);
-    }
-    return response.json() as Promise<OpenMeteoPayload>;
+    const request: DiagnosticRequest = url.hostname.startsWith('air-quality') ? 'open-meteo-aod'
+        : url.searchParams.get('hourly') === 'visibility' ? 'open-meteo-visibility' : 'open-meteo-weather';
+    const response = await withRequestDiagnostics(request, 'request', signal, async () => {
+        const result = await fetcher(url, { signal });
+        if (!result.ok) {
+            throw new RequestFailure(new Error(`Open-Meteo HTTP ${result.status}`), request, 'request', signal, result.status);
+        }
+        return result;
+    });
+    return withRequestDiagnostics(request, 'parse', signal, () => response.json() as Promise<OpenMeteoPayload>);
 };
 
 const numericArray = (value: unknown): (number | null)[] =>

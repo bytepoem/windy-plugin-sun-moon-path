@@ -16,6 +16,14 @@
       {
         "type": "improved",
         "text": "完善时区和收藏对比加载异常的诊断信息，便于排查失败原因。"
+      },
+      {
+        "type": "fixed",
+        "text": "完善光污染数据加载的取消处理，避免已取消的请求继续下载或返回缓存结果，并分离下载与解压流程。"
+      },
+      {
+        "type": "improved",
+        "text": "细分天气、大气、光污染和更新检查的错误诊断，便于区分请求失败、数据解析、解压和取消异常。"
       }
     ]
   },
@@ -34,6 +42,14 @@
       {
         "type": "improved",
         "text": "Improved diagnostics for time zone and favorite comparison loading failures to help identify their causes."
+      },
+      {
+        "type": "fixed",
+        "text": "Improved cancellation of light pollution loading so cancelled requests do not start downloads or return cached results, with separate download and decompression steps."
+      },
+      {
+        "type": "improved",
+        "text": "Added more specific diagnostics for weather, atmosphere, light pollution and update checks to distinguish request, parsing, decompression and cancellation failures."
       }
     ]
   }
