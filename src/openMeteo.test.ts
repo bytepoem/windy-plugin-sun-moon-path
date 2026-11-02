@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
     buildOpenMeteoRequestKey,
-    fetchOpenMeteoAtmosphere,
+    fetchOpenMeteoAtmosphereMetric,
+    combineAtmospherePoints,
     fetchOpenMeteoWeather,
     wmoWeatherIcon,
     mergeOpenMeteoAtmosphere,
@@ -41,7 +42,7 @@ describe('Open-Meteo atmosphere data', () => {
 
     it('only calls CAMS when the selected weather model owns visibility', async () => {
         const fetcher = vi.fn().mockResolvedValue(response({ hourly: { time: [1], aerosol_optical_depth: [0.2] } }));
-        const points = await fetchOpenMeteoAtmosphere({ location: { lat: 1, lon: 2 }, fetcher, includeVisibility: false });
+        const points = await fetchOpenMeteoAtmosphereMetric('aod', { location: { lat: 1, lon: 2 }, fetcher });
         expect(fetcher).toHaveBeenCalledOnce();
         expect(String(fetcher.mock.calls[0][0])).toContain('air-quality-api');
         expect(points).toEqual([{ timestamp: 1000, aod550: 0.2, visibilityKm: null }]);
@@ -81,10 +82,11 @@ describe('Open-Meteo atmosphere data', () => {
             return response({ hourly: { time: [], [url.searchParams.get('hourly')!]: [] } });
         }) as typeof fetch;
 
-        await fetchOpenMeteoAtmosphere({
+        const options = {
             location: { lat: 23.1291, lon: 113.2644 },
             fetcher,
-        });
+        };
+        await Promise.all([fetchOpenMeteoAtmosphereMetric('aod', options), fetchOpenMeteoAtmosphereMetric('visibility', options)]);
 
         expect(requestedUrls).toHaveLength(2);
         expect(requestedUrls.map(url => url.origin)).toEqual([
@@ -123,10 +125,14 @@ describe('Open-Meteo atmosphere data', () => {
                 });
         }) as typeof fetch;
 
-        await expect(fetchOpenMeteoAtmosphere({
+        const options = {
             location: { lat: 23.1291, lon: 113.2644 },
             fetcher,
-        })).resolves.toEqual([
+        };
+        const [aod, visibility] = await Promise.all([
+            fetchOpenMeteoAtmosphereMetric('aod', options), fetchOpenMeteoAtmosphereMetric('visibility', options),
+        ]);
+        expect(combineAtmospherePoints(aod, visibility)).toEqual([
             { timestamp: startSeconds * 1000, aod550: 0.12, visibilityKm: null },
             { timestamp: (startSeconds + 3600) * 1000, aod550: null, visibilityKm: 8.4 },
             { timestamp: (startSeconds + 7200) * 1000, aod550: null, visibilityKm: 12.2 },
@@ -147,7 +153,7 @@ describe('Open-Meteo atmosphere data', () => {
                 : response({ hourly: { time: [], visibility: [] } });
         }) as typeof fetch;
 
-        await expect(fetchOpenMeteoAtmosphere({
+        await expect(fetchOpenMeteoAtmosphereMetric('aod', {
             location: { lat: 23.1291, lon: 113.2644 },
             fetcher,
         })).resolves.toEqual([
@@ -163,19 +169,20 @@ describe('Open-Meteo atmosphere data', () => {
             return response({}, 503);
         }) as typeof fetch;
 
-        await expect(fetchOpenMeteoAtmosphere({
+        await expect(fetchOpenMeteoAtmosphereMetric('aod', {
             location: { lat: 23.1291, lon: 113.2644 },
             signal: controller.signal,
             fetcher,
         })).rejects.toThrow('Open-Meteo HTTP 503');
-        expect(fetcher).toHaveBeenCalledTimes(2);
+        expect(fetcher).toHaveBeenCalledOnce();
     });
 
     it('identifies AOD and visibility failures without retaining coordinates in metadata', async () => {
         for (const failingHost of ['air-quality-api.open-meteo.com', 'api.open-meteo.com']) {
             const fetcher = vi.fn(async (input: RequestInfo | URL) =>
                 response({}, new URL(String(input)).hostname === failingHost ? 429 : 200));
-            await expect(fetchOpenMeteoAtmosphere({ location: { lat: 23.1291, lon: 113.2644 }, fetcher }))
+            await expect(fetchOpenMeteoAtmosphereMetric(failingHost.startsWith('air-quality') ? 'aod' : 'visibility',
+                { location: { lat: 23.1291, lon: 113.2644 }, fetcher }))
                 .rejects.toMatchObject({ requestDetails: {
                     request: failingHost.startsWith('air-quality') ? 'open-meteo-aod' : 'open-meteo-visibility',
                     phase: 'request', kind: 'http', status: 429,

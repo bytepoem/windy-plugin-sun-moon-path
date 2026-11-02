@@ -1,6 +1,8 @@
 import {
     buildOpenMeteoRequestKey,
+    combineAtmospherePoints,
     mergeOpenMeteoAtmosphere,
+    type AtmosphereMetric,
     type OpenMeteoAtmospherePoint,
 } from './openMeteo';
 import {
@@ -26,6 +28,8 @@ export type ForecastState = {
     weatherStatus: WeatherLoadStatus;
     weatherError: string;
     atmosphereStatus: WeatherLoadStatus;
+    aodStatus: WeatherLoadStatus;
+    visibilityStatus: WeatherLoadStatus;
     cloudStatus: WeatherLoadStatus;
     cloudForecast: WeatherForecastPayload | null;
 };
@@ -36,6 +40,8 @@ export const emptyForecastState = (): ForecastState => ({
     weatherStatus: 'idle',
     weatherError: '',
     atmosphereStatus: 'idle',
+    aodStatus: 'idle',
+    visibilityStatus: 'idle',
     cloudStatus: 'idle',
     cloudForecast: null,
 });
@@ -59,19 +65,20 @@ const channel = <Value>(): Channel<Value> => ({
 /**
  * Owns one panel's forecast lifetimes. Keys identify reusable results; controller
  * identity distinguishes retries of the same key, even when a provider ignores abort.
- * All three channels settle independently. Destroy is terminal and never emits.
+ * Weather, AOD, visibility and clouds settle independently. Destroy is terminal and never emits.
  */
 export const createForecastController = (
     provider: WeatherProvider & {
         atmosphere: (
-            input: WeatherRequest & { includeVisibility: boolean },
+            input: WeatherRequest & { metric: AtmosphereMetric },
         ) => Promise<OpenMeteoAtmospherePoint[]>;
     },
     onChange: (state: ForecastState) => void,
     onError: (kind: 'weather' | 'atmosphere' | 'clouds', error: unknown) => void = () => undefined,
 ) => {
     const weather = channel<WeatherResult>();
-    const atmosphere = channel<OpenMeteoAtmospherePoint[]>();
+    const aod = channel<OpenMeteoAtmospherePoint[]>();
+    const visibility = channel<OpenMeteoAtmospherePoint[]>();
     const clouds = channel<WeatherForecastPayload>();
     let input: ForecastInput | null = null;
     let destroyed = false;
@@ -81,16 +88,23 @@ export const createForecastController = (
         if (destroyed) {
             return;
         }
+        const atmosphereStates = input?.source === 'windy' ? [aod.status, visibility.status] : [aod.status];
         state = {
             requestKey: weather.key,
             points: mergeOpenMeteoAtmosphere(
                 weather.data?.points ?? [],
-                atmosphere.data ?? [],
+                combineAtmospherePoints(aod.data ?? [], visibility.data ?? []),
                 input?.source === 'windy',
             ),
             weatherStatus: weather.status,
             weatherError: weather.error,
-            atmosphereStatus: atmosphere.status,
+            // This aggregate is only a diagnostic summary. Consumers use the metric states.
+            atmosphereStatus: atmosphereStates.includes('loading') ? 'loading'
+                : atmosphereStates.includes('idle') ? 'idle'
+                : atmosphereStates.includes('error') ? 'error'
+                : atmosphereStates.includes('empty') ? 'empty' : 'ready',
+            aodStatus: aod.status,
+            visibilityStatus: input?.source === 'windy' ? visibility.status : weather.status,
             cloudStatus: input?.source === 'windy' ? weather.status : clouds.status,
             cloudForecast:
                 input?.source === 'windy' ? (weather.data?.cloudForecast ?? null) : clouds.data,
@@ -145,7 +159,7 @@ export const createForecastController = (
         }
     };
 
-    const start = (kind: 'weather' | 'atmosphere' | 'clouds') => {
+    const start = (kind: 'weather' | AtmosphereMetric | 'clouds') => {
         if (destroyed || !input?.contextReady) {
             return;
         }
@@ -157,16 +171,17 @@ export const createForecastController = (
                 result => (result.points.length ? 'ready' : 'empty'),
                 'weather',
             );
-        } else if (kind === 'atmosphere') {
+        } else if (kind === 'aod' || kind === 'visibility') {
+            if (kind === 'visibility' && request.source !== 'windy') { return; }
             void load(
-                atmosphere,
+                kind === 'aod' ? aod : visibility,
                 signal =>
                     provider.atmosphere({
                         ...request,
                         signal,
-                        includeVisibility: request.source === 'windy',
+                        metric: kind,
                     }),
-                result => (result.length ? 'ready' : 'error'),
+                result => (result.some(point => kind === 'aod' ? point.aod550 !== null : point.visibilityKm !== null) ? 'ready' : 'empty'),
                 'atmosphere',
             );
         } else {
@@ -193,11 +208,12 @@ export const createForecastController = (
                 next.requestedAt,
                 next.source,
             );
-            const atmosphereKey = `${next.source}|${buildOpenMeteoRequestKey(locationKey, next.requestedAt)}`;
+            const atmosphereKey = buildOpenMeteoRequestKey(locationKey, next.requestedAt);
             let changed = false;
             for (const [target, key] of [
                 [weather, weatherKey],
-                [atmosphere, atmosphereKey],
+                [aod, atmosphereKey],
+                [visibility, next.source === 'windy' ? atmosphereKey : ''],
                 [clouds, weatherKey],
             ] as const) {
                 if (target.key !== key || (!next.contextReady && target.status !== 'idle')) {
@@ -214,16 +230,17 @@ export const createForecastController = (
             if (next.visible && weather.status === 'idle') {
                 start('weather');
             }
-            if (next.visible && atmosphere.status === 'idle') {
-                start('atmosphere');
-            }
+            if (next.visible && aod.status === 'idle') { start('aod'); }
+            if (next.visible && next.source === 'windy' && visibility.status === 'idle') { start('visibility'); }
             if (next.cloudsVisible && next.source === 'open-meteo' && clouds.status === 'idle') {
                 start('clouds');
             }
             // Return synchronous transitions so reactive callers can declare the output dependency.
             return state;
         },
-        retry(kind: 'weather' | 'atmosphere' | 'clouds') {
+        retry(kind: 'weather' | AtmosphereMetric | 'clouds') {
+            if ((kind === 'aod' || kind === 'visibility')
+                && !['error', 'empty'].includes((kind === 'aod' ? aod : visibility).status)) { return; }
             start(kind === 'clouds' && input?.source === 'windy' ? 'weather' : kind);
         },
         /** Explicit relocation, including the same coordinates, refreshes the whole forecast context. */
@@ -233,7 +250,8 @@ export const createForecastController = (
             }
             input = input ? { ...input, contextReady: false } : null;
             reset(weather);
-            reset(atmosphere);
+            reset(aod);
+            reset(visibility);
             reset(clouds);
             publish();
         },
@@ -245,16 +263,16 @@ export const createForecastController = (
             if (weather.status === 'loading') {
                 reset(weather);
             }
-            if (atmosphere.status === 'loading') {
-                reset(atmosphere);
-            }
+            if (aod.status === 'loading') { reset(aod); }
+            if (visibility.status === 'loading') { reset(visibility); }
             publish();
         },
         destroy() {
             destroyed = true;
             input = null;
             reset(weather);
-            reset(atmosphere);
+            reset(aod);
+            reset(visibility);
             reset(clouds);
         },
     };

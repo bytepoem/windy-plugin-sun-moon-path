@@ -812,8 +812,8 @@
                     source={weatherSource}
                     status={weatherStatus}
                     errorMessage={weatherErrorMessage}
-                    {atmosphereStatus}
-                    {atmosphereErrorMessage}
+                    {aodStatus}
+                    {visibilityStatus}
                     language={uiLanguage}
                     {timeZone}
                     currentTimestamp={currentInstant.getTime()}
@@ -1014,8 +1014,8 @@
                 source={weatherSource}
                 status={weatherStatus}
                 errorMessage={weatherErrorMessage}
-                {atmosphereStatus}
-                {atmosphereErrorMessage}
+                {aodStatus}
+                {visibilityStatus}
                 language={uiLanguage}
                 {timeZone}
                 currentTimestamp={currentInstant.getTime()}
@@ -1134,7 +1134,7 @@
         scheduleReopenAfterHome,
         shouldRefreshSameLocationImmediately,
     } from './location';
-    import { fetchOpenMeteoAtmosphere } from './openMeteo';
+    import { fetchOpenMeteoAtmosphereMetric, type AtmosphereMetric } from './openMeteo';
     import { createForecastController, emptyForecastState } from './forecastController';
     import { windyWeatherProvider } from './windyWeatherProvider';
     import {
@@ -1456,7 +1456,7 @@
     let forecastState = emptyForecastState();
     const forecastController = createForecastController({
         ...windyWeatherProvider,
-        atmosphere: request => fetchOpenMeteoAtmosphere(request),
+        atmosphere: request => fetchOpenMeteoAtmosphereMetric(request.metric, request),
     }, state => {
         forecastState = state;
     }, (kind, error) => diagnosticRuntime?.error(kind, error));
@@ -1475,8 +1475,8 @@
     $: weatherErrorMessage = weatherStatus === 'error'
         ? [text.weatherLoadError, forecastState.weatherError].filter(Boolean).join(' ')
         : '';
-    $: atmosphereStatus = forecastState.atmosphereStatus;
-    $: atmosphereErrorMessage = atmosphereStatus === 'error' ? text.atmosphereLoadError : '';
+    $: aodStatus = forecastState.aodStatus;
+    $: visibilityStatus = forecastState.visibilityStatus;
     let lightPollutionPoint: LightPollutionPoint | null = null;
     let lightPollutionStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
     let lightPollutionErrorMessage = '';
@@ -2582,7 +2582,7 @@
 
     const retryCloudWeather = () => forecastController.retry('clouds');
     const retryWeather = () => forecastController.retry('weather');
-    const retryAtmosphere = () => forecastController.retry('atmosphere');
+    const retryAtmosphere = (event: CustomEvent<AtmosphereMetric>) => forecastController.retry(event.detail);
 
     /** Load the configured update channel while ignoring closed or superseded requests. */
     const refreshPluginUpdate = async ({ preserveAvailableResult = false } = {}) => {
@@ -3007,7 +3007,7 @@
     const observationEvidenceState = (slot: ObservationWindow): ObservationEvidenceState =>
         resolveObservationEvidenceState({
             weatherStatus,
-            atmosphereStatus,
+            visibilityStatus,
             dateCoverage: selectedWeatherDate.coverage,
             evidence: slot.evidence,
         });

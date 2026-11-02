@@ -165,7 +165,6 @@ export const translations: Record<UiLanguage, {
     aboutPluginLinkCopyError: string;
     aboutUpdateTypeLabels: Record<UpdateNoteKind, string>;
     weatherLoadError: string;
-    atmosphereLoadError: string;
     timeZoneLoadError: string;
     timeZoneInvalidError: string;
     astronomyLoadError: string;
@@ -301,7 +300,7 @@ export const translations: Record<UiLanguage, {
             },
             weatherSources: {
                 title: '天气数据源与模型',
-                description: '天气表、观测时段与收藏对比共用所选数据源和模型。云高与地图云图来自 Windy，AOD 来自 CAMS；Windy 能见度由 Open-Meteo 补充。缺测显示空值，可手动重试。',
+                description: '天气表、观测时段与收藏对比共用所选数据源和模型。云高与地图云图来自 Windy，AOD 来自 CAMS；Windy 能见度由 Open-Meteo 补充。AOD 与补充能见度独立加载，天气表可分别重试失败项；Open-Meteo 天气保留所选模型的能见度。收藏对比保留已取得的单项数据，失败项显示「加载失败」，用「刷新对比」重新加载整个对比。缺测仍为未知。',
             },
             units: {
                 title: '显示单位',
@@ -440,7 +439,6 @@ export const translations: Record<UiLanguage, {
             fixed: '修复',
         },
         weatherLoadError: '无法取得天气模式数据，请稍后重试。',
-        atmosphereLoadError: '无法取得 Open-Meteo 补充大气数据。',
         timeZoneLoadError: '无法取得观察点时区，请稍后重试。',
         timeZoneInvalidError: 'Windy 返回的观察点时区无效，请稍后重试。',
         astronomyLoadError: '日月方位计算失败，请稍后重试。',
@@ -592,7 +590,7 @@ export const translations: Record<UiLanguage, {
             },
             weatherSources: {
                 title: 'Weather sources and models',
-                description: 'Weather, observing windows and comparisons share the selected source and model. Cloud heights and map clouds use Windy; AOD uses CAMS. Open-Meteo supplements Windy visibility. Missing data stays empty and can be retried.',
+                description: 'Weather, observing windows and comparisons share the selected source and model. Cloud heights and map clouds use Windy; AOD uses CAMS. AOD and supplementary Windy visibility load independently and can be retried separately in the weather table. Open-Meteo weather retains model visibility. Comparisons retain available metrics, mark failed ones as Load failed and use Refresh comparison to reload the entire comparison. Missing values remain unknown.',
             },
             units: {
                 title: 'Display units',
@@ -731,7 +729,6 @@ export const translations: Record<UiLanguage, {
             fixed: 'Fixed',
         },
         weatherLoadError: 'Unable to load weather model data. Please try again.',
-        atmosphereLoadError: 'Unable to load supplementary atmosphere data from Open-Meteo.',
         timeZoneLoadError: 'Unable to load the observer time zone. Please try again.',
         timeZoneInvalidError: 'Windy returned an invalid observer time zone. Please try again.',
         astronomyLoadError: 'Unable to calculate sun and moon directions. Please try again.',

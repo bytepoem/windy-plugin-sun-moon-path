@@ -16,21 +16,21 @@ export type ObservationEvidenceState =
  */
 export const resolveObservationEvidenceState = ({
     weatherStatus,
-    atmosphereStatus,
+    visibilityStatus,
     dateCoverage,
     evidence,
 }: {
     weatherStatus: WeatherLoadStatus;
-    atmosphereStatus: WeatherLoadStatus;
+    visibilityStatus: WeatherLoadStatus;
     dateCoverage: WeatherDateCoverage;
     evidence: ObservationWindowEvidence;
 }): ObservationEvidenceState => {
     if (weatherStatus === 'idle' || weatherStatus === 'loading'
-        || atmosphereStatus === 'idle' || atmosphereStatus === 'loading') {
+        || visibilityStatus === 'idle' || visibilityStatus === 'loading') {
         return 'loading';
     }
     if (weatherStatus === 'error' || weatherStatus === 'empty'
-        || atmosphereStatus === 'error' || atmosphereStatus === 'empty') {
+        || visibilityStatus === 'error' || visibilityStatus === 'empty') {
         return 'unavailable';
     }
     if ((dateCoverage === 'before-range' || dateCoverage === 'after-range')

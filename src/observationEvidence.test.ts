@@ -29,16 +29,16 @@ describe('observation evidence presentation state', () => {
     it('waits for both weather data sources', () => {
         expect(resolveObservationEvidenceState({
             weatherStatus: 'ready',
-            atmosphereStatus: 'loading',
+            visibilityStatus: 'loading',
             dateCoverage: 'covered',
             evidence: completeEvidence(),
         })).toBe('loading');
     });
 
-    it('does not present failed atmosphere data as complete evidence', () => {
+    it('does not present missing visibility as complete evidence', () => {
         expect(resolveObservationEvidenceState({
             weatherStatus: 'ready',
-            atmosphereStatus: 'error',
+            visibilityStatus: 'error',
             dateCoverage: 'covered',
             evidence: completeEvidence({ visibilityKm: null }),
         })).toBe('unavailable');
@@ -48,13 +48,13 @@ describe('observation evidence presentation state', () => {
         const noCoverage = completeEvidence({ weatherSampleCount: 0, weatherCoverage: 'none' });
         expect(resolveObservationEvidenceState({
             weatherStatus: 'ready',
-            atmosphereStatus: 'ready',
+            visibilityStatus: 'ready',
             dateCoverage: 'after-range',
             evidence: noCoverage,
         })).toBe('outside-range');
         expect(resolveObservationEvidenceState({
             weatherStatus: 'ready',
-            atmosphereStatus: 'ready',
+            visibilityStatus: 'ready',
             dateCoverage: 'missing',
             evidence: noCoverage,
         })).toBe('missing');
@@ -63,7 +63,7 @@ describe('observation evidence presentation state', () => {
     it('keeps partial interval coverage distinct from complete evidence', () => {
         expect(resolveObservationEvidenceState({
             weatherStatus: 'ready',
-            atmosphereStatus: 'ready',
+            visibilityStatus: 'ready',
             dateCoverage: 'covered',
             evidence: completeEvidence({ weatherCoverage: 'partial' }),
         })).toBe('partial');
@@ -72,13 +72,13 @@ describe('observation evidence presentation state', () => {
     it('requires all three displayed metric ranges before returning ready', () => {
         expect(resolveObservationEvidenceState({
             weatherStatus: 'ready',
-            atmosphereStatus: 'ready',
+            visibilityStatus: 'ready',
             dateCoverage: 'covered',
             evidence: completeEvidence({ totalCloudPercent: null }),
         })).toBe('unavailable');
         expect(resolveObservationEvidenceState({
             weatherStatus: 'ready',
-            atmosphereStatus: 'ready',
+            visibilityStatus: 'ready',
             dateCoverage: 'covered',
             evidence: completeEvidence(),
         })).toBe('ready');

@@ -80,10 +80,30 @@ const createPort = (): FavoriteComparisonPlannerPort => ({
 });
 
 describe('favorite comparison planner', () => {
+    it.each(['aod', 'visibility'] as const)('retains the other metric when %s fails', async failed => {
+        const port = createPort();
+        vi.mocked(port.getAtmosphere).mockImplementation(async metric => {
+            if (metric === failed) { throw new TypeError('Failed to fetch'); }
+            return [{ timestamp: Date.UTC(2026, 7, 27, 16), aod550: 0.12, visibilityKm: 26 }];
+        });
+        const signal = new AbortController().signal;
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-08-28', requestedAt: Date.UTC(2026, 7, 27, 17), signal,
+        });
+        expect(session.preparedTargets[0]).toMatchObject({
+            aodStatus: failed === 'aod' ? 'error' : 'ready',
+            visibilityStatus: failed === 'visibility' ? 'error' : 'ready',
+        });
+        const results = await session.loadModel('ecmwf', signal);
+        expect(results[0].dailyWeatherPoints[0]).toMatchObject({
+            aod550: failed === 'aod' ? null : 0.12,
+            visibilityKm: failed === 'visibility' ? null : 26,
+        });
+    });
     it('retains partial failures but excludes expected no-coverage errors', async () => {
         const port = createPort();
         const failure = new TypeError('Failed to fetch');
-        port.getAtmosphere = vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce([]);
+        port.getAtmosphere = vi.fn().mockResolvedValue([]).mockRejectedValueOnce(failure);
         port.getLightPollution = vi.fn().mockRejectedValue(new LightPollutionOutOfBoundsError());
         const session = await createFavoriteComparisonPlanner(port).prepare({
             targets: targets.map(target => ({ ...target, knownLightPollution: undefined })),
@@ -131,7 +151,7 @@ describe('favorite comparison planner', () => {
         const session = await createFavoriteComparisonPlanner(port).prepare({ targets, dateInput: '2026-08-28', requestedAt, signal, source: 'open-meteo' });
         const results = await session.loadModel('icon', signal);
         expect(port.getWeather).toHaveBeenCalledWith(targets[0].location, 'icon', requestedAt, signal, 'open-meteo');
-        expect(port.getAtmosphere).toHaveBeenCalledWith(targets[0].location, requestedAt, signal, 'open-meteo');
+        expect(port.getAtmosphere).toHaveBeenCalledWith('aod', targets[0].location, requestedAt, signal, 'open-meteo');
         expect(results.flatMap(result => result.windows).every(window => window.evidence.visibilityKm === null)).toBe(true);
     });
     it('prepares fixed context once and only reloads Windy data when the model changes', async () => {
@@ -149,13 +169,13 @@ describe('favorite comparison planner', () => {
         expect(port.getTimeZone).toHaveBeenCalledTimes(2);
         expect(port.getElevation).toHaveBeenCalledTimes(1);
         expect(port.getLightPollution).toHaveBeenCalledTimes(1);
-        expect(port.getAtmosphere).toHaveBeenCalledTimes(2);
+        expect(port.getAtmosphere).toHaveBeenCalledTimes(4);
 
         const ecResults = await session.loadModel('ecmwf', signal);
         const gfsResults = await session.loadModel('gfs', signal);
 
         expect(port.getWeather).toHaveBeenCalledTimes(4);
-        expect(port.getAtmosphere).toHaveBeenCalledTimes(2);
+        expect(port.getAtmosphere).toHaveBeenCalledTimes(4);
         expect(ecResults).toHaveLength(2);
         expect(gfsResults).toHaveLength(2);
         expect(ecResults[0].prepared.status).toBe('ready');

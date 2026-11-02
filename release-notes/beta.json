@@ -24,6 +24,10 @@
       {
         "type": "improved",
         "text": "细分天气、大气、光污染和更新检查的错误诊断，便于区分请求失败、数据解析、解压和取消异常。"
+      },
+      {
+        "type": "improved",
+        "text": "AOD 与补充能见度独立加载和重试，一项失败时保留另一项数据；收藏对比显示单项加载失败，AOD 失败不再阻断已有天气观测证据。"
       }
     ]
   },
@@ -50,6 +54,10 @@
       {
         "type": "improved",
         "text": "Added more specific diagnostics for weather, atmosphere, light pollution and update checks to distinguish request, parsing, decompression and cancellation failures."
+      },
+      {
+        "type": "improved",
+        "text": "AOD and supplementary visibility now load and retry independently, retaining available data when either fails. Comparisons identify individual loading failures, and AOD failures no longer block available weather evidence."
       }
     ]
   }

@@ -43,7 +43,7 @@ Language and display options are in Settings; detailed legends are under Setting
 | Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections as cloud-region references for sunrise/sunset glow, fiery clouds and other photography; supports single/layered views and satellite comparison |
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
 | Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
-| Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position |
+| Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position; independent loading and retry for AOD and supplementary visibility |
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
 | Light pollution map | Overlay Lorenz 2025 sky brightness and use location SQM and estimated Bortle values to shortlist dark-sky photography sites |
 | Radar and display | RainViewer overlays using the China NMC stepped reflectivity palette, Windy units, and collapsed, compact or fullscreen mobile views |
@@ -91,6 +91,8 @@ Choose dates within ten days from today at the camera location; actual coverage 
 ### Weather and observing
 
 Open Weather and choose a data source and forecast model in the weather table. Check cloud cover, precipitation, wind and visibility for your target period, alongside observing windows, moonlight and target position. Compare again after changing sources or models, and treat missing values as unknown.
+
+AOD and supplementary visibility for Windy load independently; a failure leaves the other metric available. Select Retry in the corresponding weather-table notice to reload only that metric. Open-Meteo weather retains visibility from the selected model. Favorite comparisons also retain available metrics and mark failed ones as Load failed; Refresh comparison reloads the entire comparison.
 
 ### Favorite comparisons
 
