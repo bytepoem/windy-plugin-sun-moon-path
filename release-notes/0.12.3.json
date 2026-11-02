@@ -1,0 +1,48 @@
+{
+  "version": "0.12.3",
+  "releasedAt": "2026-11-02",
+  "zh": {
+    "title": "大气数据加载与诊断优化",
+    "summary": "AOD 与补充能见度独立加载和重试，保留可用天气数据，并完善光污染取消处理与错误诊断。",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "修复光污染数据加载被取消后仍可能继续下载或返回结果的问题。"
+      },
+      {
+        "type": "improved",
+        "text": "AOD 与补充能见度分别加载和重试，一项失败时保留另一项数据；收藏对比明确标出单项加载失败。"
+      },
+      {
+        "type": "fixed",
+        "text": "AOD 加载失败时，仍可查看已有的天气观测证据。"
+      },
+      {
+        "type": "improved",
+        "text": "完善天气、大气、光污染与更新检查的错误诊断，便于反馈与排查加载问题。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Atmosphere loading and diagnostics",
+    "summary": "Independent loading and retry for AOD and supplementary visibility, preserving available weather data, with improved light pollution cancellation and error diagnostics.",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed cancelled light pollution requests continuing to download or return results."
+      },
+      {
+        "type": "improved",
+        "text": "AOD and supplementary visibility load and retry independently, retaining available data when either fails. Favorite comparisons identify individual loading failures."
+      },
+      {
+        "type": "fixed",
+        "text": "Available weather evidence remains visible when AOD fails to load."
+      },
+      {
+        "type": "improved",
+        "text": "Improved error diagnostics for weather, atmosphere, light pollution and update checks to help report and investigate loading problems."
+      }
+    ]
+  }
+}

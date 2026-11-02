@@ -1,63 +1,47 @@
 {
-  "version": "0.12.2",
-  "releasedAt": "2026-10-24",
+  "version": "0.12.3",
+  "releasedAt": "2026-11-02",
   "zh": {
-    "title": "航海时区与加载修复",
-    "summary": "修复海洋位置时区、收藏天气与云层按钮问题，并完善异常诊断。",
+    "title": "大气数据加载与诊断优化",
+    "summary": "AOD 与补充能见度独立加载和重试，保留可用天气数据，并完善光污染取消处理与错误诊断。",
     "items": [
       {
         "type": "fixed",
-        "text": "修复选择海洋位置时航海时区无法识别，导致天文事件和收藏对比加载失败的问题。"
+        "text": "修复光污染数据加载被取消后仍可能继续下载或返回结果的问题。"
+      },
+      {
+        "type": "improved",
+        "text": "AOD 与补充能见度分别加载和重试，一项失败时保留另一项数据；收藏对比明确标出单项加载失败。"
       },
       {
         "type": "fixed",
-        "text": "修复收藏对比在夜间窗口无预报时天气行空白，按所选当地日期展示可用天气；修复云层高度未知时地图范围按钮无响应，以及离开云层页后「全部」仍不可点击。"
+        "text": "AOD 加载失败时，仍可查看已有的天气观测证据。"
       },
       {
         "type": "improved",
-        "text": "完善时区和收藏对比加载异常的诊断信息，便于排查失败原因。"
-      },
-      {
-        "type": "fixed",
-        "text": "完善光污染数据加载的取消处理，避免已取消的请求继续下载或返回缓存结果，并分离下载与解压流程。"
-      },
-      {
-        "type": "improved",
-        "text": "细分天气、大气、光污染和更新检查的错误诊断，便于区分请求失败、数据解析、解压和取消异常。"
-      },
-      {
-        "type": "improved",
-        "text": "AOD 与补充能见度独立加载和重试，一项失败时保留另一项数据；收藏对比显示单项加载失败，AOD 失败不再阻断已有天气观测证据。"
+        "text": "完善天气、大气、光污染与更新检查的错误诊断，便于反馈与排查加载问题。"
       }
     ]
   },
   "en": {
-    "title": "Nautical time zones and loading fixes",
-    "summary": "Fixes ocean time zones, comparison weather and cloud controls, with improved diagnostics.",
+    "title": "Atmosphere loading and diagnostics",
+    "summary": "Independent loading and retry for AOD and supplementary visibility, preserving available weather data, with improved light pollution cancellation and error diagnostics.",
     "items": [
       {
         "type": "fixed",
-        "text": "Fixed astronomy events and favorite comparisons failing to load at ocean locations with nautical time zones."
+        "text": "Fixed cancelled light pollution requests continuing to download or return results."
+      },
+      {
+        "type": "improved",
+        "text": "AOD and supplementary visibility load and retry independently, retaining available data when either fails. Favorite comparisons identify individual loading failures."
       },
       {
         "type": "fixed",
-        "text": "Fixed empty comparison weather rows when night windows lack forecasts by using available forecasts for the selected local date. Fixed map controls when cloud heights are unknown and restored All after leaving cloud planning."
+        "text": "Available weather evidence remains visible when AOD fails to load."
       },
       {
         "type": "improved",
-        "text": "Improved diagnostics for time zone and favorite comparison loading failures to help identify their causes."
-      },
-      {
-        "type": "fixed",
-        "text": "Improved cancellation of light pollution loading so cancelled requests do not start downloads or return cached results, with separate download and decompression steps."
-      },
-      {
-        "type": "improved",
-        "text": "Added more specific diagnostics for weather, atmosphere, light pollution and update checks to distinguish request, parsing, decompression and cancellation failures."
-      },
-      {
-        "type": "improved",
-        "text": "AOD and supplementary visibility now load and retry independently, retaining available data when either fails. Comparisons identify individual loading failures, and AOD failures no longer block available weather evidence."
+        "text": "Improved error diagnostics for weather, atmosphere, light pollution and update checks to help report and investigate loading problems."
       }
     ]
   }
