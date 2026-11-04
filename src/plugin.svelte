@@ -12,10 +12,9 @@
 >
     {#if !isMobileOrTablet}
         <div
-            class="plugin__title plugin__title--chevron-back panel-title"
-            on:click={() => bcast.emit('rqstOpen', 'menu')}
+            class="plugin__title panel-title"
         >
-            <span class="panel-title__text">{title}</span>
+            <button type="button" class="plugin__title--chevron-back panel-title__text" on:click={() => bcast.emit('rqstOpen', 'menu')}>{title}</button>
             <span class="desktop-map-controls">
                 <button
                     type="button"
@@ -468,7 +467,7 @@
         class:mobile-collapsed-hidden={isMobileCollapsed && minimizeScope === 'hide-summary'}
         aria-label={text.sunMoonPanelLabel}
     >
-        <nav class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
+        <div class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
             <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => selectSummaryTab('events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
             {#if isMobileOrTablet && !isMobileFullscreen}
                 <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
@@ -503,7 +502,7 @@
                     <span class="summary-tab__badge" aria-hidden="true">{text.aboutTabUpdateBadge}</span>
                 {/if}
             </button>
-        </nav>
+        </div>
         {#if pluginUpdateReminderVersion}
             <span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
                 {text.aboutTabUpdateLabel(pluginUpdateReminderVersion)}
@@ -812,8 +811,8 @@
                     source={weatherSource}
                     status={weatherStatus}
                     errorMessage={weatherErrorMessage}
-                    {atmosphereStatus}
-                    {atmosphereErrorMessage}
+                    {aodStatus}
+                    {visibilityStatus}
                     language={uiLanguage}
                     {timeZone}
                     currentTimestamp={currentInstant.getTime()}
@@ -1014,8 +1013,8 @@
                 source={weatherSource}
                 status={weatherStatus}
                 errorMessage={weatherErrorMessage}
-                {atmosphereStatus}
-                {atmosphereErrorMessage}
+                {aodStatus}
+                {visibilityStatus}
                 language={uiLanguage}
                 {timeZone}
                 currentTimestamp={currentInstant.getTime()}
@@ -1058,6 +1057,7 @@
     import store from '@windy/store';
     import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
+    import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
     import CloudNavigation from './CloudNavigation.svelte';
@@ -1134,7 +1134,7 @@
         scheduleReopenAfterHome,
         shouldRefreshSameLocationImmediately,
     } from './location';
-    import { fetchOpenMeteoAtmosphere } from './openMeteo';
+    import { fetchOpenMeteoAtmosphereMetric, type AtmosphereMetric } from './openMeteo';
     import { createForecastController, emptyForecastState } from './forecastController';
     import { windyWeatherProvider } from './windyWeatherProvider';
     import {
@@ -1329,7 +1329,7 @@
         return cachedGpsLocation() || mapCenter;
     };
     const observationPlanner = createObservationPlanner({
-        getTimeZone: async (location, datetime) => (await getTimezoneInfo(location, datetime)).data.TZname,
+        getTimeZone: (location, datetime) => loadObservationTimeZone(() => getTimezoneInfo(location, datetime)),
         getElevation: async location => (await getElevation(location.lat, location.lon)).data,
     });
     const mapOverlayController = createMapOverlayController(map);
@@ -1456,7 +1456,7 @@
     let forecastState = emptyForecastState();
     const forecastController = createForecastController({
         ...windyWeatherProvider,
-        atmosphere: request => fetchOpenMeteoAtmosphere(request),
+        atmosphere: request => fetchOpenMeteoAtmosphereMetric(request.metric, request),
     }, state => {
         forecastState = state;
     }, (kind, error) => diagnosticRuntime?.error(kind, error));
@@ -1475,8 +1475,8 @@
     $: weatherErrorMessage = weatherStatus === 'error'
         ? [text.weatherLoadError, forecastState.weatherError].filter(Boolean).join(' ')
         : '';
-    $: atmosphereStatus = forecastState.atmosphereStatus;
-    $: atmosphereErrorMessage = atmosphereStatus === 'error' ? text.atmosphereLoadError : '';
+    $: aodStatus = forecastState.aodStatus;
+    $: visibilityStatus = forecastState.visibilityStatus;
     let lightPollutionPoint: LightPollutionPoint | null = null;
     let lightPollutionStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
     let lightPollutionErrorMessage = '';
@@ -2561,6 +2561,7 @@
         } finally {
             if (requestId === latestLightPollutionRequestId) {
                 lightPollutionLoadingKey = '';
+                lightPollutionAbortController = null;
             }
         }
     };
@@ -2581,7 +2582,7 @@
 
     const retryCloudWeather = () => forecastController.retry('clouds');
     const retryWeather = () => forecastController.retry('weather');
-    const retryAtmosphere = () => forecastController.retry('atmosphere');
+    const retryAtmosphere = (event: CustomEvent<AtmosphereMetric>) => forecastController.retry(event.detail);
 
     /** Load the configured update channel while ignoring closed or superseded requests. */
     const refreshPluginUpdate = async ({ preserveAvailableResult = false } = {}) => {
@@ -2605,6 +2606,11 @@
                 repositoryUrl,
                 betaNotesUrl: betaReleaseNotesUrl,
                 signal: abortController.signal,
+                onNotesError: error => {
+                    if (!abortController.signal.aborted && requestId === latestPluginUpdateRequestId && isMounted) {
+                        diagnosticRuntime?.error('update', error);
+                    }
+                },
             });
             if (
                 abortController.signal.aborted
@@ -3001,7 +3007,7 @@
     const observationEvidenceState = (slot: ObservationWindow): ObservationEvidenceState =>
         resolveObservationEvidenceState({
             weatherStatus,
-            atmosphereStatus,
+            visibilityStatus,
             dateCoverage: selectedWeatherDate.coverage,
             evidence: slot.evidence,
         });
@@ -3921,7 +3927,21 @@
     }
 
     .panel-title__text {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0;
+        border: 0;
+        color: inherit;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
         white-space: nowrap;
+    }
+
+    .panel-title__text:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 3px;
     }
 
     .desktop-map-controls {

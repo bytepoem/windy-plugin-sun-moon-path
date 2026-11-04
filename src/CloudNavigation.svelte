@@ -94,7 +94,7 @@
         </svg>
     </button>
     {#if open}
-        <div id="cloud-function-menu" class="menu" role="menu" aria-label={language === 'zh' ? '摄影规划功能' : 'Photography planning'} bind:this={menu} on:keydown={menuKeydown}>
+        <div id="cloud-function-menu" class="menu" role="menu" tabindex="-1" aria-label={language === 'zh' ? '摄影规划功能' : 'Photography planning'} bind:this={menu} on:keydown={menuKeydown}>
             {#each views as value, index}
                 <button type="button" role="menuitemradio" aria-checked={view === value} tabindex="-1" data-view={value} on:click={() => select(value)}>
                     <span class="menu-check" aria-hidden="true">{view === value ? '✓' : ''}</span><span class="menu-label">{labels[index]}</span>

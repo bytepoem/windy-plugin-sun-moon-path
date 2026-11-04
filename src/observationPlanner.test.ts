@@ -6,6 +6,7 @@ import {
     ObservationPlannerError,
     selectObservationPaths,
 } from './observationPlanner';
+import { sanitizeDiagnosticError } from './pluginDiagnostics';
 import type { AstronomyTimeline, SolarPath } from './solar';
 import type { WeatherPoint } from './weather';
 
@@ -31,6 +32,20 @@ const weatherPoint = (timestamp: number, overrides: Partial<WeatherPoint> = {}):
 });
 
 describe('observation planner', () => {
+    it('retains the time zone failure classification and permits a later retry', async () => {
+        const getTimeZone = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch secret'))
+            .mockResolvedValueOnce('Asia/Shanghai');
+        const planner = createObservationPlanner({ getTimeZone, getElevation: async () => 0 });
+        let failure: unknown;
+        try {
+            await planner.plan({ location, dateInput: '2026-11-04' });
+        } catch (error) { failure = error; }
+        expect(sanitizeDiagnosticError(failure)).toMatchObject({
+            code: 'TIME_ZONE_UNAVAILABLE', request: { request: 'windy-timezone', kind: 'network' },
+        });
+        expect((await planner.plan({ location, dateInput: '2026-11-04' })).timeZone).toBe('Asia/Shanghai');
+    });
+
     it.each([
         ['Nautical: Etc/GMT+9', 'Etc/GMT+9', '2026-10-19T09:00:00.000Z'],
         ['Nautical: Etc/GMT-12', 'Etc/GMT-12', '2026-10-18T12:00:00.000Z'],

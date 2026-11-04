@@ -1,4 +1,5 @@
 import { WEATHER_PAST_WINDOW_MS, WEATHER_FUTURE_WINDOW_MS, type WeatherModel, type WeatherPoint } from './weather';
+import { RequestFailure, withRequestDiagnostics, type DiagnosticRequest } from './requestDiagnostics';
 import type { Coordinates } from './solar';
 
 const AIR_QUALITY_API_URL = 'https://air-quality-api.open-meteo.com/v1/air-quality';
@@ -24,13 +25,12 @@ export type OpenMeteoAtmospherePoint = {
     aod550: number | null;
     visibilityKm: number | null;
 };
+export type AtmosphereMetric = 'aod' | 'visibility';
 
 export type OpenMeteoFetchOptions = {
     location: Coordinates;
     signal?: AbortSignal;
     fetcher?: FetchLike;
-    /** Windy retains its independent best-match visibility supplement. */
-    includeVisibility?: boolean;
 };
 
 const buildUrl = (baseUrl: string, location: Coordinates, variable: string): URL => {
@@ -45,11 +45,16 @@ const buildUrl = (baseUrl: string, location: Coordinates, variable: string): URL
 };
 
 const fetchPayload = async (url: URL, signal: AbortSignal | undefined, fetcher: FetchLike): Promise<OpenMeteoPayload> => {
-    const response = await fetcher(url, { signal });
-    if (!response.ok) {
-        throw new Error(`Open-Meteo HTTP ${response.status}`);
-    }
-    return response.json() as Promise<OpenMeteoPayload>;
+    const request: DiagnosticRequest = url.hostname.startsWith('air-quality') ? 'open-meteo-aod'
+        : url.searchParams.get('hourly') === 'visibility' ? 'open-meteo-visibility' : 'open-meteo-weather';
+    const response = await withRequestDiagnostics(request, 'request', signal, async () => {
+        const result = await fetcher(url, { signal });
+        if (!result.ok) {
+            throw new RequestFailure(new Error(`Open-Meteo HTTP ${result.status}`), request, 'request', signal, result.status);
+        }
+        return result;
+    });
+    return withRequestDiagnostics(request, 'parse', signal, () => response.json() as Promise<OpenMeteoPayload>);
 };
 
 const numericArray = (value: unknown): (number | null)[] =>
@@ -73,38 +78,31 @@ const seriesByTimestamp = (
     }));
 };
 
-export const fetchOpenMeteoAtmosphere = async ({
+/** Load one independent metric. A failed endpoint cannot discard the other metric. */
+export const fetchOpenMeteoAtmosphereMetric = async (metric: AtmosphereMetric, {
     location,
     signal,
     fetcher = fetch,
-    includeVisibility = true,
 }: OpenMeteoFetchOptions): Promise<OpenMeteoAtmospherePoint[]> => {
-    const [airQuality, forecast] = await Promise.all([
-        fetchPayload(
-            buildUrl(AIR_QUALITY_API_URL, location, 'aerosol_optical_depth'),
-            signal,
-            fetcher,
-        ),
-        includeVisibility ? fetchPayload(
-            buildUrl(FORECAST_API_URL, location, 'visibility'),
-            signal,
-            fetcher,
-        ) : Promise.resolve({} as OpenMeteoPayload),
-    ]);
-    const aodByTimestamp = seriesByTimestamp(airQuality, 'aerosol_optical_depth', value => value);
-    const visibilityByTimestamp = seriesByTimestamp(
-        forecast,
-        'visibility',
-        value => Math.round(value / 100) / 10,
-    );
-    const timestamps = [...new Set([...aodByTimestamp.keys(), ...visibilityByTimestamp.keys()])]
-        .sort((left, right) => left - right);
+    const aod = metric === 'aod';
+    const payload = await fetchPayload(buildUrl(aod ? AIR_QUALITY_API_URL : FORECAST_API_URL,
+        location, aod ? 'aerosol_optical_depth' : 'visibility'), signal, fetcher);
+    const series = seriesByTimestamp(payload, aod ? 'aerosol_optical_depth' : 'visibility',
+        value => aod ? value : Math.round(value / 100) / 10);
+    return [...series].map(([timestamp, value]) => ({
+        timestamp, aod550: aod ? value : null, visibilityKm: aod ? null : value,
+    })).sort((left, right) => left.timestamp - right.timestamp);
+};
 
-    return timestamps.map(timestamp => ({
-        timestamp,
-        aod550: aodByTimestamp.get(timestamp) ?? null,
-        visibilityKm: visibilityByTimestamp.get(timestamp) ?? null,
-    }));
+/** Join independent results by exact timestamp; unavailable values remain unknown. */
+export const combineAtmospherePoints = (aod: OpenMeteoAtmospherePoint[], visibility: OpenMeteoAtmospherePoint[]) => {
+    const points = new Map<number, OpenMeteoAtmospherePoint>();
+    for (const point of aod) { points.set(point.timestamp, { ...point, visibilityKm: null }); }
+    for (const point of visibility) {
+        points.set(point.timestamp, { timestamp: point.timestamp,
+            aod550: points.get(point.timestamp)?.aod550 ?? null, visibilityKm: point.visibilityKm });
+    }
+    return [...points.values()].sort((left, right) => left.timestamp - right.timestamp);
 };
 
 export const buildOpenMeteoRequestKey = (locationKey: string, timestamp: number): string =>

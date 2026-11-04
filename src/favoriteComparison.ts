@@ -17,8 +17,8 @@ import {
     type WeatherPoint,
 } from './weather';
 import { LightPollutionOutOfBoundsError, type LightPollutionPoint } from './lightPollution';
-import { ObservationPlannerError, resolveObservationTimeZone } from './observationTimeZone';
-import type { OpenMeteoAtmospherePoint } from './openMeteo';
+import { ObservationPlannerError, resolveObservationTimeZone, unavailableObservationTimeZone } from './observationTimeZone';
+import { combineAtmospherePoints, type AtmosphereMetric, type OpenMeteoAtmospherePoint } from './openMeteo';
 
 export const FAVORITE_COMPARISON_MIN_TARGETS = 2;
 export const FAVORITE_COMPARISON_MAX_TARGETS = 5;
@@ -42,7 +42,8 @@ export type FavoriteComparisonPreparedTarget = {
     lightPollution: LightPollutionPoint | null;
     lightPollutionStatus: 'ready' | 'error';
     atmospherePoints: OpenMeteoAtmospherePoint[];
-    atmosphereStatus: 'ready' | 'empty' | 'error';
+    aodStatus: 'ready' | 'empty' | 'error';
+    visibilityStatus: 'ready' | 'empty' | 'error' | 'not-requested';
     diagnosticErrors?: unknown[];
     timeline: AstronomyTimeline;
 } | {
@@ -65,6 +66,7 @@ export type FavoriteComparisonPlannerPort = {
     getTimeZone: (location: Coordinates, datetime: string) => Promise<string>;
     getElevation: (location: Coordinates, signal: AbortSignal) => Promise<number>;
     getAtmosphere: (
+        metric: AtmosphereMetric,
         location: Coordinates,
         requestedAt: number,
         signal: AbortSignal,
@@ -226,14 +228,17 @@ export const createFavoriteComparisonPlanner = (
                     const [
                         timeZoneResult,
                         elevationResult,
-                        atmosphereResult,
+                        aodResult,
+                        visibilityResult,
                         lightPollutionResult,
                     ] = await Promise.allSettled([
                         port.getTimeZone(target.location, datetime),
                         target.knownElevationM === undefined
                             ? port.getElevation(target.location, signal)
                             : Promise.resolve(target.knownElevationM),
-                        port.getAtmosphere(target.location, requestedAt, signal, source),
+                        port.getAtmosphere('aod', target.location, requestedAt, signal, source),
+                        source === 'windy' ? port.getAtmosphere('visibility', target.location, requestedAt, signal, source)
+                            : Promise.resolve([] as OpenMeteoAtmospherePoint[]),
                         target.knownLightPollution === undefined
                             ? port.getLightPollution(target.location, signal)
                             : Promise.resolve(target.knownLightPollution),
@@ -245,7 +250,7 @@ export const createFavoriteComparisonPlanner = (
                             target,
                             status: 'error',
                             errorCode: 'TIME_ZONE_UNAVAILABLE',
-                            diagnosticError: new ObservationPlannerError('TIME_ZONE_UNAVAILABLE'),
+                            diagnosticError: unavailableObservationTimeZone(timeZoneResult.reason),
                         } satisfies FavoriteComparisonPreparedTarget;
                     }
                     let timeZone: string;
@@ -265,9 +270,9 @@ export const createFavoriteComparisonPlanner = (
                         && Number.isFinite(elevationResult.value)
                         ? Math.max(0, elevationResult.value)
                         : 0;
-                    const atmospherePoints = atmosphereResult.status === 'fulfilled'
-                        ? atmosphereResult.value
-                        : [];
+                    const aodPoints = aodResult.status === 'fulfilled' ? aodResult.value : [];
+                    const visibilityPoints = visibilityResult.status === 'fulfilled' ? visibilityResult.value : [];
+                    const atmospherePoints = combineAtmospherePoints(aodPoints, visibilityPoints);
                     const lightPollution = lightPollutionResult.status === 'fulfilled'
                         ? lightPollutionResult.value
                         : null;
@@ -280,15 +285,16 @@ export const createFavoriteComparisonPlanner = (
                         lightPollution,
                         lightPollutionStatus: lightPollutionResult.status === 'fulfilled' ? 'ready' : 'error',
                         atmospherePoints,
-                        atmosphereStatus: atmosphereResult.status === 'rejected'
-                            ? 'error'
-                            : atmospherePoints.length > 0 ? 'ready' : 'empty',
+                        aodStatus: aodResult.status === 'rejected' ? 'error'
+                            : aodPoints.some(point => point.aod550 !== null) ? 'ready' : 'empty',
+                        visibilityStatus: source !== 'windy' ? 'not-requested'
+                            : visibilityResult.status === 'rejected' ? 'error'
+                            : visibilityPoints.some(point => point.visibilityKm !== null) ? 'ready' : 'empty',
                         // Keep failures local until the UI accepts this request's result.
-                        diagnosticErrors: [atmosphereResult, lightPollutionResult]
+                        diagnosticErrors: [aodResult, visibilityResult, lightPollutionResult]
                             .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
                             .map(result => result.reason)
-                            .filter(error => !(error instanceof LightPollutionOutOfBoundsError)
-                                && !(error instanceof Error && error.name === 'AbortError')),
+                            .filter(error => !(error instanceof LightPollutionOutOfBoundsError)),
                         timeline: calculateAstronomyTimeline({
                             dateInput,
                             timeZone,
@@ -361,10 +367,9 @@ export const createFavoriteComparisonPlanner = (
                                     }),
                                 } satisfies FavoriteComparisonResult;
                             } catch (error) {
-                                if (
-                                    modelSignal.aborted
-                                    || (error instanceof Error && error.name === 'AbortError')
-                                ) {
+                                // Only this owner can confirm cancellation. A provider's AbortError
+                                // with an active signal is a failed current request, not a silent exit.
+                                if (modelSignal.aborted) {
                                     throw abortError();
                                 }
                                 const atmosphereOnlyPoints = mergeComparisonWeather(

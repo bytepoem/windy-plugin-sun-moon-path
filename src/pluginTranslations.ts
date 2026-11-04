@@ -81,6 +81,7 @@ export const translations: Record<UiLanguage, {
     lightPollutionOutOfBounds: string;
     aboutDescription: string;
     guideHeading: string;
+    keyboardNavigationDescription: string;
     featureGuideHeading: string;
     buttonHintsHeading: string;
     buttonHintsDescription: string;
@@ -165,7 +166,6 @@ export const translations: Record<UiLanguage, {
     aboutPluginLinkCopyError: string;
     aboutUpdateTypeLabels: Record<UpdateNoteKind, string>;
     weatherLoadError: string;
-    atmosphereLoadError: string;
     timeZoneLoadError: string;
     timeZoneInvalidError: string;
     astronomyLoadError: string;
@@ -291,6 +291,7 @@ export const translations: Record<UiLanguage, {
         lightPollutionOutOfBounds: '该地点超出光污染数据范围（南纬 65° 至北纬 75°）。',
         aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30m、事件时刻和后 30m三个方位。',
         guideHeading: '地图说明',
+        keyboardNavigationDescription: '桌面标题返回按钮支持键盘聚焦；云层功能菜单用方向键选择、Enter 确认、Escape 关闭。横向表格可聚焦后使用键盘滚动。',
         featureGuideHeading: '功能说明',
         buttonHintsHeading: '按钮提示',
         buttonHintsDescription: '将鼠标停留在图标或紧凑型按钮上片刻，可查看该按钮的功能说明；按钮的键盘和屏幕阅读器名称保持一致。',
@@ -301,7 +302,7 @@ export const translations: Record<UiLanguage, {
             },
             weatherSources: {
                 title: '天气数据源与模型',
-                description: '天气表、观测时段与收藏对比共用所选数据源和模型。云高与地图云图来自 Windy，AOD 来自 CAMS；Windy 能见度由 Open-Meteo 补充。缺测显示空值，可手动重试。',
+                description: '天气表、观测时段与收藏对比共用所选数据源和模型。云高与地图云图来自 Windy，AOD 来自 CAMS；Windy 能见度由 Open-Meteo 补充。AOD 与补充能见度独立加载，天气表可分别重试失败项；Open-Meteo 天气保留所选模型的能见度。收藏对比保留已取得的单项数据，失败项显示「加载失败」，用「刷新对比」重新加载整个对比。缺测仍为未知。',
             },
             units: {
                 title: '显示单位',
@@ -440,7 +441,6 @@ export const translations: Record<UiLanguage, {
             fixed: '修复',
         },
         weatherLoadError: '无法取得天气模式数据，请稍后重试。',
-        atmosphereLoadError: '无法取得 Open-Meteo 补充大气数据。',
         timeZoneLoadError: '无法取得观察点时区，请稍后重试。',
         timeZoneInvalidError: 'Windy 返回的观察点时区无效，请稍后重试。',
         astronomyLoadError: '日月方位计算失败，请稍后重试。',
@@ -582,6 +582,7 @@ export const translations: Record<UiLanguage, {
         lightPollutionOutOfBounds: 'This location is outside atlas coverage (65°S to 75°N).',
         aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30m before, at the event, and 30m after.',
         guideHeading: 'Map guide',
+        keyboardNavigationDescription: 'Focus the desktop title back button with the keyboard. In the cloud function menu, use arrow keys to choose, Enter to confirm and Escape to close. Focus horizontal tables to scroll with the keyboard.',
         featureGuideHeading: 'Feature guide',
         buttonHintsHeading: 'Button hints',
         buttonHintsDescription: 'Pause the pointer over an icon or compact control to see what it does. The same name is also exposed to keyboard and screen-reader users.',
@@ -592,7 +593,7 @@ export const translations: Record<UiLanguage, {
             },
             weatherSources: {
                 title: 'Weather sources and models',
-                description: 'Weather, observing windows and comparisons share the selected source and model. Cloud heights and map clouds use Windy; AOD uses CAMS. Open-Meteo supplements Windy visibility. Missing data stays empty and can be retried.',
+                description: 'Weather, observing windows and comparisons share the selected source and model. Cloud heights and map clouds use Windy; AOD uses CAMS. AOD and supplementary Windy visibility load independently and can be retried separately in the weather table. Open-Meteo weather retains model visibility. Comparisons retain available metrics, mark failed ones as Load failed and use Refresh comparison to reload the entire comparison. Missing values remain unknown.',
             },
             units: {
                 title: 'Display units',
@@ -731,7 +732,6 @@ export const translations: Record<UiLanguage, {
             fixed: 'Fixed',
         },
         weatherLoadError: 'Unable to load weather model data. Please try again.',
-        atmosphereLoadError: 'Unable to load supplementary atmosphere data from Open-Meteo.',
         timeZoneLoadError: 'Unable to load the observer time zone. Please try again.',
         timeZoneInvalidError: 'Windy returned an invalid observer time zone. Please try again.',
         astronomyLoadError: 'Unable to calculate sun and moon directions. Please try again.',

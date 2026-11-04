@@ -5,7 +5,7 @@ import {
     type ForecastInput,
 } from './forecastController';
 import { transformWeatherPayload, type WeatherForecastPayload } from './weather';
-import type { OpenMeteoAtmospherePoint } from './openMeteo';
+import type { AtmosphereMetric, OpenMeteoAtmospherePoint } from './openMeteo';
 import type { WeatherRequest, WeatherResult } from './weatherProvider';
 
 const now = Date.UTC(2026, 8, 11, 5);
@@ -58,9 +58,11 @@ const harness = () => {
         task: ReturnType<typeof deferred<WeatherForecastPayload>>;
     }[] = [];
     const atmosphereRequests: {
-        request: WeatherRequest & { includeVisibility: boolean };
+        request: WeatherRequest & { metric: AtmosphereMetric };
         task: ReturnType<typeof deferred<OpenMeteoAtmospherePoint[]>>;
     }[] = [];
+    const visibilityRequests: typeof atmosphereRequests = [];
+    const onError = vi.fn();
     let state = emptyForecastState();
     const changed = vi.fn(next => {
         state = next;
@@ -79,16 +81,65 @@ const harness = () => {
             },
             atmosphere: request => {
                 const task = deferred<OpenMeteoAtmospherePoint[]>();
-                atmosphereRequests.push({ request, task });
+                (request.metric === 'aod' ? atmosphereRequests : visibilityRequests).push({ request, task });
                 return task.promise;
             },
         },
         changed,
+        onError,
     );
-    return { controller, requests, cloudRequests, atmosphereRequests, changed, state: () => state };
+    return { controller, requests, cloudRequests, atmosphereRequests, visibilityRequests, onError, changed, state: () => state };
 };
 
 describe('forecast session behavior', () => {
+    it.each(['aod', 'visibility'] as const)('retains successful data and retries only failed %s', async failed => {
+        const h = harness();
+        h.controller.update(base);
+        h.requests[0].task.resolve(result);
+        const failedRequests = failed === 'aod' ? h.atmosphereRequests : h.visibilityRequests;
+        const successfulRequests = failed === 'aod' ? h.visibilityRequests : h.atmosphereRequests;
+        failedRequests[0].task.reject(new TypeError('Failed to fetch'));
+        successfulRequests[0].task.resolve([{ timestamp: now, aod550: 0.2, visibilityKm: 18 }]);
+        await flush();
+        expect(h.state()).toMatchObject({
+            aodStatus: failed === 'aod' ? 'error' : 'ready',
+            visibilityStatus: failed === 'visibility' ? 'error' : 'ready',
+        });
+        expect(h.state().points[0]).toMatchObject({
+            aod550: failed === 'aod' ? null : 0.2,
+            visibilityKm: failed === 'visibility' ? null : 18,
+        });
+        h.controller.update(base);
+        expect(failedRequests).toHaveLength(1);
+        h.controller.retry(failed);
+        h.controller.retry(failed === 'aod' ? 'visibility' : 'aod');
+        expect(failedRequests).toHaveLength(2);
+        expect(successfulRequests).toHaveLength(1);
+        expect(h.requests).toHaveLength(1);
+        failedRequests[1].task.resolve([{ timestamp: now, aod550: 0.3, visibilityKm: 25 }]);
+        await flush();
+        expect(h.state()).toMatchObject({ aodStatus: 'ready', visibilityStatus: 'ready' });
+        expect(h.onError).toHaveBeenCalledOnce();
+        h.controller.destroy();
+    });
+
+    it('does not let a cancelled metric retry overwrite a later location', async () => {
+        const h = harness();
+        h.controller.update(base);
+        h.atmosphereRequests[0].task.reject(new Error('unavailable'));
+        await flush();
+        h.controller.retry('aod');
+        h.controller.update({ ...base, location: { lat: 40, lon: 120 } });
+        h.atmosphereRequests[2].task.resolve([{ timestamp: now, aod550: 0.1, visibilityKm: null }]);
+        await flush();
+        const current = h.state();
+        h.atmosphereRequests[1].task.resolve([{ timestamp: now, aod550: 9, visibilityKm: null }]);
+        await flush();
+        expect(h.atmosphereRequests[1].request.signal.aborted).toBe(true);
+        expect(h.state()).toBe(current);
+        h.controller.destroy();
+    });
+
     it('keeps only the last location/model/source/hour after a rapid switch sequence', async () => {
         const h = harness();
         const relocated = { ...base, location: { lat: 40, lon: 120 }, cloudsVisible: true };
@@ -142,6 +193,7 @@ describe('forecast session behavior', () => {
         expect(h.state().points).toEqual([]);
         h.requests[1].task.resolve(result);
         h.atmosphereRequests[1].task.resolve([{ timestamp: now, aod550: 0.2, visibilityKm: 18 }]);
+        h.visibilityRequests[1].task.resolve([{ timestamp: now, aod550: null, visibilityKm: 18 }]);
         await flush();
         const completed = h.state();
         h.controller.suspendDetails();
@@ -247,22 +299,24 @@ describe('forecast session behavior', () => {
         expect(h.cloudRequests).toHaveLength(2);
     });
 
-    it('invalidates all channels when the source changes and rejects late cloud results', async () => {
+    it('reuses source-independent AOD and rejects late cloud results on a source change', async () => {
         const h = harness();
         h.controller.update({ ...base, source: 'open-meteo', cloudsVisible: true });
         h.controller.update({ ...base, cloudsVisible: true });
         expect(h.cloudRequests[0].request.signal.aborted).toBe(true);
-        expect(h.atmosphereRequests[0].request.signal.aborted).toBe(true);
+        expect(h.atmosphereRequests[0].request.signal.aborted).toBe(false);
         h.cloudRequests[0].task.resolve(payload);
         await flush();
         expect(h.state().cloudForecast).toBeNull();
-        expect(h.atmosphereRequests[1].request.includeVisibility).toBe(true);
+        expect(h.atmosphereRequests).toHaveLength(1);
+        expect(h.visibilityRequests[0].request.metric).toBe('visibility');
     });
 
     it('reuses atmosphere across model switches but refreshes it in the next hour', async () => {
         const h = harness();
         h.controller.update(base);
         h.atmosphereRequests[0].task.resolve([{ timestamp: now, aod550: 0.2, visibilityKm: 12 }]);
+        h.visibilityRequests[0].task.resolve([{ timestamp: now, aod550: null, visibilityKm: 12 }]);
         await flush();
         h.controller.update({ ...base, model: 'gfs' });
         h.requests[1].task.resolve(result);
@@ -283,7 +337,8 @@ describe('forecast session behavior', () => {
         });
         h.atmosphereRequests[0].task.resolve([{ timestamp: now, aod550: 0.3, visibilityKm: 99 }]);
         await flush();
-        expect(h.atmosphereRequests[0].request.includeVisibility).toBe(false);
+        expect(h.atmosphereRequests[0].request.metric).toBe('aod');
+        expect(h.visibilityRequests).toHaveLength(0);
         expect(h.state().points[0]).toMatchObject({ visibilityKm: 23, aod550: 0.3 });
     });
 

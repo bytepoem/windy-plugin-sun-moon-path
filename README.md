@@ -19,12 +19,12 @@
 
 ## 安装与上手
 
-当前发布版本：**0.12.2** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.2)
+当前发布版本：**0.12.4** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.4)
 
 将以下地址填入 Windy 的外部插件加载入口，打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.2/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.4/plugin.min.js
 ```
 
 1. **选机位**：点击地图，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写自己的地图服务 API Key。
@@ -32,6 +32,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.2/plugin.min.
 3. **看条件**：查看事件与天气，使用云层或彩虹规划，也可选择 2–5 个收藏机位进行对比。
 
 语言和显示选项在「设置」中调整；详细图例见「设置 → 使用说明」。以下功能说明对应当前仓库，已发布版本的功能以更新记录为准。
+
+键盘可聚焦桌面标题返回按钮；云层功能菜单支持方向键选择、Enter 确认和 Escape 关闭，横向表格保留键盘滚动入口。
 
 更新检查按网络地区选择来源：中国大陆及地区未知时使用 Gitee，其他已知地区使用 GitHub。代理可能影响判断；检查失败时可在「关于」重试。
 
@@ -43,7 +45,7 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.2/plugin.min.
 | 云层规划 | 选择太阳、月亮或银心，结合预报或手动云高查看云距与视线交点，为朝晚霞、火烧云等拍摄提供云区参考；支持单层、分层和卫星云图对照 |
 | 彩虹规划 | 查看日虹／月虹的方向和高度，支持双虹、完整圆圈，以及主虹条件评估 |
 | 潮汐规划 | 自动获取 Open-Meteo 模型水位，对照日出日落并同步拍摄时间，无需 Key |
-| 天气与观测 | 选择 Windy / Open-Meteo 数据源及预报模型，结合天气、月光和目标位置查看观测时段 |
+| 天气与观测 | 选择 Windy / Open-Meteo 数据源及预报模型，结合天气、月光和目标位置查看观测时段；AOD 与补充能见度独立加载、重试 |
 | 收藏对比 | 复用 Windy 收藏，比较机位的天气、天文事件、海拔与光污染 |
 | 光污染地图 | 叠加 Lorenz 2025 天空亮度地图，结合机位 SQM 与估算 Bortle 筛选暗夜拍摄地点 |
 | 雷达与显示 | 按中央气象台分段色阶叠加 RainViewer 雷达；单位跟随 Windy，移动端支持收起、小窗口与全屏 |
@@ -91,6 +93,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.2/plugin.min.
 ### 天气与观测
 
 进入「天气」，在天气表中选择数据源和预报模型，查看目标时段的云量、降水、风和能见度等条件。结合观测时段、月光和目标位置选择拍摄时间；切换来源或模型后重新比较，缺测项按未知处理。
+
+AOD 与 Windy 的补充能见度分别加载，一项失败不会清空另一项；点击天气表对应提示中的「重试」只重新加载失败项。Open-Meteo 天气继续使用所选模型的能见度。收藏对比也保留已取得的单项数据，失败项显示「加载失败」，可用「刷新对比」重新加载整个对比。
 
 ### 收藏对比
 

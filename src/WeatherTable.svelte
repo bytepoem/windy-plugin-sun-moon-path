@@ -30,14 +30,15 @@
         type UnitPreferences,
     } from './unitPreferences';
     import type { Coordinates } from './solar';
+    import type { AtmosphereMetric } from './openMeteo';
 
     export let points: WeatherPoint[] = [];
     export let model: WeatherModel = 'ecmwf';
     export let source: WeatherSource = 'windy';
     export let status: WeatherLoadStatus = 'idle';
     export let errorMessage = '';
-    export let atmosphereStatus: WeatherLoadStatus = 'idle';
-    export let atmosphereErrorMessage = '';
+    export let aodStatus: WeatherLoadStatus = 'idle';
+    export let visibilityStatus: WeatherLoadStatus = 'idle';
     export let language: 'zh' | 'en' = 'zh';
     export let timeZone = 'UTC';
     export let currentTimestamp = Date.now();
@@ -50,7 +51,7 @@
         modelchange: WeatherModel;
         sourcechange: WeatherSource;
         retry: void;
-        atmosphereretry: void;
+        atmosphereretry: AtmosphereMetric;
     }>();
 
     const LABEL_WIDTH = 64;
@@ -86,7 +87,12 @@
             sun: '太阳',
             moon: '月亮',
             celestialCurve: '太阳和月亮升起降落曲线',
-            openMeteoRetry: 'Open-Meteo · 重试',
+            aodRetry: 'AOD 加载失败 · 重试',
+            visibilityRetry: '能见度加载失败 · 重试',
+            aodEmpty: 'AOD 暂无数据',
+            visibilityEmpty: '能见度暂无数据',
+            aodLoading: 'AOD 加载中…',
+            visibilityLoading: '能见度加载中…',
             selectedDateOutsideRange: (date: string) => `所选日期 ${date} 不在当前五天预报范围内，表格仍显示当前预报。`,
             selectedDateMissing: (date: string) => `所选日期 ${date} 暂无可用预报时次，表格仍显示当前预报。`,
             metrics: {
@@ -116,7 +122,12 @@
             sun: 'Sun',
             moon: 'Moon',
             celestialCurve: 'Sun and moon rise and set curves',
-            openMeteoRetry: 'Open-Meteo · Retry',
+            aodRetry: 'AOD failed · Retry',
+            visibilityRetry: 'Visibility failed · Retry',
+            aodEmpty: 'No AOD data',
+            visibilityEmpty: 'No visibility data',
+            aodLoading: 'Loading AOD…',
+            visibilityLoading: 'Loading visibility…',
             selectedDateOutsideRange: (date: string) => `Selected date ${date} is outside the current five-day forecast. The table still shows the current forecast.`,
             selectedDateMissing: (date: string) => `No forecast steps are available for selected date ${date}. The table still shows the current forecast.`,
             metrics: {
@@ -311,7 +322,7 @@
 </script>
 
 <section class="weather-panel" aria-label={language === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
-    <header class="weather-toolbar" class:weather-toolbar--loading={status === 'loading' || atmosphereStatus === 'loading'}>
+    <header class="weather-toolbar" class:weather-toolbar--loading={status === 'loading' || aodStatus === 'loading' || visibilityStatus === 'loading'}>
         <!-- Keep source/model controls interactive while the newest request supersedes earlier work. -->
         <div class="weather-model-control weather-source-control" role="group" aria-label={language === 'zh' ? '天气数据源' : 'Weather source'}>
             {#each sourceOptions as provider}
@@ -351,21 +362,28 @@
             </button>
         </div>
         <span class="weather-loading-indicator" role="status" aria-live="polite">
-            {#if status === 'loading' || atmosphereStatus === 'loading'}
+            {#if status === 'loading' || aodStatus === 'loading' || visibilityStatus === 'loading'}
                 <span class="weather-spinner weather-spinner--toolbar" aria-hidden="true"></span>
                 <span class="visually-hidden">{text.loading}</span>
             {/if}
         </span>
     </header>
-    {#if atmosphereStatus === 'error'}
-        <div class="weather-date-notice" role="status">
-            <button
-                type="button"
-                class="weather-source-retry"
-                title={atmosphereErrorMessage}
-                aria-label={`${atmosphereErrorMessage} ${text.openMeteoRetry}`}
-                on:click={() => dispatch('atmosphereretry')}
-            >{text.openMeteoRetry}</button>
+    {#if ['loading', 'error', 'empty'].includes(aodStatus) || (source === 'windy' && ['loading', 'error', 'empty'].includes(visibilityStatus))}
+        <div class="weather-date-notice weather-metric-notice" role="status">
+            {#if aodStatus === 'error'}
+                <button type="button" class="weather-source-retry" on:click={() => dispatch('atmosphereretry', 'aod')}>{text.aodRetry}</button>
+            {:else if aodStatus === 'empty'}
+                <span>{text.aodEmpty}</span>
+            {:else if aodStatus === 'loading'}
+                <span>{text.aodLoading}</span>
+            {/if}
+            {#if source === 'windy' && visibilityStatus === 'error'}
+                <button type="button" class="weather-source-retry" on:click={() => dispatch('atmosphereretry', 'visibility')}>{text.visibilityRetry}</button>
+            {:else if source === 'windy' && visibilityStatus === 'empty'}
+                <span>{text.visibilityEmpty}</span>
+            {:else if source === 'windy' && visibilityStatus === 'loading'}
+                <span>{text.visibilityLoading}</span>
+            {/if}
         </div>
     {/if}
 
@@ -717,6 +735,22 @@
         background: rgba(91, 60, 14, 0.42);
         font-size: 10px;
         line-height: 1.3;
+    }
+
+    .weather-metric-notice {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+    }
+
+    .weather-metric-notice .weather-source-retry {
+        min-height: 24px;
+    }
+
+    @media (pointer: coarse) {
+        .weather-metric-notice .weather-source-retry {
+            min-height: 44px;
+        }
     }
 
     .weather-state {

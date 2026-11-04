@@ -1,39 +1,31 @@
 {
-  "version": "0.12.2",
-  "releasedAt": "2026-10-24",
+  "version": "0.12.4",
+  "releasedAt": "2026-11-04",
   "zh": {
-    "title": "航海时区与加载修复",
-    "summary": "修复海洋位置时区、收藏天气与云层按钮问题，并完善异常诊断。",
+    "title": "时区诊断与键盘操作改进",
+    "summary": "完善时区加载失败的诊断分类，并改善键盘操作体验。",
     "items": [
       {
-        "type": "fixed",
-        "text": "修复选择海洋位置时航海时区无法识别，导致天文事件和收藏对比加载失败的问题。"
-      },
-      {
-        "type": "fixed",
-        "text": "修复收藏对比在夜间窗口无预报时天气行空白，按所选当地日期展示可用天气；修复云层高度未知时地图范围按钮无响应，以及离开云层页后「全部」仍不可点击。"
+        "type": "improved",
+        "text": "完善主面板与收藏对比的时区加载诊断，区分网络、超时和响应读取失败，便于反馈与排查问题。"
       },
       {
         "type": "improved",
-        "text": "完善时区和收藏对比加载异常的诊断信息，便于排查失败原因。"
+        "text": "改善桌面标题返回按钮与云层功能菜单的键盘可访问性，并保留横向表格的键盘滚动入口。"
       }
     ]
   },
   "en": {
-    "title": "Nautical time zones and loading fixes",
-    "summary": "Fixes ocean time zones, comparison weather and cloud controls, with improved diagnostics.",
+    "title": "Time zone diagnostics and keyboard controls",
+    "summary": "Clearer diagnostics for time zone loading failures and improved keyboard controls.",
     "items": [
       {
-        "type": "fixed",
-        "text": "Fixed astronomy events and favorite comparisons failing to load at ocean locations with nautical time zones."
-      },
-      {
-        "type": "fixed",
-        "text": "Fixed empty comparison weather rows when night windows lack forecasts by using available forecasts for the selected local date. Fixed map controls when cloud heights are unknown and restored All after leaving cloud planning."
+        "type": "improved",
+        "text": "Improved time zone loading diagnostics in the main panel and favorite comparisons, distinguishing network, timeout and response-reading failures to help report and investigate issues."
       },
       {
         "type": "improved",
-        "text": "Improved diagnostics for time zone and favorite comparison loading failures to help identify their causes."
+        "text": "Improved keyboard accessibility of the desktop title back button and cloud function menu while retaining keyboard scrolling for horizontal tables."
       }
     ]
   }

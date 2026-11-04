@@ -10,7 +10,7 @@ import {
     type SolarEvent,
     type SolarPath,
 } from './solar';
-import { ObservationPlannerError, resolveObservationTimeZone } from './observationTimeZone';
+import { resolveObservationTimeZone, unavailableObservationTimeZone } from './observationTimeZone';
 import type { LightPollutionPoint } from './lightPollution';
 import type { WeatherPoint } from './weather';
 
@@ -120,7 +120,7 @@ export const createObservationPlanner = (port: ObservationPlannerPort): Observat
                 : port.getElevation(location),
         ]).then(([timeZoneResult, elevationResult]) => {
             if (timeZoneResult.status !== 'fulfilled') {
-                throw new ObservationPlannerError('TIME_ZONE_UNAVAILABLE');
+                throw unavailableObservationTimeZone(timeZoneResult.reason);
             }
             const timeZone = resolveObservationTimeZone(timeZoneResult.value);
 

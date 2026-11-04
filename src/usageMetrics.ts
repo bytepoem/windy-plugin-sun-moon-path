@@ -73,6 +73,12 @@ export const createUsageMetrics = (options: {
             // Revocation discards the unfinished segment; granting never backfills it.
             lastTime = options.now();
             allowed = next;
+            // A new grant gets a new usage identity/session; its engagement
+            // threshold must not include time reported under the revoked one.
+            if (!next) {
+                session.foregroundMs = 0;
+                session.reachedThreeMinutes = false;
+            }
         },
         setVisible(next: boolean) {
             if (stopped || next === visible) {

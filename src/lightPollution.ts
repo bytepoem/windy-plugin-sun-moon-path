@@ -1,3 +1,5 @@
+import { RequestFailure, withRequestDiagnostics } from './requestDiagnostics';
+
 export const LIGHT_POLLUTION_DATA_YEAR = 2025;
 
 const TILE_SIZE_DEGREES = 5;
@@ -315,15 +317,14 @@ export const isLightPollutionResponseCurrent = (identity: LightPollutionResponse
     && identity.requestId === identity.latestRequestId
     && identity.requestKey === identity.currentRequestKey;
 
-const decompressTile = async (response: Response): Promise<Int8Array> => {
-    if (!response.body) {
-        throw new Error('Light pollution tile response has no body.');
-    }
+const decompressTile = async (bytes: ArrayBuffer): Promise<Int8Array> => {
     if (typeof DecompressionStream === 'undefined') {
         throw new Error('This browser cannot decompress light pollution data.');
     }
 
-    const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
+    // The download owns its network stream. Decompression only reads completed local bytes,
+    // so aborting an old fetch cannot reject a separate gzip input stream.
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
     return new Int8Array(await new Response(stream).arrayBuffer());
 };
 
@@ -331,20 +332,27 @@ export const fetchLightPollutionPoint = async (
     coordinates: LightPollutionCoordinates,
     signal?: AbortSignal,
 ): Promise<LightPollutionPoint> => {
+    signal?.throwIfAborted();
     const address = resolveLightPollutionTile(coordinates);
     let tile = cachedTile(address.cacheKey);
 
     if (!tile) {
-        const response = await fetch(address.url, { signal });
-        if (!response.ok) {
-            throw new Error(`Light pollution tile request failed (${response.status}).`);
-        }
-        tile = await decompressTile(response);
-        if (signal?.aborted) {
-            throw new DOMException('The operation was aborted.', 'AbortError');
-        }
+        const response = await withRequestDiagnostics('light-pollution', 'request', signal, async () => {
+            const result = await fetch(address.url, { signal });
+            if (!result.ok) {
+                throw new RequestFailure(new Error(`Light pollution tile request failed (${result.status}).`),
+                    'light-pollution', 'request', signal, result.status);
+            }
+            return result;
+        });
+        const bytes = await withRequestDiagnostics('light-pollution', 'response', signal, () => response.arrayBuffer());
+        tile = await withRequestDiagnostics('light-pollution', 'decompress', signal, () => decompressTile(bytes));
+        // The helper and this caller resume in different microtasks. Check again in
+        // the same continuation that commits the tile, before touching shared cache.
+        signal?.throwIfAborted();
         if (tile.length !== DECOMPRESSED_TILE_BYTES) {
-            throw new Error(`Unexpected light pollution tile size: ${tile.length}.`);
+            throw new RequestFailure(new Error(`Unexpected light pollution tile size: ${tile.length}.`),
+                'light-pollution', 'decompress', signal);
         }
         cacheTile(address.cacheKey, tile);
     }

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { createEventDispatcher, tick } from 'svelte';
+    import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
 
     import {
@@ -11,7 +12,7 @@
     } from './favoriteComparison';
     import { fetchLightPollutionPoint } from './lightPollution';
     import { compactLocationLabel } from './location';
-    import { fetchOpenMeteoAtmosphere } from './openMeteo';
+    import { fetchOpenMeteoAtmosphereMetric } from './openMeteo';
     import { windyWeatherProvider } from './windyWeatherProvider';
     import {
         weatherConditionLabel,
@@ -84,6 +85,7 @@
             noWindow: '无可用时段',
             outsideForecast: '日期超出预报范围',
             weatherError: '模型数据不可用',
+            atmosphereError: '加载失败',
             retry: '刷新对比',
             locate: (title: string) => `定位到${title}`,
         },
@@ -117,6 +119,7 @@
             noWindow: 'No available window',
             outsideForecast: 'Date outside forecast range',
             weatherError: 'Model data unavailable',
+            atmosphereError: 'Load failed',
             retry: 'Refresh comparison',
             locate: (title: string) => `Show ${title} on the map`,
         },
@@ -137,11 +140,11 @@
     };
     const windowKinds: AstronomyIntervalKind[] = ['moonless-night', 'milky-way'];
     const comparisonPlanner = createFavoriteComparisonPlanner({
-        getTimeZone: async (location, datetime) => (await getTimezoneInfo(location, datetime)).data.TZname,
+        getTimeZone: (location, datetime) => loadObservationTimeZone(() => getTimezoneInfo(location, datetime)),
         getElevation: async (location, signal) => (
             await getElevation(location.lat, location.lon, { abortSignal: signal })
         ).data,
-        getAtmosphere: (location, _requestedAt, signal, weatherSource) => fetchOpenMeteoAtmosphere({ location, signal, includeVisibility: weatherSource === 'windy' }),
+        getAtmosphere: (metric, location, _requestedAt, signal) => fetchOpenMeteoAtmosphereMetric(metric, { location, signal }),
         getLightPollution: (location, signal) => fetchLightPollutionPoint(location, signal),
         getWeather: async (location, weatherModel, requestedAt, signal, weatherSource = 'windy') => (
             await windyWeatherProvider.weather({ location, model: weatherModel, requestedAt, signal, source: weatherSource })
@@ -237,8 +240,7 @@
             diagnostics?.end('comparison', operation);
         } catch (error) {
             if (!destroyed && open && !abortController.signal.aborted
-                && requestId === modelRequestId && session === nextSession
-                && !(error instanceof Error && error.name === 'AbortError')) {
+                && requestId === modelRequestId && session === nextSession) {
                 diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';
             } else {
@@ -306,7 +308,6 @@
                 && open
                 && !abortController.signal.aborted
                 && requestId === prepareRequestId
-                && !(error instanceof Error && error.name === 'AbortError')
             ) {
                 diagnostics?.error('comparison', error, operation);
                 prepareStatus = 'error';
@@ -413,6 +414,11 @@
             }
             : null;
         if (!range) {
+            if (result.prepared.status === 'ready'
+                && ((field === 'aod550' && result.prepared.aodStatus === 'error')
+                    || (field === 'visibilityKm' && result.prepared.visibilityStatus === 'error'))) {
+                return text.atmosphereError;
+            }
             const independentField = field === 'aod550' || (source === 'windy' && field === 'visibilityKm');
             if (result.weatherStatus === 'error' && !independentField) {
                 return text.weatherError;
@@ -524,6 +530,8 @@
 </script>
 
 {#if open}
+    <!-- Dialog delegates Escape and nested scroll handling for its interactive children. -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <section
         id="favorite-comparison-panel"
         class="favorite-comparison"

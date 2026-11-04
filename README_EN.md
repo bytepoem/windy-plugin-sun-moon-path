@@ -21,12 +21,12 @@ Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glo
 
 Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About. This describes the current repository; released behavior is listed in the release notes.
 
-Current release: **0.12.2** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.2)
+Current release: **0.12.4** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.4)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.2/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.4/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
@@ -34,6 +34,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.2/plugin.min.
 3. **Check conditions:** explore events and weather, use cloud or rainbow planning, or compare 2–5 favorite locations.
 
 Language and display options are in Settings; detailed legends are under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
+
+The desktop title back button supports keyboard focus. In the cloud function menu, use arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
 
 ## Features
 
@@ -43,7 +45,7 @@ Language and display options are in Settings; detailed legends are under Setting
 | Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections as cloud-region references for sunrise/sunset glow, fiery clouds and other photography; supports single/layered views and satellite comparison |
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
 | Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
-| Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position |
+| Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position; independent loading and retry for AOD and supplementary visibility |
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
 | Light pollution map | Overlay Lorenz 2025 sky brightness and use location SQM and estimated Bortle values to shortlist dark-sky photography sites |
 | Radar and display | RainViewer overlays using the China NMC stepped reflectivity palette, Windy units, and collapsed, compact or fullscreen mobile views |
@@ -91,6 +93,8 @@ Choose dates within ten days from today at the camera location; actual coverage 
 ### Weather and observing
 
 Open Weather and choose a data source and forecast model in the weather table. Check cloud cover, precipitation, wind and visibility for your target period, alongside observing windows, moonlight and target position. Compare again after changing sources or models, and treat missing values as unknown.
+
+AOD and supplementary visibility for Windy load independently; a failure leaves the other metric available. Select Retry in the corresponding weather-table notice to reload only that metric. Open-Meteo weather retains visibility from the selected model. Favorite comparisons also retain available metrics and mark failed ones as Load failed; Refresh comparison reloads the entire comparison.
 
 ### Favorite comparisons
 

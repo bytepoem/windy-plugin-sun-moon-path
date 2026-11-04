@@ -1,4 +1,5 @@
 import { ObservationPlannerError, type TimeZoneDiagnosticDetails } from './observationTimeZone';
+import { diagnosticException, safeRequestFailureDetails, type RequestFailureDetails } from './requestDiagnostics';
 
 /** Bounded, in-memory diagnostics. Only allowlisted state and sanitized errors leave this module. */
 export type DiagnosticStage = 'construct' | 'mount' | 'dom' | 'open' | 'galactic'
@@ -19,6 +20,8 @@ export type DiagnosticError = {
     name: string; message: string; frames: string[];
     code?: 'TIME_ZONE_INVALID' | 'TIME_ZONE_UNAVAILABLE';
     details?: TimeZoneDiagnosticDetails;
+    request?: RequestFailureDetails;
+    capture?: 'error' | 'unhandledrejection';
 };
 type DiagnosticEntry = { elapsedMs: number; stage: DiagnosticStage; result: string; operation: number };
 export type DiagnosticEvent = {
@@ -49,8 +52,8 @@ export const diagnosticId = () => `${Date.now().toString(36)}-${++serial}-${Math
 /** Do not upload arbitrary exception text: URLs, coordinates, keys and search text can all occur there. */
 export const sanitizeDiagnosticError = (value: unknown): DiagnosticError => {
     try {
-        const error = value instanceof Error ? value : null;
-        const name = error && /^(?:Error|TypeError|RangeError|ReferenceError|SyntaxError|ObservationPlannerError)$/.test(error.name)
+        const error = diagnosticException(value);
+        const name = error && /^(?:Error|TypeError|RangeError|ReferenceError|SyntaxError|ObservationPlannerError|AbortError|TimeoutError|NetworkError|NotSupportedError|DataError)$/.test(error.name)
             ? error.name : 'Error';
         const rawMessage = error?.message ?? '';
         const messages: [RegExp, string][] = [
@@ -65,12 +68,20 @@ export const sanitizeDiagnosticError = (value: unknown): DiagnosticError => {
             [/Windy map center is unavailable/, 'Windy map center is unavailable'],
             [/^Startup did not complete within visible-time budget$/, 'Startup did not complete within visible-time budget'],
         ];
-        const message = messages.find(([pattern]) => pattern.test(rawMessage))?.[1]
+        const request = safeRequestFailureDetails(value)
+            ?? (error instanceof ObservationPlannerError && error.code === 'TIME_ZONE_UNAVAILABLE'
+                ? safeRequestFailureDetails(error.cause) : undefined);
+        const message = name === 'AbortError' ? 'Operation aborted'
+            : name === 'TimeoutError' ? 'Operation timed out'
+            : name === 'NetworkError' ? 'Network request failed'
+            : request ? `Request failed: ${request.kind}`
+            : messages.find(([pattern]) => pattern.test(rawMessage))?.[1]
             ?? 'Message omitted to protect private data';
         // Keep only generated bundle locations. Never retain function arguments or URL query strings.
         const frames = [...(error?.stack ?? '').matchAll(/(?:\/|\b)(plugin(?:\.min)?\.js):(\d+):(\d+)\b/g)]
             .slice(0, 12).map(match => `${match[1]}:${match[2]}:${match[3]}`);
         const safe: DiagnosticError = { name, message, frames };
+        if (request) { safe.request = request; }
         if (error instanceof ObservationPlannerError
             && ['TIME_ZONE_INVALID', 'TIME_ZONE_UNAVAILABLE'].includes(error.code)) {
             safe.code = error.code;
@@ -166,14 +177,17 @@ export const createPluginDiagnostics = (options: {
             record('dom', complete ? 'ready' : 'incomplete');
             if (complete) { state = 'ready'; }
         },
-        error(stage: DiagnosticStage, value: unknown, operation = 0, fatal = false) {
+        error(stage: DiagnosticStage, value: unknown, operation = 0, fatal = false, capture?: DiagnosticError['capture']) {
             if (state === 'closed' || state === 'failed') { return; }
             if (value !== null && typeof value === 'object') {
                 if (!fatal && seenErrors.has(value)) { return; }
                 seenErrors.add(value);
             }
             const error = sanitizeDiagnosticError(value);
-            const fingerprint = `${stage}|${error.name}|${error.message}|${error.frames[0] ?? ''}|${error.details?.reason ?? ''}`;
+            if (capture === 'error' || capture === 'unhandledrejection') { error.capture = capture; }
+            const requestKey = error.request
+                ? `|${error.request.request}|${error.request.phase}|${error.request.kind}|${error.request.status ?? ''}` : '';
+            const fingerprint = `${stage}|${error.name}|${error.message}|${error.frames[0] ?? ''}|${error.details?.reason ?? ''}${requestKey}`;
             if (seen.has(fingerprint) || errors.length >= MAX_ERRORS) {
                 if (fatal) { state = 'failed'; }
                 return;

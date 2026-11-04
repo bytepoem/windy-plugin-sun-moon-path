@@ -1,3 +1,5 @@
+import { RequestFailure, withRequestDiagnostics } from './requestDiagnostics.js';
+
 /** Fixed public update endpoints. No client credentials or arbitrary manifest URLs. */
 export type UpdateSource = 'gitee' | 'github';
 
@@ -26,23 +28,28 @@ export const fetchUpdateJson = async (
         throw new Error('Invalid update file path');
     }
     const url = updateSourceRoots[source] + path + (source === 'gitee' ? '?ref=master' : '');
-    const response = await fetchImpl(url, {
-        signal,
-        ...(revalidate ? { cache: 'no-cache' as const } : {}),
-        ...(source === 'gitee' ? { credentials: 'omit' as const } : {}),
+    const request = path === 'latest.json' ? 'update-manifest' : 'update-notes';
+    const response = await withRequestDiagnostics(request, 'request', signal, async () => {
+        const result = await fetchImpl(url, {
+            signal,
+            ...(revalidate ? { cache: 'no-cache' as const } : {}),
+            ...(source === 'gitee' ? { credentials: 'omit' as const } : {}),
+        });
+        if (!result.ok) {
+            throw new RequestFailure(new Error(`Update ${path === 'latest.json' ? 'manifest' : 'notes'} request failed with ${result.status}`),
+                request, 'request', signal, result.status);
+        }
+        return result;
     });
-    if (!response.ok) {
-        throw new Error(`Update ${path === 'latest.json' ? 'manifest' : 'notes'} request failed with ${response.status}`);
-    }
-    const value = await response.json();
-    if (source !== 'gitee') {
-        return value;
-    }
-    if (value?.type !== 'file' || value.encoding !== 'base64' || value.path !== path || typeof value.content !== 'string') {
-        throw new Error('Invalid Gitee file response');
-    }
-    const bytes = Uint8Array.from(atob(value.content.replace(/\s/g, '')), character => character.charCodeAt(0));
-    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    return withRequestDiagnostics(request, 'parse', signal, async () => {
+        const value = await response.json();
+        if (source !== 'gitee') { return value; }
+        if (value?.type !== 'file' || value.encoding !== 'base64' || value.path !== path || typeof value.content !== 'string') {
+            throw new Error('Invalid Gitee file response');
+        }
+        const bytes = Uint8Array.from(atob(value.content.replace(/\s/g, '')), character => character.charCodeAt(0));
+        return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    });
 };
 
 export type UpdateNoteKind = 'new' | 'improved' | 'fixed';
@@ -130,6 +137,8 @@ interface CheckPluginUpdateOptions {
     fetchImpl?: typeof fetch;
     sessionCache?: SessionCache | null;
     betaNotesUrl?: string | null;
+    /** Notes can fail while the version check succeeds. The accepting UI owns reporting. */
+    onNotesError?: (error: unknown) => void;
 }
 
 const SEMANTIC_VERSION_PATTERN = /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -353,32 +362,39 @@ const loadReleaseNoteSeries = async ({
     requiredVersion,
     signal,
     fetchImpl,
+    onNotesError,
 }: {
     notesBaseUrl: string;
     versions: string[];
     requiredVersion?: string;
     signal?: AbortSignal;
     fetchImpl: typeof fetch;
+    onNotesError?: (error: unknown) => void;
 }): Promise<{ notes: UserFacingReleaseNotes[]; status: PluginUpdateNotesStatus }> => {
     const notes: UserFacingReleaseNotes[] = [];
     let encounteredError = false;
     for (const version of versions) {
         try {
-            const response = await fetchImpl(new URL(`${encodeURIComponent(version)}.json`, notesBaseUrl).href, { signal });
-            if (response.ok) {
-                const parsed = parseUserFacingReleaseNotes(await response.json(), version);
-                if (parsed) {
-                    notes.push(parsed);
-                } else {
-                    encounteredError = true;
+            const response = await withRequestDiagnostics('update-notes', 'request', signal, async () => {
+                const result = await fetchImpl(new URL(`${encodeURIComponent(version)}.json`, notesBaseUrl).href, { signal });
+                if (!result.ok && (result.status !== 404 || version === requiredVersion)) {
+                    throw new RequestFailure(new Error(`Update notes request failed with ${result.status}`),
+                        'update-notes', 'request', signal, result.status);
                 }
-            } else if (response.status !== 404 || version === requiredVersion) {
-                encounteredError = true;
-            }
+                return result;
+            });
+            if (!response.ok) { continue; }
+            const parsed = await withRequestDiagnostics('update-notes', 'parse', signal, async () => {
+                const value = parseUserFacingReleaseNotes(await response.json(), version);
+                if (!value) { throw new Error('Invalid update release notes'); }
+                return value;
+            });
+            notes.push(parsed);
         } catch (error) {
-            if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+            if (signal?.aborted) {
                 throw error;
             }
+            reportNotesError(onNotesError, error);
             encounteredError = true;
         }
     }
@@ -420,20 +436,29 @@ const loadUpdateSnapshot = async (
     fetchImpl: typeof fetch,
     signal?: AbortSignal,
     source: UpdateSource = 'gitee',
+    onNotesError?: (error: unknown) => void,
 ): Promise<{ notes: UserFacingReleaseNotes[]; status: 'loaded' | 'error' }> => {
     if (manifest.notesUrl !== `./${manifest.version}/notes.json`) {
         throw new Error('Invalid update notes URL');
     }
     try {
         const value = await fetchUpdateJson(source, `${manifest.version}/notes.json`, fetchImpl, signal);
-        return { notes: parseUpdateSnapshot(value, manifest.version), status: 'loaded' as const };
+        const notes = await withRequestDiagnostics('update-notes', 'parse', signal,
+            async () => parseUpdateSnapshot(value, manifest.version));
+        return { notes, status: 'loaded' as const };
     } catch (error) {
-        if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        if (signal?.aborted) {
             throw error;
         }
+        reportNotesError(onNotesError, error);
         return { notes: [], status: 'error' as const };
     }
 };
+
+/** Optional diagnostics cannot change the version result or cause another request. */
+function reportNotesError(report: CheckPluginUpdateOptions['onNotesError'], error: unknown) {
+    try { report?.(error); } catch { /* The result remains usable when diagnostics fail. */ }
+}
 
 const resolveSessionCache = (): SessionCache | null => {
     try {
@@ -644,23 +669,30 @@ export const checkPluginUpdate = async ({
     fetchImpl = fetch,
     sessionCache = resolveSessionCache(),
     betaNotesUrl = null,
+    onNotesError,
 }: CheckPluginUpdateOptions): Promise<PluginUpdateResult> => {
     const normalizedCurrentVersion = parseSemanticVersion(currentVersion).raw;
     const { owner, repository } = parseGithubRepository(repositoryUrl);
     if (betaNotesUrl) {
-        const betaResponse = await fetchImpl(betaNotesUrl, { signal, cache: 'no-store' });
-        if (!betaResponse.ok) {
-            throw new Error(`Beta release notes request failed with ${betaResponse.status}`);
-        }
-        const betaValue = parseBetaReleaseNotes(await betaResponse.json());
-        if (!betaValue) {
-            throw new Error('Beta release notes are invalid');
-        }
+        const betaResponse = await withRequestDiagnostics('update-notes', 'request', signal, async () => {
+            const result = await fetchImpl(betaNotesUrl, { signal, cache: 'no-store' });
+            if (!result.ok) {
+                throw new RequestFailure(new Error(`Beta release notes request failed with ${result.status}`),
+                    'update-notes', 'request', signal, result.status);
+            }
+            return result;
+        });
+        const betaValue = await withRequestDiagnostics('update-notes', 'parse', signal, async () => {
+            const value = parseBetaReleaseNotes(await betaResponse.json());
+            if (!value) { throw new Error('Beta release notes are invalid'); }
+            return value;
+        });
         const previousSeries = await loadReleaseNoteSeries({
             notesBaseUrl: new URL('./', betaNotesUrl).href,
             versions: releaseSeriesVersions(betaValue.version, false),
             signal,
             fetchImpl,
+            onNotesError,
         });
         return {
             status: 'available',
@@ -688,7 +720,7 @@ export const checkPluginUpdate = async ({
 
     const manifestValue = await fetchUpdateJson(source, 'latest.json', fetchImpl, signal, true);
     if (!isUpdateManifest(manifestValue, repository)) {
-        throw new Error('Update manifest is invalid');
+        throw new RequestFailure(new Error('Update manifest is invalid'), 'update-manifest', 'parse', signal);
     }
 
     const latestVersion = parseSemanticVersion(manifestValue.version).raw;
@@ -696,7 +728,7 @@ export const checkPluginUpdate = async ({
     if (parseSemanticVersion(latestVersion).prerelease.length || latestVersion !== manifestValue.version) {
         throw new Error('Invalid formal update version');
     }
-    const noteSeries = await loadUpdateSnapshot(manifestValue, fetchImpl, signal, source);
+    const noteSeries = await loadUpdateSnapshot(manifestValue, fetchImpl, signal, source, onNotesError);
     const notes = noteSeries.notes.find(note => compareSemanticVersions(note.version, latestVersion) === 0) ?? null;
     const notesStatus = noteSeries.status;
 

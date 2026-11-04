@@ -6,6 +6,8 @@ import {
     type FavoriteComparisonTarget,
 } from './favoriteComparison';
 import { LightPollutionOutOfBoundsError, type LightPollutionPoint } from './lightPollution';
+import { RequestFailure } from './requestDiagnostics';
+import { sanitizeDiagnosticError } from './pluginDiagnostics';
 import type { WeatherPoint } from './weather';
 
 const lightPollution = (estimatedBortle: number): LightPollutionPoint => ({
@@ -79,10 +81,46 @@ const createPort = (): FavoriteComparisonPlannerPort => ({
 });
 
 describe('favorite comparison planner', () => {
+    it('retains time zone request classification without failing the other target', async () => {
+        const port = createPort();
+        vi.mocked(port.getTimeZone).mockRejectedValueOnce(new DOMException('secret', 'TimeoutError'));
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-11-04', requestedAt: Date.UTC(2026, 10, 4),
+            signal: new AbortController().signal,
+        });
+        const failed = session.preparedTargets[0];
+        expect(failed.status).toBe('error');
+        if (failed.status !== 'error') { throw new Error('Expected failed target'); }
+        expect(sanitizeDiagnosticError(failed.diagnosticError)).toMatchObject({
+            code: 'TIME_ZONE_UNAVAILABLE', request: { request: 'windy-timezone', kind: 'timeout' },
+        });
+        expect(session.preparedTargets[1].status).toBe('ready');
+    });
+
+    it.each(['aod', 'visibility'] as const)('retains the other metric when %s fails', async failed => {
+        const port = createPort();
+        vi.mocked(port.getAtmosphere).mockImplementation(async metric => {
+            if (metric === failed) { throw new TypeError('Failed to fetch'); }
+            return [{ timestamp: Date.UTC(2026, 7, 27, 16), aod550: 0.12, visibilityKm: 26 }];
+        });
+        const signal = new AbortController().signal;
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-08-28', requestedAt: Date.UTC(2026, 7, 27, 17), signal,
+        });
+        expect(session.preparedTargets[0]).toMatchObject({
+            aodStatus: failed === 'aod' ? 'error' : 'ready',
+            visibilityStatus: failed === 'visibility' ? 'error' : 'ready',
+        });
+        const results = await session.loadModel('ecmwf', signal);
+        expect(results[0].dailyWeatherPoints[0]).toMatchObject({
+            aod550: failed === 'aod' ? null : 0.12,
+            visibilityKm: failed === 'visibility' ? null : 26,
+        });
+    });
     it('retains partial failures but excludes expected no-coverage errors', async () => {
         const port = createPort();
         const failure = new TypeError('Failed to fetch');
-        port.getAtmosphere = vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce([]);
+        port.getAtmosphere = vi.fn().mockResolvedValue([]).mockRejectedValueOnce(failure);
         port.getLightPollution = vi.fn().mockRejectedValue(new LightPollutionOutOfBoundsError());
         const session = await createFavoriteComparisonPlanner(port).prepare({
             targets: targets.map(target => ({ ...target, knownLightPollution: undefined })),
@@ -130,7 +168,7 @@ describe('favorite comparison planner', () => {
         const session = await createFavoriteComparisonPlanner(port).prepare({ targets, dateInput: '2026-08-28', requestedAt, signal, source: 'open-meteo' });
         const results = await session.loadModel('icon', signal);
         expect(port.getWeather).toHaveBeenCalledWith(targets[0].location, 'icon', requestedAt, signal, 'open-meteo');
-        expect(port.getAtmosphere).toHaveBeenCalledWith(targets[0].location, requestedAt, signal, 'open-meteo');
+        expect(port.getAtmosphere).toHaveBeenCalledWith('aod', targets[0].location, requestedAt, signal, 'open-meteo');
         expect(results.flatMap(result => result.windows).every(window => window.evidence.visibilityKm === null)).toBe(true);
     });
     it('prepares fixed context once and only reloads Windy data when the model changes', async () => {
@@ -148,13 +186,13 @@ describe('favorite comparison planner', () => {
         expect(port.getTimeZone).toHaveBeenCalledTimes(2);
         expect(port.getElevation).toHaveBeenCalledTimes(1);
         expect(port.getLightPollution).toHaveBeenCalledTimes(1);
-        expect(port.getAtmosphere).toHaveBeenCalledTimes(2);
+        expect(port.getAtmosphere).toHaveBeenCalledTimes(4);
 
         const ecResults = await session.loadModel('ecmwf', signal);
         const gfsResults = await session.loadModel('gfs', signal);
 
         expect(port.getWeather).toHaveBeenCalledTimes(4);
-        expect(port.getAtmosphere).toHaveBeenCalledTimes(2);
+        expect(port.getAtmosphere).toHaveBeenCalledTimes(4);
         expect(ecResults).toHaveLength(2);
         expect(gfsResults).toHaveLength(2);
         expect(ecResults[0].prepared.status).toBe('ready');
@@ -313,6 +351,21 @@ describe('favorite comparison planner', () => {
         timeZoneResolvers.splice(0).forEach(resolve => resolve());
         await Promise.all([firstPrepare, secondPrepare]);
         expect(peakActiveTimeZones).toBe(2);
+    });
+
+    it('retains unexpected cancellation failures when neither owner cancelled', async () => {
+        const port = createPort();
+        const failure = new RequestFailure(new DOMException('private', 'AbortError'), 'windy-weather', 'request');
+        vi.mocked(port.getAtmosphere).mockRejectedValue(failure);
+        vi.mocked(port.getWeather).mockRejectedValue(failure);
+        const signal = new AbortController().signal;
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-08-28', requestedAt: Date.UTC(2026, 7, 27, 17), signal,
+        });
+        expect(session.preparedTargets[0]).toMatchObject({ diagnosticErrors: expect.arrayContaining([failure]) });
+        const results = await session.loadModel('ecmwf', signal);
+        expect(results.map(result => result.weatherStatus)).toEqual(['error', 'error']);
+        expect(results[0].diagnosticError).toBe(failure);
     });
 
     it('does not start model requests when the model signal is already aborted', async () => {
