@@ -1,3 +1,5 @@
+import { RequestFailure, withRequestDiagnostics } from './requestDiagnostics';
+
 export type ObservationPlannerErrorCode = 'TIME_ZONE_UNAVAILABLE' | 'TIME_ZONE_INVALID';
 
 export type TimeZoneDiagnosticDetails = {
@@ -10,11 +12,23 @@ export type TimeZoneDiagnosticDetails = {
 };
 
 export class ObservationPlannerError extends Error {
-    constructor(readonly code: ObservationPlannerErrorCode, readonly details?: TimeZoneDiagnosticDetails) {
-        super(code);
+    constructor(readonly code: ObservationPlannerErrorCode, readonly details?: TimeZoneDiagnosticDetails, options?: ErrorOptions) {
+        super(code, options);
         this.name = 'ObservationPlannerError';
     }
 }
+
+/** Keep host request failures separate from extracting the returned zone label. */
+export const loadObservationTimeZone = async (load: () => Promise<{ data: { TZname: string } }>): Promise<string> => {
+    const response = await withRequestDiagnostics('windy-timezone', 'request', undefined, load);
+    return withRequestDiagnostics('windy-timezone', 'parse', undefined, async () => response.data.TZname);
+};
+
+/** Preserve the domain failure code and a local cause; diagnostics only copy validated categories. */
+export const unavailableObservationTimeZone = (cause: unknown): ObservationPlannerError =>
+    new ObservationPlannerError('TIME_ZONE_UNAVAILABLE', undefined, {
+        cause: cause instanceof RequestFailure ? cause : new RequestFailure(cause, 'windy-timezone', 'request'),
+    });
 
 const intlSupports = (value: string): boolean => {
     try {

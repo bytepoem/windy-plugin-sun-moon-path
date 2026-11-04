@@ -1,10 +1,35 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPluginDiagnostics, sanitizeDiagnosticError } from './pluginDiagnostics';
 import { ObservationPlannerError, resolveObservationTimeZone } from './observationTimeZone';
+import { RequestFailure } from './requestDiagnostics';
 
 const build = { id: 'build-one', commit: 'abc123', local: true };
 
 describe('bounded plugin diagnostics', () => {
+    it('validates nested time zone request fields and distinguishes failures in deduplication', () => {
+        const send = vi.fn();
+        const diagnostics = createPluginDiagnostics({ build, version: 'test', send });
+        for (const kind of ['network', 'timeout']) {
+            const cause = new RequestFailure(kind === 'network'
+                ? new TypeError('Failed to fetch private URL') : new DOMException('secret', 'TimeoutError'),
+            'windy-timezone', 'request');
+            Object.assign(cause.requestDetails, { url: 'secret', status: 999 });
+            const error = new ObservationPlannerError('TIME_ZONE_UNAVAILABLE', undefined, { cause });
+            diagnostics.error('astronomy', error);
+            expect(sanitizeDiagnosticError(error).request).toEqual({
+                request: 'windy-timezone', phase: 'request', kind,
+            });
+            Object.assign(cause.requestDetails, { request: 'secret' });
+            expect(sanitizeDiagnosticError(error).request).toBeUndefined();
+        }
+        expect(send).toHaveBeenCalledTimes(2);
+        expect(JSON.stringify(send.mock.calls)).not.toMatch(/secret|private/);
+        const spoofed = new ObservationPlannerError('TIME_ZONE_UNAVAILABLE', undefined, {
+            cause: { requestDetails: { request: 'windy-timezone', phase: 'request', kind: 'network' } },
+        });
+        expect(sanitizeDiagnosticError(spoofed).request).toBeUndefined();
+    });
+
     it('uploads bounded independent breadcrumbs and distinguishes failure reasons', () => {
         const send = vi.fn();
         let now = 0;

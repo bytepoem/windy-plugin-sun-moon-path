@@ -1057,6 +1057,7 @@
     import store from '@windy/store';
     import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
+    import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
     import CloudNavigation from './CloudNavigation.svelte';
@@ -1328,7 +1329,7 @@
         return cachedGpsLocation() || mapCenter;
     };
     const observationPlanner = createObservationPlanner({
-        getTimeZone: async (location, datetime) => (await getTimezoneInfo(location, datetime)).data.TZname,
+        getTimeZone: (location, datetime) => loadObservationTimeZone(() => getTimezoneInfo(location, datetime)),
         getElevation: async location => (await getElevation(location.lat, location.lon)).data,
     });
     const mapOverlayController = createMapOverlayController(map);

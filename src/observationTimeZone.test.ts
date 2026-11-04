@@ -1,8 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { resolveObservationTimeZone } from './observationTimeZone';
+import { loadObservationTimeZone, resolveObservationTimeZone, unavailableObservationTimeZone } from './observationTimeZone';
 import { sanitizeDiagnosticError } from './pluginDiagnostics';
 
 describe('time zone boundary diagnostics', () => {
+    it.each([
+        [new TypeError('Failed to fetch https://private.example?location=secret'), 'network'],
+        [new DOMException('secret URL', 'TimeoutError'), 'timeout'],
+        [new Error('secret response'), 'unknown'],
+    ] as const)('preserves classified request failures behind the domain error: %s', async (cause, kind) => {
+        let failure: unknown;
+        try {
+            await loadObservationTimeZone(async () => { throw cause; });
+        } catch (error) {
+            failure = unavailableObservationTimeZone(error);
+        }
+        expect(sanitizeDiagnosticError(failure)).toMatchObject({
+            code: 'TIME_ZONE_UNAVAILABLE',
+            request: { request: 'windy-timezone', phase: 'request', kind },
+        });
+        expect(JSON.stringify(sanitizeDiagnosticError(failure))).not.toMatch(/secret|private|https:/);
+    });
+
+    it('separates malformed response access from a valid response containing an invalid zone', async () => {
+        let failure: unknown;
+        try {
+            await loadObservationTimeZone(async () => ({ data: null } as any));
+        } catch (error) {
+            failure = unavailableObservationTimeZone(error);
+        }
+        expect(sanitizeDiagnosticError(failure)).toMatchObject({
+            code: 'TIME_ZONE_UNAVAILABLE',
+            request: { request: 'windy-timezone', phase: 'parse', kind: 'parse' },
+        });
+        const zone = await loadObservationTimeZone(async () => ({ data: { TZname: 'private-zone' } }));
+        expect(() => resolveObservationTimeZone(zone)).toThrow('TIME_ZONE_INVALID');
+    });
+
     it.each([
         ['', 'empty', 'string', false],
         [null, 'unexpected_type', 'null', false],

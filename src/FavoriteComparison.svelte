@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { createEventDispatcher, tick } from 'svelte';
+    import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
 
     import {
@@ -139,7 +140,7 @@
     };
     const windowKinds: AstronomyIntervalKind[] = ['moonless-night', 'milky-way'];
     const comparisonPlanner = createFavoriteComparisonPlanner({
-        getTimeZone: async (location, datetime) => (await getTimezoneInfo(location, datetime)).data.TZname,
+        getTimeZone: (location, datetime) => loadObservationTimeZone(() => getTimezoneInfo(location, datetime)),
         getElevation: async (location, signal) => (
             await getElevation(location.lat, location.lon, { abortSignal: signal })
         ).data,

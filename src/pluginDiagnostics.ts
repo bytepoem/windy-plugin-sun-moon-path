@@ -68,7 +68,9 @@ export const sanitizeDiagnosticError = (value: unknown): DiagnosticError => {
             [/Windy map center is unavailable/, 'Windy map center is unavailable'],
             [/^Startup did not complete within visible-time budget$/, 'Startup did not complete within visible-time budget'],
         ];
-        const request = safeRequestFailureDetails(value);
+        const request = safeRequestFailureDetails(value)
+            ?? (error instanceof ObservationPlannerError && error.code === 'TIME_ZONE_UNAVAILABLE'
+                ? safeRequestFailureDetails(error.cause) : undefined);
         const message = name === 'AbortError' ? 'Operation aborted'
             : name === 'TimeoutError' ? 'Operation timed out'
             : name === 'NetworkError' ? 'Network request failed'

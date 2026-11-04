@@ -1,0 +1,32 @@
+{
+  "version": "0.12.4",
+  "releasedAt": "2026-11-04",
+  "zh": {
+    "title": "时区诊断与键盘操作改进",
+    "summary": "完善时区加载失败的诊断分类，并改善键盘操作体验。",
+    "items": [
+      {
+        "type": "improved",
+        "text": "完善主面板与收藏对比的时区加载诊断，区分网络、超时和响应读取失败，便于反馈与排查问题。"
+      },
+      {
+        "type": "improved",
+        "text": "改善桌面标题返回按钮与云层功能菜单的键盘可访问性，并保留横向表格的键盘滚动入口。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Time zone diagnostics and keyboard controls",
+    "summary": "Clearer diagnostics for time zone loading failures and improved keyboard controls.",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Improved time zone loading diagnostics in the main panel and favorite comparisons, distinguishing network, timeout and response-reading failures to help report and investigate issues."
+      },
+      {
+        "type": "improved",
+        "text": "Improved keyboard accessibility of the desktop title back button and cloud function menu while retaining keyboard scrolling for horizontal tables."
+      }
+    ]
+  }
+}

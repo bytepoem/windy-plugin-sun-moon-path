@@ -1,7 +1,7 @@
 // @ts-check
 // Shared with the native Node update-site tools as well as the browser bundle.
 /** Fixed categories identify a request without retaining its URL, coordinates or response. */
-const REQUESTS = /** @type {const} */ (['windy-weather', 'open-meteo-weather', 'open-meteo-aod', 'open-meteo-visibility',
+const REQUESTS = /** @type {const} */ (['windy-weather', 'windy-timezone', 'open-meteo-weather', 'open-meteo-aod', 'open-meteo-visibility',
     'light-pollution', 'update-manifest', 'update-notes']);
 const PHASES = /** @type {const} */ (['request', 'response', 'parse', 'decompress']);
 const FAILURES = /** @type {const} */ (['cancelled', 'abort', 'timeout', 'network', 'http', 'parse', 'decompress', 'unknown']);

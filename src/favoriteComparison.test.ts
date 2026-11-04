@@ -7,6 +7,7 @@ import {
 } from './favoriteComparison';
 import { LightPollutionOutOfBoundsError, type LightPollutionPoint } from './lightPollution';
 import { RequestFailure } from './requestDiagnostics';
+import { sanitizeDiagnosticError } from './pluginDiagnostics';
 import type { WeatherPoint } from './weather';
 
 const lightPollution = (estimatedBortle: number): LightPollutionPoint => ({
@@ -80,6 +81,22 @@ const createPort = (): FavoriteComparisonPlannerPort => ({
 });
 
 describe('favorite comparison planner', () => {
+    it('retains time zone request classification without failing the other target', async () => {
+        const port = createPort();
+        vi.mocked(port.getTimeZone).mockRejectedValueOnce(new DOMException('secret', 'TimeoutError'));
+        const session = await createFavoriteComparisonPlanner(port).prepare({
+            targets, dateInput: '2026-11-04', requestedAt: Date.UTC(2026, 10, 4),
+            signal: new AbortController().signal,
+        });
+        const failed = session.preparedTargets[0];
+        expect(failed.status).toBe('error');
+        if (failed.status !== 'error') { throw new Error('Expected failed target'); }
+        expect(sanitizeDiagnosticError(failed.diagnosticError)).toMatchObject({
+            code: 'TIME_ZONE_UNAVAILABLE', request: { request: 'windy-timezone', kind: 'timeout' },
+        });
+        expect(session.preparedTargets[1].status).toBe('ready');
+    });
+
     it.each(['aod', 'visibility'] as const)('retains the other metric when %s fails', async failed => {
         const port = createPort();
         vi.mocked(port.getAtmosphere).mockImplementation(async metric => {

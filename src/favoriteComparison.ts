@@ -17,7 +17,7 @@ import {
     type WeatherPoint,
 } from './weather';
 import { LightPollutionOutOfBoundsError, type LightPollutionPoint } from './lightPollution';
-import { ObservationPlannerError, resolveObservationTimeZone } from './observationTimeZone';
+import { ObservationPlannerError, resolveObservationTimeZone, unavailableObservationTimeZone } from './observationTimeZone';
 import { combineAtmospherePoints, type AtmosphereMetric, type OpenMeteoAtmospherePoint } from './openMeteo';
 
 export const FAVORITE_COMPARISON_MIN_TARGETS = 2;
@@ -250,7 +250,7 @@ export const createFavoriteComparisonPlanner = (
                             target,
                             status: 'error',
                             errorCode: 'TIME_ZONE_UNAVAILABLE',
-                            diagnosticError: new ObservationPlannerError('TIME_ZONE_UNAVAILABLE'),
+                            diagnosticError: unavailableObservationTimeZone(timeZoneResult.reason),
                         } satisfies FavoriteComparisonPreparedTarget;
                     }
                     let timeZone: string;
