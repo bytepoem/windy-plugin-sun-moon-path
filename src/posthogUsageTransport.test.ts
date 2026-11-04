@@ -8,6 +8,21 @@ const config = { projectToken: 'phc_test', pluginVersion: '0.10.4', environment:
 const open: UsageEvent = { category: 'plugin', action: 'open' };
 
 describe('PostHog event transport', () => {
+    it('adds one pageview per opening without capturing the host URL or duplicating tab events', () => {
+        vi.stubGlobal('location', { href: 'https://www.windy.com/private-map?lat=12&lon=34' });
+        const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+        const transport = createPostHogUsageTransport(() => true, 'browser-id', config, fetchMock);
+        transport.send(open, 'opening-id');
+        transport.send({ category: 'tab', action: 'select', label: 'weather' }, 'opening-id');
+        const payloads = fetchMock.mock.calls.map(([, options]) => JSON.parse(options.body));
+        expect(payloads.map(payload => payload.event)).toEqual(['plugin_open', '$pageview', 'tab_select']);
+        expect(payloads[1]).toEqual({ ...payloads[0], event: '$pageview' });
+        expect(JSON.stringify(payloads)).not.toContain('private-map');
+        expect(payloads[1].properties).not.toHaveProperty('$current_url');
+        expect(payloads[1].properties).not.toHaveProperty('$referrer');
+        transport.destroy();
+    });
+
     it('labels browser identity and keeps the usage session separate from distinct_id', () => {
         const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
         const transport = createPostHogUsageTransport(() => true, 'browser-id', config, fetchMock);
@@ -61,7 +76,7 @@ describe('PostHog event transport', () => {
         expect(payload.properties).not.toHaveProperty('$user_agent');
         allowed = false;
         transport.send(open);
-        expect(fetchMock).toHaveBeenCalledOnce();
+        expect(fetchMock).toHaveBeenCalledTimes(2);
         transport.destroy();
     });
 
@@ -102,9 +117,9 @@ describe('PostHog event transport', () => {
         }));
         allowed = false;
         transport.send(open);
-        expect(fetchMock).toHaveBeenCalledOnce();
+        expect(fetchMock).toHaveBeenCalledTimes(2);
         transport.destroy(true);
-        expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+        expect(fetchMock.mock.calls.every(([, options]) => options.signal.aborted)).toBe(true);
         await Promise.resolve();
     });
 
@@ -113,9 +128,9 @@ describe('PostHog event transport', () => {
         const transport = createPostHogUsageTransport(() => true, 'session', config, fetchMock);
         transport.send(open);
         transport.destroy();
-        expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(false);
+        expect(fetchMock.mock.calls.every(([, options]) => !options.signal.aborted)).toBe(true);
         transport.send(open);
-        expect(fetchMock).toHaveBeenCalledOnce();
+        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('keeps diagnostics outside geographic enrichment', () => {
@@ -158,12 +173,12 @@ describe('PostHog event transport', () => {
         transport.send(open);
         await Promise.resolve();
         await Promise.resolve();
-        expect(fetchMock).toHaveBeenCalledOnce();
+        expect(fetchMock).toHaveBeenCalledTimes(2);
         fetchMock.mockImplementation(() => { throw new Error('unavailable'); });
         expect(() => transport.send(open)).not.toThrow();
         const unconfigured = createPostHogUsageTransport(() => true, 'session', { ...config, projectToken: '' }, fetchMock);
         unconfigured.send(open);
-        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
         transport.destroy(true);
     });
 });

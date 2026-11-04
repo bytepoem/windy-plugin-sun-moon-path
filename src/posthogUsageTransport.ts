@@ -85,7 +85,14 @@ export const createPostHogUsageTransport = (
             }
             usageEnvironment ??= readUsageEnvironment();
             const payload = postHogUsagePayload(event, distinctId, config, sessionId);
-            sendPayload({ ...payload, properties: { ...payload.properties, ...usageEnvironment } });
+            const enrichedPayload = { ...payload, properties: { ...payload.properties, ...usageEnvironment } };
+            sendPayload(enrichedPayload);
+            // One explicit plugin opening is one pageview. Reuse only consented
+            // properties; never read the host URL, referrer or map location.
+            // Each request independently rechecks consent and the in-flight bound.
+            if (event.category === 'plugin') {
+                sendPayload({ ...enrichedPayload, event: '$pageview' });
+            }
         },
         /** Ordinary diagnostic events, not PostHog's SDK-specific $exception contract. */
         sendDiagnostic(event: DiagnosticEvent, environment: {
