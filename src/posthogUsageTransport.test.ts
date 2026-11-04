@@ -8,6 +8,16 @@ const config = { projectToken: 'phc_test', pluginVersion: '0.10.4', environment:
 const open: UsageEvent = { category: 'plugin', action: 'open' };
 
 describe('PostHog event transport', () => {
+    it('labels browser identity and keeps the usage session separate from distinct_id', () => {
+        const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+        const transport = createPostHogUsageTransport(() => true, 'browser-id', config, fetchMock);
+        transport.send(open, 'opening-id');
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+            distinct_id: 'browser-id',
+            properties: { usage_identity: 'browser_v1', usage_session_id: 'opening-id' },
+        });
+        transport.destroy();
+    });
     it('sends classified failures and breadcrumbs without the raw input', () => {
         const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
         const transport = createPostHogUsageTransport(() => true, 'instance', config, fetchMock);
@@ -126,6 +136,8 @@ describe('PostHog event transport', () => {
         const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
         expect(payload.properties.$geoip_disable).toBe(true);
         expect(payload.properties.$process_person_profile).toBe(false);
+        expect(payload.properties).not.toHaveProperty('usage_identity');
+        expect(payload.properties).not.toHaveProperty('usage_session_id');
         transport.destroy();
     });
 

@@ -529,6 +529,8 @@
 </script>
 
 {#if open}
+    <!-- Dialog delegates Escape and nested scroll handling for its interactive children. -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <section
         id="favorite-comparison-panel"
         class="favorite-comparison"

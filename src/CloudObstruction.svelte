@@ -240,6 +240,8 @@
     {#if !scenarios.length}
         <p class="cloud-error" role="status">{zh ? '所选时刻不可用，或地点时区尚未就绪' : 'Selected time unavailable, or location time zone is not ready'}</p>
     {/if}
+    <!-- Svelte 4 treats region as noninteractive; keyboard users need to focus this horizontal scroll region. -->
+    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
     <div class="cloud-table-scroll" tabindex="0" role="region" aria-label={zh ? '云层距离表' : 'Cloud distance table'}>
     <table class="cloud-table">
         <thead><tr>
@@ -340,6 +342,8 @@
         <p class="cloud-error" role="status">{zh ? `${bodyName}中心在地平线下，遮蔽云距仅为几何参考` : `${bodyName} centre is below the horizon; blocking distance is a geometric reference only`}</p>
     {/if}
     <div class="cloud-map-options">
+        <!-- Keyboard focus allows scrolling the controls when they overflow on mobile. -->
+        <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
         <div class="cloud-map-row" tabindex="0" role="region" aria-label={zh ? '云图设置' : 'Cloud map settings'}>
         <label title={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'}><input type="checkbox" bind:checked={settings.syncMap} aria-label={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'} /> {zh ? '同步 Windy 模型与时间' : 'Sync Windy'}</label>
         {#if settings.syncMap && syncError && !previewingTime}

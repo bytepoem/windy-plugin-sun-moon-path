@@ -81,6 +81,7 @@ export const translations: Record<UiLanguage, {
     lightPollutionOutOfBounds: string;
     aboutDescription: string;
     guideHeading: string;
+    keyboardNavigationDescription: string;
     featureGuideHeading: string;
     buttonHintsHeading: string;
     buttonHintsDescription: string;
@@ -290,6 +291,7 @@ export const translations: Record<UiLanguage, {
         lightPollutionOutOfBounds: '该地点超出光污染数据范围（南纬 65° 至北纬 75°）。',
         aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30m、事件时刻和后 30m三个方位。',
         guideHeading: '地图说明',
+        keyboardNavigationDescription: '桌面标题返回按钮支持键盘聚焦；云层功能菜单用方向键选择、Enter 确认、Escape 关闭。横向表格可聚焦后使用键盘滚动。',
         featureGuideHeading: '功能说明',
         buttonHintsHeading: '按钮提示',
         buttonHintsDescription: '将鼠标停留在图标或紧凑型按钮上片刻，可查看该按钮的功能说明；按钮的键盘和屏幕阅读器名称保持一致。',
@@ -580,6 +582,7 @@ export const translations: Record<UiLanguage, {
         lightPollutionOutOfBounds: 'This location is outside atlas coverage (65°S to 75°N).',
         aboutDescription: 'Solar event lines are solid; moonrise and moonset lines are dashed. Each event includes directions 30m before, at the event, and 30m after.',
         guideHeading: 'Map guide',
+        keyboardNavigationDescription: 'Focus the desktop title back button with the keyboard. In the cloud function menu, use arrow keys to choose, Enter to confirm and Escape to close. Focus horizontal tables to scroll with the keyboard.',
         featureGuideHeading: 'Feature guide',
         buttonHintsHeading: 'Button hints',
         buttonHintsDescription: 'Pause the pointer over an icon or compact control to see what it does. The same name is also exposed to keyboard and screen-reader users.',

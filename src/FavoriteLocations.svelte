@@ -631,6 +631,8 @@
 </script>
 
 {#if open}
+    <!-- Dialog delegates Escape, drag and nested scroll handling for its interactive children. -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <section
         id="favorite-locations-panel"
         class="favorite-locations"

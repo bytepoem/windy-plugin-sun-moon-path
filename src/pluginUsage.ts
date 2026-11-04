@@ -1,4 +1,5 @@
 import store from '@windy/store';
+import { createBrowserUsageIdentity } from './browserUsageIdentity';
 import { createBaiduUsageTransport } from './baiduUsageTransport';
 import { createPostHogUsageTransport } from './posthogUsageTransport';
 import { postHogUsageConfig } from './posthogUsageConfig';
@@ -7,7 +8,7 @@ import { analyticsEnvironmentEnabled, createUsageMetrics, type UsageCloudView, t
 const CHECKPOINT_INTERVAL_MS = 30_000;
 // Internal remounts are immediate. Never resume a later manual opening.
 const INTERNAL_REOPEN_WINDOW_MS = 2_000;
-let continuation: { session: UsageSession; time: number; distinctId: string | null } | null = null;
+let continuation: { session: UsageSession; time: number; sessionId: string | null } | null = null;
 
 /** Bind one component lifetime to Windy consent and browser visibility. */
 export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; cloudView?: UsageCloudView }) => {
@@ -17,11 +18,16 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
     let interval: ReturnType<typeof setInterval> | null = null;
     let transport: ReturnType<typeof createBaiduUsageTransport> | null = null;
     let eventTransport: ReturnType<typeof createPostHogUsageTransport> | null = null;
-    const allowed = () => enabled && active && store.get('consent')?.analytics === true;
-    const resume = continuation && performance.now() - continuation.time <= INTERNAL_REOPEN_WINDOW_MS
+    let identityRevoked = false;
+    const allowed = () => enabled && active && !identityRevoked && store.get('consent')?.analytics === true;
+    const identity = createBrowserUsageIdentity(allowed);
+    const resume = allowed() && continuation && performance.now() - continuation.time <= INTERNAL_REOPEN_WINDOW_MS
         ? continuation : undefined;
-    let distinctId = resume?.distinctId ?? null;
+    let sessionId = resume?.sessionId ?? null;
+    let transportBrowserId: string | null = null;
     continuation = null;
+    // Cleanup is the only storage operation allowed without consent.
+    if (enabled && !allowed()) { identity.revoke(); }
 
     const metrics = createUsageMetrics({
         now: () => performance.now(),
@@ -39,9 +45,16 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
                     } catch { /* A PV failure must not suppress the event. */ }
                 }
                 try {
-                    distinctId ??= crypto.randomUUID();
-                    eventTransport ??= createPostHogUsageTransport(allowed, distinctId, postHogUsageConfig);
-                    eventTransport.send(event);
+                    identity.send(browserId => {
+                        sessionId ??= crypto.randomUUID();
+                        if (transportBrowserId !== browserId) {
+                            eventTransport?.destroy(true);
+                            eventTransport = null;
+                            transportBrowserId = browserId;
+                        }
+                        eventTransport ??= createPostHogUsageTransport(allowed, browserId, postHogUsageConfig);
+                        eventTransport.send(event, sessionId);
+                    });
                 } catch { /* Event statistics must not interrupt plugin use. */ }
             }
         },
@@ -61,14 +74,32 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
     };
 
     const consentChanged = () => {
+        identityRevoked = false;
         metrics.setConsent(allowed());
         if (!allowed()) {
             transport?.destroy();
             transport = null;
             eventTransport?.destroy(true);
             eventTransport = null;
-            distinctId = null;
+            sessionId = null;
+            transportBrowserId = null;
+            identity.revoke();
         }
+        syncTimer();
+    };
+
+    const storageChanged = (event: StorageEvent) => {
+        if (!identity.wasInvalidated(event)) { return; }
+        // Never recreate an identity in response to another tab's revocation.
+        identityRevoked = true;
+        metrics.setConsent(false);
+        transport?.destroy();
+        transport = null;
+        eventTransport?.destroy(true);
+        eventTransport = null;
+        transportBrowserId = null;
+        sessionId = null;
+        identity.cancel();
         syncTimer();
     };
 
@@ -91,6 +122,7 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
         document.addEventListener('visibilitychange', visibilityChanged);
         window.addEventListener('pagehide', pageHidden);
         window.addEventListener('pageshow', pageShown);
+        window.addEventListener('storage', storageChanged);
         syncTimer();
     }
 
@@ -105,8 +137,10 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
             }
             metrics.setConsent(allowed());
             const session = metrics.stop();
+            const allowedForContinuation = allowed();
             active = false;
-            continuation = resumeAfterInternalReopen ? { session, time: performance.now(), distinctId } : null;
+            continuation = resumeAfterInternalReopen && allowedForContinuation
+                ? { session, time: performance.now(), sessionId } : null;
             if (interval !== null) {
                 clearInterval(interval);
                 interval = null;
@@ -117,6 +151,8 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
             document.removeEventListener('visibilitychange', visibilityChanged);
             window.removeEventListener('pagehide', pageHidden);
             window.removeEventListener('pageshow', pageShown);
+            window.removeEventListener('storage', storageChanged);
+            identity.destroy();
             transport?.destroy();
             transport = null;
             eventTransport?.destroy();

@@ -78,6 +78,8 @@
         <span>{zh ? '高度' : 'Altitude'} <strong>{degree(source?.altitude)}</strong></span>
         <span>{zh ? '方位' : 'Azimuth'} <strong>{degree(source?.azimuth)}</strong></span>
     </div>
+    <!-- Svelte 4 treats region as noninteractive; keyboard users need to focus this horizontal scroll region. -->
+    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
     <div class="rainbow-table-scroll" role="region" tabindex="0" aria-label={zh ? '彩虹角度与当日时段' : 'Rainbow angles and daily windows'}>
     <table>
         <colgroup><col class="bow-column" /><col class="window-column" /><col span="4" class="angle-column" /></colgroup>

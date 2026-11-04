@@ -35,6 +35,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.3/plugin.min.
 
 Language and display options are in Settings; detailed legends are under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
 
+The desktop title back button supports keyboard focus. In the cloud function menu, use arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
+
 ## Features
 
 | Feature | Purpose |

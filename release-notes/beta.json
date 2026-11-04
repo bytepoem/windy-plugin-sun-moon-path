@@ -6,6 +6,10 @@
     "summary": "AOD 与补充能见度独立加载和重试，保留可用天气数据，并完善光污染取消处理与错误诊断。",
     "items": [
       {
+        "type": "improved",
+        "text": "改善桌面标题返回按钮与云层功能菜单的键盘可访问性，并保留横向表格的键盘滚动入口。"
+      },
+      {
         "type": "fixed",
         "text": "修复光污染数据加载被取消后仍可能继续下载或返回结果的问题。"
       },
@@ -27,6 +31,10 @@
     "title": "Atmosphere loading and diagnostics",
     "summary": "Independent loading and retry for AOD and supplementary visibility, preserving available weather data, with improved light pollution cancellation and error diagnostics.",
     "items": [
+      {
+        "type": "improved",
+        "text": "Improved keyboard accessibility of the desktop title back button and cloud function menu while retaining keyboard scrolling for horizontal tables."
+      },
       {
         "type": "fixed",
         "text": "Fixed cancelled light pollution requests continuing to download or return results."

@@ -12,7 +12,7 @@ const CAPTURE_URL = 'https://us.i.posthog.com/i/v0/e/';
 const MAX_IN_FLIGHT_REQUESTS = 16;
 
 /** Map only our explicit events; never collect the host page URL or account. */
-export const postHogUsagePayload = (event: UsageEvent, distinctId: string, config: PostHogUsageConfig) => ({
+export const postHogUsagePayload = (event: UsageEvent, distinctId: string, config: PostHogUsageConfig, sessionId?: string) => ({
     api_key: config.projectToken,
     distinct_id: distinctId,
     event: event.category === 'plugin' ? 'plugin_open'
@@ -25,6 +25,7 @@ export const postHogUsagePayload = (event: UsageEvent, distinctId: string, confi
         plugin: 'windy-plugin-sun-moon-path',
         plugin_version: config.pluginVersion,
         environment: config.environment,
+        ...(sessionId ? { usage_identity: 'browser_v1', usage_session_id: sessionId } : {}),
         ...('label' in event && event.label !== 'plugin' ? { tab: event.label } : {}),
         ...('value' in event ? { seconds: event.value } : {}),
     },
@@ -32,7 +33,8 @@ export const postHogUsagePayload = (event: UsageEvent, distinctId: string, confi
 
 /**
  * Send directly through the documented capture API. No automatic collection,
- * persistent identifiers, deferred batches, retries or third-party SDK timers.
+ * storage access, deferred batches, retries or third-party SDK timers. The caller
+ * owns the consented browser identifier and the separate usage session identifier.
  */
 export const createPostHogUsageTransport = (
     isAllowed: () => boolean,
@@ -77,12 +79,12 @@ export const createPostHogUsageTransport = (
 
     return {
         get pending() { return inFlight.size; },
-        send(event: UsageEvent) {
+        send(event: UsageEvent, sessionId?: string) {
             if (disposed || !isAllowed() || !config.projectToken) {
                 return;
             }
             usageEnvironment ??= readUsageEnvironment();
-            const payload = postHogUsagePayload(event, distinctId, config);
+            const payload = postHogUsagePayload(event, distinctId, config, sessionId);
             sendPayload({ ...payload, properties: { ...payload.properties, ...usageEnvironment } });
         },
         /** Ordinary diagnostic events, not PostHog's SDK-specific $exception contract. */

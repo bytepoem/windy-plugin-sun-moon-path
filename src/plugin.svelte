@@ -12,10 +12,9 @@
 >
     {#if !isMobileOrTablet}
         <div
-            class="plugin__title plugin__title--chevron-back panel-title"
-            on:click={() => bcast.emit('rqstOpen', 'menu')}
+            class="plugin__title panel-title"
         >
-            <span class="panel-title__text">{title}</span>
+            <button type="button" class="plugin__title--chevron-back panel-title__text" on:click={() => bcast.emit('rqstOpen', 'menu')}>{title}</button>
             <span class="desktop-map-controls">
                 <button
                     type="button"
@@ -468,7 +467,7 @@
         class:mobile-collapsed-hidden={isMobileCollapsed && minimizeScope === 'hide-summary'}
         aria-label={text.sunMoonPanelLabel}
     >
-        <nav class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
+        <div class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
             <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => selectSummaryTab('events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
             {#if isMobileOrTablet && !isMobileFullscreen}
                 <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
@@ -503,7 +502,7 @@
                     <span class="summary-tab__badge" aria-hidden="true">{text.aboutTabUpdateBadge}</span>
                 {/if}
             </button>
-        </nav>
+        </div>
         {#if pluginUpdateReminderVersion}
             <span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
                 {text.aboutTabUpdateLabel(pluginUpdateReminderVersion)}
@@ -3927,7 +3926,21 @@
     }
 
     .panel-title__text {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0;
+        border: 0;
+        color: inherit;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
         white-space: nowrap;
+    }
+
+    .panel-title__text:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 3px;
     }
 
     .desktop-map-controls {

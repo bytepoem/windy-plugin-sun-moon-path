@@ -52,6 +52,16 @@ describe('plugin usage lifecycle', () => {
         browser = Object.assign(new EventTarget(), { location: { href: 'https://www.windy.com/' } });
         vi.stubGlobal('document', page);
         vi.stubGlobal('window', browser);
+        const items = new Map<string, string>([['sun-moon-path-usage-browser-id-v1', crypto.randomUUID()]]);
+        vi.stubGlobal('localStorage', {
+            getItem: vi.fn((key: string) => items.get(key) ?? null),
+            setItem: vi.fn((key: string, value: string) => items.set(key, value)),
+            removeItem: vi.fn((key: string) => items.delete(key)),
+        });
+        vi.stubGlobal('navigator', { locks: { request: vi.fn((_key, _options, callback) => {
+            callback();
+            return Promise.resolve();
+        }) } });
     });
 
     afterEach(() => {
@@ -100,12 +110,15 @@ describe('plugin usage lifecycle', () => {
         expect(state.pageviews).toHaveLength(0);
         expect(state.listeners.size).toBe(0);
         expect(vi.getTimerCount()).toBe(0);
+        expect(localStorage.getItem).not.toHaveBeenCalled();
+        expect(localStorage.setItem).not.toHaveBeenCalled();
+        expect(localStorage.removeItem).not.toHaveBeenCalled();
     });
 
     it('destroys the transport immediately on revocation and never replays opening', async () => {
         const { startPluginUsage } = await import('./pluginUsage');
         const usage = startPluginUsage({ localBuild: false, tab: 'events' });
-        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'plugin', action: 'open' });
+        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'plugin', action: 'open' }, expect.any(String));
         consent(false);
         expect(state.transports[0].destroy).toHaveBeenCalledOnce();
         expect(state.transports[0].destroy).toHaveBeenCalledWith(true);
@@ -113,7 +126,7 @@ describe('plugin usage lifecycle', () => {
         expect(vi.getTimerCount()).toBe(0);
         consent(true);
         usage.setTab('clouds', true);
-        expect(state.transports[1].send).toHaveBeenCalledExactlyOnceWith({ category: 'tab', action: 'select', label: 'obstruction' });
+        expect(state.transports[1].send).toHaveBeenCalledExactlyOnceWith({ category: 'tab', action: 'select', label: 'obstruction' }, expect.any(String));
         expect(state.identities[1]).not.toBe(state.identities[0]);
         expect(state.pageviews).toHaveLength(1);
         usage.stop();
@@ -157,8 +170,11 @@ describe('plugin usage lifecycle', () => {
         expect(state.pageviews).toHaveLength(1);
         second.stop();
         const third = startPluginUsage({ localBuild: false, tab: 'events' });
-        expect(state.transports.at(-1)?.send).toHaveBeenCalledWith({ category: 'plugin', action: 'open' });
-        expect(state.identities.at(-1)).not.toBe(state.identities[0]);
+        expect(state.transports.at(-1)?.send).toHaveBeenCalledWith({ category: 'plugin', action: 'open' }, expect.any(String));
+        expect(state.identities.at(-1)).toBe(state.identities[0]);
+        const firstSession = state.transports[0].send.mock.calls[0][1];
+        expect(state.transports[1].send.mock.calls[0][1]).toBe(firstSession);
+        expect(state.transports.at(-1)?.send.mock.calls[0][1]).not.toBe(firstSession);
         expect(state.pageviews).toHaveLength(2);
         third.stop();
     });
@@ -179,14 +195,80 @@ describe('plugin usage lifecycle', () => {
         expect(actions).toContain('reached_3min');
     });
 
+    it('clears an old identifier without reading it when opening without consent', async () => {
+        state.consent = false;
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        expect(localStorage.removeItem).toHaveBeenCalledOnce();
+        expect(localStorage.getItem).not.toHaveBeenCalled();
+        expect(localStorage.setItem).not.toHaveBeenCalled();
+        expect(state.transports).toHaveLength(0);
+        consent(true);
+        usage.setTab('weather', true);
+        expect(state.transports[0].send.mock.calls.map(([event]) => event.action)).toEqual(['select']);
+        usage.stop();
+    });
+
+    it.each(['sun-moon-path-usage-browser-id-v1', null])('stops on cross-tab deletion of %s and removes its listener on close', async key => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        const event = Object.assign(new Event('storage'), { key, newValue: null, storageArea: localStorage });
+        browser.dispatchEvent(Object.assign(new Event('storage'), { key: 'unrelated', newValue: null, storageArea: localStorage }));
+        expect(state.transports[0].destroy).not.toHaveBeenCalled();
+        localStorage.removeItem('sun-moon-path-usage-browser-id-v1');
+        browser.dispatchEvent(event);
+        expect(state.transports[0].destroy).toHaveBeenCalledWith(true);
+        expect(vi.getTimerCount()).toBe(0);
+        usage.setTab('weather', true);
+        expect(state.transports).toHaveLength(1);
+        consent(true);
+        usage.setTab('about', true);
+        expect(state.identities[1]).not.toBe(state.identities[0]);
+        usage.stop();
+        const reads = vi.mocked(localStorage.getItem).mock.calls.length;
+        browser.dispatchEvent(event);
+        expect(vi.mocked(localStorage.getItem).mock.calls).toHaveLength(reads);
+        expect(state.listeners.size).toBe(0);
+    });
+
+    it('counts a new three-minute threshold after revocation instead of carrying old engagement', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        vi.advanceTimersByTime(180_000);
+        expect(state.transports[0].send.mock.calls.filter(([event]) => event.action === 'reached_3min')).toHaveLength(1);
+        consent(false);
+        consent(true);
+        vi.advanceTimersByTime(180_000);
+        expect(state.transports[1].send.mock.calls.filter(([event]) => event.action === 'reached_3min')).toHaveLength(1);
+        expect(state.transports[1].send.mock.calls[0][1]).not.toBe(state.transports[0].send.mock.calls[0][1]);
+        usage.stop();
+    });
+
+    it('discards an internal handoff when consent is absent at the next mount', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const first = startPluginUsage({ localBuild: false, tab: 'events' });
+        vi.advanceTimersByTime(180_000);
+        const oldSessionId = state.transports[0].send.mock.calls[0][1];
+        first.stop(true);
+        state.consent = false;
+        const next = startPluginUsage({ localBuild: false, tab: 'events' });
+        consent(true);
+        next.setTab('weather', true);
+        expect(state.identities[1]).not.toBe(state.identities[0]);
+        expect(state.transports[1].send.mock.calls[0][1]).not.toBe(oldSessionId);
+        vi.advanceTimersByTime(180_000);
+        expect(state.transports[1].send.mock.calls.filter(([event]) => event.action === 'reached_3min')).toHaveLength(1);
+        next.stop();
+    });
+
     it('keeps events working when the Baidu transport cannot initialize', async () => {
         const baidu = await import('./baiduUsageTransport');
         vi.spyOn(baidu, 'createBaiduUsageTransport').mockImplementationOnce(() => { throw new Error('blocked'); });
         const { startPluginUsage } = await import('./pluginUsage');
         const usage = startPluginUsage({ localBuild: false, tab: 'events' });
-        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'plugin', action: 'open' });
+        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'plugin', action: 'open' }, expect.any(String));
         usage.setTab('clouds', true);
-        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'tab', action: 'select', label: 'obstruction' });
+        expect(state.transports[0].send).toHaveBeenCalledWith({ category: 'tab', action: 'select', label: 'obstruction' }, expect.any(String));
         usage.stop();
     });
 
