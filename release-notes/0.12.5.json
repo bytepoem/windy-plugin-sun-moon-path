@@ -1,0 +1,32 @@
+{
+  "version": "0.12.5",
+  "releasedAt": "2026-11-05",
+  "zh": {
+    "title": "修复设置与面板切换",
+    "summary": "修复设置页空白和面板切换失去响应的问题。",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "修复 Windy 新增飞行危险图层后设置页空白、切换云层和关于失去响应的问题。"
+      },
+      {
+        "type": "improved",
+        "text": "启动图层选项支持飞行危险，并只展示插件支持且当前 Windy 提供的图层。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Settings and panel navigation fixes",
+    "summary": "Fixed blank Settings and unresponsive panel navigation.",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed blank Settings and unresponsive Clouds/About navigation after Windy introduced the Flight dangers layer."
+      },
+      {
+        "type": "improved",
+        "text": "Startup layer choices now include Flight dangers and only list layers supported by the plugin and available in Windy."
+      }
+    ]
+  }
+}

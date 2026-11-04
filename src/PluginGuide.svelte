@@ -36,8 +36,8 @@
             ? '先选地点，再调整顶部当地日期和时间；「现在」返回当前时刻，升落按钮可直接跳转。Windy 时间轴也会同步规划时间，切换 Tab 不会重置。重新打开插件从当前时刻开始。'
             : 'Choose a location, then set the local date and time above. Now returns to the current instant; rise/set shortcuts jump to events. The Windy timeline also updates planning time. Tabs preserve your selection; reopening starts at the current instant.'}</p>
         <p>{uiLanguage === 'zh'
-            ? '主导航下拉菜单切换云层遮挡、彩虹、地平线与潮汐；语言、单位和其他偏好在设置中修改。'
-            : 'Use the navigation dropdown for Clouds, Rainbow, Horizon or Tides. Change language, units and other preferences in Settings.'}</p>
+            ? '主导航下拉菜单切换云层遮挡、彩虹、地平线与潮汐；语言、单位和其他偏好在设置中修改。启动图层只列出插件支持且当前 Windy 提供的选项，也可保持当前图层。'
+            : 'Use the navigation dropdown for Clouds, Rainbow, Horizon or Tides. Change language, units and other preferences in Settings. Startup layers list choices supported by the plugin and available in Windy; you can also keep the current layer.'}</p>
         <p>{text.keyboardNavigationDescription}</p>
         <p>{uiLanguage === 'zh'
             ? '显示不完整或加载异常时，展开「关于」底部的「查看诊断信息」，复制报告并随问题反馈提供。初始化失败时也会显示诊断入口；文件本身无法加载时，请提供截图与浏览器错误。'

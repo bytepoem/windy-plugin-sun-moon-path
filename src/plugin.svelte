@@ -1217,6 +1217,7 @@
     import {
         DEFAULT_INITIAL_OVERLAY,
         KEEP_CURRENT_OVERLAY,
+        isSupportedInitialOverlay,
         normalizeInitialOverlayPreference,
         orderInitialOverlayOptions,
         type InitialOverlayPreference,
@@ -1303,8 +1304,10 @@
     const MAP_VIEW_EDGE_PADDING_PX = 18;
     const MOBILE_MAP_RECENTER_DELAY_MS = 550;
     const initialOverlayOptions = orderInitialOverlayOptions(Array.from(new Map(
+        // Validate the external menu before using plugin-owned bilingual labels.
         Object.values(windyOverlays)
             .filter(overlay => !overlay.partOf)
+            .filter(overlay => isSupportedInitialOverlay(overlay.getMenuIdent()))
             .map(overlay => [
                 overlay.getMenuIdent(),
                 {
