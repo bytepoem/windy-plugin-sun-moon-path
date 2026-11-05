@@ -33,8 +33,9 @@
 
 ## 浏览器控制
 
+- 真实 Windy Developer mode 的安装、交互与提交／发布前 UI 验收，包括批量回归和异常场景，优先使用已有登录态的 `$ego-browser`，失败后按下述规则切换 `$browser-skill`（bsk）。不得为这类验收改用缺少登录态的 `agent-browser` 隔离环境并要求用户重新登录。
 - 用户登录态和交互式浏览优先使用 `$ego-browser`，首次使用即授予完整权限；不可用或针对实际错误修正并重试一次仍失败时，切换一次到 `$browser-skill`。
-- Headless、CI、批量回归、远程浏览器、网络 Mock、HAR、Trace 或性能分析直接使用 `$agent-browser`。
+- 不依赖用户登录态的独立 Headless、CI、远程浏览器、网络 Mock、HAR、Trace 或性能分析使用 `$agent-browser`；真实 Windy 验收按上一条执行。
 - 不并行或反复切换；切换后重新观察页面。登录、CAPTCHA、OTP、支付确认和用户接管按当前 skill 完成交接，不算工具失败；结束时按当前 skill 要求清理。
 
 ## Windy 插件审核

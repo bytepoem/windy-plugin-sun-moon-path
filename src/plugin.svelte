@@ -3310,8 +3310,10 @@
     };
 
     onMount(() => {
+        const mountStarted = performance.now();
         try {
             mountPlugin();
+            pluginUsage?.recordMountDuration(performance.now() - mountStarted);
         } catch (error) {
             // Let the constructor finish, then the entry destroys the complete Svelte subtree.
             startupFailed(error);
