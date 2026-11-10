@@ -75,6 +75,102 @@ describe('plugin usage lifecycle', () => {
         state.listeners.forEach(listener => listener());
     };
 
+    it('pairs pagehide and BFCache restore without duplicate closes or plugin openings', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        browser.dispatchEvent(new Event('pagehide'));
+        browser.dispatchEvent(new Event('pagehide'));
+        browser.dispatchEvent(new Event('pageshow'));
+        browser.dispatchEvent(new Event('pageshow'));
+        usage.stop();
+        usage.stop();
+        const calls = state.transports[0].send.mock.calls;
+        expect(calls.map(([event]) => event.action).filter(action => action.startsWith('$')))
+            .toEqual(['$pageleave', '$pageview', '$pageleave']);
+        expect(calls.filter(([event]) => event.action === 'open')).toHaveLength(1);
+        expect(new Set(calls.map(([, id]) => id)).size).toBe(1);
+        expect(calls[0][1].split('-')[2]).toMatch(/^7/);
+    });
+
+    it('reports only one valid plugin mount measurement and discards it after revocation', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        usage.recordMountDuration(NaN);
+        usage.recordMountDuration(-1);
+        usage.recordMountDuration(12.5);
+        usage.recordMountDuration(99);
+        expect(state.transports[0].send.mock.calls.filter(([event]) => event.category === 'performance'))
+            .toEqual([[{ category: 'performance', action: 'plugin_mount_setup', durationMs: 12.5 }, expect.any(String)]]);
+        usage.stop();
+        const second = startPluginUsage({ localBuild: false, tab: 'events' });
+        consent(false);
+        consent(true);
+        second.recordMountDuration(20);
+        expect(state.transports).toHaveLength(2);
+        second.stop();
+    });
+
+    it('renews an expired standard session without reusing an invalid timestamp', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        const original = state.transports[0].send.mock.calls[0][1];
+        vi.setSystemTime(Date.now() + 86_400_000);
+        usage.setTab('weather', true);
+        expect(state.transports[0].send.mock.calls.at(-1)?.[1]).not.toBe(original);
+        usage.stop();
+        const newSessionEvents = state.transports[0].send.mock.calls.filter(([, id]) => id !== original);
+        expect(newSessionEvents[0][0].action).toBe('$pageview');
+        expect(newSessionEvents.at(-1)?.[0].action).toBe('$pageleave');
+        expect(newSessionEvents.filter(([event]) => event.action === '$pageview')).toHaveLength(1);
+    });
+
+    it.each(['close', 'restore', 'grant'] as const)('keeps browsing boundaries on expired session %s', async scenario => {
+        state.consent = scenario !== 'grant';
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        if (scenario === 'grant') {
+            consent(true);
+            usage.setTab('weather', true);
+        }
+        if (scenario === 'restore') { browser.dispatchEvent(new Event('pagehide')); }
+        const transport = state.transports[0];
+        const original = transport.send.mock.calls[0][1];
+        vi.setSystemTime(Date.now() + 86_400_000);
+        if (scenario === 'restore') { browser.dispatchEvent(new Event('pageshow')); }
+        if (scenario === 'grant') { usage.setTab('about', true); }
+        usage.stop();
+        const events = transport.send.mock.calls.filter(([, id]) => id !== original).map(([event]) => event.action);
+        if (scenario === 'grant') {
+            expect(events).not.toContain('$pageview');
+            expect(events).not.toContain('$pageleave');
+        } else {
+            expect(events.filter(action => action === '$pageview' || action === '$pageleave'))
+                .toEqual(['$pageview', '$pageleave']);
+        }
+    });
+
+    it('queues mount measurement behind identity creation and cancels on close', async () => {
+        localStorage.removeItem('sun-moon-path-usage-browser-id-v1');
+        const pending: (() => void)[] = [];
+        vi.mocked(navigator.locks.request).mockImplementation((_name: unknown, _options: unknown, callback: unknown) => {
+            pending.push(callback as () => void);
+            return Promise.resolve();
+        });
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events' });
+        usage.recordMountDuration(25);
+        expect(state.transports).toHaveLength(0);
+        pending.splice(0).forEach(callback => callback());
+        expect(state.transports[0].send.mock.calls.map(([event]) => event.action)).toEqual(['open', 'plugin_mount_setup']);
+        usage.stop();
+        localStorage.removeItem('sun-moon-path-usage-browser-id-v1');
+        const closed = startPluginUsage({ localBuild: false, tab: 'events' });
+        closed.recordMountDuration(30);
+        closed.stop();
+        pending.forEach(callback => callback());
+        expect(state.transports).toHaveLength(1);
+    });
+
     it('forwards restored and selected subviews through timing, background and close', async () => {
         let now = 0;
         vi.spyOn(performance, 'now').mockImplementation(() => now);

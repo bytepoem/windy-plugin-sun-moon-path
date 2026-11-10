@@ -29,7 +29,7 @@ describe('PostHog event transport', () => {
         transport.send(open, 'opening-id');
         expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
             distinct_id: 'browser-id',
-            properties: { usage_identity: 'browser_v1', usage_session_id: 'opening-id' },
+            properties: { usage_identity: 'browser_v1', usage_session_id: 'opening-id', $session_id: 'opening-id' },
         });
         transport.destroy();
     });
@@ -81,6 +81,9 @@ describe('PostHog event transport', () => {
     });
 
     it.each([
+        [{ category: 'web', action: '$pageleave' }, '$pageleave', {}],
+        [{ category: 'web', action: '$pageview' }, '$pageview', {}],
+        [{ category: 'performance', action: 'plugin_mount_setup', durationMs: 12.5 }, 'plugin_mount_setup', { duration_ms: 12.5, measurement_scope: 'plugin_mount_setup' }],
         [open, 'plugin_open', {}],
         [{ category: 'tab', action: 'select', label: 'obstruction' }, 'tab_select', { tab: 'obstruction' }],
         [{ category: 'usage', action: 'foreground_seconds', label: 'plugin', value: 30 }, 'foreground_seconds', { seconds: 30 }],

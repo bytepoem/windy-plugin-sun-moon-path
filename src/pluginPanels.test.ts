@@ -93,6 +93,13 @@ const settingsProps = {
 };
 
 describe('compiled settings panel states', () => {
+    it.each(['zh', 'en'])('renders the live flight dangers option in %s', uiLanguage => {
+        const html = renderSettings({ ...settingsProps, uiLanguage,
+            initialOverlayOptions: [{ value: 'satellite' }, { value: 'flightDangers' }],
+            initialOverlayPreference: 'flightDangers' });
+        expect(html).toContain(uiLanguage === 'zh' ? '飞行危险' : 'Flight dangers');
+        expect(html).toContain('value="flightDangers"');
+    });
     it('renders current preferences and recalculates distance labels on unit changes', () => {
         expect(renderSettings(settingsProps)).toContain('显示 600 km 点');
         const miles = renderSettings({ ...settingsProps, units: { ...settingsProps.units, distance: 'mi' } });

@@ -3,6 +3,8 @@ export type UsageCloudView = 'obstruction' | 'rainbow' | 'horizon' | 'tide';
 export type UsageReportTab = Exclude<UsageTab, 'clouds'> | UsageCloudView;
 
 export type UsageEvent =
+    | { category: 'web'; action: '$pageview' | '$pageleave' }
+    | { category: 'performance'; action: 'plugin_mount_setup'; durationMs: number }
     | { category: 'plugin'; action: 'open' }
     | { category: 'tab'; action: 'select'; label: UsageReportTab }
     | { category: 'usage'; action: 'foreground_seconds'; label: 'plugin'; value: number }
@@ -12,6 +14,8 @@ export type UsageEvent =
 export interface UsageSession {
     foregroundMs: number;
     reachedThreeMinutes: boolean;
+    pageOpen: boolean;
+    pageRestorable: boolean;
 }
 
 const THREE_MINUTES_MS = 180_000;
@@ -32,7 +36,9 @@ export const createUsageMetrics = (options: {
     let cloudView = options.cloudView ?? 'obstruction';
     let stopped = false;
     let lastTime = options.now();
-    const session = options.resume ?? { foregroundMs: 0, reachedThreeMinutes: false };
+    const session = options.resume ?? {
+        foregroundMs: 0, reachedThreeMinutes: false, pageOpen: allowed, pageRestorable: false,
+    };
 
     const send = (event: UsageEvent) => {
         try { options.send(event); } catch { /* Metrics must never interrupt the plugin. */ }
@@ -64,8 +70,23 @@ export const createUsageMetrics = (options: {
         }
     };
 
+    /** Page departures are distinct from foreground timing and internal remounts. */
+    const leavePage = () => {
+        if (stopped || !allowed || !session.pageOpen) { return; }
+        session.pageOpen = false;
+        session.pageRestorable = true;
+        send({ category: 'web', action: '$pageleave' });
+    };
+
     return {
         checkpoint,
+        leavePage,
+        restorePage() {
+            if (stopped || !allowed || !session.pageRestorable || session.pageOpen) { return; }
+            session.pageRestorable = false;
+            session.pageOpen = true;
+            send({ category: 'web', action: '$pageview' });
+        },
         setConsent(next: boolean) {
             if (stopped || next === allowed) {
                 return;
@@ -76,6 +97,8 @@ export const createUsageMetrics = (options: {
             // A new grant gets a new usage identity/session; its engagement
             // threshold must not include time reported under the revoked one.
             if (!next) {
+                session.pageOpen = false;
+                session.pageRestorable = false;
                 session.foregroundMs = 0;
                 session.reachedThreeMinutes = false;
             }
@@ -103,8 +126,9 @@ export const createUsageMetrics = (options: {
                 }
             }
         },
-        stop(): UsageSession {
+        stop(resumeAfterInternalReopen = false): UsageSession {
             checkpoint();
+            if (!resumeAfterInternalReopen) { leavePage(); }
             stopped = true;
             return { ...session };
         },

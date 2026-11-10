@@ -19,12 +19,12 @@
 
 ## 安装与上手
 
-当前发布版本：**0.12.4** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.4)
+当前发布版本：**0.12.5** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.5)
 
 将以下地址填入 Windy 的外部插件加载入口，打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.4/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.5/plugin.min.js
 ```
 
 1. **选机位**：点击地图，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写自己的地图服务 API Key。
@@ -32,6 +32,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.4/plugin.min.
 3. **看条件**：查看事件与天气，使用云层或彩虹规划，也可选择 2–5 个收藏机位进行对比。
 
 语言和显示选项在「设置」中调整；详细图例见「设置 → 使用说明」。以下功能说明对应当前仓库，已发布版本的功能以更新记录为准。
+
+启动图层选项包含插件支持且当前 Windy 提供的图层，包括飞行危险；可选择保持 Windy 当前图层。
 
 键盘可聚焦桌面标题返回按钮；云层功能菜单支持方向键选择、Enter 确认和 Escape 关闭，横向表格保留键盘滚动入口。
 

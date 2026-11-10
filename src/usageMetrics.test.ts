@@ -20,6 +20,36 @@ const durations = (events: UsageEvent[], action = 'foreground_seconds') => event
     .reduce((total, event) => total + event.value, 0);
 
 describe('authorized plugin usage', () => {
+    it('pairs departures once, resumes a restored page and preserves internal remounts', () => {
+        const first = fixture();
+        first.advance(1000);
+        const resume = first.metrics.stop(true);
+        expect(first.events.filter(event => event.action === '$pageleave')).toHaveLength(0);
+        const next = fixture(true, resume);
+        next.metrics.leavePage();
+        next.metrics.leavePage();
+        next.metrics.restorePage();
+        next.metrics.restorePage();
+        next.metrics.stop();
+        next.metrics.stop();
+        expect(next.events.filter(event => event.category === 'web').map(event => event.action))
+            .toEqual(['$pageleave', '$pageview', '$pageleave']);
+    });
+
+    it('does not create orphan departures after a grant or revocation', () => {
+        const denied = fixture(false);
+        denied.metrics.setConsent(true);
+        denied.metrics.stop();
+        expect(denied.events.filter(event => event.category === 'web')).toEqual([]);
+        const revoked = fixture();
+        revoked.metrics.setConsent(false);
+        revoked.metrics.setConsent(true);
+        revoked.metrics.leavePage();
+        revoked.metrics.restorePage();
+        revoked.metrics.stop();
+        expect(revoked.events.filter(event => event.category === 'web')).toEqual([]);
+    });
+
     it('reports each cloud subview instead of an aggregate cloud tab', () => {
         const { metrics, events, advance } = fixture();
         metrics.setTab('clouds', true, 'obstruction');
@@ -80,7 +110,7 @@ describe('authorized plugin usage', () => {
         const options = { now: () => now, send: (event: UsageEvent) => events.push(event), allowed: true, visible: true, tab: 'clouds' as const, cloudView: 'tide' as const };
         const first = createUsageMetrics(options);
         now = 15_000;
-        const resume = first.stop();
+        const resume = first.stop(true);
         const second = createUsageMetrics({ ...options, resume });
         now = 25_000;
         second.stop();
@@ -165,7 +195,7 @@ describe('authorized plugin usage', () => {
     it('continues the milestone across internal remounts without another opening', () => {
         const first = fixture();
         first.advance(100_000);
-        const session = first.metrics.stop();
+        const session = first.metrics.stop(true);
         const second = fixture(true, session);
         second.advance(80_000);
         second.metrics.checkpoint();

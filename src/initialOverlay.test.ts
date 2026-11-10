@@ -7,6 +7,7 @@ import {
     KEEP_CURRENT_OVERLAY,
     normalizeInitialOverlayPreference,
     orderInitialOverlayOptions,
+    isSupportedInitialOverlay,
 } from './initialOverlay';
 
 const availableOverlays = ['wind', 'satellite', 'clouds'] as const;
@@ -74,6 +75,13 @@ describe('initial overlay preference', () => {
 
 
 describe('plugin-language overlay names', () => {
+    it('supports the live Windy flight dangers menu and rejects unrecognized host entries', () => {
+        expect(isSupportedInitialOverlay('flightDangers')).toBe(true);
+        expect(initialOverlayLabel('flightDangers', 'zh')).toBe('飞行危险');
+        expect(initialOverlayLabel('flightDangers', 'en')).toBe('Flight dangers');
+        expect(isSupportedInitialOverlay('future-host-overlay')).toBe(false);
+        expect(isSupportedInitialOverlay('constructor')).toBe(false);
+    });
     it('changes labels without changing overlay identifiers or selection', () => {
         const options = orderInitialOverlayOptions([{ value: 'clouds' }, { value: 'satellite' }, { value: 'wind' }] as const);
         expect(options.map(option => initialOverlayLabel(option.value, 'en'))).toEqual(['Satellite', 'Clouds', 'Wind']);

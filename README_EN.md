@@ -21,12 +21,12 @@ Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glo
 
 Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About. This describes the current repository; released behavior is listed in the release notes.
 
-Current release: **0.12.4** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.4)
+Current release: **0.12.5** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.5)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.4/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.5/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
@@ -34,6 +34,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.4/plugin.min.
 3. **Check conditions:** explore events and weather, use cloud or rainbow planning, or compare 2–5 favorite locations.
 
 Language and display options are in Settings; detailed legends are under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
+
+Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers. You can also keep Windy's current layer.
 
 The desktop title back button supports keyboard focus. In the cloud function menu, use arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
 

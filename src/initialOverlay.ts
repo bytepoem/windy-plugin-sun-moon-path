@@ -1,6 +1,7 @@
 import type { overlays } from '@windy/rootScope';
 
-export type WindyOverlay = (typeof overlays)[number];
+// The live host exposes flightDangers before the bundled SDK declares it.
+export type WindyOverlay = (typeof overlays)[number] | 'flightDangers';
 
 export const KEEP_CURRENT_OVERLAY = 'keep-current';
 export const DEFAULT_INITIAL_OVERLAY: WindyOverlay = 'satellite';
@@ -134,7 +135,14 @@ const INITIAL_OVERLAY_LABELS: Record<WindyOverlay, readonly [string, string]> = 
     heatmaps: ['热点', 'Active fires'],
     topoMap: ['地形图', 'Topographic map'],
     hurricanes: ['飓风跟踪器', 'Hurricane tracker'],
+    flightDangers: ['飞行危险', 'Flight dangers'],
 };
+
+/** Only expose startup choices whose identifiers and bilingual labels we support.
+ * Host menu entries are an open runtime set, independent of the bundled SDK.
+ */
+export const isSupportedInitialOverlay = (value: string): value is WindyOverlay =>
+    Object.prototype.hasOwnProperty.call(INITIAL_OVERLAY_LABELS, value);
 
 export const initialOverlayLabel = (overlay: WindyOverlay, language: 'zh' | 'en'): string =>
     INITIAL_OVERLAY_LABELS[overlay][language === 'zh' ? 0 : 1];
