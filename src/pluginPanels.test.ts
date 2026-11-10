@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { compileRenderer, type RenderComponent } from './test/renderSvelte';
+import { UI_LANGUAGE_OPTIONS } from './uiLanguage';
 import type { PluginUpdateResult } from './pluginUpdate';
 
 let renderAbout: RenderComponent;
@@ -81,11 +82,14 @@ const settingsProps = {
     units: { wind: 'm/s', temperature: '°C', precipitation: 'mm', distance: 'km', elevation: 'm' },
     initialOverlayPreference: 'satellite', initialOverlayOptions: [{ value: 'satellite' }],
     radarProvider: 'none', radarOverlayStatus: 'disabled', radarOpacityPercent: 65,
+    lightPollutionEnabled: false, lightPollutionOverlayStatus: 'disabled', lightPollutionOpacityPercent: 85,
+    toggleLightPollutionOverlay: () => undefined, changeLightPollutionOpacity: () => undefined,
+    retryLightPollutionOverlay: () => undefined,
     hideLocationSearch: false, directionLineOpacityPercent: 85, showExtendedDistanceMarker: false,
     minimizeScope: 'standard', changeMinimizeScope: () => undefined,
     savedApiKeyProvider: null, locationApiKeyDrafts: { amap: '', baidu: '', tencent: '' },
     locationApiKeys: { amap: '', baidu: '', tencent: '' },
-    toggleLanguage: () => undefined, changeInitialOverlayPreference: () => undefined,
+    changeLanguage: () => undefined, changeInitialOverlayPreference: () => undefined,
     changeRadarProvider: () => undefined, changeRadarOpacity: () => undefined,
     toggleLocationSearch: () => undefined, changeDirectionLineOpacity: () => undefined,
     toggleExtendedDistanceMarker: () => undefined, saveLocationApiKey: () => undefined,
@@ -93,6 +97,14 @@ const settingsProps = {
 };
 
 describe('compiled settings panel states', () => {
+    it.each(UI_LANGUAGE_OPTIONS)('renders all registered language choices while displaying $nativeName', option => {
+        const html = renderSettings({ ...settingsProps, uiLanguage: option.value });
+        expect(html).toMatch(/<select[^>]*class="language-toggle(?:\s[^"]*)?"/);
+        for (const language of UI_LANGUAGE_OPTIONS) {
+            expect(html).toContain(`<option value="${language.value}">${language.nativeName}</option>`);
+        }
+        expect(html).not.toContain('undefined');
+    });
     it.each(['zh', 'en'])('renders the live flight dangers option in %s', uiLanguage => {
         const html = renderSettings({ ...settingsProps, uiLanguage,
             initialOverlayOptions: [{ value: 'satellite' }, { value: 'flightDangers' }],

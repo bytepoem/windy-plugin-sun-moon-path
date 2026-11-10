@@ -1,5 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher, tick } from 'svelte';
+    import { UI_LANGUAGES } from './uiLanguage';
+    import { translations, messages } from './locales/WeatherTable';
 
     import CelestialIcon from './CelestialIcon.svelte';
     import { buildCelestialCurves, type CelestialCurveSegment } from './celestialCurve';
@@ -29,6 +31,7 @@
         windDisplayUnit,
         type UnitPreferences,
     } from './unitPreferences';
+    import { DEFAULT_UI_LANGUAGE, type UiLanguage } from './uiLanguage';
     import type { Coordinates } from './solar';
     import type { AtmosphereMetric } from './openMeteo';
 
@@ -39,7 +42,7 @@
     export let errorMessage = '';
     export let aodStatus: WeatherLoadStatus = 'idle';
     export let visibilityStatus: WeatherLoadStatus = 'idle';
-    export let language: 'zh' | 'en' = 'zh';
+    export let language: UiLanguage = DEFAULT_UI_LANGUAGE;
     export let timeZone = 'UTC';
     export let currentTimestamp = Date.now();
     export let selectedDate = '';
@@ -74,78 +77,7 @@
         'aod550',
     ];
 
-    const translations = {
-        zh: {
-            modelLabel: '预报模型',
-            date: '日期',
-            time: '时间',
-            weather: '天气',
-            loading: '正在加载天气模式数据…',
-            empty: '当前模式没有返回可用天气数据。',
-            retry: '重试',
-            now: '当前时间',
-            sun: '太阳',
-            moon: '月亮',
-            celestialCurve: '太阳和月亮升起降落曲线',
-            aodRetry: 'AOD 加载失败 · 重试',
-            visibilityRetry: '能见度加载失败 · 重试',
-            aodEmpty: 'AOD 暂无数据',
-            visibilityEmpty: '能见度暂无数据',
-            aodLoading: 'AOD 加载中…',
-            visibilityLoading: '能见度加载中…',
-            selectedDateOutsideRange: (date: string) => `所选日期 ${date} 不在当前五天预报范围内，表格仍显示当前预报。`,
-            selectedDateMissing: (date: string) => `所选日期 ${date} 暂无可用预报时次，表格仍显示当前预报。`,
-            metrics: {
-                totalCloudPercent: ['云量', '%'],
-                highCloudPercent: ['高云', '%'],
-                mediumCloudPercent: ['中云', '%'],
-                lowCloudPercent: ['低云', '%'],
-                temperatureC: ['气温', ''],
-                dewPointC: ['露点', ''],
-                humidityPercent: ['湿度', '%'],
-                aod550: ['AOD', 'OM · 550nm'],
-                visibilityKm: ['能见度', 'OM'],
-                precipMm: ['降水', ''],
-                windMs: ['风速', ''],
-                windDirectionDeg: ['风向', ''],
-            },
-        },
-        en: {
-            modelLabel: 'Forecast model',
-            date: 'Date',
-            time: 'Time',
-            weather: 'Weather',
-            loading: 'Loading forecast data…',
-            empty: 'No weather data is available for this model.',
-            retry: 'Retry',
-            now: 'Current time',
-            sun: 'Sun',
-            moon: 'Moon',
-            celestialCurve: 'Sun and moon rise and set curves',
-            aodRetry: 'AOD failed · Retry',
-            visibilityRetry: 'Visibility failed · Retry',
-            aodEmpty: 'No AOD data',
-            visibilityEmpty: 'No visibility data',
-            aodLoading: 'Loading AOD…',
-            visibilityLoading: 'Loading visibility…',
-            selectedDateOutsideRange: (date: string) => `Selected date ${date} is outside the current five-day forecast. The table still shows the current forecast.`,
-            selectedDateMissing: (date: string) => `No forecast steps are available for selected date ${date}. The table still shows the current forecast.`,
-            metrics: {
-                totalCloudPercent: ['Clouds', '%'],
-                highCloudPercent: ['High', '%'],
-                mediumCloudPercent: ['Medium', '%'],
-                lowCloudPercent: ['Low', '%'],
-                temperatureC: ['Temp.', ''],
-                dewPointC: ['Dew point', ''],
-                humidityPercent: ['Humidity', '%'],
-                aod550: ['AOD', 'OM · 550nm'],
-                visibilityKm: ['Visibility', 'OM'],
-                precipMm: ['Precip.', ''],
-                windMs: ['Wind', ''],
-                windDirectionDeg: ['Direction', ''],
-            },
-        },
-    } as const;
+
 
     let tableScroller: HTMLDivElement | null = null;
     let dateGroups: WeatherDateGroup[] = [];
@@ -211,7 +143,7 @@
         if (![year, month, day].every(Number.isFinite)) {
             return dateInput;
         }
-        return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-US', {
+        return new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -283,12 +215,10 @@
 
     const metricAriaLabel = (metric: WeatherMetric, selectedUnits: UnitPreferences): string => {
         if (metric === 'precipMm' && source === 'open-meteo') {
-            return language === 'zh' ? '前一小时降水量' : 'Precipitation in the preceding hour';
+            return messages[language].precipitationInThePrecedingHour;
         }
         if (metric === 'aod550') {
-            return language === 'zh'
-                ? 'AOD 550 纳米，Open-Meteo，数据源 CAMS'
-                : 'AOD at 550 nanometres, Open-Meteo, sourced from CAMS';
+            return messages[language].aODAtNanometresOpenMeteoSourcedFrom;
         }
         if (metric === 'visibilityKm') {
             return `${text.metrics[metric][0]} ${selectedUnits.distance}, Open-Meteo`;
@@ -321,10 +251,10 @@
         }).format(timestamp);
 </script>
 
-<section class="weather-panel" aria-label={language === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
+<section class="weather-panel" aria-label={messages[language].weatherModelForecast}>
     <header class="weather-toolbar" class:weather-toolbar--loading={status === 'loading' || aodStatus === 'loading' || visibilityStatus === 'loading'}>
         <!-- Keep source/model controls interactive while the newest request supersedes earlier work. -->
-        <div class="weather-model-control weather-source-control" role="group" aria-label={language === 'zh' ? '天气数据源' : 'Weather source'}>
+        <div class="weather-model-control weather-source-control" role="group" aria-label={messages[language].weatherSource}>
             {#each sourceOptions as provider}
                 <button type="button" class:active={source === provider} aria-pressed={source === provider}
                     on:click={() => {
@@ -410,7 +340,7 @@
             class="weather-table-scroll"
             bind:this={tableScroller}
             role="region"
-            aria-label={language === 'zh' ? '逐时天气数据表' : 'Hourly weather data table'}
+            aria-label={messages[language].hourlyWeatherDataTable}
             tabindex="0"
             on:keydown={handleTableKeydown}
         >

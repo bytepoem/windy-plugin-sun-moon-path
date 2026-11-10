@@ -1,9 +1,10 @@
 <script lang="ts">
     import { onDestroy } from 'svelte';
-    import { translations, type UiLanguage } from './pluginTranslations';
+    import { translations } from './pluginTranslations';
+    import { DEFAULT_UI_LANGUAGE, type UiLanguage } from './uiLanguage';
 
     export let report: () => string;
-    export let uiLanguage: UiLanguage = 'zh';
+    export let uiLanguage: UiLanguage = DEFAULT_UI_LANGUAGE;
     let content = '';
     let expanded = false;
     let copyState: 'idle' | 'copied' | 'error' = 'idle';

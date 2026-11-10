@@ -1,9 +1,12 @@
 <script lang="ts">
+    import { messages } from './locales/RainbowConditions';
+    import { UI_LANGUAGES } from './uiLanguage';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
     import RainbowSightlineEvidence from './RainbowSightlineEvidence.svelte';
     import { createRainbowConditionsLoader, rainbowSampleSignal, type RainbowConditions } from './rainbowConditions';
     import { PRIMARY_RAINBOW_RADIUS, type SkyDirection } from './rainbowGeometry';
     import { createRainbowSightlineLoader, type SightlineState } from './rainbowSightlines';
+    import type { UiLanguage } from './uiLanguage';
     import type { Coordinates } from './solar';
     import type { WeatherModel } from './weather';
 
@@ -12,7 +15,7 @@
     export let timestamp: number | null;
     export let model: WeatherModel;
     export let timeZone: string;
-    export let language: 'zh' | 'en';
+    export let language: UiLanguage;
     export let enabled: boolean;
 
     let state: { status: 'idle' | 'loading' | 'ready' | 'error'; result: RainbowConditions | null } = { status: 'idle', result: null };
@@ -20,7 +23,6 @@
     let cameraHeightM: number | undefined = 2;
     const loader = createRainbowConditionsLoader(value => { state = value; });
     const sightlineLoader = createRainbowSightlineLoader(value => { sightlines = value; });
-    $: zh = language === 'zh';
     $: heightValid = cameraHeightM !== undefined && Number.isFinite(cameraHeightM) && cameraHeightM >= 0 && cameraHeightM <= 1000;
     $: eligible = enabled && timestamp !== null && source !== null
         && source.altitude > 0 && source.altitude < PRIMARY_RAINBOW_RADIUS;
@@ -31,10 +33,8 @@
         loader.reset();
         sightlineLoader.reset();
     }
-    $: labels = zh
-        ? { favourable: '条件较有利', mixed: '条件一般', unfavourable: '条件不利', insufficient: '数据不足' }
-        : { favourable: 'More favourable', mixed: 'Mixed conditions', unfavourable: 'Unfavourable', insufficient: 'Insufficient data' };
-    $: timeFormat = new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-GB', {
+    $: labels = messages[language].conditionLevels;
+    $: timeFormat = new Intl.DateTimeFormat(UI_LANGUAGES[language].clockLocale, {
         timeZone, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     });
     const assess = () => {
@@ -49,56 +49,54 @@
     });
 </script>
 
-<section class="conditions" aria-label={zh ? '主虹条件评估' : 'Primary rainbow conditions'}>
+<section class="conditions" aria-label={messages[language].primaryRainbowConditions}>
     <div class="heading">
-        <strong>{zh ? '主虹条件' : 'Primary bow conditions'}</strong>
+        <strong>{messages[language].primaryBowConditions}</strong>
         <button type="button" disabled={!eligible || !heightValid} on:click={assess}>
-            {state.status === 'idle' ? (zh ? '评估当前时刻' : 'Assess selected time') : (zh ? '重新评估' : 'Assess again')}
+            {state.status === 'idle' ? (messages[language].assessSelectedTime) : (messages[language].assessAgain)}
         </button>
     </div>
-    <label class="height-input"><span>{zh ? '视点离地高度' : 'Height above ground'}</span>
+    <label class="height-input"><span>{messages[language].heightAboveGround}</span>
         <span class="height-field"><input type="number" min="0" max="1000" step="0.1" bind:value={cameraHeightM} aria-invalid={!heightValid} /><span aria-hidden="true">m</span></span>
     </label>
-    {#if !heightValid}<p role="status">{zh ? '请输入 0–1000 m 的有效离地高度。' : 'Enter a valid height from 0 to 1000 m.'}</p>{/if}
+    {#if !heightValid}<p role="status">{messages[language].enterAValidHeightFromToM}</p>{/if}
     <div role="status" aria-live="polite">
         {#if !eligible}
-            <p>{zh ? '仅评估太阳在地平线上、主虹有地平线上弧段的时刻；不评估月虹及地平线下弧段。' : 'Available when the Sun and part of the primary bow are above the horizon. Moonbows and below-horizon arcs are not assessed.'}</p>
+            <p>{messages[language].availableWhenTheSunAndPartOf}</p>
         {:else if state.status === 'loading'}
-            <p>{zh ? '正在读取前方采样点的降雨与直射光…' : 'Loading rain and direct sunlight at forward sample points…'}</p>
+            <p>{messages[language].loadingRainAndDirectSunlightAtForward}</p>
         {:else if state.status === 'error'}
-            <p>{zh ? '数据不足：天气请求失败，可重新评估。' : 'Insufficient data: the weather request failed. Try again.'}</p>
+            <p>{messages[language].insufficientDataTheWeatherRequestFailedTry}</p>
         {:else if state.result}
-            <div class="verdict"><span>{zh ? '雨光条件' : 'Rain/light'}</span><strong>{labels[state.result.level]}</strong><span class="confidence">{zh ? '低可信度 · 非概率' : 'Low confidence · Not a probability'}</span></div>
+            <div class="verdict"><span>{messages[language].rainLight}</span><strong>{labels[state.result.level]}</strong><span class="confidence">{messages[language].lowConfidenceNotAProbability}</span></div>
             <p class="assessment-meta">{timeFormat.format(state.result.start)} – {timeFormat.format(state.result.end)} <span>({timeZone})</span></p>
-            <p>{zh
-                ? `9 个采样点中，${state.result.wetCount} 个有液态降水信号，${state.result.litWetCount} 个同时满足小时直射光参考值。`
-                : `Of 9 sample points, ${state.result.wetCount} have a liquid-rain signal; ${state.result.litWetCount} also meet the hourly direct-light reference.`}</p>
+            <p>{messages[language].sampleSummary(state.result.wetCount, state.result.litWetCount)}</p>
             {#if state.result.level === 'insufficient'}
-                <p>{zh ? '部分字段缺失或所选时段超出预报范围，不能作完整判断。' : 'Some fields are missing or the selected interval is outside forecast coverage.'}</p>
+                <p>{messages[language].someFieldsAreMissingOrTheSelected}</p>
             {/if}
             <details class="assessment-details">
-                <summary>{zh ? '采样依据' : 'Sample evidence'}</summary>
+                <summary>{messages[language].sampleEvidence}</summary>
                 <table class="assessment-table">
-                    <caption>{zh ? '雨光采样数据' : 'Rain and sunlight samples'}</caption>
-                    <thead><tr><th scope="col">{zh ? '方位' : 'Bearing'}</th><th scope="col">km</th><th scope="col">mm</th><th scope="col">W/m²</th></tr></thead>
+                    <caption>{messages[language].rainAndSunlightSamples}</caption>
+                    <thead><tr><th scope="col">{messages[language].bearing}</th><th scope="col">km</th><th scope="col">mm</th><th scope="col">W/m²</th></tr></thead>
                     <tbody>{#each state.result.samples as sample}
                         {@const signal = rainbowSampleSignal(sample)}
                         <tr class:evidence-good={signal === 'favourable'} class:evidence-risk={signal === 'no-rain' || signal === 'weak-light'} class:evidence-unknown={signal === 'missing'}>
-                            <td>{sample.bearing.toFixed(0)}°<span class="evidence-label">{signal === 'favourable' ? (zh ? '有利' : 'Favourable')
-                                : signal === 'no-rain' ? (zh ? '无雨信号' : 'No rain signal')
-                                    : signal === 'weak-light' ? (zh ? '直射光弱' : 'Weak light') : (zh ? '缺测' : 'Missing')}</span></td>
+                            <td>{sample.bearing.toFixed(0)}°<span class="evidence-label">{signal === 'favourable' ? (messages[language].favourable)
+                                : signal === 'no-rain' ? (messages[language].noRainSignal)
+                                    : signal === 'weak-light' ? (messages[language].weakLight) : (messages[language].missing)}</span></td>
                             <td>{sample.distanceKm}</td><td>{sample.rainMm === null ? '—' : sample.rainMm.toFixed(1)}</td><td>{sample.directWm2 === null ? '—' : sample.directWm2.toFixed(0)}</td>
                         </tr>
                     {/each}</tbody>
                 </table>
-                <p>{zh ? '液态降水 ≥0.1 mm/h、小时平均直射法向辐射 ≥120 W/m² 为经验筛选参考，未作彩虹观测校准。距离按模型网格间距粗采样，相邻点可能属于同一网格；无降水信号不代表周边无雨。' : 'Liquid rain ≥0.1 mm/h and hourly mean DNI ≥120 W/m² are uncalibrated screening references. Distances scale with model grid spacing; nearby samples may share a grid cell. No rain signal does not rule out nearby rain.'}</p>
+                <p>{messages[language].liquidRainMmHAndHourlyMean}</p>
             </details>
         {:else}
-            <p>{zh ? '按主虹左右与中间方向采样周边天气，给出小时尺度的条件参考。' : 'Sample weather along the left, centre and right bearings of the primary bow for hourly guidance.'}</p>
+            <p>{messages[language].sampleWeatherAlongTheLeftCentreAnd}</p>
         {/if}
     </div>
     <RainbowSightlineEvidence state={sightlines} {language} {timeZone} />
-    <p class="note">Open-Meteo · {model.toUpperCase()} · {zh ? '独立于天气表的数据源设置。小时雨量和地面直射光不证明同一瞬间雨滴受光；未检查三维云层。地形与近地面能见度仅提供独立的视线风险参考。' : 'Independent of the weather table source. Hourly rain and surface direct light do not prove simultaneous illumination of droplets. 3D clouds are not checked. Terrain and near-surface visibility provide separate sightline risk references.'}</p>
+    <p class="note">Open-Meteo · {model.toUpperCase()} · {messages[language].independentOfTheWeatherTableSourceHourly}</p>
 </section>
 
 <style>

@@ -6,6 +6,10 @@
     "summary": "修复设置页空白和面板切换失去响应的问题。",
     "items": [
       {
+        "type": "improved",
+        "text": "设置顶部改用语言选择框，继续支持简体中文与 English，并记住选择。"
+      },
+      {
         "type": "fixed",
         "text": "修复 Windy 新增飞行危险图层后设置页空白、切换云层和关于失去响应的问题。"
       },
@@ -19,6 +23,10 @@
     "title": "Settings and panel navigation fixes",
     "summary": "Fixed blank Settings and unresponsive panel navigation.",
     "items": [
+      {
+        "type": "improved",
+        "text": "Settings now uses a language selector, with Simplified Chinese and English choices remembered between visits."
+      },
       {
         "type": "fixed",
         "text": "Fixed blank Settings and unresponsive Clouds/About navigation after Windy introduced the Flight dangers layer."

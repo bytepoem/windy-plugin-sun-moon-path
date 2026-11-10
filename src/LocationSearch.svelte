@@ -1,6 +1,8 @@
 <script lang="ts">
     import { getElevation } from '@windy/fetch';
     import { createEventDispatcher, tick } from 'svelte';
+    import { labels } from './locales/LocationSearch';
+    import { DEFAULT_UI_LANGUAGE, UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
 
     import {
@@ -36,7 +38,7 @@
     };
 
     export let apiKeys: LocationProviderApiKeys;
-    export let language: 'zh' | 'en' = 'zh';
+    export let language: UiLanguage = DEFAULT_UI_LANGUAGE;
     export let location: Coordinates;
     export let mobile = false;
     export let provider: LocationProvider = 'amap';
@@ -50,66 +52,7 @@
         providerchange: LocationProvider;
         hide: void;
     }>();
-    const labels = {
-        zh: {
-            label: '地点搜索',
-            hide: '隐藏',
-            hideLabel: '隐藏地点搜索框',
-            modeLabel: '搜索方式',
-            providers: {
-                amap: '高德',
-                baidu: '百度',
-                tencent: '腾讯',
-            },
-            placeholder: '搜索地点或地址',
-            missingKeyPrompt: '使用 {provider} 搜索需要对应的 API Key，请先申请并在设置中保存。',
-            applyForKey: '申请 {provider} API Key',
-            search: '搜索',
-            locate: '定位',
-            loading: '正在搜索…',
-            noResults: '没有找到可定位的地址，请换个关键词。',
-            error: '地址搜索失败，请检查 API Key 或稍后重试。',
-            suggestions: '地址推荐',
-            distance: '直线',
-            elevation: '海拔',
-            latitude: '纬度',
-            longitude: '经度',
-            coordinateErrors: {
-                format: '请完整填写纬度和经度。',
-                latitude: '纬度必须在 -90 到 90 之间。',
-                longitude: '经度必须在 -180 到 180 之间。',
-            },
-        },
-        en: {
-            label: 'Location search',
-            hide: 'Hide',
-            hideLabel: 'Hide location search',
-            modeLabel: 'Search mode',
-            providers: {
-                amap: 'Amap',
-                baidu: 'Baidu',
-                tencent: 'Tencent',
-            },
-            placeholder: 'Search for a place or address',
-            missingKeyPrompt: '{provider} search requires its API Key. Apply for one, then save it in Settings.',
-            applyForKey: 'Apply for a {provider} API Key',
-            search: 'Search',
-            locate: 'Locate',
-            loading: 'Searching…',
-            noResults: 'No locatable address found. Try another keyword.',
-            error: 'Location search failed. Check the API Key or try again later.',
-            suggestions: 'Suggested locations',
-            distance: 'Direct',
-            elevation: 'Elevation',
-            latitude: 'Lat',
-            longitude: 'Lon',
-            coordinateErrors: {
-                format: 'Enter both latitude and longitude.',
-                latitude: 'Latitude must be between -90 and 90.',
-                longitude: 'Longitude must be between -180 and 180.',
-            },
-        },
-    } as const;
+
 
     let query = '';
     let latitudeQuery = '';
@@ -122,7 +65,7 @@
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let abortController: AbortController | null = null;
     let rootElement: HTMLElement | null = null;
-    let text = labels.zh;
+    let text = labels[language];
     let searchContextKey = '';
     let apiKey = '';
     let missingKeyPromptText = '';
@@ -142,12 +85,12 @@
     $: missingKeyPromptText = text.missingKeyPrompt.replace('{provider}', text.providers[provider]);
     $: applyForKeyText = text.applyForKey.replace('{provider}', text.providers[provider]);
     $: {
-        const nextSelectorOptions: SelectorOption[] = language === 'zh'
+        const nextSelectorOptions: SelectorOption[] = UI_LANGUAGES[language].placeSearch
             ? [...LOCATION_PROVIDERS, ...COORDINATE_SYSTEMS]
             : [...COORDINATE_SYSTEMS];
         selectorOptions = nextSelectorOptions;
         if (!nextSelectorOptions.includes(searchMode)) {
-            searchMode = language === 'zh' ? provider : 'wgs84';
+            searchMode = UI_LANGUAGES[language].placeSearch ? provider : 'wgs84';
             selectorMenuOpen = false;
             results = [];
             status = 'idle';

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { translations } from './pluginTranslations';
+import { messages as pluginMessages } from './locales/plugin';
+import { labels as favoriteLocationLabels } from './locales/FavoriteLocations';
+import { labels as locationSearchLabels } from './locales/LocationSearch';
 import guideSource from './PluginGuide.svelte?raw';
 import timelineSource from './CloudTimeline.svelte?raw';
 
@@ -213,8 +216,8 @@ describe('plugin astronomy loading presentation', () => {
 
     it('adds delayed native hints to compact and icon-only controls', () => {
         expect(pluginSource).toContain(': text.eventButtonTitles[option.value]}');
-        expect(pluginSource).toContain('Cloud planning requires a single event');
-        expect(settingsSource).toContain('title={text.languageToggleLabel}');
+        expect(pluginMessages.en.cloudPlanningRequiresASingleEvent).toBe('Cloud planning requires a single event');
+        expect(settingsSource).toContain('title={text.languageLabel}');
         expect(pluginSource).toContain(
             'title={text.locationCopyLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
         );
@@ -590,12 +593,8 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('supports two to five comparison targets with horizontally scrollable location columns', () => {
-        expect(favoriteLocationsSource).toContain(
-            '选择 2–${FAVORITE_COMPARISON_MAX_TARGETS} 个收藏地点',
-        );
-        expect(favoriteLocationsSource).toContain(
-            '`已选 ${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS}`',
-        );
+        expect(favoriteLocationLabels.zh.compareHint).toContain('选择 2–5 个收藏地点');
+        expect(favoriteLocationLabels.zh.compareSelection(2)).toBe('已选 2/5');
         expect(favoriteLocationsSource).toContain(
             'comparisonIds.length >= FAVORITE_COMPARISON_MAX_TARGETS',
         );
@@ -777,8 +776,8 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).not.toContain('hideDomesticLocationSearch');
         expect(locationSearchSource).toContain('? [...LOCATION_PROVIDERS, ...COORDINATE_SYSTEMS]');
         expect(locationSearchSource).toContain(': [...COORDINATE_SYSTEMS]');
-        expect(locationSearchSource).toContain("latitude: 'Lat'");
-        expect(locationSearchSource).toContain("longitude: 'Lon'");
+        expect(locationSearchLabels.en.latitude).toBe('Lat');
+        expect(locationSearchLabels.en.longitude).toBe('Lon');
         expect(locationSearchSource).toContain('id="location-search-latitude"');
         expect(locationSearchSource).toContain('id="location-search-longitude"');
         expect(locationSearchSource).toContain('inputmode="text"');

@@ -6,14 +6,14 @@ import type { LocationProvider } from './locationProvider';
 import type { UpdateNoteKind } from './pluginUpdate';
 import type { TemperatureUnit, PrecipitationUnit, WindUnit, DistanceUnit } from './unitPreferences';
 
-export type UiLanguage = 'zh' | 'en';
+import type { UiLanguage } from './uiLanguage';
 
-/** Shared bilingual copy; presentation modules own rendering, not duplicate translations. */
+/** Shared interface copy; feature-specific catalogs live in locales/. */
 export const translations: Record<UiLanguage, {
     dateLabel: string;
     eventSelectorLabel: string;
     eventButtonTitles: Record<DirectionEvent, string>;
-    languageToggleLabel: string;
+    languageLabel: string;
     collapsePanelLabel: string;
     expandCompactPanelLabel: string;
     expandPanelLabel: string;
@@ -219,7 +219,7 @@ export const translations: Record<UiLanguage, {
             moonrise: '只显示月升方位线',
             moonset: '只显示月落方位线',
         },
-        languageToggleLabel: '切换到英文',
+        languageLabel: '显示语言',
         collapsePanelLabel: '收起为方位线模式',
         expandCompactPanelLabel: '展开面板',
         expandPanelLabel: '全屏显示',
@@ -510,7 +510,7 @@ export const translations: Record<UiLanguage, {
             moonrise: 'Show only moonrise direction lines',
             moonset: 'Show only moonset direction lines',
         },
-        languageToggleLabel: 'Switch to Chinese',
+        languageLabel: 'Display language',
         collapsePanelLabel: 'Collapse to direction-line mode',
         expandCompactPanelLabel: 'Expand panel',
         expandPanelLabel: 'Show fullscreen',
@@ -793,4 +793,4 @@ export const translations: Record<UiLanguage, {
     },
 };
 
-export type PluginText = typeof translations.zh;
+export type PluginText = typeof translations[UiLanguage];

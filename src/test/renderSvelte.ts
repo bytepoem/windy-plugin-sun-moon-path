@@ -48,10 +48,18 @@ export const compileRenderer = async (component: string): Promise<RenderComponen
         plugins: [
             {
                 name: 'test-windy-metrics',
-                resolveId: id => id === '@windy/metrics' ? '\0test-windy-metrics' : null,
-                load: id => id === '\0test-windy-metrics'
-                    ? 'export default globalThis.__testMetrics;'
-                    : null,
+                resolveId: id => id === '@windy/metrics' ? '\0test-windy-metrics'
+                    : id === '@windy/fetch' ? '\0test-windy-fetch' : null,
+                load: id => {
+                    if (id === '\0test-windy-metrics') {
+                        return 'export default globalThis.__testMetrics;';
+                    }
+                    if (id === '\0test-windy-fetch') {
+                        // SSR exercises construction/rendering; a network call is a test failure.
+                        return 'export const getElevation = () => { throw new Error("Unexpected SSR elevation request"); };';
+                    }
+                    return null;
+                },
             },
             rollupSvelte({
                 emitCss: false,

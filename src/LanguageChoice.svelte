@@ -1,10 +1,11 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import { onPluginMount as onMount } from './pluginLifecycle';
-    import type { UiLanguage } from './pluginTranslations';
+    import { DEFAULT_UI_LANGUAGE, UI_LANGUAGE_OPTIONS, type UiLanguage } from './uiLanguage';
+    import { messages } from './locales/LanguageChoice';
 
     const dispatch = createEventDispatcher<{ confirm: UiLanguage }>();
-    let selectedLanguage: UiLanguage = 'zh';
+    let selectedLanguage: UiLanguage = DEFAULT_UI_LANGUAGE;
     let dialog: HTMLDialogElement;
 
     // Native modality traps focus and blocks background input; removal releases it immediately.
@@ -22,22 +23,22 @@
     <form on:submit|preventDefault={() => dispatch('confirm', selectedLanguage)}>
         <div class="language-choice-heading">
             <span class="language-choice-eyebrow">Sun &amp; Moon Path</span>
-            <h2 id="language-choice-title"><span lang="zh-CN">选择语言</span><span lang="en">Choose your language</span></h2>
-            <p id="language-choice-description"><span lang="zh-CN">请选择插件的显示语言。</span><span lang="en">Select the language for this plugin.</span></p>
+            <h2 id="language-choice-title"><span lang="zh-CN">{messages.zh.title}</span><span lang="en">{messages.en.title}</span></h2>
+            <p id="language-choice-description"><span lang="zh-CN">{messages.zh.description}</span><span lang="en">{messages.en.description}</span></p>
         </div>
         <div class="language-choice-options">
-            <label class:selected={selectedLanguage === 'zh'}>
-                <input type="radio" name="plugin-language" value="zh" bind:group={selectedLanguage} />
-                <span><strong lang="zh-CN">简体中文</strong><small lang="en">Simplified Chinese</small></span>
-                <span class="language-choice-default"><span lang="zh-CN">默认</span> / <span lang="en">Default</span></span>
-            </label>
-            <label class:selected={selectedLanguage === 'en'}>
-                <input type="radio" name="plugin-language" value="en" bind:group={selectedLanguage} />
-                <span><strong lang="en">English</strong><small lang="zh-CN">英语</small></span>
-            </label>
+            {#each UI_LANGUAGE_OPTIONS as option}
+                <label class:selected={selectedLanguage === option.value}>
+                    <input type="radio" name="plugin-language" value={option.value} bind:group={selectedLanguage} />
+                    <span><strong lang={option.locale}>{option.nativeName}</strong><small lang={option.secondaryLocale}>{option.secondaryName}</small></span>
+                    {#if option.value === DEFAULT_UI_LANGUAGE}
+                        <span class="language-choice-default"><span lang="zh-CN">{messages.zh.defaultLabel}</span> / <span lang="en">{messages.en.defaultLabel}</span></span>
+                    {/if}
+                </label>
+            {/each}
         </div>
-        <p class="language-choice-hint"><span lang="zh-CN">之后可在「设置」中随时修改。</span><span lang="en">You can change this later in Settings.</span></p>
-        <button type="submit"><span lang="zh-CN">确认</span><span aria-hidden="true"> / </span><span lang="en">Confirm</span></button>
+        <p class="language-choice-hint"><span lang="zh-CN">{messages.zh.hint}</span><span lang="en">{messages.en.hint}</span></p>
+        <button type="submit"><span lang="zh-CN">{messages.zh.confirm}</span><span aria-hidden="true"> / </span><span lang="en">{messages.en.confirm}</span></button>
     </form>
 </dialog>
 

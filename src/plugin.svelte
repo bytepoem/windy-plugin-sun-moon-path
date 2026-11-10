@@ -257,7 +257,7 @@
 
     <div class="planning-datetime">
         <CloudTimeline clock={planningTime.clock} date={selectedDate}
-            dateLabel={formatDateControlLabel(selectedDate)} zh={uiLanguage === 'zh'}
+            dateLabel={formatDateControlLabel(selectedDate)} language={uiLanguage}
             on:now={jumpToNow}
             on:datetime={event => selectPlanningDateTime(event.detail)}
             on:preview={event => previewPlanningTime(event.detail)}
@@ -279,8 +279,8 @@
                         aria-label={text.events[option.value]}
                         title={summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible) && option.value === 'all'
                             ? (rainbowVisible
-                                ? (uiLanguage === 'zh' ? '彩虹规划需选择单个事件' : 'Rainbow planning requires a single event')
-                                : (uiLanguage === 'zh' ? '云层规划需选择单个事件' : 'Cloud planning requires a single event'))
+                                ? (messages[uiLanguage].rainbowPlanningRequiresASingleEvent)
+                                : (messages[uiLanguage].cloudPlanningRequiresASingleEvent))
                             : text.eventButtonTitles[option.value]}
                         on:click={() => selectEvent(option.value)}
                     >
@@ -321,8 +321,8 @@
                         type="button"
                         class:active={highlightedEvent === event}
                         aria-pressed={highlightedEvent === event}
-                        aria-label={cloudTimelineLabel(event, uiLanguage === 'zh')}
-                        title={cloudTimelineLabel(event, uiLanguage === 'zh')}
+                        aria-label={cloudTimelineLabel(event, uiLanguage)}
+                        title={cloudTimelineLabel(event, uiLanguage)}
                         disabled={eventSkyReadyKey !== astronomyKey || !galacticEvents.some(item => item.type === event)}
                         on:click={() => selectGalacticEvent(event)}
                     >
@@ -578,7 +578,7 @@
                                 </span>
                             </button>
                             <span class="astronomy-location__actions">
-                                <span class="coordinate-copy-toast" class:visible={coordinateCopyStatus !== 'idle'} aria-live="polite" aria-atomic="true">{coordinateCopyStatus === 'copied' ? (uiLanguage === 'zh' ? '经纬度已复制' : 'Coordinates copied') : coordinateCopyStatus === 'error' ? (uiLanguage === 'zh' ? '复制失败，请重试' : 'Copy failed. Try again') : ''}</span>
+                                <span class="coordinate-copy-toast" class:visible={coordinateCopyStatus !== 'idle'} aria-live="polite" aria-atomic="true">{coordinateCopyStatus === 'copied' ? (messages[uiLanguage].coordinatesCopied) : coordinateCopyStatus === 'error' ? (messages[uiLanguage].copyFailedTryAgain) : ''}</span>
                                 <button
                                     type="button"
                                     class="astronomy-location__favorite"
@@ -853,7 +853,7 @@
                     {savedApiKeyProvider}
                     {locationApiKeyDrafts}
                     {locationApiKeys}
-                    {toggleLanguage}
+                    {changeLanguage}
                     {changeInitialOverlayPreference}
                     {changeRadarProvider}
                     {changeRadarOpacity}
@@ -1006,7 +1006,7 @@
     </section>
 
     {#if !isMobileOrTablet || isMobileFullscreen}
-        <section class="desktop-weather-module" aria-label={uiLanguage === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
+        <section class="desktop-weather-module" aria-label={messages[uiLanguage].weatherModelForecast}>
             <WeatherTable
                 points={weatherPoints}
                 model={weatherModel}
@@ -1057,6 +1057,8 @@
     import store from '@windy/store';
     import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
+    import { UI_LANGUAGES, DEFAULT_UI_LANGUAGE, isUiLanguage } from './uiLanguage';
+    import { messages } from './locales/plugin';
     import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
@@ -1066,7 +1068,7 @@
     import { resolvePlanningTime, type PlanningTimeSelection } from './planningTime';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
-    import { translations, type UiLanguage } from './pluginTranslations';
+    import { translations } from './pluginTranslations';
     import {
         loadLanguagePreference,
         loadPlanningViewPreference,
@@ -1187,7 +1189,6 @@
     import {
         calculateCurrentMoonInfo,
         calculateCurrentSolarDirection,
-        compassDirection,
         dateInputForInstant,
         dateInputToUtcNoon,
         formatLocalClock,
@@ -1241,6 +1242,7 @@
         type PrecipitationUnit,
         type UnitPreferences,
     } from './unitPreferences';
+    import type { UiLanguage } from './uiLanguage';
     import type { DiagnosticRuntime } from './diagnosticRuntime';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
 
@@ -1288,7 +1290,7 @@
             const crossing = galacticEvents.find(event => event.type === kind);
             return {
                 kind,
-                label: cloudTimelineLabel(kind, uiLanguage === 'zh'),
+                label: cloudTimelineLabel(kind, uiLanguage),
                 body: 'milkyway',
                 time: crossing ? new Date(crossing.timestamp) : null,
             };
@@ -1364,9 +1366,9 @@
     let favoriteDistanceOrigin: Coordinates | null = cachedGpsLocation();
     let selectedDate = dateInputForInstant(new Date(), systemTimeZone);
     let selectedEvent: DirectionEvent = 'sunset';
-    let uiLanguage: UiLanguage = 'zh';
+    let uiLanguage: UiLanguage = DEFAULT_UI_LANGUAGE;
     let showLanguageChoice = false;
-    let text = translations.zh;
+    let text = translations[uiLanguage];
     let timeZone = systemTimeZone;
     let elevationM = 0;
     let groundElevationM: number | null = null;
@@ -1377,7 +1379,7 @@
     let currentMoonInfo: CurrentMoonInfo | null = null;
     let displayedMoonIllumination: { fraction: number; waxing: boolean } | null = null;
     let currentInstant = new Date();
-    let timelineLeadLabel = '正在计算…';
+    let timelineLeadLabel = text.calculating;
     let timelineLeadTime = '';
     let locationDisplayName = '';
     let eventLocationDisplayName = '';
@@ -1703,7 +1705,7 @@
 
     const eventDisplayName = (event: DirectionEvent, labels = text): string => {
         if (isGalacticEvent(event)) {
-            return cloudTimelineLabel(event, uiLanguage === 'zh');
+            return cloudTimelineLabel(event, uiLanguage);
         }
         return labels.events[event] || event;
     };
@@ -1771,10 +1773,15 @@
         } catch { /* Storage access may be blocked; retain the current session's controls. */ }
     }
 
-    const toggleLanguage = () => {
+    /** Validate the DOM boundary; the shell owns persistence and dependent UI state. */
+    const changeLanguage = (event: Event) => {
+        const value = (event.currentTarget as HTMLSelectElement).value;
+        if (!isUiLanguage(value) || value === uiLanguage) {
+            return;
+        }
         favoritesOpen = false;
         favoriteReturnFocus = null;
-        uiLanguage = uiLanguage === 'zh' ? 'en' : 'zh';
+        uiLanguage = value;
         saveLanguagePreference(uiLanguage);
     };
 
@@ -1953,11 +1960,11 @@
         return mapEvent === null ? [] : selectDirectionPaths(paths, galacticPaths, mapEvent);
     };
 
-    $: fitMapControlLabel = rainbowVisible ? (uiLanguage === 'zh' ? '居中彩虹方向图' : 'Centre rainbow sky chart')
-        : horizonVisible ? (uiLanguage === 'zh' ? '适配地平线范围' : 'Fit horizon radius')
-        : cloudObstructionVisible && cloudBounds ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
+    $: fitMapControlLabel = rainbowVisible ? (messages[uiLanguage].centreRainbowSkyChart)
+        : horizonVisible ? (messages[uiLanguage].fitHorizonRadius)
+        : cloudObstructionVisible && cloudBounds ? (messages[uiLanguage].fitAllCloudReferenceLines)
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
-    $: detailMapControlLabel = cloudObstructionVisible && cloudDetailBounds ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
+    $: detailMapControlLabel = cloudObstructionVisible && cloudDetailBounds ? (messages[uiLanguage].focusCloudHorizonAndIntersections)
         : text.restoreSearchZoomLabel;
 
     // Event rays remain visible when cloud heights are unavailable; fit those real lines independently.
@@ -2376,10 +2383,7 @@
     const lineColorForEvent = directionLineColor;
 
     const compassDirectionLabel = (azimuth: number, language = uiLanguage): string => {
-        if (language === 'zh') {
-            return compassDirection(azimuth);
-        }
-        const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        const labels = messages[language].compass;
         return labels[Math.round(((azimuth % 360) + 360) % 360 / 45) % labels.length];
     };
 
@@ -2391,9 +2395,7 @@
         : {
             currentSun: currentSolarDirection,
             currentMoon: currentMoonInfo,
-            liveLabels: uiLanguage === 'zh'
-                ? { sun: '太阳 · 实时', moon: '月亮 · 实时' }
-                : { sun: 'Sun · Live', moon: 'Moon · Live' },
+            liveLabels: messages[uiLanguage].liveBodies,
         };
 
     const renderMapFeatures = (paths: DirectionPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
@@ -2686,23 +2688,7 @@
         reason: 'always-up' | 'always-down' | 'not-available',
     ): string => {
         const nameForEvent = eventDisplayName(event, text);
-        if (uiLanguage === 'en') {
-            const body = event === 'moonrise' || event === 'moonset' ? 'moon' : 'sun';
-            if (reason === 'always-up') {
-                return `The ${body} stays above the horizon today; no ${nameForEvent} time is available.`;
-            }
-            if (reason === 'always-down') {
-                return `The ${body} stays below the horizon today; no ${nameForEvent} time is available.`;
-            }
-            return `No ${nameForEvent} time is available today.`;
-        }
-        if (reason === 'always-up') {
-            return `当天${nameForEvent === '月升' || nameForEvent === '月落' ? '月亮' : '太阳'}始终在地平线以上，没有可用的${nameForEvent}时刻。`;
-        }
-        if (reason === 'always-down') {
-            return `当天${nameForEvent === '月升' || nameForEvent === '月落' ? '月亮' : '太阳'}始终在地平线以下，没有可用的${nameForEvent}时刻。`;
-        }
-        return `当天没有可用的${nameForEvent}时刻。`;
+        return messages[uiLanguage].unavailableEvent(nameForEvent, event === 'moonrise' || event === 'moonset', reason);
     };
 
     const coordinateLocationLabel = (location: Coordinates): string =>
@@ -2960,9 +2946,7 @@
 
     const timelineEventLabel = (item: { kind: string; label: string }, labels = text): string => {
         if (item.kind === 'dawn' || item.kind === 'dusk') {
-            return uiLanguage === 'zh'
-                ? (item.kind === 'dawn' ? '晨间蓝调' : '暮间蓝调')
-                : (item.kind === 'dawn' ? 'Morning blue hour' : 'Evening blue hour');
+            return messages[uiLanguage].blueHours[item.kind];
         }
         return labels.timeline[item.kind] || item.label;
     };
@@ -3032,7 +3016,7 @@
         if (!range) {
             return '--';
         }
-        const formatter = new Intl.NumberFormat(uiLanguage === 'zh' ? 'zh-CN' : 'en-US', {
+        const formatter = new Intl.NumberFormat(UI_LANGUAGES[uiLanguage].locale, {
             maximumFractionDigits,
         });
         const minimum = formatter.format(range.minimum);
@@ -3084,7 +3068,7 @@
         if (![year, month, day].every(Number.isFinite)) {
             return dateInput;
         }
-        return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-US', {
+        return new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -3103,10 +3087,7 @@
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        if (language === 'en') {
-            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-        }
-        return hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
+        return messages[language].compactRemaining(hours, minutes);
     };
 
     // 今日使用实时月相；选择其他日期时，使用该日当地中午的天文时间线月相。
@@ -3132,16 +3113,10 @@
 
     const nextWindowParts = (item: { kind: string; label: string; time?: Date | null }, language = uiLanguage): { label: string; time: string } => {
         if (!item.time) {
-            return { label: language === 'en' ? 'Ended' : '已结束', time: '' };
-        }
-        if (language === 'en') {
-            return {
-                label: 'Next',
-                time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime(), language),
-            };
+            return { label: messages[language].ended, time: '' };
         }
         return {
-            label: '倒计时',
+            label: messages[language].countdown,
             time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime(), language),
         };
     };
@@ -3258,7 +3233,7 @@
             : null;
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
         const savedLanguage = loadLanguagePreference();
-        uiLanguage = savedLanguage ?? 'zh';
+        uiLanguage = savedLanguage ?? DEFAULT_UI_LANGUAGE;
         showLanguageChoice = savedLanguage === null;
         cloudView = loadPlanningViewPreference();
         // Retire the previous provider's browser credential without reading or retaining its value.

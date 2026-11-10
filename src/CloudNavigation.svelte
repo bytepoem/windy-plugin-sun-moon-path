@@ -1,9 +1,11 @@
 <script lang="ts">
     import { createEventDispatcher, tick } from 'svelte';
+    import { messages } from './locales/CloudNavigation';
+    import type { UiLanguage } from './uiLanguage';
 
     export let active: boolean;
     export let view: 'obstruction' | 'rainbow' | 'horizon' | 'tide' = 'obstruction';
-    export let language: 'zh' | 'en';
+    export let language: UiLanguage;
 
     const dispatch = createEventDispatcher<{ activate: void; tabkeydown: KeyboardEvent }>();
     const views = ['obstruction', 'rainbow', 'horizon', 'tide'] as const;
@@ -11,7 +13,7 @@
     let root: HTMLDivElement;
     let trigger: HTMLButtonElement;
     let menu: HTMLDivElement;
-    $: labels = language === 'zh' ? ['云层遮挡', '彩虹', '地平线', '潮汐'] : ['Clouds', 'Rainbow', 'Horizon', 'Tides'];
+    $: labels = messages[language].views;
     $: if (!active) { open = false; }
 
     // Opening only exposes choices; selecting an item activates its planning tab.
@@ -72,12 +74,12 @@
         tabindex={active ? 0 : -1}
         on:click={() => dispatch('activate')}
         on:keydown={event => dispatch('tabkeydown', event)}
-    ><span class="tab-label">{labels[views.indexOf(view)]}</span></button>
+    ><span class="tab-label">{labels[view]}</span></button>
     <button
         class="arrow"
         bind:this={trigger}
         type="button"
-        aria-label={language === 'zh' ? '选择云层、彩虹、地平线或潮汐功能' : 'Choose clouds, rainbow, horizon or tides'}
+        aria-label={messages[language].chooseCloudsRainbowHorizonOrTides}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="cloud-function-menu"
@@ -94,10 +96,10 @@
         </svg>
     </button>
     {#if open}
-        <div id="cloud-function-menu" class="menu" role="menu" tabindex="-1" aria-label={language === 'zh' ? '摄影规划功能' : 'Photography planning'} bind:this={menu} on:keydown={menuKeydown}>
-            {#each views as value, index}
+        <div id="cloud-function-menu" class="menu" role="menu" tabindex="-1" aria-label={messages[language].photographyPlanning} bind:this={menu} on:keydown={menuKeydown}>
+            {#each views as value}
                 <button type="button" role="menuitemradio" aria-checked={view === value} tabindex="-1" data-view={value} on:click={() => select(value)}>
-                    <span class="menu-check" aria-hidden="true">{view === value ? '✓' : ''}</span><span class="menu-label">{labels[index]}</span>
+                    <span class="menu-check" aria-hidden="true">{view === value ? '✓' : ''}</span><span class="menu-label">{labels[value]}</span>
                 </button>
             {/each}
         </div>

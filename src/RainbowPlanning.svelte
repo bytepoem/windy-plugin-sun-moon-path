@@ -1,5 +1,6 @@
 <script lang="ts">
     import { map } from '@windy/map';
+    import { messages } from './locales/RainbowPlanning';
     import { onPluginMount as onMount, onPluginDestroy as onDestroy } from './pluginLifecycle';
     import CelestialIcon from './CelestialIcon.svelte';
     import RainbowConditions from './RainbowConditions.svelte';
@@ -8,13 +9,14 @@
     import { createRainbowOverlay } from './rainbowOverlay';
     import { rainbowWindows } from './rainbowWindows';
     import { formatLocalClock } from './solar';
+    import type { UiLanguage } from './uiLanguage';
     import type { WeatherModel } from './weather';
     import type { Coordinates } from './solar';
 
     export let location: Coordinates;
     export let contextReady: boolean;
     export let contextError: boolean;
-    export let language: 'zh' | 'en';
+    export let language: UiLanguage;
     export let lineOpacity: number;
     export let model: WeatherModel;
     export let timeZone: string;
@@ -29,7 +31,6 @@
     const overlay = createRainbowOverlay(map);
     const degree = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${value.toFixed(1)}°`;
 
-    $: zh = language === 'zh';
     // Date-level geometry is independent of clock dragging and weather requests.
     $: windows = contextReady ? rainbowWindows(selectedDate, timeZone, location, body) : null;
     const windowClock = (time: number) => time === windows?.dayEnd ? '24:00' : formatLocalClock(new Date(time), timeZone);
@@ -52,43 +53,43 @@
     });
 </script>
 
-<section class="rainbow-panel" aria-label={zh ? '彩虹规划' : 'Rainbow planning'}>
+<section class="rainbow-panel" aria-label={messages[language].rainbowPlanning}>
     <div class="rainbow-controls">
-        <div class="body-picker" role="group" aria-label={zh ? '彩虹光源' : 'Rainbow light source'}>
+        <div class="body-picker" role="group" aria-label={messages[language].rainbowLightSource}>
             <button type="button" class:active={body === 'sun'} aria-pressed={body === 'sun'} on:click={() => body = 'sun'}>
-                <CelestialIcon body="sun" size={14} />{zh ? '日虹' : 'Sun'}
+                <CelestialIcon body="sun" size={14} />{messages[language].sun}
             </button>
             <button type="button" class:active={body === 'moon'} aria-pressed={body === 'moon'} on:click={() => body = 'moon'}>
-                <CelestialIcon body="moon" size={14} />{zh ? '月虹' : 'Moon'}
+                <CelestialIcon body="moon" size={14} />{messages[language].moon}
             </button>
         </div>
-        <label><input type="checkbox" bind:checked={secondary} />{zh ? '双彩虹' : 'Double'}</label>
-        <label><input type="checkbox" bind:checked={fullCircle} />{zh ? '完整圆圈' : 'Full circle'}</label>
-        <button class="help-button" type="button" aria-label={zh ? '彩虹说明' : 'Rainbow guide'} aria-expanded={showHelp} aria-controls="rainbow-help" on:click={() => showHelp = !showHelp}>?</button>
+        <label><input type="checkbox" bind:checked={secondary} />{messages[language].double}</label>
+        <label><input type="checkbox" bind:checked={fullCircle} />{messages[language].fullCircle}</label>
+        <button class="help-button" type="button" aria-label={messages[language].rainbowGuide} aria-expanded={showHelp} aria-controls="rainbow-help" on:click={() => showHelp = !showHelp}>?</button>
     </div>
     {#if showHelp}
         <div id="rainbow-help" class="rainbow-help">
-            <p>{zh ? '七彩弧线的宽度仅用于清晰显示，不代表实际角宽。彩色同心圆标记反太阳点／反月亮点：方位与光源相差 180°，高度相反；它可能位于地平线下。圆圈大小为固定图标，不表示佛光大小，也不预测佛光是否出现。' : 'The rainbow ribbon width is for legibility, not actual angular width. The coloured target marks the antisolar/antilunar direction: 180° opposite in azimuth, with negated altitude; it can be below the horizon. Its fixed icon size does not model or predict a glory.'}</p>
-            <p>{zh ? '主虹围绕光源反方向约 42°，副虹约 51° 且颜色相反。左右方位是虹弧与水平地平线的交点，没有交点时显示 —。地图从上方俯视天空，0° 圈为水平地平线，高度刻度并非等距。完整圆圈中，地平线上下的方向可能重叠，用实线与虚线区分。' : 'The primary bow lies about 42° from the opposite light-source direction; the secondary is about 51° with reversed colours. Left/right bearings mark horizontal-horizon crossings, or — if absent. The map looks down onto the sky; the 0° ring is the horizon and altitude rings are not evenly spaced. In full-circle mode, above/below-horizon directions may overlap; solid/dashed arcs distinguish them.'}</p>
-            <p>{zh ? '虹弧为构图参考。下方可单独评估白天主虹的小时降雨与直射光条件，不是出现概率。前方需有受光水滴；完整圆圈还需下方有受光水滴及无遮挡视线。月虹通常需要较亮月光和长曝光，不纳入条件评估。' : 'The bow is a composition reference. The separate assessment below screens hourly rain and direct light for daytime primary bows; it is not an occurrence probability. Lit droplets must be ahead. Full circles also need lit droplets and clear sightlines below. Moonbows usually need bright moonlight and long exposures and are not assessed.'}</p>
+            <p>{messages[language].theRainbowRibbonWidthIsForLegibility}</p>
+            <p>{messages[language].thePrimaryBowLiesAboutFromThe}</p>
+            <p>{messages[language].theBowIsACompositionReferenceThe}</p>
         </div>
     {/if}
     <div class="source-line">
-        <span>{body === 'sun' ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon')}</span>
-        <span>{zh ? '高度' : 'Altitude'} <strong>{degree(source?.altitude)}</strong></span>
-        <span>{zh ? '方位' : 'Azimuth'} <strong>{degree(source?.azimuth)}</strong></span>
+        <span>{body === 'sun' ? (messages[language].sun2) : (messages[language].moon2)}</span>
+        <span>{messages[language].altitude} <strong>{degree(source?.altitude)}</strong></span>
+        <span>{messages[language].azimuth} <strong>{degree(source?.azimuth)}</strong></span>
     </div>
     <!-- Svelte 4 treats region as noninteractive; keyboard users need to focus this horizontal scroll region. -->
     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-    <div class="rainbow-table-scroll" role="region" tabindex="0" aria-label={zh ? '彩虹角度与当日时段' : 'Rainbow angles and daily windows'}>
+    <div class="rainbow-table-scroll" role="region" tabindex="0" aria-label={messages[language].rainbowAnglesAndDailyWindows}>
     <table>
         <colgroup><col class="bow-column" /><col class="window-column" /><col span="4" class="angle-column" /></colgroup>
-        <thead><tr><th scope="col">{zh ? '虹弧' : 'Bow'}</th><th scope="col" class="window-heading">{zh ? '时段 / 时长' : 'Window / duration'}</th><th scope="col" title={zh ? '顶部高度' : 'Top altitude'}>{zh ? '顶高' : 'Top alt.'}</th><th scope="col">{zh ? '左侧' : 'Left'}</th><th scope="col">{zh ? '中间' : 'Centre'}</th><th scope="col">{zh ? '右侧' : 'Right'}</th></tr></thead>
+        <thead><tr><th scope="col">{messages[language].bow}</th><th scope="col" class="window-heading">{messages[language].windowDuration}</th><th scope="col" title={messages[language].topAltitude}>{messages[language].topAlt}</th><th scope="col">{messages[language].left}</th><th scope="col">{messages[language].centre}</th><th scope="col">{messages[language].right}</th></tr></thead>
         {#each rows as arc, index}
             {@const intervals = index === 0 ? windows?.primary : windows?.secondary}
             <tbody>
                 <tr>
-                    <th scope="row">{index === 0 ? (zh ? '主虹' : 'Primary') : (zh ? '副虹' : 'Secondary')}</th>
+                    <th scope="row">{index === 0 ? (messages[language].primary) : (messages[language].secondary)}</th>
                     <td class="window-cell">
                         {#if intervals}
                             {#each intervals as interval}
@@ -97,10 +98,10 @@
                                     <span>{durationLabel(interval.start, interval.end)}</span>
                                 </div>
                             {:else}
-                                <span>{zh ? '当日无符合条件的时段' : 'No qualifying window today'}</span>
+                                <span>{messages[language].noQualifyingWindowToday}</span>
                             {/each}
                         {:else}
-                            <span>{contextError ? (zh ? '时段暂不可用' : 'Windows unavailable') : (zh ? '等待地点与时区…' : 'Waiting for location and time zone…')}</span>
+                            <span>{contextError ? (messages[language].windowsUnavailable) : (messages[language].waitingForLocationAndTimeZone)}</span>
                         {/if}
                     </td>
                     <td>{degree(arc?.topAltitude)}</td>
@@ -112,19 +113,19 @@
         {/each}
     </table>
     </div>
-    <p class="caption">{zh ? '角度对应所选时刻；时段为当地几何估算，不保证出现。' : 'Angles are for the selected time; windows are local geometric estimates, not occurrence forecasts.'}</p>
+    <p class="caption">{messages[language].anglesAreForTheSelectedTimeWindows}</p>
     {#if !contextReady}
         <p class="status" role="status">{contextError
-            ? (zh ? '地点时区解析失败，暂无法计算彩虹；请重新选择地点。' : 'Location time zone unavailable; select the location again to retry.')
-            : (zh ? '正在解析地点时区…' : 'Resolving the location time zone…')}</p>
+            ? (messages[language].locationTimeZoneUnavailableSelectTheLocation)
+            : (messages[language].resolvingTheLocationTimeZone)}</p>
     {:else if timestamp === null}
-        <p class="status" role="status">{zh ? '请选择有效的当地时间；夏令时跳过的时刻不可用。' : 'Choose a valid local time; skipped daylight-saving times are unavailable.'}</p>
+        <p class="status" role="status">{messages[language].chooseAValidLocalTimeSkippedDaylight}</p>
     {:else if primaryArc && primaryArc.topAltitude < 0}
         <p class="status" role="status">{fullCircle
-            ? (zh ? '主虹在水平地平线下，虚线仅为俯视方向参考。' : 'The primary bow is below the horizontal horizon; dashed arcs show downward directions only.')
-            : (zh ? '主虹在水平地平线下；开启完整圆圈可查看俯视方向。' : 'The primary bow is below the horizontal horizon. Full circle shows downward directions.')}</p>
+            ? (messages[language].thePrimaryBowIsBelowTheHorizontal)
+            : (messages[language].thePrimaryBowIsBelowTheHorizontal2)}</p>
     {/if}
-    <p class="caption">{zh ? '地图为天空俯视投影，不表示距离；虚线为地平线下。' : 'Map overlay is a top-down sky projection, not distance; dashed arcs are below the horizon.'}</p>
+    <p class="caption">{messages[language].mapOverlayIsATopDownSky}</p>
     <RainbowConditions {location} {source} {timestamp} {model} {timeZone} {language} enabled={contextReady && body === 'sun'} />
 </section>
 

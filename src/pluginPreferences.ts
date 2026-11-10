@@ -2,7 +2,7 @@ import { DEFAULT_INITIAL_OVERLAY, normalizeInitialOverlayPreference, type Initia
 import { DEFAULT_RADAR_OPACITY_PERCENT, normalizeRadarOpacityPercent, normalizeRadarProvider, type RadarProvider } from './radarOverlay';
 import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
 import { DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT, normalizeLightPollutionOpacity } from './lightPollutionOverlay';
-import type { UiLanguage } from './pluginTranslations';
+import { isUiLanguage, type UiLanguage } from './uiLanguage';
 
 export type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
 export type MinimizeScope = 'standard' | 'hide-times' | 'hide-summary';
@@ -47,7 +47,7 @@ const write = (key: string, value: string): boolean => {
 export const loadLanguagePreference = (): UiLanguage | null => {
     try {
         const value = localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
-        return value === 'zh' || value === 'en' ? value : null;
+        return isUiLanguage(value) ? value : null;
     } catch {
         return null;
     }

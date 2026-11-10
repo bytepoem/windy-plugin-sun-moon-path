@@ -1,3 +1,5 @@
+import { messages } from './locales/weather';
+import type { UiLanguage } from './uiLanguage';
 export type WeatherModel = 'ecmwf' | 'gfs' | 'icon';
 export type WeatherSource = 'windy' | 'open-meteo';
 
@@ -307,7 +309,7 @@ const dateParts = (timestamp: number, timeZone: string): { key: string; month: s
 export const buildWeatherDateGroups = (
     points: WeatherPoint[],
     timeZone: string,
-    language: 'zh' | 'en',
+    language: UiLanguage,
 ): WeatherDateGroup[] => {
     const groups: WeatherDateGroup[] = [];
     for (const [index, point] of points.entries()) {
@@ -319,9 +321,7 @@ export const buildWeatherDateGroups = (
         }
         groups.push({
             key: parts.key,
-            label: language === 'zh'
-                ? `${Number(parts.month)}.${Number(parts.day)}`
-                : `${Number(parts.month)}/${Number(parts.day)}`,
+            label: messages[language].dateGroup(Number(parts.month), Number(parts.day)),
             startIndex: index,
             length: 1,
         });
@@ -457,10 +457,8 @@ export const weatherMetricTone = (metric: WeatherMetric, value: number | null): 
 
 export const weatherConditionLabel = (
     iconCode: number | null,
-    language: 'zh' | 'en',
+    language: UiLanguage,
 ): string => {
-    const labels = language === 'zh'
-        ? ['未知', '晴', '大部晴朗', '多云', '阴', '局部有雨', '多云有雨', '阴有雨', '局部有雪', '多云有雪', '阴有雪', '雨夹雪', '雨夹雪', '雨夹雪', '雷雨', '雷雪', '雷雨夹雪', '雾', '阵雨', '阵雨', '阵雨', '雷阵雨', '晴雾', '雷暴', '局部雷暴']
-        : ['Unknown', 'Clear', 'Mostly clear', 'Partly cloudy', 'Overcast', 'Mostly clear with rain', 'Cloudy with rain', 'Overcast with rain', 'Mostly clear with snow', 'Cloudy with snow', 'Overcast with snow', 'Rain and snow', 'Rain and snow', 'Rain and snow', 'Thunderstorm', 'Thunder snow', 'Thunder rain and snow', 'Fog', 'Showers', 'Showers', 'Showers', 'Thunder showers', 'Clear with fog', 'Thunderstorm', 'Partly cloudy thunderstorm'];
+    const labels = messages[language].conditions;
     return iconCode === null || !labels[iconCode] ? labels[0] : labels[iconCode];
 };

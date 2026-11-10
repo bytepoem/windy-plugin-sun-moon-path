@@ -1,33 +1,35 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import { messages } from './locales/CloudTimeline';
     import { cloudClockMinute, cloudMinuteClock } from './cloudTimeline';
+    import type { UiLanguage } from './uiLanguage';
 
     export let clock: string;
     export let date: string;
     export let dateLabel: string;
-    export let zh: boolean;
+    export let language: UiLanguage;
     const dispatch = createEventDispatcher<{ preview: string; datetime: string; commit: void; now: void }>();
     $: minute = cloudClockMinute(clock);
 </script>
 
-<div class="cloud-timeline" aria-label={zh ? '当地时间与天体升落' : 'Local time and celestial events'}>
+<div class="cloud-timeline" aria-label={messages[language].localTimeAndCelestialEvents}>
     <div class="time-row">
         <label class="datetime-entry">
             <span aria-hidden="true">{dateLabel} <span>{clock || '--:--'}</span></span>
             <input type="datetime-local" step="60" value={clock ? `${date}T${clock}` : ''}
-                aria-label={zh ? '选择当地日期和时间' : 'Choose local date and time'}
+                aria-label={messages[language].chooseLocalDateAndTime}
                 on:click={event => event.currentTarget.showPicker?.()}
                 on:input={event => {
                     if (event.currentTarget.value) { dispatch('datetime', event.currentTarget.value); }
                 }} />
         </label>
         <button class="time-now" type="button"
-            aria-label={zh ? '回到当前日期和时间' : 'Jump to the current date and time'}
-            title={zh ? '回到当前日期和时间' : 'Jump to the current date and time'}
-            on:click={() => dispatch('now')}>{zh ? '现在' : 'Now'}</button>
+            aria-label={messages[language].jumpToTheCurrentDateAndTime}
+            title={messages[language].jumpToTheCurrentDateAndTime}
+            on:click={() => dispatch('now')}>{messages[language].now}</button>
         <div class="time-track">
             <input type="range" min="0" max="1439" step="1" value={minute}
-                aria-label={zh ? '当地计算时间' : 'Local calculation time'} aria-valuetext={clock || '--:--'}
+                aria-label={messages[language].localCalculationTime} aria-valuetext={clock || '--:--'}
                 on:input={event => dispatch('preview', cloudMinuteClock(event.currentTarget.valueAsNumber))}
                 on:change={() => dispatch('commit')} on:pointercancel={() => dispatch('commit')} on:blur={() => dispatch('commit')} />
             <div class="time-ticks" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>

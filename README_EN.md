@@ -33,7 +33,7 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.5/plugin.min.
 2. **Choose a time:** select a date, then use the local time strip or Sun, Moon and galactic centre rise/set shortcuts.
 3. **Check conditions:** explore events and weather, use cloud or rainbow planning, or compare 2–5 favorite locations.
 
-Language and display options are in Settings; detailed legends are under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
+Choose Simplified Chinese or English when first opening the plugin. You can change this later using the language selector at the top of Settings; the plugin remembers your choice. Display options are also in Settings, with detailed legends under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
 
 Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers. You can also keep Windy's current layer.
 

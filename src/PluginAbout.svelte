@@ -1,6 +1,7 @@
 <script lang="ts">
     import config, { currentVersionReleasedAt } from './pluginConfig';
-    import { translations, type UiLanguage } from './pluginTranslations';
+    import { translations } from './pluginTranslations';
+    import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import DiagnosticReport from './DiagnosticReport.svelte';
     import type { PluginUpdateResult } from './pluginUpdate';
 
@@ -22,7 +23,7 @@
     $: localizedUpdateNotes = pluginUpdateResult?.seriesNotes.map(notes => ({
         version: notes.version,
         releasedAt: notes.releasedAt,
-        notes: notes[uiLanguage],
+        notes: notes[UI_LANGUAGES[uiLanguage].releaseNotesLanguage],
     })) ?? [];
 </script>
 

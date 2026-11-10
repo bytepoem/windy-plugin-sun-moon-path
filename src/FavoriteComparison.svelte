@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { createEventDispatcher, tick } from 'svelte';
+    import { labels, messages } from './locales/FavoriteComparison';
     import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
 
@@ -32,6 +33,7 @@
         dateInputForInstant,
         type AstronomyIntervalKind,
     } from './solar';
+    import { DEFAULT_UI_LANGUAGE, type UiLanguage } from './uiLanguage';
     import type { PluginDiagnostics } from './pluginDiagnostics';
 
     export let open = false;
@@ -41,7 +43,7 @@
     export let currentInstant: Date;
     export let initialModel: WeatherModel = 'ecmwf';
     export let source: WeatherSource = 'windy';
-    export let language: 'zh' | 'en' = 'zh';
+    export let language: UiLanguage = DEFAULT_UI_LANGUAGE;
     export let mobile = false;
     export let fullscreen = false;
     export let openUpward = false;
@@ -54,76 +56,7 @@
         select: FavoriteComparisonTarget;
         datechange: void;
     }>();
-    const labels = {
-        zh: {
-            title: '收藏地点时间窗口对比',
-            back: '返回收藏',
-            close: '关闭地点对比',
-            dateControl: '观测日期',
-            moonless: '无月',
-            milkyWay: '银河',
-            conditions: '天气按所选当地日期的可用预报统计，可能仅覆盖部分时段。',
-            modelLabel: '预报模型',
-            weather: '天气',
-            cloud: '云量',
-            highCloud: '高云',
-            mediumCloud: '中云',
-            lowCloud: '低云',
-            temperature: '气温',
-            dewPoint: '露点',
-            precipitation: '降水',
-            wind: '风速',
-            humidity: '湿度',
-            visibility: '能见度',
-            aod: 'AOD',
-            bortle: '光污染',
-            moonIllumination: '月相',
-            loadingContext: '正在计算各地点天文窗口与固定条件…',
-            loadingModel: '正在刷新模型条件…',
-            prepareError: '无法建立地点对比，请稍后重试。',
-            timeZoneError: '时区不可用',
-            noWindow: '无可用时段',
-            outsideForecast: '日期超出预报范围',
-            weatherError: '模型数据不可用',
-            atmosphereError: '加载失败',
-            retry: '刷新对比',
-            locate: (title: string) => `定位到${title}`,
-        },
-        en: {
-            title: 'Favorite time-window comparison',
-            back: 'Back to favorites',
-            close: 'Close comparison',
-            dateControl: 'Observing date',
-            moonless: 'Moonless',
-            milkyWay: 'Milky Way',
-            conditions: 'Weather uses available forecasts for the selected local date; coverage may be partial.',
-            modelLabel: 'Forecast model',
-            weather: 'Weather',
-            cloud: 'Cloud cover',
-            highCloud: 'High cloud',
-            mediumCloud: 'Mid cloud',
-            lowCloud: 'Low cloud',
-            temperature: 'Temperature',
-            dewPoint: 'Dew point',
-            precipitation: 'Precipitation',
-            wind: 'Wind',
-            humidity: 'Humidity',
-            visibility: 'Visibility',
-            aod: 'AOD',
-            bortle: 'Light pollution',
-            moonIllumination: 'Moon phase',
-            loadingContext: 'Calculating astronomy windows and fixed conditions…',
-            loadingModel: 'Refreshing model conditions…',
-            prepareError: 'Unable to prepare the comparison. Try again later.',
-            timeZoneError: 'Time zone unavailable',
-            noWindow: 'No available window',
-            outsideForecast: 'Date outside forecast range',
-            weatherError: 'Model data unavailable',
-            atmosphereError: 'Load failed',
-            retry: 'Refresh comparison',
-            locate: (title: string) => `Show ${title} on the map`,
-        },
-    } as const;
+
     const modelOptions: { value: WeatherModel; label: string }[] = [
         { value: 'ecmwf', label: 'EC' },
         { value: 'gfs', label: 'GFS' },
@@ -151,7 +84,7 @@
         ).points,
     });
 
-    let text = labels.zh;
+    let text = labels[language];
     let previousOpen = false;
     let previousSelectedDate = selectedDate;
     let previousSource = source;
@@ -514,9 +447,9 @@
             : `${minimum.toFixed(1)}–${maximum.toFixed(1)}%`;
     };
 
-    const dateLabel = (dateInput: string, currentLanguage: 'zh' | 'en'): string => {
+    const dateLabel = (dateInput: string, currentLanguage: UiLanguage): string => {
         const [, month, day] = dateInput.split('-').map(Number);
-        return currentLanguage === 'zh' ? `${month}月${day}日` : `${month}/${day}`;
+        return labels[currentLanguage].shortDate(month, day);
     };
 
     const windowKindLabel = (kind: AstronomyIntervalKind): string => kind === 'moonless-night'
@@ -578,7 +511,7 @@
         </header>
 
         <label class="favorite-comparison__source">
-            {language === 'zh' ? '天气数据源' : 'Weather source'}
+            {messages[language].weatherSource}
             <select bind:value={source}>
                 <option value="windy">Windy</option>
                 <option value="open-meteo">Open-Meteo</option>

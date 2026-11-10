@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { messages } from './locales/PluginGuide';
     import CelestialIcon from './CelestialIcon.svelte';
-    import { translations, type UiLanguage } from './pluginTranslations';
+    import { translations } from './pluginTranslations';
+    import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import {
         formatDistanceKm, formatPrecipitationMm, formatTemperatureC, formatVisibilityKm,
         formatWindThreshold, windThresholdUnit, type UnitPreferences, type DistanceUnit,
@@ -31,83 +33,47 @@
 
 <section class="module-about module-guide" aria-label={text.guideHeading}>
     <section class="feature-guide" aria-labelledby="quick-start-heading">
-        <h3 id="quick-start-heading">{uiLanguage === 'zh' ? '开始使用' : 'Getting started'}</h3>
-        <p>{uiLanguage === 'zh'
-            ? '先选地点，再调整顶部当地日期和时间；「现在」返回当前时刻，升落按钮可直接跳转。Windy 时间轴也会同步规划时间，切换 Tab 不会重置。重新打开插件从当前时刻开始。'
-            : 'Choose a location, then set the local date and time above. Now returns to the current instant; rise/set shortcuts jump to events. The Windy timeline also updates planning time. Tabs preserve your selection; reopening starts at the current instant.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '主导航下拉菜单切换云层遮挡、彩虹、地平线与潮汐；语言、单位和其他偏好在设置中修改。启动图层只列出插件支持且当前 Windy 提供的选项，也可保持当前图层。'
-            : 'Use the navigation dropdown for Clouds, Rainbow, Horizon or Tides. Change language, units and other preferences in Settings. Startup layers list choices supported by the plugin and available in Windy; you can also keep the current layer.'}</p>
+        <h3 id="quick-start-heading">{messages[uiLanguage].gettingStarted}</h3>
+        <p>{messages[uiLanguage].chooseALocationThenSetTheLocal}</p>
+        <p>{messages[uiLanguage].useTheNavigationDropdownForCloudsRainbow}</p>
         <p>{text.keyboardNavigationDescription}</p>
-        <p>{uiLanguage === 'zh'
-            ? '显示不完整或加载异常时，展开「关于」底部的「查看诊断信息」，复制报告并随问题反馈提供。初始化失败时也会显示诊断入口；文件本身无法加载时，请提供截图与浏览器错误。'
-            : 'For incomplete displays or loading errors, expand View diagnostics at the bottom of About, copy the report and include it with your issue. Initialization failures also show this entry. If the file itself cannot load, provide screenshots and browser errors.'}</p>
+        <p>{messages[uiLanguage].forIncompleteDisplaysOrLoadingErrorsExpand}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="events-guide-heading">
-        <h3 id="events-guide-heading">{uiLanguage === 'zh' ? '事件与天空盘' : 'Events and sky chart'}</h3>
-        <p>{uiLanguage === 'zh'
-            ? '离开云层规划后，点击「全部」可恢复事件方向。云层高度未知时，范围按钮适配已有方向线，放大按钮恢复机位缩放。'
-            : 'After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '在设置中切换「显示天空盘」，或点击窗口栏首个天体轨道图标按钮；两处同步并记住选择。'
-            : 'Toggle “Show sky chart” in Settings or use the first window button with the orbit icon. Both controls stay synchronized and remember your choice.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '查看日月、银心升落和无月黑夜／银河时段，点击事件时刻跳转。今天的高亮与倒计时指向下一个真实事件。天空盘跟随规划时间；标有 now 的日月长线始终表示现在。'
-            : 'View Sun, Moon and galactic centre events, moonless nights and Milky Way windows. Click an event time to jump. Today’s highlight and countdown identify the next real event. The sky chart follows planning time; Sun/Moon bearings labelled now always mean the current instant.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '天空盘北上东右，圆周为地平线、圆心为天顶；虚线与向下标记表示地平线下。银河带只示意走向，不保证可见；夜间卡片的云量、降水和能见度供拍摄参考。'
-            : 'North is up, east is right, the rim is the horizon and the centre is the zenith. Dashes and downward markers indicate below-horizon directions. The galactic band is illustrative, not a visibility guarantee. Night cards summarize cloud, rain and visibility for planning.'}</p>
+        <h3 id="events-guide-heading">{messages[uiLanguage].eventsAndSkyChart}</h3>
+        <p>{messages[uiLanguage].afterLeavingCloudPlanningAllRestoresEvent}</p>
+        <p>{messages[uiLanguage].toggleShowSkyChartInSettingsOr}</p>
+        <p>{messages[uiLanguage].viewSunMoonAndGalacticCentreEvents}</p>
+        <p>{messages[uiLanguage].northIsUpEastIsRightThe}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="horizon-guide-heading">
-        <h3 id="horizon-guide-heading">{uiLanguage === 'zh' ? '地平线' : 'Horizon'}</h3>
-        <p>{uiLanguage === 'zh'
-            ? '事件表同时显示太阳、月亮和银心的升落方位与时间，时间按当前地点时区显示；海洋位置使用 Windy 提供的航海时区。当天没有发生的事件会单独提示。'
-            : 'The event table shows rise/set bearings and times for the Sun, Moon and galactic centre in the current location’s time zone; ocean locations use the nautical time zone provided by Windy. A notice appears when an event does not occur that day.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '可切换总云、低云、中云、高云、云底高度或卫星云图，选择预报模型，并查看底图预报时次。开启同步后，预报云图跟随顶部日期和时间；卫星影像时间以 Windy 时间轴为准。云图选项与「云层遮挡」共用。'
-            : 'Switch between total, low, middle or high clouds, cloud base and satellite imagery; select a forecast model and check the map’s forecast time. With synchronization enabled, forecast maps follow the shared date and time controls; satellite image time follows the Windy timeline. Cloud map preferences are shared with Clouds.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '在主导航下拉菜单选择「地平线」，默认读取并展示当前定位点海拔，填入高度框并适配地图范围。可手动修改视点总海拔以计入楼顶或相机离地高度，换地点后恢复自动海拔；读取失败可重试。顶部按钮筛选日、月和银心升落方向，「全部」显示六个方向；地图只保留所选方向的地平线方位线和距离。修改高度后可用范围按钮重新适配，计算方法见面板说明。这是到海平面切点的几何距离，不是最远可见物体的距离；不修改升落时刻，不含折射、地形、建筑和云层遮挡。'
-            : 'Select Horizon to read and display the current location elevation, fill the height field and fit the map. Manually enter total observer elevation to include rooftop or camera height; a new location restores auto elevation, and failed reads can be retried. The top buttons filter Sun, Moon and galactic centre rise/set directions; All shows all six. Only the selected horizon bearings and distances appear on the map. After changing height, use the fit button to fit again; see the panel guide for the calculation. This is geometric distance to the sea-level tangent point, not the farthest visible object. It does not adjust event times or include refraction, terrain, buildings or clouds.'}</p>
+        <h3 id="horizon-guide-heading">{messages[uiLanguage].horizon}</h3>
+        <p>{messages[uiLanguage].theEventTableShowsRiseSetBearings}</p>
+        <p>{messages[uiLanguage].switchBetweenTotalLowMiddleOrHigh}</p>
+        <p>{messages[uiLanguage].selectHorizonToReadAndDisplayThe}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="cloud-guide-heading">
-        <h3 id="cloud-guide-heading">{uiLanguage === 'zh' ? '云层遮挡' : 'Cloud planning'}</h3>
-        <p>{uiLanguage === 'zh'
-            ? '选择云图、模型、云层模式与高度来源，参考所选时刻的云距和天体视线。云距采用零高度基准，不扣除机位海拔；沿途云况、地形与消光未校验，不能据此保证可见。详细图例见面板内的说明按钮。'
-            : 'Choose the cloud map, model, layer mode and height source to inspect cloud distances and celestial sightlines at planning time. Distances use a zero-height reference without subtracting camera elevation. Path clouds, terrain and extinction are unverified, so visibility is not guaranteed. Use the panel help for its detailed legend.'}</p>
+        <h3 id="cloud-guide-heading">{messages[uiLanguage].cloudPlanning}</h3>
+        <p>{messages[uiLanguage].chooseTheCloudMapModelLayerMode}</p>
         <p>{text.featureGuide.cloudPlanning.description}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="rainbow-guide-heading">
-        <h3 id="rainbow-guide-heading">{uiLanguage === 'zh' ? '彩虹规划' : 'Rainbow planning'}</h3>
-        <p>{uiLanguage === 'zh'
-            ? '选择日虹／月虹，查看当日主虹时段、顶部高度和左右方位；开启双彩虹可同时查看副虹。时段按分钟估算，仅表示光源在地平线上且虹弧部分高于水平地平线，不是彩虹出现预报。月虹还需要足够月光，通常需长曝光。'
-            : 'Choose Sun or Moon to see daily primary-bow windows, top altitude and bearings; Double adds the secondary bow. Windows are estimated at minute resolution, with the source above the horizon and part of the bow above the horizontal horizon. They do not predict occurrence. Moonbows also need sufficient moonlight and usually long exposures.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '地图为天空俯视投影，不表示距离；实线／虚线区分地平线上下。完整圆圈只提供俯视方向参考，仍需受光水滴和无遮挡视线。彩色同心圆标记光源反方向，不预测佛光。'
-            : 'The map is a top-down sky projection, not distance; solid/dashed arcs distinguish above/below the horizon. Full circle adds downward directions, still requiring lit droplets and clear sightlines. The coloured target marks the opposite light-source direction; it does not predict a glory.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '「评估当前时刻」单独检查白天主虹的小时雨光条件，并展示地形、能见度风险。结果可信度低，不是出现概率，也不能证明同一瞬间雨滴受光；月虹不参与评估。山体提示不等于一定遮挡，未发现风险也不等于视线畅通。'
-            : 'Assess selected time separately screens hourly rain/light for daytime primary bows, with terrain and visibility risks. Confidence is low: grades are not probabilities or proof of simultaneous illumination. Moonbows are not assessed. Terrain warnings do not prove obstruction, and no detected risk does not establish a clear view.'}</p>
+        <h3 id="rainbow-guide-heading">{messages[uiLanguage].rainbowPlanning}</h3>
+        <p>{messages[uiLanguage].chooseSunOrMoonToSeeDaily}</p>
+        <p>{messages[uiLanguage].theMapIsATopDownSky}</p>
+        <p>{messages[uiLanguage].assessSelectedTimeSeparatelyScreensHourlyRain}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="tide-guide-heading">
-        <h3 id="tide-guide-heading">{uiLanguage === 'zh' ? '潮汐规划' : 'Tide planning'}</h3>
-        <p>{uiLanguage === 'zh'
-            ? '右上角图标切换曲线与表格；表格按面板宽度分两组或三组展示当天全部可用小时数据，每组从上往下阅读。'
-            : 'The top-right icon switches between curve and table. All available hourly readings for the day appear in two or three groups depending on panel width; read each group from top to bottom.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '从主导航下拉菜单选择「潮汐」，自动加载当前机位的 Open-Meteo 模型水位，无需 Key。统一使用顶部时间条调整拍摄时间；点击估算高低水位或日光事件也可同步顶部拍摄时间。可选择机位当地今天起 10 天内的日期，实际覆盖以模型数据为准。无数据时仍可使用日光时刻。'
-            : 'Select Tides from the navigation dropdown to automatically load Open-Meteo model water levels without an API key. Use the top time strip to adjust shooting time; selecting estimated high/low levels or sunlight events also updates the shared time. Choose dates within ten days from today at the camera location; actual coverage depends on model availability. Sunlight events remain available without water data.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? 'Open-Meteo 免费接口限非商业用途并有请求限额。水位相对全球平均海平面（MSL），包含潮汐及气压等影响，不是港口潮汐表或浪高。'
-            : 'The free Open-Meteo API is for non-commercial use with request limits. Levels are relative to global mean sea level (MSL), including tides and pressure effects, not port tide tables or wave heights.'}</p>
-        <p>{uiLanguage === 'zh'
-            ? '模型分辨率约 8 km，河口与近岸误差可能较大；高低水位时刻由逐小时曲线估算，以「约」标示。仅供摄影参考，不代表机位水深或通行安全，不能用于航行。'
-            : 'Model resolution is about 8 km, with limited accuracy near coasts and estuaries. High/low times are estimated from hourly samples and marked approximately. For photography reference only, not local depth, access safety or navigation.'}</p>
+        <h3 id="tide-guide-heading">{messages[uiLanguage].tidePlanning}</h3>
+        <p>{messages[uiLanguage].theTopRightIconSwitchesBetweenCurve}</p>
+        <p>{messages[uiLanguage].selectTidesFromTheNavigationDropdownTo}</p>
+        <p>{messages[uiLanguage].theFreeOpenMeteoAPIIsFor}</p>
+        <p>{messages[uiLanguage].modelResolutionIsAboutKmWithLimited}</p>
     </section>
 
     <section class="feature-guide" aria-labelledby="feature-guide-heading">
@@ -220,7 +186,7 @@
     <section class="settings-guide" aria-labelledby="settings-guide-heading">
         <h3 id="settings-guide-heading">{text.settingsGuideHeading}</h3>
         <dl>
-            {#if uiLanguage === 'zh'}
+            {#if UI_LANGUAGES[uiLanguage].placeSearch}
                 <div>
                     <dt>{text.locationApiKeyLabel}</dt>
                     <dd>{text.locationApiKeyDescription}</dd>

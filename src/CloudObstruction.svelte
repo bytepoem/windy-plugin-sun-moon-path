@@ -2,6 +2,8 @@
     import { createEventDispatcher } from 'svelte';
     import { map } from '@windy/map';
     import metrics from '@windy/metrics';
+    import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
+    import { messages } from './locales/CloudObstruction';
     import { onPluginDestroy as onDestroy, onPluginMount as onMount } from './pluginLifecycle';
     import { cloudArc, cloudTargetPosition, cloudSightDistance, cloudTwilightDistances, type CloudDirectionBody } from './cloudGeometry';
     import CloudHelp from './CloudHelp.svelte';
@@ -21,7 +23,7 @@
     export let status: WeatherLoadStatus;
     export let model: WeatherModel;
     export let timeZone: string;
-    export let language: 'zh' | 'en';
+    export let language: UiLanguage;
     export let units: UnitPreferences;
     export let settings: CloudSettings;
     export let lineOpacity: number;
@@ -43,7 +45,6 @@
     export let syncing: boolean;
     const changeModel = (event: Event) => dispatch('modelchange', (event.currentTarget as HTMLSelectElement).value as WeatherModel);
 
-    $: zh = language === 'zh';
     $: single = settings.view === 'single';
     $: visibleBands = single ? ['low'] as CloudBand[] : CLOUD_BANDS;
     $: heightMode = single ? settings.single.mode
@@ -55,17 +56,7 @@
     // Only the selected automatic method is evaluated; changing time reuses its forecast steps.
     $: cloudForecast = !automaticHeights || heightSource === 'base' ? { profiles: [], modelElevationM: null }
         : extractCloudForecast(forecast, heightSource === 'cloud' ? settings.threshold : settings.dewPointSpreadC, heightSource);
-    $: sourceDescriptions = zh ? [
-        '预报云底 · 读取模型预报云底；分层时按离地高度归入低中高中的一层，其他层未知。',
-        '云量剖面 · 按云量阈值识别云层；单层取最低检出层，分层保留各段独立云层。',
-        '温湿剖面 · 按温度与露点温差估算候选云层；单层取最低候选层，分层保留各段候选层。不等同实测，也不作冰面饱和修正。',
-        '手动输入 · 输入所关注云层的海拔高度；单层设置一个参考高度，分层分别设置低中高层高度。',
-    ] : [
-        'Forecast base · Reads the model cloud base. Layered view assigns it to one band by AGL height; other bands remain unknown.',
-        'Cloud-cover profile · Detects clouds using a cover threshold. Single view uses the lowest detected layer; layered view retains separate layers.',
-        'Temperature/dew-point profile · Estimates candidate layers from the temperature/dew-point spread. Single view uses the lowest candidate; layered view retains separate candidates. Not measured bases; no ice-saturation correction.',
-        'Manual input · Enter cloud altitude AMSL. Single view uses one reference height; layered view accepts separate low, middle and high layer heights.',
-    ];
+    $: sourceDescriptions = messages[language].heightSourceDescriptions;
     // The parent owns the clock across every Tab, including while this view is unmounted.
     $: planningEvents = timestamp === null ? [] : [{ type: timelineEvent, timestamp }];
     $: scenarios = planningEvents.map(event => {
@@ -77,8 +68,8 @@
     $: activeBody = scenarios[0]?.body ?? cloudEventBody(timelineEvent);
     $: cloudPlanningBody = activeBody;
     $: cloudMapEvent = activeBody === 'milkyway' ? null : `${activeBody}${timelineEvent.endsWith('rise') ? 'rise' : 'set'}` as SolarEvent;
-    $: bodyName = activeBody === 'milkyway' ? (zh ? '银心' : 'Galactic centre')
-        : activeBody === 'sun' ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon');
+    $: bodyName = activeBody === 'milkyway' ? (messages[language].galacticCentre)
+        : activeBody === 'sun' ? (messages[language].sun) : (messages[language].moon);
     $: layers = scenarios.flatMap(event => event.layers);
     // Share the outermost cloud distance with event rays, including a small visual overrun.
     $: cloudDirectionRangeKm = Math.max(0, ...scenarios.flatMap(event => event.layers.map(layer => Math.max(
@@ -96,7 +87,7 @@
     }
 
     $: bandName = (band: CloudBand) => ({
-        low: zh ? '低' : 'L', medium: zh ? '中' : 'M', high: zh ? '高' : 'H',
+        low: messages[language].l, medium: messages[language].m, high: messages[language].h,
     })[band];
     $: heightLabel = (height: number) => `${formatElevationM(height, units.elevation)} ${units.elevation}`;
     const validHeight = (height: number | undefined): height is number =>
@@ -161,40 +152,40 @@
     });
 </script>
 
-<section class="cloud-panel" class:cloud-panel--english={!zh} aria-label={zh ? '云层遮挡规划' : 'Cloud obstruction planning'}>
+<section class="cloud-panel" class:cloud-panel--expanded-headings={!UI_LANGUAGES[language].compactCloudHeadings} aria-label={messages[language].cloudObstructionPlanning}>
     <div class="cloud-forecast-controls">
         <div class="cloud-model-mode">
-        <label class="cloud-map-select"><span class="cloud-map-label">{zh ? '云图' : 'Cloud map'}</span> <select bind:value={settings.overlay} aria-label={zh ? '云图' : 'Cloud map'}>
-            <option value="clouds">{zh ? '总云' : 'Total'}</option><option value="lclouds">{zh ? '低云' : 'Low'}</option>
-            <option value="mclouds">{zh ? '中云' : 'Middle'}</option><option value="hclouds">{zh ? '高云' : 'High'}</option>
-            <option value="cbase">{zh ? '云底高度' : 'Cloud base'}</option>
-            <option value="satellite">{zh ? '卫星云图' : 'Satellite'}</option>
+        <label class="cloud-map-select"><span class="cloud-map-label">{messages[language].cloudMap}</span> <select bind:value={settings.overlay} aria-label={messages[language].cloudMap}>
+            <option value="clouds">{messages[language].total}</option><option value="lclouds">{messages[language].low}</option>
+            <option value="mclouds">{messages[language].middle}</option><option value="hclouds">{messages[language].high}</option>
+            <option value="cbase">{messages[language].cloudBase}</option>
+            <option value="satellite">{messages[language].satellite}</option>
         </select></label>
-        <label class="cloud-model"><span>{zh ? '模型' : 'Model'}</span>
-            <select aria-label={zh ? '云层预报模型' : 'Cloud forecast model'} value={model}
+        <label class="cloud-model"><span>{messages[language].model}</span>
+            <select aria-label={messages[language].cloudForecastModel} value={model}
                 on:change={changeModel}>
                 <option value="ecmwf">EC</option><option value="gfs">GFS</option><option value="icon">ICON</option>
             </select>
         </label>
-        <label class="cloud-view-select"><span>{zh ? '云层' : 'Layers'}</span>
-        <select bind:value={settings.view} aria-label={zh ? '云层规划模式' : 'Cloud planning mode'}>
-            <option value="single">{zh ? '单层' : 'Single'}</option>
-            <option value="layers">{zh ? '分层' : 'Layered'}</option>
+        <label class="cloud-view-select"><span>{messages[language].layers}</span>
+        <select bind:value={settings.view} aria-label={messages[language].cloudPlanningMode}>
+            <option value="single">{messages[language].single}</option>
+            <option value="layers">{messages[language].layered}</option>
         </select></label>
         </div>
     </div>
     <div class="cloud-source-controls">
         <div class="cloud-source-picker">
-        <label class="cloud-source-select"><span>{zh ? '高度来源' : 'Height source'}</span>
-            <select value={sourceValue} on:change={changeSource} aria-label={zh ? '云层高度来源' : 'Cloud height source'}>
-                <option value="base">{zh ? '预报云底' : 'Forecast base'}</option>
-                <option value="cloud">{zh ? '云量剖面' : 'Cloud-cover profile'}</option>
-                <option value="dewpoint">{zh ? '温湿剖面' : 'Temperature/dew-point profile'}</option>
-                <option value="manual">{zh ? '手动输入' : 'Manual input'}</option>
+        <label class="cloud-source-select"><span>{messages[language].heightSource}</span>
+            <select value={sourceValue} on:change={changeSource} aria-label={messages[language].cloudHeightSource}>
+                <option value="base">{messages[language].forecastBase}</option>
+                <option value="cloud">{messages[language].cloudCoverProfile}</option>
+                <option value="dewpoint">{messages[language].temperatureDewPointProfile}</option>
+                <option value="manual">{messages[language].manualInput}</option>
             </select>
         </label>
-            <button class="cloud-source-help" type="button" title={zh ? '查看所有高度来源说明' : 'Explain all height sources'}
-                aria-label={zh ? '高度来源说明' : 'Height source explanation'} aria-expanded={showSourceHelp}
+            <button class="cloud-source-help" type="button" title={messages[language].explainAllHeightSources}
+                aria-label={messages[language].heightSourceExplanation} aria-expanded={showSourceHelp}
                 aria-controls="cloud-source-help"
                 on:click={event => {
                     showSourceHelp = !showSourceHelp;
@@ -202,25 +193,25 @@
                 }}>ⓘ</button>
         </div>
     {#if automaticHeights && heightSource === 'dewpoint'}
-        <label class="cloud-threshold">{zh ? '温度－露点 ≤' : 'Temperature − dew point ≤'}
+        <label class="cloud-threshold">{messages[language].temperatureDewPoint}
             <input type="number" min="0" max="10" step="0.1" bind:value={settings.dewPointSpreadC}
-                aria-label={zh ? '温度与露点之差的上限' : 'Maximum temperature minus dew-point spread'}
+                aria-label={messages[language].maximumTemperatureMinusDewPointSpread}
                 aria-invalid={!Number.isFinite(settings.dewPointSpreadC) || settings.dewPointSpreadC < 0 || settings.dewPointSpreadC > 10} /> °C
         </label>
         {#if !Number.isFinite(settings.dewPointSpreadC) || settings.dewPointSpreadC < 0 || settings.dewPointSpreadC > 10}
-            <p class="cloud-error">{zh ? '请输入 0～10℃ 的温差阈值' : 'Enter a spread threshold from 0 to 10°C'}</p>
+            <p class="cloud-error">{messages[language].enterASpreadThresholdFromToC}</p>
         {/if}
     {/if}
     {#if automaticHeights && heightSource === 'cloud'}
         <div class="cloud-threshold-row">
-            <label class="cloud-threshold">{zh ? '仅考虑云量 ≥' : 'Only include cloud cover ≥'}
+            <label class="cloud-threshold">{messages[language].onlyIncludeCloudCover}
                 <input type="number" min="1" max="100" step="1" bind:value={settings.threshold}
                     aria-invalid={!Number.isFinite(settings.threshold) || settings.threshold < 1 || settings.threshold > 100} /> %
             </label>
 
         </div>
         {#if !Number.isFinite(settings.threshold) || settings.threshold < 1 || settings.threshold > 100}
-            <p class="cloud-error">{zh ? '请输入 1～100% 的云量阈值' : 'Enter a cloud-cover threshold from 1 to 100%'}</p>
+            <p class="cloud-error">{messages[language].enterACloudCoverThresholdFromTo}</p>
         {/if}
     {/if}
     </div>
@@ -230,48 +221,48 @@
         </div>
     {/if}
     {#if settings.overlay === 'satellite'}
-        <p class="cloud-muted">{zh ? '卫星实况对照 · 影像时间以 Windy 时间轴为准，与预报计算时刻独立' : 'Satellite observations · Image time follows the Windy timeline, independently of forecast calculations'}</p>
+        <p class="cloud-muted">{messages[language].satelliteObservationsImageTimeFollowsTheWindy}</p>
     {/if}
     {#if activeBody === 'milkyway'}
         {#if scenarios[0]}
-            <p class="cloud-muted">{zh ? '高度角' : 'Altitude'} {scenarios[0].position.altitude.toFixed(1)}° · {zh ? '方位角' : 'Azimuth'} {scenarios[0].position.azimuth.toFixed(1)}°</p>
+            <p class="cloud-muted">{messages[language].altitude} {scenarios[0].position.altitude.toFixed(1)}° · {messages[language].azimuth} {scenarios[0].position.azimuth.toFixed(1)}°</p>
         {/if}
     {/if}
     {#if !scenarios.length}
-        <p class="cloud-error" role="status">{zh ? '所选时刻不可用，或地点时区尚未就绪' : 'Selected time unavailable, or location time zone is not ready'}</p>
+        <p class="cloud-error" role="status">{messages[language].selectedTimeUnavailableOrLocationTimeZone}</p>
     {/if}
     <!-- Svelte 4 treats region as noninteractive; keyboard users need to focus this horizontal scroll region. -->
     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-    <div class="cloud-table-scroll" tabindex="0" role="region" aria-label={zh ? '云层距离表' : 'Cloud distance table'}>
+    <div class="cloud-table-scroll" tabindex="0" role="region" aria-label={messages[language].cloudDistanceTable}>
     <table class="cloud-table">
         <thead><tr>
-            <th scope="col" title={zh ? '云层海拔高度' : 'Clouds Height AMSL'}>{zh ? '云层高度' : 'Clouds Height'} ({units.elevation})
-                <div class="cloud-data-status" role="status" title={zh ? '预报时次' : 'Forecast step'}>
+            <th scope="col" title={messages[language].cloudsHeightAMSL}>{messages[language].cloudsHeight} ({units.elevation})
+                <div class="cloud-data-status" role="status" title={messages[language].forecastStep}>
                     {#if !automaticHeights}
-                        {heightMode === 'manual' ? (zh ? '手动高度' : 'Manual height')
-                            : (zh ? '未启用' : 'Disabled')}
+                        {heightMode === 'manual' ? (messages[language].manualHeight)
+                            : (messages[language].disabled)}
                     {:else if status === 'loading' || status === 'idle'}
-                        {zh ? '加载中…' : 'Loading…'}
+                        {messages[language].loading}
                     {:else if status === 'error'}
-                        {zh ? '加载失败' : 'Failed'} <button type="button" on:click={() => dispatch('retry')}>{zh ? '重试' : 'Retry'}</button>
+                        {messages[language].failed} <button type="button" on:click={() => dispatch('retry')}>{messages[language].retry}</button>
                     {:else}
-                        {#each scenarios as event}{@const step = heightSource === 'base' ? event.base : event.profile}<div>{#if step}<span class="cloud-forecast-label">{zh ? '预报时次' : 'Forecast'} </span>{formatLocalClock(new Date(step.timestamp), timeZone)}{:else}{zh ? '无预报' : 'No forecast'}{/if}</div>{/each}
+                        {#each scenarios as event}{@const step = heightSource === 'base' ? event.base : event.profile}<div>{#if step}<span class="cloud-forecast-label">{messages[language].forecast} </span>{formatLocalClock(new Date(step.timestamp), timeZone)}{:else}{messages[language].noForecast}{/if}</div>{/each}
                     {/if}
                 </div>
                 <div class="cloud-height-heading-controls">
                 <button class="cloud-help-trigger" type="button" aria-haspopup="dialog"
-                    aria-label={zh ? '云层距离图解' : 'Cloud distance guide'} title={zh ? '云层距离图解' : 'Cloud distance guide'}
+                    aria-label={messages[language].cloudDistanceGuide} title={messages[language].cloudDistanceGuide}
                     on:click={() => { showHelp = true; }}>
-                    <span aria-hidden="true">ⓘ</span> {zh ? '图解' : 'Guide'}
+                    <span aria-hidden="true">ⓘ</span> {messages[language].guide}
                 </button>
                 </div>
             </th>
-            <th scope="col" title={zh ? `遮蔽${bodyName}云距` : `Blocking ${bodyName}`}><span class="cloud-heading-line">{zh ? `遮蔽${bodyName}` : 'Blocking'}</span><span class="cloud-heading-line">{zh ? '云距' : bodyName}</span><small>({units.distance})</small></th>
-            <th scope="col" title={zh ? '地平线云距' : 'Clouds at Horizon'}><span class="cloud-heading-line">{#if zh}地平线{:else}<span class="cloud-heading-wide">Clouds at</span><span class="cloud-heading-compact">Clouds</span>{/if}</span><span class="cloud-heading-line">{zh ? '云距' : 'Horizon'}</span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].blockingTitle(bodyName)}><span class="cloud-heading-line">{messages[language].blockingHeading(bodyName)}</span><span class="cloud-heading-line">{messages[language].blockingDetail(bodyName)}</span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].cloudsAtHorizon}><span class="cloud-heading-line"><span class="cloud-heading-wide">{messages[language].horizonHeading.wide}</span><span class="cloud-heading-compact">{messages[language].horizonHeading.compact}</span></span><span class="cloud-heading-line">{messages[language].horizon}</span><small>({units.distance})</small></th>
             <!-- Height-derived solar reference columns remain available for both targets. -->
-            <th scope="col" title={zh ? '擦地云距' : 'Tangent distance'}><span class="cloud-heading-line">{zh ? '擦地' : 'Tangent'}</span><span class="cloud-heading-line">{zh ? '云距' : 'distance'}</span><small>({units.distance})</small></th>
-            <th scope="col" title={zh ? '最远无云距' : 'Furthest No Clouds'}><span class="cloud-heading-wide">{#if zh}最远无云<br />距{:else}Furthest No<br />Clouds{/if}</span><span class="cloud-heading-compact"><span class="cloud-heading-line">{zh ? '最远' : 'Furthest'}</span><span class="cloud-heading-line">{zh ? '无云距' : 'clear'}</span></span><small>({units.distance})</small></th>
-            <th scope="col" title={zh ? '该云高对应的太阳最低高度角' : 'Minimum solar altitude for this cloud height'}><span class="cloud-heading-line"><span class="cloud-heading-wide">{zh ? '太阳高度角' : 'Sun Altitude'}</span><span class="cloud-heading-compact">{zh ? '太阳' : 'Sun'}<br />{zh ? '高度角' : 'Altitude'}</span></span><span class="cloud-heading-line">∠</span></th>
+            <th scope="col" title={messages[language].tangentDistance}><span class="cloud-heading-line">{messages[language].tangent}</span><span class="cloud-heading-line">{messages[language].distance}</span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].furthestNoClouds}><span class="cloud-heading-wide">{messages[language].farHeading.firstLine}<br />{messages[language].farHeading.secondLine}</span><span class="cloud-heading-compact"><span class="cloud-heading-line">{messages[language].furthest}</span><span class="cloud-heading-line">{messages[language].clear}</span></span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].minimumSolarAltitudeForThisCloudHeight}><span class="cloud-heading-line"><span class="cloud-heading-wide">{messages[language].sunAltitude}</span><span class="cloud-heading-compact">{messages[language].sun}<br />{messages[language].altitude}</span></span><span class="cloud-heading-line">∠</span></th>
         </tr></thead>
         {#each visibleBands as band}
             {@const row = single ? { ...settings.single, enabled: true } : settings.layers[band]}
@@ -287,15 +278,15 @@
                 <tr>
                     <th scope="row" class="cloud-height-cell">
                     <div class="cloud-height-controls">
-                    <label class="cloud-band">{#if index === 0 && !single}<input type="checkbox" bind:checked={settings.layers[band].enabled} />{/if}<i></i>{single ? (zh ? '参考' : 'Ref') : bandName(band)}</label>
+                    <label class="cloud-band">{#if index === 0 && !single}<input type="checkbox" bind:checked={settings.layers[band].enabled} />{/if}<i></i>{single ? (messages[language].ref) : bandName(band)}</label>
                     {#if row.mode === 'manual' && index === 0}
                         <div class="cloud-height">
                             <input type="number" min="1" max={units.elevation === 'ft' ? 98425 : 30000} step="any"
-                                aria-label={`${single ? (zh ? '参考' : 'Reference') : bandName(band)} ${zh ? '海拔高度' : 'height AMSL'}`}
+                                aria-label={`${single ? (messages[language].reference) : bandName(band)} ${messages[language].heightAMSL}`}
                                 aria-invalid={!validHeight(row.heightM)}
                                 value={row.heightM === undefined ? '' : Number((row.heightM / (units.elevation === 'ft' ? 0.3048 : 1)).toFixed(1))}
                                 on:input={event => setManualHeight(band, event)} />
-                            <button class="cloud-clear" type="button" title={zh ? '清除高度' : 'Clear height'} aria-label={`${single ? (zh ? '参考' : 'Reference') : bandName(band)} ${zh ? '清除高度' : 'clear height'}`}
+                            <button class="cloud-clear" type="button" title={messages[language].clearHeight} aria-label={`${single ? (messages[language].reference) : bandName(band)} ${messages[language].clearHeight2}`}
                                 disabled={row.heightM === undefined} on:click={() => { if (single) { settings.single.heightM = undefined; } else { settings.layers[band].heightM = undefined; } settings = { ...settings }; }}>×</button>
                         </div>
                     {:else}
@@ -312,24 +303,24 @@
                     <tr class="cloud-detail"><td colspan="6">
                         {#if heightSource === 'base'}
                             {#if !single && item.event.base?.layer && item.event.base.layer.band !== band}
-                                {zh ? '预报云底归入其他高度层；本层未知，不代表无云' : 'Forecast base belongs to another band; this band is unknown'}
+                                {messages[language].forecastBaseBelongsToAnotherBandThis}
                             {:else if item.event.base?.heightAglM !== null && item.event.base?.heightAglM !== undefined}
-                                {zh ? '预报云底（离地）' : 'Forecast base (AGL)'} {heightLabel(item.event.base.heightAglM)}
-                                {#if layer} · {zh ? '计算海拔' : 'Altitude AMSL'} {heightLabel(layer.heightM)}
-                                {:else} · {zh ? '缺少模型高程或高度不适用于云距计算' : 'Missing model terrain or height outside geometry limits'}{/if}
+                                {messages[language].forecastBaseAGL} {heightLabel(item.event.base.heightAglM)}
+                                {#if layer} · {messages[language].altitudeAMSL} {heightLabel(layer.heightM)}
+                                {:else} · {messages[language].missingModelTerrainOrHeightOutsideGeometry}{/if}
                             {:else}
-                                {zh ? '所选模型或时刻无可用云底；不代表无云。可切换其他高度来源。' : 'Cloud base unavailable for this model or time; this does not mean clear skies. Choose another height source.'}
+                                {messages[language].cloudBaseUnavailableForThisModelOr}
                             {/if}
                         {:else if layer}
-                            {zh ? '计算海拔（采样）' : 'Calculation altitude (sample)'} {heightLabel(layer.heightM)}
-                            {#if heightSource === 'dewpoint'} · {zh ? '温度－露点' : 'Temperature − dew point'} {layer.dewPointSpreadC?.toFixed(1)}°C
-                            {:else} · {zh ? '云量' : 'Cover'} {layer.cloudPercent}%{/if}
-                            {#if layer.baseMinimumM !== null} · {zh ? '云底区间' : 'Base interval'} {heightLabel(layer.baseMinimumM)} – {heightLabel(layer.heightM)} ({zh ? '海拔' : 'AMSL'})
-                            {:else} · {zh ? '云底下界未知' : 'Base lower bound unknown'}{/if}
-                        {:else}{(single ? Object.values(item.event.profile?.coverage ?? {}).includes('sampled') : item.event.profile?.coverage[band] === 'sampled') ? (zh ? '未检出独立云底；不代表远方无云' : 'No separate cloud base detected; distant clouds unknown') : (zh ? '无可用高度数据' : 'No height data')}{/if}
+                            {messages[language].calculationAltitudeSample} {heightLabel(layer.heightM)}
+                            {#if heightSource === 'dewpoint'} · {messages[language].temperatureDewPoint2} {layer.dewPointSpreadC?.toFixed(1)}°C
+                            {:else} · {messages[language].cover} {layer.cloudPercent}%{/if}
+                            {#if layer.baseMinimumM !== null} · {messages[language].baseInterval} {heightLabel(layer.baseMinimumM)} – {heightLabel(layer.heightM)} ({messages[language].aMSL})
+                            {:else} · {messages[language].baseLowerBoundUnknown}{/if}
+                        {:else}{(single ? Object.values(item.event.profile?.coverage ?? {}).includes('sampled') : item.event.profile?.coverage[band] === 'sampled') ? (messages[language].noSeparateCloudBaseDetectedDistantClouds) : (messages[language].noHeightData)}{/if}
                     </td></tr>
                 {:else if row.enabled && row.heightM !== undefined && !validHeight(row.heightM)}
-                    <tr class="cloud-detail"><td colspan="6" class="cloud-error">{zh ? '请输入大于 0、最高 30000 米的海拔高度' : 'Enter a height above 0 and up to 30,000 m AMSL'}</td></tr>
+                    <tr class="cloud-detail"><td colspan="6" class="cloud-error">{messages[language].enterAHeightAboveAndUpTo}</td></tr>
                 {/if}
                 {/each}
             </tbody>
@@ -337,42 +328,42 @@
     </table>
     </div>
     {#if layers.length && scenarios[0] && !scenarios[0].position.sightlineAvailable}
-        <p class="cloud-error" role="status">{zh ? `${bodyName}${activeBody === 'sun' ? '中心' : ''}在地平线下，不显示遮蔽${bodyName}云距` : `${bodyName} is below the horizon and not visible; blocking distance is unavailable`}</p>
+        <p class="cloud-error" role="status">{messages[language].belowHorizon(bodyName, activeBody === 'sun')}</p>
     {:else if layers.length && scenarios[0]?.position.altitude < 0}
-        <p class="cloud-error" role="status">{zh ? `${bodyName}中心在地平线下，遮蔽云距仅为几何参考` : `${bodyName} centre is below the horizon; blocking distance is a geometric reference only`}</p>
+        <p class="cloud-error" role="status">{messages[language].belowHorizonReference(bodyName)}</p>
     {/if}
     <div class="cloud-map-options">
         <!-- Keyboard focus allows scrolling the controls when they overflow on mobile. -->
         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-        <div class="cloud-map-row" tabindex="0" role="region" aria-label={zh ? '云图设置' : 'Cloud map settings'}>
-        <label title={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'}><input type="checkbox" bind:checked={settings.syncMap} aria-label={zh ? '同步 Windy 模型与时间' : 'Sync Windy model and time'} /> {zh ? '同步 Windy 模型与时间' : 'Sync Windy'}</label>
+        <div class="cloud-map-row" tabindex="0" role="region" aria-label={messages[language].cloudMapSettings}>
+        <label title={messages[language].syncWindyModelAndTime}><input type="checkbox" bind:checked={settings.syncMap} aria-label={messages[language].syncWindyModelAndTime} /> {messages[language].syncWindy}</label>
         {#if settings.syncMap && syncError && !previewingTime}
-        <button class="cloud-resync" type="button" on:click={() => dispatch('resync')}>{zh ? '重新同步' : 'Sync again'}</button>
+        <button class="cloud-resync" type="button" on:click={() => dispatch('resync')}>{messages[language].syncAgain}</button>
         {/if}
         </div>
         {#if !settings.syncMap || syncError || syncing || previewingTime}<div class="cloud-sync-status">
     {#if !settings.syncMap}
-        <p class="cloud-error" role="status">{zh ? '独立几何规划 · 底图天气未同步' : 'Independent geometry · Map weather is not synchronized'}</p>
+        <p class="cloud-error" role="status">{messages[language].independentGeometryMapWeatherIsNotSynchronized}</p>
     {:else if previewingTime}
-        <p class="cloud-muted" role="status">{zh ? '时间预览 · 卫星图独立，预报云图松开后同步' : 'Time preview · Forecast maps sync on release; satellite time stays independent'}</p>
+        <p class="cloud-muted" role="status">{messages[language].timePreviewForecastMapsSyncOnRelease}</p>
     {:else if syncError}
-        <p class="cloud-error" role="status">{zh ? '底图模型或时刻未同步，参考线仍对应所选计算时刻' : 'Map model or time differs; reference lines retain the selected calculation time'}</p>
+        <p class="cloud-error" role="status">{messages[language].mapModelOrTimeDiffersReferenceLines}</p>
     {:else if syncing}
-        <p class="cloud-muted" role="status">{zh ? '正在同步云图…' : 'Synchronizing cloud map…'}</p>
+        <p class="cloud-muted" role="status">{messages[language].synchronizingCloudMap}</p>
     {/if}
         </div>{/if}
     </div>
     <div class="cloud-legend">
-        {#each visibleBands as band}<span><i style={`border-color:${CLOUD_BAND_COLORS[band]}`}></i>{single ? (zh ? '参考云层' : 'Reference layer') : bandName(band)}</span>{/each}
-        <span><i class="sight"></i>{zh ? `遮蔽${bodyName}云距` : `Blocking ${bodyName}`}</span>
-        <span><i class="horizon"></i>{zh ? '地平线云距' : 'Clouds at Horizon'}</span>
-        <span><i class="tangent"></i>{zh ? '擦地云距' : 'Tangent'}</span>
-        <span><i class="far"></i>{zh ? '最远无云距' : 'Furthest No Clouds'}</span>
+        {#each visibleBands as band}<span><i style={`border-color:${CLOUD_BAND_COLORS[band]}`}></i>{single ? (messages[language].referenceLayer) : bandName(band)}</span>{/each}
+        <span><i class="sight"></i>{messages[language].blockingTitle(bodyName)}</span>
+        <span><i class="horizon"></i>{messages[language].cloudsAtHorizon}</span>
+        <span><i class="tangent"></i>{messages[language].tangent2}</span>
+        <span><i class="far"></i>{messages[language].furthestNoClouds}</span>
     </div>
-    <p class="cloud-limit">{zh ? '云距采用零高度基准，不扣除机位海拔；未校验沿途云况、地形或消光' : 'Cloud distances use a zero-height reference without subtracting camera elevation; path clouds, terrain and extinction unverified'}</p>
+    <p class="cloud-limit">{messages[language].cloudDistancesUseAZeroHeightReference}</p>
 </section>
 
-{#if showHelp}<CloudHelp {zh} on:close={() => { showHelp = false; }} />{/if}
+{#if showHelp}<CloudHelp {language} on:close={() => { showHelp = false; }} />{/if}
 
 <style>
     .cloud-height-heading-controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 2px 4px; }
@@ -420,13 +411,13 @@
     .cloud-table thead th { font-weight: 700; overflow-wrap: anywhere; }
     .cloud-table thead small { font-weight: inherit; }
     .cloud-table th:first-child { width: 106px; }
-    .cloud-panel--english .cloud-table thead th { overflow-wrap: normal; }
-    .cloud-panel--english .cloud-table th:first-child { width: 24%; }
-    .cloud-panel--english .cloud-table thead th:nth-child(2) { width: 14%; }
-    .cloud-panel--english .cloud-table thead th:nth-child(3) { width: 17%; }
-    .cloud-panel--english .cloud-table thead th:nth-child(4) { width: 10%; }
-    .cloud-panel--english .cloud-table thead th:nth-child(5) { width: 18%; }
-    .cloud-panel--english .cloud-table thead th:nth-child(6) { width: 17%; }
+    .cloud-panel--expanded-headings .cloud-table thead th { overflow-wrap: normal; }
+    .cloud-panel--expanded-headings .cloud-table th:first-child { width: 24%; }
+    .cloud-panel--expanded-headings .cloud-table thead th:nth-child(2) { width: 14%; }
+    .cloud-panel--expanded-headings .cloud-table thead th:nth-child(3) { width: 17%; }
+    .cloud-panel--expanded-headings .cloud-table thead th:nth-child(4) { width: 10%; }
+    .cloud-panel--expanded-headings .cloud-table thead th:nth-child(5) { width: 18%; }
+    .cloud-panel--expanded-headings .cloud-table thead th:nth-child(6) { width: 17%; }
     .cloud-table small { display: block; font-size: 10px; font-weight: 400; }
     .cloud-table tbody { border-top: 1px solid var(--panel-border); }
     .cloud-table tbody td:not(.cloud-height-cell) { font-weight: 600; }
@@ -439,8 +430,8 @@
     .cloud-source-select { flex: 0 1 auto; min-width: 0; }
     .cloud-source-select select { width: auto; min-width: 0; max-width: 100%; }
     .cloud-source-select > span { flex-shrink: 0; }
-    .cloud-panel--english .cloud-source-select { max-width: 100%; }
-    .cloud-panel--english .cloud-source-select select { flex: 1; }
+    .cloud-panel--expanded-headings .cloud-source-select { max-width: 100%; }
+    .cloud-panel--expanded-headings .cloud-source-select select { flex: 1; }
     .cloud-height-controls > span { flex: 1; min-width: 0; }
     .cloud-band i { width: 3px; height: 18px; background: var(--cloud-band-color); border-radius: 2px; flex-shrink: 0; }
     .cloud-band-value { color: var(--cloud-band-color); }
@@ -487,14 +478,14 @@
             background-size: 4px 4px;
             background-repeat: no-repeat;
         }
-        .cloud-panel--english .cloud-map-row { gap: 2px; font-size: 10px; }
-        .cloud-panel--english .cloud-map-row label { gap: 3px; }
+        .cloud-panel--expanded-headings .cloud-map-row { gap: 2px; font-size: 10px; }
+        .cloud-panel--expanded-headings .cloud-map-row label { gap: 3px; }
 
         .cloud-heading-wide { display: none; }
         .cloud-heading-compact { display: inline; }
         .cloud-table thead { font-size: 10px; }
-        .cloud-table th:first-child, .cloud-panel--english .cloud-table th:first-child { width: 100px; }
-        .cloud-panel--english .cloud-table thead th:nth-child(n+2) { width: auto; overflow-wrap: anywhere; }
+        .cloud-table th:first-child, .cloud-panel--expanded-headings .cloud-table th:first-child { width: 100px; }
+        .cloud-panel--expanded-headings .cloud-table thead th:nth-child(n+2) { width: auto; overflow-wrap: anywhere; }
         .cloud-height-controls { grid-template-columns: 30px minmax(0, 1fr); }
         .cloud-forecast-controls { gap: 4px; font-size: 11px; }
         .cloud-forecast-controls label { gap: 3px; }

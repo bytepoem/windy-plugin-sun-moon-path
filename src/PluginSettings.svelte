@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { messages } from './locales/PluginSettings';
     import PluginGuide from './PluginGuide.svelte';
-    import { translations, type UiLanguage } from './pluginTranslations';
+    import { translations } from './pluginTranslations';
+    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, type UiLanguage } from './uiLanguage';
     import { KEEP_CURRENT_OVERLAY, initialOverlayLabel, type InitialOverlayPreference, type WindyOverlay } from './initialOverlay';
     import { RADAR_PROVIDERS, RAINVIEWER_WEBSITE_URL, type RadarProvider, type RadarOverlayStatus } from './radarOverlay';
     import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
@@ -34,7 +36,7 @@
     export let savedApiKeyProvider: LocationProvider | null;
     export let locationApiKeyDrafts: LocationProviderApiKeys;
     export let locationApiKeys: LocationProviderApiKeys;
-    export let toggleLanguage: () => void;
+    export let changeLanguage: (event: Event) => void;
     export let changeInitialOverlayPreference: (event: Event) => void;
     export let changeRadarProvider: (event: Event) => void;
     export let changeRadarOpacity: (event: Event) => void;
@@ -57,19 +59,20 @@
 
 <div class="settings-header">
     <div class="settings-pages" role="group" aria-label={text.settingsTab}>
-        <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{uiLanguage === 'zh' ? '偏好设置' : 'Preferences'}</button>
-        <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{uiLanguage === 'zh' ? '使用说明' : 'User guide'}</button>
+        <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{messages[uiLanguage].preferences}</button>
+        <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{messages[uiLanguage].userGuide}</button>
     </div>
-    <button
-        type="button"
+    <select
         class="language-toggle"
-        aria-label={text.languageToggleLabel}
-        title={text.languageToggleLabel}
-        on:click={toggleLanguage}
+        aria-label={text.languageLabel}
+        title={text.languageLabel}
+        value={uiLanguage}
+        on:change={changeLanguage}
     >
-        <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中文</span>
-        <span class="language-toggle__option" class:active={uiLanguage === 'en'}>EN</span>
-    </button>
+        {#each UI_LANGUAGE_OPTIONS as option}
+            <option value={option.value}>{option.nativeName}</option>
+        {/each}
+    </select>
 </div>
 {#if settingsPage === 'guide'}
     <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
@@ -238,7 +241,7 @@
         {/if}
         <a class="atlas-source" href={LIGHT_POLLUTION_ATLAS_URL} target="_blank" rel="noreferrer">Light Pollution Atlas · David Lorenz · 2025</a>
     </div>
-    {#if uiLanguage === 'zh'}
+    {#if UI_LANGUAGES[uiLanguage].placeSearch}
         <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
             {#each LOCATION_PROVIDERS as providerOption}
                 <form
@@ -323,50 +326,21 @@
 
     .language-toggle {
         min-height: 36px;
-        padding: 0 4px;
-        border: 0;
-        color: var(--panel-muted);
-        background: transparent;
-        font: inherit;
-        font-size: 14px;
-        cursor: pointer;
-        transition: color 160ms ease, background 160ms ease;
-    }
-
-    .language-toggle {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-items: center;
-        gap: 2px;
-        width: 100%;
-        padding: 2px;
+        padding: 4px 6px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
+        color: var(--panel-text);
         background: #0e161f;
+        font: inherit;
         font-size: 12px;
-        font-weight: 700;
+        cursor: pointer;
+        transition: color 160ms ease, background 160ms ease;
     }
 
     .language-toggle:hover {
         background: rgba(73, 169, 232, 0.12);
     }
 
-    .language-toggle__option {
-        display: grid;
-        place-items: center;
-        min-width: 0;
-        min-height: 30px;
-        border-radius: 5px;
-        color: var(--panel-muted);
-        line-height: 1;
-        white-space: nowrap;
-        transition: color 160ms ease, background 160ms ease;
-    }
-
-    .language-toggle__option.active {
-        color: #07131c;
-        background: #67c5ff;
-    }
 
     .settings-header {
         flex-shrink: 0;
@@ -384,8 +358,8 @@
     }
 
     .settings-header .language-toggle {
-        flex: 0 0 80px;
-        width: 80px;
+        flex: 0 0 auto;
+        max-width: 120px;
     }
 
     .settings-pages button {

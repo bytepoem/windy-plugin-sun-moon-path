@@ -1,3 +1,4 @@
+import { DEFAULT_UI_LANGUAGE } from './uiLanguage';
 import Plugin from './plugin.svelte';
 import DiagnosticReport from './DiagnosticReport.svelte';
 import { startDiagnosticRuntime } from './diagnosticRuntime';
@@ -76,7 +77,7 @@ export default class DiagnosticPlugin {
         this.app = null;
         this.runtime.stop('failure');
         this.container.replaceChildren();
-        const language = loadLanguagePreference() ?? 'zh';
+        const language = loadLanguagePreference() ?? DEFAULT_UI_LANGUAGE;
         const message = document.createElement('p');
         message.textContent = translations[language].diagnosticStartupFailed;
         message.style.cssText = 'padding:16px;color:inherit;line-height:1.5';
