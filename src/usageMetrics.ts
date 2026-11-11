@@ -1,3 +1,5 @@
+import type { LanguageSelection } from './languageController';
+
 export type UsageTab = 'events' | 'weather' | 'clouds' | 'settings' | 'about';
 export type UsageCloudView = 'obstruction' | 'rainbow' | 'horizon' | 'tide';
 export type UsageReportTab = Exclude<UsageTab, 'clouds'> | UsageCloudView;
@@ -7,6 +9,7 @@ export type UsageEvent =
     | { category: 'performance'; action: 'plugin_mount_setup'; durationMs: number }
     | { category: 'plugin'; action: 'open' }
     | { category: 'tab'; action: 'select'; label: UsageReportTab }
+    | ({ category: 'language'; action: 'language_view' | 'language_select' } & LanguageSelection)
     | { category: 'usage'; action: 'foreground_seconds'; label: 'plugin'; value: number }
     | { category: 'usage'; action: 'tab_seconds'; label: UsageReportTab; value: number }
     | { category: 'usage'; action: 'reached_3min' };

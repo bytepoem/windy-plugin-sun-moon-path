@@ -75,6 +75,69 @@ describe('plugin usage lifecycle', () => {
         state.listeners.forEach(listener => listener());
     };
 
+    it('attributes elapsed time to the old language and counts only successful active selections', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events', language: { language: 'zh', preference: 'auto' } });
+        vi.advanceTimersByTime(10_000);
+        usage.setLanguage({ language: 'fr', preference: 'auto' });
+        vi.advanceTimersByTime(20_000);
+        usage.setLanguage({ language: 'fr', preference: 'fr' }, true);
+        usage.setLanguage({ language: 'fr', preference: 'fr' }, true);
+        usage.stop();
+        const calls = state.transports[0].send.mock.calls;
+        expect(calls.filter(([event]) => event.action === 'foreground_seconds').map(([event, , language]) => [event.value, language.language]))
+            .toEqual([[10, 'zh'], [20, 'fr']]);
+        expect(calls.filter(([event]) => event.action === 'language_select').map(([event]) => event))
+            .toEqual([{ category: 'language', action: 'language_select', language: 'fr', preference: 'fr' }]);
+        expect(calls.filter(([event]) => event.action === 'language_view').map(([event]) => [event.language, event.preference]))
+            .toEqual([['zh', 'auto'], ['fr', 'auto'], ['fr', 'fr']]);
+    });
+
+    it('observes the current language on consent without replaying selections made before consent', async () => {
+        state.consent = false;
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events', language: { language: 'zh', preference: 'auto' } });
+        usage.setLanguage({ language: 'fr', preference: 'fr' }, true);
+        expect(state.transports).toHaveLength(0);
+        consent(true);
+        const transport = state.transports[0];
+        expect(transport.send.mock.calls.map(([event]) => event.action)).toEqual(['language_view']);
+        expect(transport.send.mock.calls[0][0]).toMatchObject({ language: 'fr', preference: 'fr' });
+        consent(false);
+        usage.setLanguage({ language: 'ja', preference: 'ja' }, true);
+        usage.stop();
+        expect(transport.send).toHaveBeenCalledTimes(1);
+    });
+
+    it('excludes local testing and rejects updates after close', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const local = startPluginUsage({ localBuild: true, tab: 'events', language: { language: 'zh', preference: 'auto' } });
+        local.setLanguage({ language: 'fr', preference: 'fr' }, true);
+        local.stop();
+        expect(state.transports).toHaveLength(0);
+        const production = startPluginUsage({ localBuild: false, tab: 'events', language: { language: 'zh', preference: 'auto' } });
+        production.stop();
+        const count = state.transports[0].send.mock.calls.length;
+        production.setLanguage({ language: 'ja', preference: 'ja' }, true);
+        expect(state.transports[0].send).toHaveBeenCalledTimes(count);
+    });
+
+    it('counts successful startup recovery once and never replays recovery before consent', async () => {
+        const { startPluginUsage } = await import('./pluginUsage');
+        const usage = startPluginUsage({ localBuild: false, tab: 'events', language: { language: 'en', preference: 'en' } });
+        usage.recordInitialLanguageChoice();
+        usage.recordInitialLanguageChoice();
+        expect(state.transports[0].send.mock.calls.filter(([event]) => event.action === 'language_select')).toHaveLength(1);
+        usage.stop();
+        state.consent = false;
+        const late = startPluginUsage({ localBuild: false, tab: 'events', language: { language: 'en', preference: 'en' } });
+        late.recordInitialLanguageChoice();
+        consent(true);
+        late.recordInitialLanguageChoice();
+        expect(state.transports[1].send.mock.calls.map(([event]) => event.action)).toEqual(['language_view']);
+        late.stop();
+    });
+
     it('pairs pagehide and BFCache restore without duplicate closes or plugin openings', async () => {
         const { startPluginUsage } = await import('./pluginUsage');
         const usage = startPluginUsage({ localBuild: false, tab: 'events' });

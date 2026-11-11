@@ -67,7 +67,7 @@ export default class DiagnosticPlugin {
 
     /** Prepare copy before constructing any consumer. Closing invalidates pending work;
      * opening during preparation is delivered once after the main component exists. */
-    private bootstrap(preference: UiLanguagePreference, persist = false) {
+    private bootstrap(preference: UiLanguagePreference, persist = false, userInitiated = persist) {
         if (this.closed) { return; }
         const revision = ++this.bootstrapRevision;
         this.languageRequest?.abort();
@@ -90,7 +90,7 @@ export default class DiagnosticPlugin {
             return;
         }
         if (language === 'zh' || language === 'en') {
-            this.mount(language, preference, persist);
+            this.mount(language, preference, persist, userInitiated);
             return;
         }
         const loading = document.createElement('p');
@@ -99,13 +99,13 @@ export default class DiagnosticPlugin {
         loading.style.padding = '16px';
         this.container.replaceChildren(loading);
         void prepareUiLanguage(language, this.languageRequest.signal).then(() => {
-            if (!this.closed && revision === this.bootstrapRevision) { this.mount(language, preference, persist); }
+            if (!this.closed && revision === this.bootstrapRevision) { this.mount(language, preference, persist, userInitiated); }
         }, error => {
             if (!this.closed && revision === this.bootstrapRevision) { this.showLanguageFailure(error); }
         });
     }
 
-    private mount(language: UiLanguage, preference: UiLanguagePreference, persist: boolean) {
+    private mount(language: UiLanguage, preference: UiLanguagePreference, persist: boolean, userInitiated: boolean) {
         if (this.closed) { return; }
         this.language = language;
         this.container.replaceChildren();
@@ -124,6 +124,7 @@ export default class DiagnosticPlugin {
             } else {
                 this.runtime.mounted(this.container);
                 if (persist) { saveLanguagePreference(preference); }
+                if (userInitiated) { this.app?.recordInitialLanguageChoice(); }
                 if (this.pendingOpen) {
                     const { params } = this.pendingOpen;
                     this.pendingOpen = null;
@@ -170,7 +171,7 @@ export default class DiagnosticPlugin {
             language,
             initialPreference: loadLanguagePreference(),
             choose: (preference: UiLanguagePreference) => this.bootstrap(preference, true),
-            useEnglish: () => this.bootstrap('en'),
+            useEnglish: () => this.bootstrap('en', false, true),
         } });
         this.failureReport = new DiagnosticReport({ target: this.container, props: {
             report: this.runtime.report, uiLanguage: language,

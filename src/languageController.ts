@@ -14,6 +14,7 @@ export const createLanguageController = (options: {
     apply: (selection: LanguageSelection) => void;
     status: (loading: boolean, failed: boolean) => void;
     persist: (preference: UiLanguagePreference) => void;
+    committed?: (selection: LanguageSelection, userInitiated: boolean) => void;
     prepare?: (language: UiLanguage, signal?: AbortSignal) => Promise<void>;
 }) => {
     let current = options.initial;
@@ -43,6 +44,8 @@ export const createLanguageController = (options: {
             options.apply(next);
             current = next;
             if (shouldPersist) { options.persist(preference); }
+            // Observers see only a committed choice; analytics cannot roll it back.
+            try { options.committed?.(next, shouldPersist); } catch { /* Keep the successful language selection. */ }
             shouldPersist = false;
             options.status(false, false);
         } catch {

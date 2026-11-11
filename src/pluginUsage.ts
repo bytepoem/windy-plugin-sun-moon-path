@@ -5,6 +5,8 @@ import { createPostHogUsageTransport } from './posthogUsageTransport';
 import { postHogUsageConfig } from './posthogUsageConfig';
 import { createUsageSessionId, usageSessionExpired } from './usageSessionId';
 import { analyticsEnvironmentEnabled, createUsageMetrics, type UsageCloudView, type UsageEvent, type UsageSession, type UsageTab } from './usageMetrics';
+import { isUiLanguage, isUiLanguagePreference } from './uiLanguage';
+import type { LanguageSelection } from './languageController';
 
 const CHECKPOINT_INTERVAL_MS = 30_000;
 // Internal remounts are immediate. Never resume a later manual opening.
@@ -12,7 +14,7 @@ const INTERNAL_REOPEN_WINDOW_MS = 2_000;
 let continuation: { session: UsageSession; time: number; sessionId: string | null } | null = null;
 
 /** Bind one component lifetime to Windy consent and browser visibility. */
-export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; cloudView?: UsageCloudView }) => {
+export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; cloudView?: UsageCloudView; language?: LanguageSelection }) => {
     const enabled = analyticsEnvironmentEnabled(options.localBuild, window.location.href);
     let active = true;
     let pageActive = true;
@@ -20,6 +22,9 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
     let transport: ReturnType<typeof createBaiduUsageTransport> | null = null;
     let eventTransport: ReturnType<typeof createPostHogUsageTransport> | null = null;
     let identityRevoked = false;
+    let language = options.language ? { ...options.language } : null;
+    let languageReported = false;
+    let initialChoiceReported = false;
     const allowed = () => enabled && active && !identityRevoked && store.get('consent')?.analytics === true;
     const identity = createBrowserUsageIdentity(allowed);
     const mountAllowed = allowed();
@@ -37,6 +42,9 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
 
     const sendEvent = (event: UsageEvent) => {
         if (allowed()) {
+            // Identity creation may wait on another tab. Keep event-time language,
+            // rather than reading a newer selection when that callback eventually runs.
+            const eventLanguage = language ? { ...language } : undefined;
             if (event.category === 'plugin') {
                 try {
                     transport ??= createBaiduUsageTransport(allowed);
@@ -59,9 +67,10 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
                     // continuing an existing browse. Never backfill a consent grant.
                     if (sessionExpired && dispatchedPageOpen && event.category !== 'plugin'
                         && event.action !== '$pageview') {
-                        eventTransport.send({ category: 'web', action: '$pageview' }, sessionId);
+                        eventTransport.send({ category: 'web', action: '$pageview' }, sessionId, eventLanguage);
                     }
-                    eventTransport.send(event, sessionId);
+                    if (eventLanguage) { eventTransport.send(event, sessionId, eventLanguage); }
+                    else { eventTransport.send(event, sessionId); }
                     if (event.category === 'plugin' || event.action === '$pageview') {
                         dispatchedPageOpen = true;
                     } else if (event.action === '$pageleave') {
@@ -82,6 +91,13 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
         send: sendEvent,
     });
 
+    const reportLanguage = () => {
+        if (!language || !allowed()) { return; }
+        sendEvent({ category: 'language', action: 'language_view', ...language });
+        languageReported = true;
+    };
+    if (!resume) { reportLanguage(); }
+
     const syncTimer = () => {
         if (interval !== null) {
             clearInterval(interval);
@@ -99,6 +115,7 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
         identityRevoked = false;
         metrics.setConsent(allowed());
         if (!allowed()) {
+            languageReported = false;
             mountReported = true;
             transport?.destroy();
             transport = null;
@@ -108,6 +125,9 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
             dispatchedPageOpen = false;
             transportBrowserId = null;
             identity.revoke();
+        } else if (!languageReported) {
+            // Observe the current UI at consent grant; never replay earlier selections.
+            reportLanguage();
         }
         syncTimer();
     };
@@ -116,6 +136,7 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
         if (!identity.wasInvalidated(event)) { return; }
         // Never recreate an identity in response to another tab's revocation.
         identityRevoked = true;
+        languageReported = false;
         mountReported = true;
         metrics.setConsent(false);
         transport?.destroy();
@@ -155,6 +176,26 @@ export const startPluginUsage = (options: { localBuild: boolean; tab: UsageTab; 
     }
 
     return {
+        /** The entry calls this once after a recovery choice has mounted successfully.
+         * Missing consent discards the action instead of replaying it on a later grant. */
+        recordInitialLanguageChoice() {
+            if (!active || initialChoiceReported) { return; }
+            initialChoiceReported = true;
+            if (language && allowed()) { sendEvent({ category: 'language', action: 'language_select', ...language }); }
+        },
+        /** Old language owns its elapsed time. Only committed manual choices count
+         * as selections; host changes contribute actual language use without clicks. */
+        setLanguage(next: LanguageSelection, userInitiated = false) {
+            if (!active || !isUiLanguage(next.language) || !isUiLanguagePreference(next.preference)
+                || (next.preference !== 'auto' && next.preference !== next.language)) { return; }
+            const changed = !language || next.language !== language.language || next.preference !== language.preference;
+            if (!changed) { return; }
+            metrics.setConsent(allowed());
+            metrics.checkpoint();
+            language = { ...next };
+            reportLanguage();
+            if (userInitiated && allowed()) { sendEvent({ category: 'language', action: 'language_select', ...language }); }
+        },
         /** Measure synchronous plugin mount setup only, excluding host load and data requests. */
         recordMountDuration(durationMs: number) {
             if (mountReported || !mountAllowed || !allowed() || !Number.isFinite(durationMs) || durationMs < 0) { return; }

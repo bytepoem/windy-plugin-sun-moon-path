@@ -14,16 +14,17 @@ const setup = () => {
     const apply = vi.fn();
     const persist = vi.fn();
     const status = vi.fn();
+    const committed = vi.fn();
     const controller = createLanguageController({
         initial: { language: 'zh', preference: 'auto' },
-        usedLang: () => host, apply, persist, status,
+        usedLang: () => host, apply, persist, status, committed,
         prepare: language => {
             const request = pending();
             requests.set(language, request);
             return request.promise;
         },
     });
-    return { controller, requests, apply, persist, status, host: (value: unknown) => { host = value; } };
+    return { controller, requests, apply, persist, status, committed, host: (value: unknown) => { host = value; } };
 };
 
 describe('Windy language selection contract', () => {
@@ -47,6 +48,7 @@ describe('Windy language selection contract', () => {
         await first;
         expect(test.apply.mock.calls).toEqual([[{ language: 'ja', preference: 'ja' }]]);
         expect(test.persist.mock.calls).toEqual([['ja']]);
+        expect(test.committed.mock.calls).toEqual([[{ language: 'ja', preference: 'ja' }, true]]);
     });
 
     it('keeps the displayed selection on failure, then permits retry', async () => {
@@ -56,6 +58,7 @@ describe('Windy language selection contract', () => {
         await failed;
         expect(test.apply).not.toHaveBeenCalled();
         expect(test.persist).not.toHaveBeenCalled();
+        expect(test.committed).not.toHaveBeenCalled();
         expect(test.status).toHaveBeenLastCalledWith(false, true);
         const retry = test.controller.retry();
         test.requests.get('de')!.resolve();

@@ -1,6 +1,7 @@
 import { readUsageEnvironment, type UsageEnvironment } from './usageEnvironment';
 import type { UsageEvent } from './usageMetrics';
 import type { DiagnosticEvent } from './pluginDiagnostics';
+import type { LanguageSelection } from './languageController';
 
 export interface PostHogUsageConfig {
     projectToken: string;
@@ -11,8 +12,16 @@ export interface PostHogUsageConfig {
 const CAPTURE_URL = 'https://us.i.posthog.com/i/v0/e/';
 const MAX_IN_FLIGHT_REQUESTS = 16;
 
+/** Explicit UI state only; never infer language from geography or browser locale. */
+const languageProperties = (selection?: LanguageSelection) => selection ? {
+    ui_language: selection.language,
+    language_preference: selection.preference,
+    language_mode: selection.preference === 'auto' ? 'follow_windy' : 'manual',
+    language_schema: 1,
+} : {};
+
 /** Map only our explicit events; never collect the host page URL or account. */
-export const postHogUsagePayload = (event: UsageEvent, distinctId: string, config: PostHogUsageConfig, sessionId?: string) => ({
+export const postHogUsagePayload = (event: UsageEvent, distinctId: string, config: PostHogUsageConfig, sessionId?: string, language?: LanguageSelection) => ({
     api_key: config.projectToken,
     distinct_id: distinctId,
     event: event.category === 'plugin' ? 'plugin_open'
@@ -26,6 +35,7 @@ export const postHogUsagePayload = (event: UsageEvent, distinctId: string, confi
         plugin_version: config.pluginVersion,
         environment: config.environment,
         ...(sessionId ? { usage_identity: 'browser_v1', usage_session_id: sessionId, $session_id: sessionId } : {}),
+        ...languageProperties(event.category === 'language' ? event : language),
         ...(event.category === 'performance' ? { duration_ms: event.durationMs, measurement_scope: 'plugin_mount_setup' } : {}),
         ...('label' in event && event.label !== 'plugin' ? { tab: event.label } : {}),
         ...('value' in event ? { seconds: event.value } : {}),
@@ -80,12 +90,12 @@ export const createPostHogUsageTransport = (
 
     return {
         get pending() { return inFlight.size; },
-        send(event: UsageEvent, sessionId?: string) {
+        send(event: UsageEvent, sessionId?: string, language?: LanguageSelection) {
             if (disposed || !isAllowed() || !config.projectToken) {
                 return;
             }
             usageEnvironment ??= readUsageEnvironment();
-            const payload = postHogUsagePayload(event, distinctId, config, sessionId);
+            const payload = postHogUsagePayload(event, distinctId, config, sessionId, language);
             const enrichedPayload = { ...payload, properties: { ...payload.properties, ...usageEnvironment } };
             sendPayload(enrichedPayload);
             // One explicit plugin opening is one pageview. Reuse only consented

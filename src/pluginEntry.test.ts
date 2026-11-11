@@ -12,6 +12,7 @@ beforeAll(async () => {
         './plugin.svelte': `export default class {
             constructor(options){fixture.mounts.push(options.props);}
             onopen(params){fixture.opens.push(params);}
+            recordInitialLanguageChoice(){fixture.initialChoices++;}
             $destroy(){fixture.destroyed++;}
         }`,
         './DiagnosticReport.svelte': 'export default class {constructor(){fixture.reports++;} $destroy(){fixture.reportsDestroyed++;}}',
@@ -47,7 +48,7 @@ const setup = (preference = 'auto', host = 'fr') => {
     const fixture = {
         preference, host, preparation: new Promise<void>((yes, no) => { complete = yes; fail = () => no(Error('decode failed')); }),
         mounts: [] as { initialLanguageSelection: { language: string; preference: string } }[],
-        opens: [] as unknown[], saved: [] as string[], destroyed: 0,
+        opens: [] as unknown[], saved: [] as string[], destroyed: 0, initialChoices: 0,
         reports: 0, reportsDestroyed: 0, runtimeStarts: 0, errors: [] as unknown[],
         choice: null as null | { choose: (preference: string) => void; useEnglish: () => void },
     };
@@ -107,6 +108,7 @@ describe('asynchronous language bootstrap boundary', () => {
         test.fixture.choice!.choose('en');
         expect(test.fixture.mounts[0].initialLanguageSelection).toEqual({ language: 'en', preference: 'en' });
         expect(test.fixture.saved).toEqual(['en']);
+        expect(test.fixture.initialChoices).toBe(1);
         expect(test.fixture.reportsDestroyed).toBe(1);
         expect(test.fixture.runtimeStarts).toBe(2);
         test.plugin.$destroy();
@@ -119,6 +121,7 @@ describe('asynchronous language bootstrap boundary', () => {
         test.fixture.choice!.useEnglish();
         expect(test.fixture.mounts[0].initialLanguageSelection).toEqual({ language: 'en', preference: 'en' });
         expect(test.fixture.saved).toEqual([]);
+        expect(test.fixture.initialChoices).toBe(1);
         test.plugin.$destroy();
     });
 

@@ -1364,6 +1364,7 @@
     let selectedDate = dateInputForInstant(new Date(), systemTimeZone);
     let selectedEvent: DirectionEvent = 'sunset';
     export let initialLanguageSelection: LanguageSelection = { language: DEFAULT_UI_LANGUAGE, preference: 'auto' };
+    export const recordInitialLanguageChoice = () => pluginUsage?.recordInitialLanguageChoice();
     let uiLanguage: UiLanguage = initialLanguageSelection.language;
     let languagePreference = initialLanguageSelection.preference;
     let languageLoading = false;
@@ -1787,6 +1788,7 @@
             languageLoadError = failed;
         },
         persist: saveLanguagePreference,
+        committed: (selection, userInitiated) => pluginUsage?.setLanguage(selection, userInitiated),
     });
     const syncHostLanguage = () => { void languageController.syncHost(); };
     const retryLanguage = () => { void languageController.retry(); };
@@ -3285,7 +3287,10 @@
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
         isMounted = true;
-        pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab, cloudView });
+        pluginUsage = startPluginUsage({
+            localBuild: betaReleaseNotesUrl !== null, tab: summaryTab, cloudView,
+            language: { language: uiLanguage, preference: languagePreference },
+        });
         radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
         languageSubscriptionId = store.on('usedLang', syncHostLanguage);
         // Catch a host change that occurred while the entry was preparing the first catalog.
