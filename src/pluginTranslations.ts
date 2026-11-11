@@ -1,3 +1,4 @@
+import { defineMessages, localized } from './localeMessages';
 import type { ObservationEvent as DirectionEvent } from './observationPlanner';
 import type { AstronomyInterval } from './solar';
 import type { RadarProvider, RadarOverlayStatus } from './radarOverlay';
@@ -14,6 +15,9 @@ export const translations: Record<UiLanguage, {
     eventSelectorLabel: string;
     eventButtonTitles: Record<DirectionEvent, string>;
     languageLabel: string;
+    followWindyLanguageLabel: string;
+    languageLoadingLabel: string;
+    languageLoadErrorLabel: string;
     collapsePanelLabel: string;
     expandCompactPanelLabel: string;
     expandPanelLabel: string;
@@ -208,7 +212,7 @@ export const translations: Record<UiLanguage, {
     intervals: Record<AstronomyInterval['kind'], string>;
     legend: Record<string, string>;
     phases: string[];
-}> = {
+}> = defineMessages({
     zh: {
         dateLabel: '观测日期',
         eventSelectorLabel: '选择日月或银心事件',
@@ -220,6 +224,9 @@ export const translations: Record<UiLanguage, {
             moonset: '只显示月落方位线',
         },
         languageLabel: '显示语言',
+        followWindyLanguageLabel: '跟随 Windy',
+        languageLoadingLabel: '正在切换语言…',
+        languageLoadErrorLabel: '语言暂时无法加载，请重新选择后重试。',
         collapsePanelLabel: '收起为方位线模式',
         expandCompactPanelLabel: '展开面板',
         expandPanelLabel: '全屏显示',
@@ -511,11 +518,14 @@ export const translations: Record<UiLanguage, {
             moonset: 'Show only moonset direction lines',
         },
         languageLabel: 'Display language',
+        followWindyLanguageLabel: 'Follow Windy',
+        languageLoadingLabel: 'Changing language…',
+        languageLoadErrorLabel: 'This language could not be loaded. Select it again to retry.',
         collapsePanelLabel: 'Collapse to direction-line mode',
         expandCompactPanelLabel: 'Expand panel',
         expandPanelLabel: 'Show fullscreen',
         restorePanelLabel: 'Restore compact window',
-        fitDirectionLinesLabel: distance => `Fit ${distance} direction lines`,
+        fitDirectionLinesLabel: localized((t, distance: string) => t("Fit {{0}} direction lines", distance)),
         restoreSearchZoomLabel: 'Restore search-location zoom',
         enableRadarOverlayLabel: 'Enable radar overlay',
         showSkyChartLabel: 'Show sky chart',
@@ -525,9 +535,9 @@ export const translations: Record<UiLanguage, {
         panelIntro: 'Key sun and moon times, direction lines 30m before and after each event, and night observing windows.',
         sunMoonPanelLabel: 'Sun and moon information panel',
         summaryViewsLabel: 'Sun and moon information views',
-        astronomyPanelLabel: (date, isToday) => isToday ? 'Today’s astronomy windows' : `Astronomy windows for ${date}`,
+        astronomyPanelLabel: localized((t, date: string, isToday: boolean) => isToday ? t("Today’s astronomy windows") : t("Astronomy windows for {{0}}", date)),
         currentMoonPhaseLabel: 'Moon phase',
-        astronomyEventsLabel: (date, isToday) => isToday ? 'Today’s astronomy events' : `Astronomy events for ${date}`,
+        astronomyEventsLabel: localized((t, date: string, isToday: boolean) => isToday ? t("Today’s astronomy events") : t("Astronomy events for {{0}}", date)),
         nightObservationWindowsLabel: 'Night observing windows',
         observationEvidenceLabel: 'Weather evidence for the observing window',
         observationEvidenceLoading: 'Matching forecast to this window…',
@@ -541,10 +551,10 @@ export const translations: Record<UiLanguage, {
             visibilityKm: 'Visibility',
         },
         mapLegendLabel: 'Map legend',
-        eventDirectionLinesLabel: event => `${event} direction-line data`,
+        eventDirectionLinesLabel: localized((t, event: string) => t("{{0}} direction-line data", event)),
         favoriteLocationsLabel: 'Favorite locations',
-        locationCopyLabel: location => `${location}. Copy coordinates`,
-        favoriteLocationsCountLabel: count => `Open ${count} favorite locations`,
+        locationCopyLabel: localized((t, location: string) => t("{{0}}. Copy coordinates", location)),
+        favoriteLocationsCountLabel: localized((t, count: number) => t("Open {{0}} favorite locations", count)),
         saveCurrentLocationFavoriteLabel: 'Save current location',
         removeCurrentLocationFavoriteLabel: 'Remove current location from favorites',
         pinCurrentLocationLabel: 'Pin current location',
@@ -561,7 +571,7 @@ export const translations: Record<UiLanguage, {
         diagnosticCopyError: 'Copy failed. Select and copy the text manually.',
         diagnosticStartupFailed: 'The plugin could not finish initializing. Copy the diagnostics to report the problem. Close and reopen to try again.',
         aboutTabUpdateBadge: 'NEW',
-        aboutTabUpdateLabel: version => `About, version ${version} is available`,
+        aboutTabUpdateLabel: localized((t, version: string) => t("About, version {{0}} is available", version)),
         retry: 'Retry',
         eventTimeSuffix: ' time',
         now: 'Now',
@@ -675,8 +685,8 @@ export const translations: Record<UiLanguage, {
         radarOpacityDescription: 'Adjust the third-party radar layer immediately. 0% is fully transparent and 100% is fully opaque. This setting is saved in this browser.',
         lineOpacityLabel: 'Line opacity',
         lineOpacityDescription: 'Adjust all sun/moon bearings, galactic centre sightlines and cloud reference lines on the map. This setting is saved in this browser.',
-        show600Label: distance => `Show ${distance} point`,
-        show600Description: distance => `When enabled, event direction lines extend to ${distance} and add a reference point there. This setting is saved in this browser.`,
+        show600Label: localized((t, distance: string) => t("Show {{0}} point", distance)),
+        show600Description: localized((t, distance: string) => t("When enabled, event direction lines extend to {{0}} and add a reference point there. This setting is saved in this browser.", distance)),
         locationSearchHiddenNotice: 'Location search hidden. Turn off “Hide location search” in Settings to show it again.',
         hideLocationSearchLabel: 'Hide location search',
         hideLocationSearchDescription: 'Hide place-name and coordinate search without removing saved map API keys. This setting is saved in this browser.',
@@ -684,7 +694,7 @@ export const translations: Record<UiLanguage, {
         locationApiKeyPlaceholder: 'Enter API Key',
         locationApiKeyDescription: 'Configure Amap, Baidu, and Tencent, then switch providers in search. Keys stay in this browser.',
         locationApiKeySave: 'Save',
-        locationApiKeyClear: 'Clear',
+        locationApiKeyClear: 'Clear API key',
         locationApiKeySaved: 'Saved',
         locationProviderLabels: {
             amap: 'Amap Web Service API Key',
@@ -708,7 +718,7 @@ export const translations: Record<UiLanguage, {
         aboutLinksLabel: 'Project links',
         aboutGithubLabel: 'GitHub',
         aboutIssuesLabel: 'Issues',
-        aboutStarLabel: 'Star',
+        aboutStarLabel: 'Star', // GitHub repository action; not the celestial object.
         aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
         aboutSupportLabel: 'Like it? Treat the author to MIXUE',
         aboutXiaohongshuLabel: 'RedNote',
@@ -723,8 +733,8 @@ export const translations: Record<UiLanguage, {
         aboutUpdateNotesUnavailable: 'The user-facing update notes could not be loaded.',
         aboutUpdateNotesRetry: 'Reload update notes',
         aboutUpdateNotesRetrying: 'Reloading…',
-        aboutCopyLatestPluginLink: version => `Copy ${version} plugin link`,
-        aboutPluginLinkCopied: version => `Copied ${version} plugin link`,
+        aboutCopyLatestPluginLink: localized((t, version: string) => t("Copy {{0}} plugin link", version)),
+        aboutPluginLinkCopied: localized((t, version: string) => t("Copied {{0}} plugin link", version)),
         aboutPluginLinkCopyError: 'Copy failed. Try again.',
         aboutUpdateTypeLabels: {
             new: 'New',
@@ -740,21 +750,19 @@ export const translations: Record<UiLanguage, {
             cloud: 'Cloud cover',
             cloudDescription: 'More white fill means more cloud. Total cover shows overall obstruction; high, medium, and low show cloud-layer height.',
             temperature: 'Temperature',
-            temperatureDescription: unit => `Colors progress from colder to hotter. Values are in ${unit}.`,
+            temperatureDescription: localized((t, unit: TemperatureUnit) => t("Colors progress from colder to hotter. Values are in {{0}}.", unit)),
             dewPoint: 'Dew point',
-            dewPointDescription: unit => `Green means lower condensation risk, yellow needs attention, and red means condensation is likely. Values are in ${unit}.`,
+            dewPointDescription: localized((t, unit: TemperatureUnit) => t("Green means lower condensation risk, yellow needs attention, and red means condensation is likely. Values are in {{0}}.", unit)),
             humidity: 'Humidity',
             humidityDescription: 'Higher humidity means a greater need to watch for condensation.',
             precipitation: 'Precipitation',
-            precipitationDescription: (warning, danger, unit) =>
-                `Yellow is below ${warning} ${unit}, orange is ${warning}–${danger} ${unit}, and red is above ${danger} ${unit}.`,
+            precipitationDescription: localized((t, warning: string, danger: string, unit: PrecipitationUnit) => t("Yellow is below {{0}} {{1}}, orange is {{2}}–{{3}} {{4}}, and red is above {{5}} {{6}}.", warning, unit, warning, danger, unit, danger, unit)),
             windSpeed: 'Wind speed',
-            windSpeedDescription: (warning, danger, unit, beaufort) =>
-                `Green is up to ${warning} ${unit}, yellow is above ${warning} through ${danger} ${unit}, and red is above ${danger} ${unit}.${beaufort ? ' When Windy uses bft, cells show bft/m/s together and colors use exact m/s.' : ''}`,
+            windSpeedDescription: localized((t, warning: string, danger: string, unit: WindUnit, beaufort: boolean) => t("Green is up to {{0}} {{1}}, yellow is above {{2}} through {{3}} {{4}}, and red is above {{5}} {{6}}.{{7}}", warning, unit, warning, danger, unit, danger, unit, beaufort ? t(" When Windy uses bft, cells show bft/m/s together and colors use exact m/s.") : '')),
             windDirection: 'Wind direction',
             windDirectionDescription: 'The arrow points toward the direction the wind comes from.',
             visibility: 'Visibility',
-            visibilityDescription: unit => `Sample values are in ${unit}. Higher values usually mean clearer air over longer distances.`,
+            visibilityDescription: localized((t, unit: DistanceUnit) => t("Sample values are in {{0}}. Higher values usually mean clearer air over longer distances.", unit)),
             aerosolAod: 'Aerosol AOD',
             aerosolAodDescription: 'AOD is total-column aerosol optical depth at 550 nm. From left to right, the samples mean very low, low, elevated, and high. Lower values usually mean less light attenuation by aerosols, but AOD cannot be converted directly into visibility. AOD is supplied by Open-Meteo from CAMS independently of the EC, GFS, or ICON selection. Visibility follows the selected weather source as described above.',
             celestialEvents: 'Sun and moon rise/set times',
@@ -768,6 +776,7 @@ export const translations: Record<UiLanguage, {
             moonset: 'Moonset',
         },
         timeline: {
+            // Compact label for the blue-hour interval, not a selectable colour.
             dawn: 'Blue',
             sunrise: 'Sunrise',
             sunset: 'Sunset',
@@ -789,8 +798,8 @@ export const translations: Record<UiLanguage, {
             currentSun: 'Current sun',
             currentMoon: 'Current moon',
         },
-        phases: ['New', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full', 'Waning gibbous', 'Last quarter', 'Waning crescent'],
+        phases: ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'],
     },
-};
+});
 
 export type PluginText = typeof translations[UiLanguage];

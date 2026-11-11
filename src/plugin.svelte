@@ -1,6 +1,8 @@
 <section
     id="sun-moon-path-panel"
     class="sun-path-panel"
+    lang={UI_LANGUAGES[uiLanguage].locale}
+    dir="ltr"
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
     class:mobile_collapsed={isMobileCollapsed}
@@ -830,6 +832,10 @@
             {:else if summaryTab === 'settings'}
                 <PluginSettings
                     {uiLanguage}
+                    {languagePreference}
+                    {languageLoading}
+                    {languageLoadError}
+                    {retryLanguage}
                     {units}
                     bind:settingsPage
                     {initialOverlayPreference}
@@ -1036,14 +1042,6 @@
     </div>
 </section>
 
-{#if showLanguageChoice}
-    <LanguageChoice on:confirm={event => {
-        uiLanguage = event.detail;
-        saveLanguagePreference(uiLanguage);
-        showLanguageChoice = false;
-    }} />
-{/if}
-
 <script lang="ts">
     import bcast from '@windy/broadcast';
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
@@ -1057,20 +1055,19 @@
     import store from '@windy/store';
     import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
-    import { UI_LANGUAGES, DEFAULT_UI_LANGUAGE, isUiLanguage } from './uiLanguage';
+    import { UI_LANGUAGES, DEFAULT_UI_LANGUAGE, isUiLanguagePreference } from './uiLanguage';
+    import { createLanguageController, type LanguageSelection } from './languageController';
     import { messages } from './locales/plugin';
     import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
     import CloudNavigation from './CloudNavigation.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
-    import LanguageChoice from './LanguageChoice.svelte';
     import { resolvePlanningTime, type PlanningTimeSelection } from './planningTime';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import { translations } from './pluginTranslations';
     import {
-        loadLanguagePreference,
         loadPlanningViewPreference,
         savePlanningViewPreference,
         saveLanguagePreference,
@@ -1366,8 +1363,11 @@
     let favoriteDistanceOrigin: Coordinates | null = cachedGpsLocation();
     let selectedDate = dateInputForInstant(new Date(), systemTimeZone);
     let selectedEvent: DirectionEvent = 'sunset';
-    let uiLanguage: UiLanguage = DEFAULT_UI_LANGUAGE;
-    let showLanguageChoice = false;
+    export let initialLanguageSelection: LanguageSelection = { language: DEFAULT_UI_LANGUAGE, preference: 'auto' };
+    let uiLanguage: UiLanguage = initialLanguageSelection.language;
+    let languagePreference = initialLanguageSelection.preference;
+    let languageLoading = false;
+    let languageLoadError = false;
     let text = translations[uiLanguage];
     let timeZone = systemTimeZone;
     let elevationM = 0;
@@ -1773,16 +1773,32 @@
         } catch { /* Storage access may be blocked; retain the current session's controls. */ }
     }
 
-    /** Validate the DOM boundary; the shell owns persistence and dependent UI state. */
+    const languageController = createLanguageController({
+        initial: initialLanguageSelection,
+        usedLang: () => store.get('usedLang'),
+        apply: selection => {
+            favoritesOpen = false;
+            favoriteReturnFocus = null;
+            uiLanguage = selection.language;
+            languagePreference = selection.preference;
+        },
+        status: (loading, failed) => {
+            languageLoading = loading;
+            languageLoadError = failed;
+        },
+        persist: saveLanguagePreference,
+    });
+    const syncHostLanguage = () => { void languageController.syncHost(); };
+    const retryLanguage = () => { void languageController.retry(); };
+    let languageSubscriptionId: number | null = null;
+
+    /** Validate the DOM boundary before starting the asynchronous selection transaction. */
     const changeLanguage = (event: Event) => {
-        const value = (event.currentTarget as HTMLSelectElement).value;
-        if (!isUiLanguage(value) || value === uiLanguage) {
-            return;
-        }
-        favoritesOpen = false;
-        favoriteReturnFocus = null;
-        uiLanguage = value;
-        saveLanguagePreference(uiLanguage);
+        const select = event.currentTarget as HTMLSelectElement;
+        const value = select.value;
+        // Keep the DOM aligned with committed state while the selected catalog loads.
+        select.value = languagePreference;
+        if (isUiLanguagePreference(value)) { void languageController.select(value); }
     };
 
     const setMobilePanelMode = async (value: MobilePanelMode) => {
@@ -3155,6 +3171,11 @@
 
     const overlayOwner = {
         deactivateForReplacement: () => {
+            languageController.destroy();
+            if (languageSubscriptionId !== null) {
+                store.off(languageSubscriptionId);
+                languageSubscriptionId = null;
+            }
             if (diagnosticRuntime?.diagnostics.state !== 'failed') { diagnosticRuntime?.stop('replacement'); }
             // Replacement mounts continue the logical use, with no live old resources.
             pluginUsage?.stop(true);
@@ -3232,9 +3253,6 @@
             ? panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path') || null
             : null;
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
-        const savedLanguage = loadLanguagePreference();
-        uiLanguage = savedLanguage ?? DEFAULT_UI_LANGUAGE;
-        showLanguageChoice = savedLanguage === null;
         cloudView = loadPlanningViewPreference();
         // Retire the previous provider's browser credential without reading or retaining its value.
         try { localStorage.removeItem('windy-plugin-sun-moon-path:qweather'); } catch { /* Storage may be disabled. */ }
@@ -3269,6 +3287,9 @@
         isMounted = true;
         pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab, cloudView });
         radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
+        languageSubscriptionId = store.on('usedLang', syncHostLanguage);
+        // Catch a host change that occurred while the entry was preparing the first catalog.
+        syncHostLanguage();
         void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
         lightPollutionOverlayController.setEnabled(lightPollutionEnabled);
@@ -3869,7 +3890,8 @@
         min-height: 36px;
         padding: 0 3px;
         font-size: 13px;
-        white-space: nowrap;
+        /* Long localized names must stay inside their own tap target. */
+        white-space: normal;
         min-width: 0;
     }
 

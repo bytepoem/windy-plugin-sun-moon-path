@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 /** RainbowSightlineEvidence interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {
@@ -36,9 +36,9 @@ export const messages = defineMessages({
         noneFound2: '未见风险',
     },
     en: {
-        visibilityNote: (thresholdKm: number) => `Samples the observer, candidate rain locations and intermediate points. Near-surface visibility <${thresholdKm} km is a screening reference. Its timestamp is the rainfall interval's end, not an hourly average. Droplet heights are unknown; surface visibility does not describe elevated sightlines and is not compared directly with rain distance or converted to an invisibility probability.`,
-        obstructionCount: (count: number) => `Potential obstruction in ${count} sampled directions`,
-        poorRouteCount: (count: number) => `Low-visibility signal on ${count} candidate routes`,
+        visibilityNote: localized((t, thresholdKm: number) => t("Samples the observer, candidate rain locations and intermediate points. Near-surface visibility <{{0}} km is a screening reference. Its timestamp is the rainfall interval's end, not an hourly average. Droplet heights are unknown; surface visibility does not describe elevated sightlines and is not compared directly with rain distance or converted to an invisibility probability.", thresholdKm)),
+        obstructionCount: localized((t, count: number) => t("Potential obstruction in {{0}} sampled directions", count)),
+        poorRouteCount: localized((t, count: number) => t("Low-visibility signal on {{0}} candidate routes", count)),
         terrainAndVisibilityRisks: 'Terrain and visibility risks',
         sightlineRisks: 'Sightline risks',
         separateFromRainLightGrade: 'Separate from rain/light grade',

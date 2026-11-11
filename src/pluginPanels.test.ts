@@ -29,6 +29,11 @@ const aboutProps = {
 };
 
 describe('compiled about panel states', () => {
+    it('marks reused historical notes with their actual language inside an Arabic UI', () => {
+        const html = renderAbout({ ...aboutProps, uiLanguage: 'ar' });
+        expect(html).toMatch(/class="about-update__release-note[^"]*"[^>]*lang="en"[^>]*dir="ltr"/);
+        expect(html).toContain('Planning improvements');
+    });
     it('distinguishes formal updates, beta previews and the current version', () => {
         expect(renderAbout(aboutProps)).toContain('发现新版本');
         const beta = renderAbout({ ...aboutProps, pluginUpdateResult: { ...available, channel: 'beta' } });

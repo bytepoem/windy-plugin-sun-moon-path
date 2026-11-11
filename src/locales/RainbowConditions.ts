@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 /** RainbowConditions interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {
@@ -28,7 +28,7 @@ export const messages = defineMessages({
         independentOfTheWeatherTableSourceHourly: '独立于天气表的数据源设置。小时雨量和地面直射光不证明同一瞬间雨滴受光；未检查三维云层。地形与近地面能见度仅提供独立的视线风险参考。',
     },
     en: {
-        sampleSummary: (wet: number, lit: number) => `Of 9 sample points, ${wet} have a liquid-rain signal; ${lit} also meet the hourly direct-light reference.`,
+        sampleSummary: localized((t, wet: number, lit: number) => t("Of 9 sample points, {{0}} have a liquid-rain signal; {{1}} also meet the hourly direct-light reference.", wet, lit)),
         conditionLevels: { favourable: 'More favourable', mixed: 'Mixed conditions', unfavourable: 'Unfavourable', insufficient: 'Insufficient data' },
         primaryRainbowConditions: 'Primary rainbow conditions',
         primaryBowConditions: 'Primary bow conditions',

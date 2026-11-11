@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages } from '../localeMessages';
 
 /** Compile-only negative cases: translations must preserve keys, nesting and interpolation inputs. */
 export const verifyMessageContracts = (): void => {

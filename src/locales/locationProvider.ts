@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 export const KNOWN_LOCATION_SEARCH_FAILURES = defineMessages({
     zh: {
         BAIDU_SDK_LOAD_FAILED: '地图服务加载失败，请检查网络后重试。',
@@ -29,5 +29,5 @@ export const KNOWN_LOCATION_SEARCH_FAILURES = defineMessages({
 });
 export const messages = defineMessages({
     zh: { providerError: (provider: string, detail: string) => `${provider}：${detail}` },
-    en: { providerError: (provider: string, detail: string) => `${provider}: ${detail}` },
+    en: { providerError: localized((t, provider: string, detail: string) => t("{{0}}: {{1}}", provider, detail)) },
 });

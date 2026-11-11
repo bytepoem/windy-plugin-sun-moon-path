@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy } from 'svelte';
     import { translations } from './pluginTranslations';
-    import { DEFAULT_UI_LANGUAGE, type UiLanguage } from './uiLanguage';
+    import { DEFAULT_UI_LANGUAGE, UI_LANGUAGES, type UiLanguage } from './uiLanguage';
 
     export let report: () => string;
     export let uiLanguage: UiLanguage = DEFAULT_UI_LANGUAGE;
@@ -29,7 +29,7 @@
     onDestroy(() => { active = false; });
 </script>
 
-<section class="diagnostic-report" aria-label={text.diagnosticTitle}>
+<section class="diagnostic-report" lang={UI_LANGUAGES[uiLanguage].locale} dir="ltr" aria-label={text.diagnosticTitle}>
     <button type="button" aria-expanded={expanded} on:click={toggle}>{text.diagnosticTitle}</button>
     {#if expanded}
         <div class="diagnostic-content">

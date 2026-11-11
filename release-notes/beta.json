@@ -7,7 +7,11 @@
     "items": [
       {
         "type": "improved",
-        "text": "设置顶部改用语言选择框，继续支持简体中文与 English，并记住选择。"
+        "text": "支持 Windy 设置中的 42 种语言，默认跟随 Windy；也可在设置顶部单独选择并记住语言，或切回跟随。语言列表优先显示简体中文、繁体中文和英语。新增语言的机器初译已进行术语与语义复核，尚未逐语言由母语者人工审校；说明图片与历史更新说明仍使用中文或英文。"
+      },
+      {
+        "type": "fixed",
+        "text": "修复窄屏下较长的功能标签相互重叠、遮挡相邻按钮的问题，完整显示文字并保留规划下拉箭头的操作空间。"
       },
       {
         "type": "fixed",
@@ -25,7 +29,11 @@
     "items": [
       {
         "type": "improved",
-        "text": "Settings now uses a language selector, with Simplified Chinese and English choices remembered between visits."
+        "text": "Supports the 42 languages in Windy Settings and follows Windy by default. Choose and remember a separate language at the top of Settings, or switch back to following Windy. Manual language choices start with Simplified Chinese, Traditional Chinese and English, in that order. Machine translations for new languages have received terminology and semantic checks, but not human native-speaker review in every language; guide images and historical update notes remain in Chinese or English."
+      },
+      {
+        "type": "fixed",
+        "text": "Fixed long tab labels overlapping and blocking adjacent buttons on narrow screens. Labels remain fully visible and the planning dropdown arrow retains its own space."
       },
       {
         "type": "fixed",

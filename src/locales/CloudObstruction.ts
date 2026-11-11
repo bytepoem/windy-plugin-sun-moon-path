@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 /** CloudObstruction interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {
@@ -107,11 +107,11 @@ export const messages = defineMessages({
         cloudDistancesUseAZeroHeightReference: '云距采用零高度基准，不扣除机位海拔；未校验沿途云况、地形或消光',
     },
     en: {
-        blockingTitle: (body: string) => `Blocking ${body}`,
-        blockingHeading: (_body: string) => 'Blocking',
-        blockingDetail: (body: string) => body,
-        belowHorizon: (body: string, _sun: boolean) => `${body} is below the horizon and not visible; blocking distance is unavailable`,
-        belowHorizonReference: (body: string) => `${body} centre is below the horizon; blocking distance is a geometric reference only`,
+        blockingTitle: localized((t, body: string) => t("Blocking {{0}}", body)),
+        blockingHeading: localized((t, _body: string) => t("Blocking")),
+        blockingDetail: localized((t, body: string) => body),
+        belowHorizon: localized((t, body: string, _sun: boolean) => t("{{0}} is below the horizon and not visible; blocking distance is unavailable", body)),
+        belowHorizonReference: localized((t, body: string) => t("{{0}} centre is below the horizon; blocking distance is a geometric reference only", body)),
         horizonHeading: { wide: 'Clouds at', compact: 'Clouds' },
         farHeading: { firstLine: 'Furthest No', secondLine: 'Clouds' },
         heightSourceDescriptions: [
@@ -183,6 +183,7 @@ export const messages = defineMessages({
         ref: 'Ref',
         reference: 'Reference',
         heightAMSL: 'height AMSL',
+        // Both labels clear an input; neither means cloud-free clearance above the observer.
         clearHeight: 'Clear height',
         clearHeight2: 'clear height',
         forecastBaseBelongsToAnotherBandThis: 'Forecast base belongs to another band; this band is unknown',

@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 export const translations = defineMessages({
     zh: {
         modelLabel: '预报模型',
@@ -53,8 +53,8 @@ export const translations = defineMessages({
         visibilityEmpty: 'No visibility data',
         aodLoading: 'Loading AOD…',
         visibilityLoading: 'Loading visibility…',
-        selectedDateOutsideRange: (date: string) => `Selected date ${date} is outside the current five-day forecast. The table still shows the current forecast.`,
-        selectedDateMissing: (date: string) => `No forecast steps are available for selected date ${date}. The table still shows the current forecast.`,
+        selectedDateOutsideRange: localized((t, date: string) => t("Selected date {{0}} is outside the current five-day forecast. The table still shows the current forecast.", date)),
+        selectedDateMissing: localized((t, date: string) => t("No forecast steps are available for selected date {{0}}. The table still shows the current forecast.", date)),
         metrics: {
             totalCloudPercent: ['Clouds', '%'],
             highCloudPercent: ['High', '%'],

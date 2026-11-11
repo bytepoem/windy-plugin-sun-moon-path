@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages } from '../localeMessages';
 import type { ObservationConditionKey } from '../lightPollution';
 export const translations = defineMessages({
     zh: {
@@ -44,9 +44,9 @@ export const translations = defineMessages({
         bortle: 'Est. Bortle',
         milkyWay: 'Milky Way',
         zodiacalLight: 'Zodiacal light',
-        andromedaGalaxy: 'Andromeda',
-        triangulumGalaxy: 'Triangulum',
-        groundVisibility: 'Ground visibility',
+        andromedaGalaxy: 'Andromeda galaxy',
+        triangulumGalaxy: 'Triangulum galaxy',
+        groundVisibility: 'Ground brightness',
         loading: 'Loading light pollution data…',
         retry: 'Retry',
         conditions: {

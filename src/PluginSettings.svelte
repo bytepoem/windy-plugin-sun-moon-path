@@ -2,7 +2,7 @@
     import { messages } from './locales/PluginSettings';
     import PluginGuide from './PluginGuide.svelte';
     import { translations } from './pluginTranslations';
-    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, type UiLanguage } from './uiLanguage';
+    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
     import { KEEP_CURRENT_OVERLAY, initialOverlayLabel, type InitialOverlayPreference, type WindyOverlay } from './initialOverlay';
     import { RADAR_PROVIDERS, RAINVIEWER_WEBSITE_URL, type RadarProvider, type RadarOverlayStatus } from './radarOverlay';
     import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
@@ -12,6 +12,9 @@
 
     // Controlled settings: the shell owns persistence and map side effects.
     export let uiLanguage: UiLanguage;
+    export let languagePreference: UiLanguagePreference = uiLanguage;
+    export let languageLoading = false;
+    export let languageLoadError = false;
     export let units: UnitPreferences;
     // Bound to the shell so unmounting this Tab does not reset the selected page.
     export let settingsPage: 'preferences' | 'guide';
@@ -37,6 +40,7 @@
     export let locationApiKeyDrafts: LocationProviderApiKeys;
     export let locationApiKeys: LocationProviderApiKeys;
     export let changeLanguage: (event: Event) => void;
+    export let retryLanguage: () => void = () => undefined;
     export let changeInitialOverlayPreference: (event: Event) => void;
     export let changeRadarProvider: (event: Event) => void;
     export let changeRadarOpacity: (event: Event) => void;
@@ -66,14 +70,22 @@
         class="language-toggle"
         aria-label={text.languageLabel}
         title={text.languageLabel}
-        value={uiLanguage}
+        value={languagePreference}
+        aria-busy={languageLoading}
         on:change={changeLanguage}
     >
+        <option value="auto">{text.followWindyLanguageLabel}</option>
         {#each UI_LANGUAGE_OPTIONS as option}
             <option value={option.value}>{option.nativeName}</option>
         {/each}
     </select>
 </div>
+{#if languageLoading || languageLoadError}
+    <p role="status" class="language-status">
+        {languageLoading ? text.languageLoadingLabel : text.languageLoadErrorLabel}
+        {#if languageLoadError && !languageLoading}<button type="button" on:click={retryLanguage}>{text.retry}</button>{/if}
+    </p>
+{/if}
 {#if settingsPage === 'guide'}
     <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
 {:else}
@@ -305,6 +317,13 @@
 {/if}
 
 <style>
+    .language-status { margin: 4px 12px 8px; font-size: 12px; line-height: 1.4; }
+    .language-status button {
+        margin-inline-start: 6px; min-height: 36px; padding: 4px 8px;
+        color: var(--panel-text); background: var(--panel-surface);
+        border: 1px solid var(--panel-border); border-radius: 6px; font: inherit; cursor: pointer;
+    }
+    .language-status button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: 2px; }
     .atlas-source {
         color: var(--panel-accent);
         font-size: 12px;

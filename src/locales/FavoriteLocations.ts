@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized, localizedText } from '../localeMessages';
 import { FAVORITE_COMPARISON_MAX_TARGETS } from '../favoriteComparison';
 export const labels = defineMessages({
     zh: {
@@ -39,7 +39,7 @@ export const labels = defineMessages({
         close: 'Close favorite locations',
         current: 'Current',
         search: 'Search favorites',
-        searchResults: (totalMatches: number) => `${totalMatches} favorite locations found.`,
+        searchResults: localized((t, totalMatches: number) => t("{{0}} favorite locations found.", totalMatches)),
         noMatches: 'No matching favorite locations.',
         loading: 'Loading favorite locations…',
         empty: 'No favorite locations yet. Save the current observing location first.',
@@ -51,10 +51,10 @@ export const labels = defineMessages({
         elevation: 'Elevation',
         bortle: 'Bortle',
         compare: 'Compare',
-        compareHint: `Select 2–${FAVORITE_COMPARISON_MAX_TARGETS} favorites for the same observing date.`,
-        compareSelection: (selectedCount: number) => `${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS} selected`,
+        compareHint: localizedText("Select 2–{{0}} favorites for the same observing date.", FAVORITE_COMPARISON_MAX_TARGETS),
+        compareSelection: localized((t, selectedCount: number) => t("{{0}}/{{1}} selected", selectedCount, FAVORITE_COMPARISON_MAX_TARGETS)),
         compareStart: 'Compare now',
         compareCancel: 'Cancel selection',
-        compareLimit: `You can compare up to ${FAVORITE_COMPARISON_MAX_TARGETS} locations.`,
+        compareLimit: localizedText("You can compare up to {{0}} locations.", FAVORITE_COMPARISON_MAX_TARGETS),
     },
 });

@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages } from '../localeMessages';
 export const labels = defineMessages({
     zh: {
         label: '地点搜索',
@@ -48,6 +48,7 @@ export const labels = defineMessages({
         noResults: 'No locatable address found. Try another keyword.',
         error: 'Location search failed. Check the API Key or try again later.',
         suggestions: 'Suggested locations',
+        // Straight-line distance to a search result, not direct solar radiation.
         distance: 'Direct',
         elevation: 'Elevation',
         latitude: 'Lat',

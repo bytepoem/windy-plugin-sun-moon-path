@@ -64,9 +64,9 @@ jobs:
                   echo "{\"repositoryName\": \"${{ github.repository }}\", \"commitSha\": \"${{ github.sha }}\", \"repositoryOwner\": \"${{ github.repository_owner }}\"}" > /tmp/plugin-info.json
                   mv plugin.json /tmp
                   jq -s '.[0] * .[1]' /tmp/plugin.json /tmp/plugin-info.json > plugin.json
-                  # Source maps are useful in local builds but are not runtime assets.
-                  # Excluding them keeps the Windy upload request below its size limit.
-                  tar --exclude='*.map' -cf ../plugin.tar .
+                  # Source maps and the readable development bundle are not runtime assets.
+                  # Ship plugin.min.js without duplicating its embedded language catalogs.
+                  tar --exclude='*.map' --exclude='./plugin.js' --exclude='./plugin.js.build.json' -cf ../plugin.tar .
                   # Keep a safety margin below Windy's 4 MB request limit so package
                   # growth fails here with an actionable message instead of at upload.
                   max_plugin_archive_bytes=3800000

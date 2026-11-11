@@ -868,8 +868,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(mobileModeStart).toBeGreaterThan(comparisonStart);
         expect(translations.zh.featureGuideHeading).toBe('功能说明');
         expect(translations.en.featureGuideHeading).toBe('Feature guide');
-        expect(JSON.stringify(translations)).not.toContain('0.8.0 新增功能');
-        expect(JSON.stringify(translations)).not.toContain('What’s new in 0.8.0');
+        const bilingualCopy = JSON.stringify({ zh: translations.zh, en: translations.en });
+        expect(bilingualCopy).not.toContain('0.8.0 新增功能');
+        expect(bilingualCopy).not.toContain('What’s new in 0.8.0');
         expect(translations.zh.featureGuide.comparison.title).toBe('收藏地点对比');
         expect(translations.en.featureGuide.comparison.title).toBe('Favorite location comparison');
         expect(translations.zh.featureGuide.mapControls.title).toBe('地图视图按钮');

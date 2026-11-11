@@ -257,12 +257,12 @@
                 </button>
                 </div>
             </th>
-            <th scope="col" title={messages[language].blockingTitle(bodyName)}><span class="cloud-heading-line">{messages[language].blockingHeading(bodyName)}</span><span class="cloud-heading-line">{messages[language].blockingDetail(bodyName)}</span><small>({units.distance})</small></th>
-            <th scope="col" title={messages[language].cloudsAtHorizon}><span class="cloud-heading-line"><span class="cloud-heading-wide">{messages[language].horizonHeading.wide}</span><span class="cloud-heading-compact">{messages[language].horizonHeading.compact}</span></span><span class="cloud-heading-line">{messages[language].horizon}</span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].blockingTitle(bodyName)}><span class="cloud-heading-text">{messages[language].blockingTitle(bodyName)}</span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].cloudsAtHorizon}><span class="cloud-heading-text">{messages[language].cloudsAtHorizon}</span><small>({units.distance})</small></th>
             <!-- Height-derived solar reference columns remain available for both targets. -->
-            <th scope="col" title={messages[language].tangentDistance}><span class="cloud-heading-line">{messages[language].tangent}</span><span class="cloud-heading-line">{messages[language].distance}</span><small>({units.distance})</small></th>
-            <th scope="col" title={messages[language].furthestNoClouds}><span class="cloud-heading-wide">{messages[language].farHeading.firstLine}<br />{messages[language].farHeading.secondLine}</span><span class="cloud-heading-compact"><span class="cloud-heading-line">{messages[language].furthest}</span><span class="cloud-heading-line">{messages[language].clear}</span></span><small>({units.distance})</small></th>
-            <th scope="col" title={messages[language].minimumSolarAltitudeForThisCloudHeight}><span class="cloud-heading-line"><span class="cloud-heading-wide">{messages[language].sunAltitude}</span><span class="cloud-heading-compact">{messages[language].sun}<br />{messages[language].altitude}</span></span><span class="cloud-heading-line">∠</span></th>
+            <th scope="col" title={messages[language].tangentDistance}><span class="cloud-heading-text">{messages[language].tangentDistance}</span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].furthestNoClouds}><span class="cloud-heading-text">{messages[language].furthestNoClouds}</span><small>({units.distance})</small></th>
+            <th scope="col" title={messages[language].minimumSolarAltitudeForThisCloudHeight}><span class="cloud-heading-text">{messages[language].sunAltitude}</span><span>∠</span></th>
         </tr></thead>
         {#each visibleBands as band}
             {@const row = single ? { ...settings.single, enabled: true } : settings.layers[band]}
@@ -403,8 +403,8 @@
     .cloud-model-mode select { padding-inline: 3px; font-size: 12px; }
     .cloud-table-scroll { overflow-x: auto; margin: 0; }
     .cloud-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; font-variant-numeric: tabular-nums; }
-    .cloud-heading-line { display: block; white-space: nowrap; }
-    .cloud-heading-compact { display: none; }
+    /* Translate each heading as a complete phrase; let layout choose line breaks. */
+    .cloud-heading-text { display: block; white-space: normal; overflow-wrap: anywhere; text-wrap: balance; }
     .cloud-table th, .cloud-table td { padding: 4px 0; text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
     /* Inherit one computed row height, including the smaller unit text and guide button. */
     .cloud-table thead { color: #b9c2ce; font-size: 11px; line-height: 1.5em; }
@@ -481,8 +481,6 @@
         .cloud-panel--expanded-headings .cloud-map-row { gap: 2px; font-size: 10px; }
         .cloud-panel--expanded-headings .cloud-map-row label { gap: 3px; }
 
-        .cloud-heading-wide { display: none; }
-        .cloud-heading-compact { display: inline; }
         .cloud-table thead { font-size: 10px; }
         .cloud-table th:first-child, .cloud-panel--expanded-headings .cloud-table th:first-child { width: 100px; }
         .cloud-panel--expanded-headings .cloud-table thead th:nth-child(n+2) { width: auto; overflow-wrap: anywhere; }

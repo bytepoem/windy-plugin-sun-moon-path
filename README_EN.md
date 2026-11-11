@@ -7,7 +7,7 @@
 
 [中文](README.md) · **English**
 
-Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glow, fiery clouds and rainbows on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Available in Chinese and English on desktop and mobile.
+Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glow, fiery clouds and rainbows on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Supports the 42 languages in Windy Settings on desktop and mobile.
 
 **Mobile**
 
@@ -33,7 +33,7 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.5/plugin.min.
 2. **Choose a time:** select a date, then use the local time strip or Sun, Moon and galactic centre rise/set shortcuts.
 3. **Check conditions:** explore events and weather, use cloud or rainbow planning, or compare 2–5 favorite locations.
 
-Choose Simplified Chinese or English when first opening the plugin. You can change this later using the language selector at the top of Settings; the plugin remembers your choice. Display options are also in Settings, with detailed legends under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
+The plugin follows the language actually used by Windy by default and supports the 42 languages in Windy Settings. Choose a separate language at the top of Settings, or switch back to Follow Windy. Manual choices, including existing ones, are remembered. New languages are machine translated with AI language checks and have not been reviewed by native speakers of every language; cloud-guide images and historical update notes remain in Chinese or English. Display options are also in Settings, with detailed legends under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
 
 Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers. You can also keep Windy's current layer.
 

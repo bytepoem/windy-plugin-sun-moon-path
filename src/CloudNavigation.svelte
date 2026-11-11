@@ -128,7 +128,8 @@
     button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: -2px; }
     button:hover, .active > button { color: var(--panel-text); }
     button[role='tab'] { flex: 1; min-width: 0; padding: 0; text-align: center; }
-    .tab-label { display: block; width: 100%; text-align: center; }
+    /* Wrap the translated name within the space left by the separate arrow. */
+    .tab-label { display: block; width: 100%; text-align: center; white-space: normal; overflow-wrap: anywhere; }
     /* Reserve real layout space so the entire button, not just its glyph, clears the title. */
     .arrow { flex: 0 0 28px; align-self: center; display: flex; align-items: center; justify-content: center; width: 28px; min-height: 28px; margin: 4px 5px 4px 6px; padding: 0; border-radius: 4px; color: var(--panel-text); background: rgba(255, 255, 255, 0.06); }
     .arrow:hover, .arrow[aria-expanded='true'] { background: rgba(99, 185, 238, 0.2); }

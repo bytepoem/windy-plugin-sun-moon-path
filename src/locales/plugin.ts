@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 /** plugin interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {
@@ -32,17 +32,17 @@ export const messages = defineMessages({
         compass: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
         blueHours: { dawn: 'Morning blue hour', dusk: 'Evening blue hour' },
         countdown: 'Next',
-        compactRemaining: (hours: number, minutes: number) => hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`,
-        unavailableEvent: (name: string, moon: boolean, reason: string) => {
-            const body = moon ? 'moon' : 'sun';
+        compactRemaining: localized((t, hours: number, minutes: number) => hours > 0 ? t("{{0}}h {{1}}m", hours, minutes) : t("{{0}}m", minutes)),
+        unavailableEvent: localized((t, name: string, moon: boolean, reason: string) => {
+            const body = moon ? t("moon") : t("sun");
             if (reason === 'always-up') {
-                return `The ${body} stays above the horizon today; no ${name} time is available.`;
+                return t("The {{0}} stays above the horizon today; no {{1}} time is available.", body, name);
             }
             if (reason === 'always-down') {
-                return `The ${body} stays below the horizon today; no ${name} time is available.`;
+                return t("The {{0}} stays below the horizon today; no {{1}} time is available.", body, name);
             }
-            return `No ${name} time is available today.`;
-        },
+            return t("No {{0}} time is available today.", name);
+        }),
         centreRainbowSkyChart: 'Centre rainbow sky chart',
         fitHorizonRadius: 'Fit horizon radius',
         fitAllCloudReferenceLines: 'Fit all cloud reference lines',

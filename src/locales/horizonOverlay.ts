@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 /** Map labels for the geographic event horizon overlay. */
 export const messages = defineMessages({
     zh: {
@@ -10,7 +10,7 @@ export const messages = defineMessages({
     en: {
         events: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset', milkywayrise: 'Galactic centre rise', milkywayset: 'Galactic centre set' },
         shortEvents: { sunrise: 'Sunrise', sunset: 'Sunset', moonrise: 'Moonrise', moonset: 'Moonset', milkywayrise: 'GC rise', milkywayset: 'GC set' },
-        horizon: (event: string) => `${event} horizon`,
+        horizon: localized((t, event: string) => t("{{0}} horizon", event)),
         selectedLocation: 'Selected location',
     },
 });

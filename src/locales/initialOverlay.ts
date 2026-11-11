@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages } from '../localeMessages';
 export const overlayLabels = defineMessages({
     zh: {
         radar: "气象雷达",

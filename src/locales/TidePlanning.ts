@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages } from '../localeMessages';
 /** TidePlanning interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {

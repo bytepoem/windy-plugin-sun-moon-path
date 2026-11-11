@@ -108,7 +108,7 @@
                 {#if localizedUpdateNotes.length > 0}
                     <div class="about-update__notes">
                         {#each localizedUpdateNotes as releaseNote}
-                            <section class="about-update__release-note">
+                            <section class="about-update__release-note" lang={UI_LANGUAGES[uiLanguage].releaseNotesLanguage} dir="ltr">
                                 <div class="about-update__release-note-header">
                                     <strong>{releaseNote.version}</strong>
                                     <time datetime={releaseNote.releasedAt}>{releaseNote.releasedAt}</time>
@@ -118,7 +118,7 @@
                                 <ul>
                                     {#each releaseNote.notes.items as item}
                                         <li>
-                                            <span class={`about-update__type about-update__type--${item.type}`}>
+                                            <span class={`about-update__type about-update__type--${item.type}`} lang={UI_LANGUAGES[uiLanguage].locale}>
                                                 {text.aboutUpdateTypeLabels[item.type]}
                                             </span>
                                             <span>{item.text}</span>

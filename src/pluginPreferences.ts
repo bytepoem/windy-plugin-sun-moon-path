@@ -2,7 +2,7 @@ import { DEFAULT_INITIAL_OVERLAY, normalizeInitialOverlayPreference, type Initia
 import { DEFAULT_RADAR_OPACITY_PERCENT, normalizeRadarOpacityPercent, normalizeRadarProvider, type RadarProvider } from './radarOverlay';
 import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
 import { DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT, normalizeLightPollutionOpacity } from './lightPollutionOverlay';
-import { isUiLanguage, type UiLanguage } from './uiLanguage';
+import { isUiLanguagePreference, type UiLanguagePreference } from './uiLanguage';
 
 export type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
 export type MinimizeScope = 'standard' | 'hide-times' | 'hide-summary';
@@ -43,13 +43,13 @@ const write = (key: string, value: string): boolean => {
     }
 };
 
-/** Missing or invalid choices require first-use confirmation; do not silently persist a default. */
-export const loadLanguagePreference = (): UiLanguage | null => {
+/** Existing manual choices survive upgrades; absent or invalid preferences follow Windy. */
+export const loadLanguagePreference = (): UiLanguagePreference => {
     try {
         const value = localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
-        return isUiLanguage(value) ? value : null;
+        return isUiLanguagePreference(value) ? value : 'auto';
     } catch {
-        return null;
+        return 'auto';
     }
 };
 
@@ -71,7 +71,7 @@ export const savePlanningViewPreference = (view: 'obstruction' | 'rainbow' | 'ho
     }
 };
 
-export const saveLanguagePreference = (value: UiLanguage) => {
+export const saveLanguagePreference = (value: UiLanguagePreference) => {
     try {
         localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, value);
     } catch {

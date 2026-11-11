@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages } from '../localeMessages';
 /** The first-use prompt deliberately shows Chinese and English before a language is confirmed.
  * The choices themselves come from the full registry and use each language's native name.
  */

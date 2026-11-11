@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages } from '../localeMessages';
 /** EventHorizon interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {
@@ -76,6 +76,7 @@ export const messages = defineMessages({
         autoElevation: 'Auto elevation',
         manualInput: 'Manual input',
         observerHeight: 'Observer height',
+        // Action: empty the height input. "Clear" does not describe sky conditions or clearance.
         clearHeight: 'Clear height',
         horizonGuide: 'Horizon guide',
         locationElevation: 'Location elevation',
@@ -93,7 +94,7 @@ export const messages = defineMessages({
         useASmoothSphereWithRKm: 'Use a smooth sphere with R = 6371.0088 km and h equal to the entered height divided by 1000 (km). Surface distance d = R × acos(R / (R + h)); all events share this distance, each along its own bearing.',
         distanceExcludesRefractionTerrainBuildingsAndCloud: 'Distance excludes refraction, terrain, buildings and cloud obstruction, so a clear view is not guaranteed.',
         horizonEventBearingsAndTimes: 'Horizon event bearings and times',
-        body: 'Body',
+        body: 'Body', // A celestial body, not a human body.
         riseAzimuthTime: 'Rise azimuth / time',
         setAzimuthTime: 'Set azimuth / time',
         pending: 'Pending',

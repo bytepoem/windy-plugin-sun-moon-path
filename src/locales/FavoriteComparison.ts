@@ -1,4 +1,4 @@
-import { defineMessages } from '../uiLanguage';
+import { defineMessages, localized } from '../localeMessages';
 export const labels = defineMessages({
     zh: {
         shortDate: (month: number, day: number) => `${month}月${day}日`,
@@ -36,7 +36,7 @@ export const labels = defineMessages({
         locate: (title: string) => `定位到${title}`,
     },
     en: {
-        shortDate: (month: number, day: number) => `${month}/${day}`,
+        shortDate: localized((t, month: number, day: number) => t("{{0}}/{{1}}", month, day)),
         title: 'Favorite time-window comparison',
         back: 'Back to favorites',
         close: 'Close comparison',
@@ -68,7 +68,7 @@ export const labels = defineMessages({
         weatherError: 'Model data unavailable',
         atmosphereError: 'Load failed',
         retry: 'Refresh comparison',
-        locate: (title: string) => `Show ${title} on the map`,
+        locate: localized((t, title: string) => t("Show {{0}} on the map", title)),
     },
 });
 /** FavoriteComparison interface copy, checked against the same schema in every language. */
