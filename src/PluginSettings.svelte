@@ -66,19 +66,24 @@
         <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{messages[uiLanguage].preferences}</button>
         <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{messages[uiLanguage].userGuide}</button>
     </div>
-    <select
-        class="language-toggle"
-        aria-label={text.languageLabel}
-        title={text.languageLabel}
-        value={languagePreference}
-        aria-busy={languageLoading}
-        on:change={changeLanguage}
-    >
-        <option value="auto">{text.followWindyLanguageLabel}</option>
-        {#each UI_LANGUAGE_OPTIONS as option}
-            <option value={option.value}>{option.nativeName}</option>
-        {/each}
-    </select>
+    <div class="language-control">
+        <select
+            class="language-toggle"
+            aria-label={text.languageLabel}
+            title={text.languageLabel}
+            value={languagePreference}
+            aria-busy={languageLoading}
+            on:change={changeLanguage}
+        >
+            <option value="auto">{text.followWindyLanguageLabel}</option>
+            {#each UI_LANGUAGE_OPTIONS as option}
+                <option value={option.value}>{option.nativeName}</option>
+            {/each}
+        </select>
+        <svg class="language-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="m4 6 4 4 4-4"></path>
+        </svg>
+    </div>
 </div>
 {#if languageLoading || languageLoadError}
     <p role="status" class="language-status">
@@ -344,8 +349,13 @@
     }
 
     .language-toggle {
+        appearance: none;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
         min-height: 36px;
-        padding: 4px 6px;
+        /* Equal padding keeps the label centered while reserving arrow space. */
+        padding: 4px 24px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
         color: var(--panel-text);
@@ -376,9 +386,25 @@
         gap: 8px;
     }
 
-    .settings-header .language-toggle {
+    .language-control {
+        position: relative;
         flex: 0 0 auto;
-        max-width: 120px;
+        width: 120px;
+    }
+
+    .language-chevron {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        width: 16px;
+        height: 16px;
+        transform: translateY(-50%);
+        fill: none;
+        stroke: var(--panel-text);
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        pointer-events: none;
     }
 
     .settings-pages button {

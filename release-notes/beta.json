@@ -7,6 +7,22 @@
     "items": [
       {
         "type": "fixed",
+        "text": "调整语言选择框的箭头与右侧边框间距，统一箭头样式并保持文字居中。"
+      },
+      {
+        "type": "fixed",
+        "text": "事件时刻标签按各语言的完整语序显示，避免事件名与“时间”粘连；修正部分天气、天空盘、收藏排序和功能说明的译名与语法，并同步相关入口和说明引用。"
+      },
+      {
+        "type": "fixed",
+        "text": "修正孟加拉语降水、荷兰语中层云、日语和韩语彩虹方向图的译名，并统一丹麦语与挪威语的地图方位线术语，避免误解为行为准则。"
+      },
+      {
+        "type": "fixed",
+        "text": "精简日语「关于」标签和更新徽标，修正日语天气、云层表头与说明，以及部分语言把事件倒计时译成「下一步」的问题。"
+      },
+      {
+        "type": "fixed",
         "text": "明确所有语言中最小化选项同时隐藏的内容；修正所选日期被写为“今天”的提示，并补全光污染排序、直线距离、中国搜索 API Key 及临时英语恢复的说明，统一不透明度名称。"
       },
       {
@@ -35,6 +51,22 @@
     "title": "Settings and panel navigation fixes",
     "summary": "Fixed blank Settings and unresponsive panel navigation.",
     "items": [
+      {
+        "type": "fixed",
+        "text": "Adjusted the language selector’s arrow spacing from the right edge, matching other navigation arrows while keeping the label centered."
+      },
+      {
+        "type": "fixed",
+        "text": "Event-time labels now follow each language’s word order and spacing. Corrected terminology and grammar in weather, sky charts, favorite sorting and feature guidance, with matching control labels and guide references."
+      },
+      {
+        "type": "fixed",
+        "text": "Corrected Bengali precipitation, Dutch mid-level cloud and Japanese/Korean rainbow direction-chart labels. Clarified map azimuth-line terminology in Danish and Norwegian so it is not confused with guidelines."
+      },
+      {
+        "type": "fixed",
+        "text": "Shortened the Japanese About tab and update badge, corrected Japanese weather labels and explanations, and fixed event countdown labels translated as a navigation action in several languages."
+      },
       {
         "type": "fixed",
         "text": "Clarified what each minimize option hides in every language. Fixed messages that called the selected date “today”, and clarified light-pollution sorting, straight-line distance, China search API keys and temporary English recovery. Chinese opacity labels now match the controls."

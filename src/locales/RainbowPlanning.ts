@@ -33,8 +33,8 @@ export const messages = defineMessages({
         locationTimeZoneUnavailableSelectTheLocation: '地点时区解析失败，暂无法计算彩虹；请重新选择地点。',
         resolvingTheLocationTimeZone: '正在解析地点时区…',
         chooseAValidLocalTimeSkippedDaylight: '请选择有效的当地时间；夏令时跳过的时刻不可用。',
-        thePrimaryBowIsBelowTheHorizontal: '主虹在水平地平线下，虚线仅为俯视方向参考。',
-        thePrimaryBowIsBelowTheHorizontal2: '主虹在水平地平线下；开启完整圆圈可查看俯视方向。',
+        thePrimaryBowIsBelowTheHorizontal: '主虹在水平地平线下，虚线仅表示地平线下的方向。',
+        thePrimaryBowIsBelowTheHorizontal2: '主虹在水平地平线下；开启完整圆圈可查看地平线下的方向。',
         mapOverlayIsATopDownSky: '地图为天空俯视投影，不表示距离；虚线为地平线下。',
     },
     en: {

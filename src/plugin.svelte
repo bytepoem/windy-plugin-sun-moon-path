@@ -423,7 +423,7 @@
         {:else if selectedEvent !== 'all' && activeSolarPath?.status === 'ok'}
             <div class="event-summary">
                 <div>
-                    <span class="control-label">{eventDisplayName(selectedEvent, text)}{text.eventTimeSuffix}</span>
+                    <span class="control-label">{text.eventTimeLabel(eventDisplayName(selectedEvent, text))}</span>
                     <strong>{formatLocalDateTime(activeSolarPath.eventTime, timeZone)}</strong>
                 </div>
                 <div class="event-summary__meta">

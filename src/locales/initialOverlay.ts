@@ -65,7 +65,7 @@ export const overlayLabels = defineMessages({
         dfm10h: "可燃物湿度（10h）",
         dfm100h: "可燃物湿度（100h）",
         dfm1000h: "可燃物湿度（1000h）",
-        heatmaps: "热点",
+        heatmaps: "活跃火点",
         topoMap: "地形图",
         hurricanes: "飓风跟踪器",
         flightDangers: "飞行危险",

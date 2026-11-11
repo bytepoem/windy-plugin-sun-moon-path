@@ -78,7 +78,8 @@ export const translations: Record<UiLanguage, {
     aboutTabUpdateBadge: string;
     aboutTabUpdateLabel: (version: string) => string;
     retry: string;
-    eventTimeSuffix: string;
+    /** Format the complete label so each language owns word order and spacing. */
+    eventTimeLabel: (eventName: string) => string;
     now: string;
     currentDirectionsLabel: string;
     sun: string;
@@ -250,7 +251,7 @@ export const translations: Record<UiLanguage, {
         hideSkyChartLabel: '隐藏天空盘',
         showSkyChartDescription: '控制事件视图的天空盘显示，与窗口栏首个按钮同步，并记住选择。',
         disableRadarOverlayLabel: '关闭气象雷达叠加',
-        panelIntro: '日月关键时刻、事件前后 30m方位线和夜间观测时段。',
+        panelIntro: '日月关键时刻、各事件前后 30 分钟的方位线和夜间观测时段。',
         sunMoonPanelLabel: '日月信息面板',
         summaryViewsLabel: '日月信息视图',
         astronomyPanelLabel: (date, isToday) => isToday ? '今日天文时段' : `${date}天文时段`,
@@ -291,7 +292,7 @@ export const translations: Record<UiLanguage, {
         aboutTabUpdateBadge: '新',
         aboutTabUpdateLabel: version => `关于，发现新版本 ${version}`,
         retry: '重试',
-        eventTimeSuffix: '时间',
+        eventTimeLabel: eventName => `${eventName}时间`,
         now: '现在',
         currentDirectionsLabel: '当前太阳和月亮方位',
         sun: '太阳',
@@ -308,7 +309,7 @@ export const translations: Record<UiLanguage, {
         moonPhaseLoading: '月相计算中',
         lightPollutionLoadError: '无法取得光污染数据，请稍后重试。',
         lightPollutionOutOfBounds: '该地点超出光污染数据范围（南纬 65° 至北纬 75°）。',
-        aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30m、事件时刻和后 30m三个方位。',
+        aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
         guideHeading: '地图说明',
         keyboardNavigationDescription: '桌面标题返回按钮支持键盘聚焦；云层功能菜单用方向键选择、Enter 确认、Escape 关闭。横向表格可聚焦后使用键盘滚动。',
         featureGuideHeading: '功能说明',
@@ -585,7 +586,7 @@ export const translations: Record<UiLanguage, {
         aboutTabUpdateBadge: 'NEW',
         aboutTabUpdateLabel: localized((t, version: string) => t("About, version {{0}} is available", version)),
         retry: 'Retry',
-        eventTimeSuffix: ' time',
+        eventTimeLabel: localized((t, eventName: string) => t("{{0}} time", eventName)),
         now: 'Now',
         currentDirectionsLabel: 'Current sun and moon directions',
         sun: 'Sun',

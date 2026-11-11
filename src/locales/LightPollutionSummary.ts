@@ -27,8 +27,8 @@ export const translations = defineMessages({
             faint: '隐约可见',
             'zenith-visible': '天顶可见',
             'clearly-visible': '明显可见',
-            'dark-yellow': '明亮暗黄色',
-            striking: '惊人可见',
+            'dark-yellow': '明亮的暗黄色光晕',
+            striking: '格外醒目',
             'bright-enough-to-read': '明亮到可读报',
             'nearby-small-objects': '可辨近处小物',
             'distant-objects': '可辨远处物体',
@@ -79,7 +79,7 @@ export const translations = defineMessages({
 /** LightPollutionSummary interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {
-        estimatedFromZenithBrightnessOnly: '仅依据天顶光污染估算',
+        estimatedFromZenithBrightnessOnly: '仅依据天顶亮度估算',
     },
     en: {
         estimatedFromZenithBrightnessOnly: 'Estimated from zenith brightness only',

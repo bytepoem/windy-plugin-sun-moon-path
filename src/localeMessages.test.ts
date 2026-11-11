@@ -25,6 +25,28 @@ const placeholders = (text: string) => (text.match(/\{\{\d+\}\}|\{provider\}/g) 
 const properNames = ['Windy', 'Open-Meteo', 'RainViewer', 'ECMWF', 'GFS', 'ICON', 'CAMS', 'WGS84', 'GCJ-02', 'DNI', 'SQM', 'MSL', 'AMSL', 'AGL', 'Bortle'];
 
 describe('complete translated language payload', () => {
+    it('keeps the visible About tab name in its accessible update label', () => {
+        for (const { value } of UI_LANGUAGE_OPTIONS) {
+            const text = translations[value];
+            expect(text.aboutTabUpdateLabel('9.99.8').toLocaleLowerCase(), value)
+                .toContain(text.aboutTab.toLocaleLowerCase());
+        }
+    });
+
+    it('formats complete event-time labels without joining words or forcing English word order', () => {
+        expect(translations.ar.eventTimeLabel(translations.ar.events.sunset)).toBe('وقت غروب الشمس');
+        expect(translations.tr.eventTimeLabel(translations.tr.events.sunset)).toBe('Gün batımı zamanı');
+        expect(translations.ru.eventTimeLabel(translations.ru.events.moonset)).toBe('Время: Заход Луны');
+        expect(translations.bn.eventTimeLabel(translations.bn.events.sunset)).toBe('সময়: সূর্যাস্ত');
+        expect(translations.ja.eventTimeLabel(translations.ja.events.moonset)).toBe('月の入りの時刻');
+        expect(translations.ko.eventTimeLabel(translations.ko.events.sunset)).toBe('일몰 시간');
+        for (const { value } of UI_LANGUAGE_OPTIONS) {
+            const label = translations[value].eventTimeLabel('EVENT_MARKER');
+            expect(label.match(/EVENT_MARKER/g), value).toHaveLength(1);
+            expect(label, value).not.toMatch(/\{\{\d+\}\}/);
+        }
+    });
+
     it('retains astronomy context for new/full moon instead of reusing update labels', () => {
         expect(translations.de.phases[4].toLowerCase()).toContain('vollmond');
         expect(translations.fr.phases[4].toLowerCase()).toContain('lune');

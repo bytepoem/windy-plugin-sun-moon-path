@@ -30,7 +30,7 @@ export const UI_LANGUAGES = {
         releaseNotesLanguage: 'zh',
         cloudHelpImage: 'https://community.windy.com/assets/uploads/files/1788950340643-74dd941b-faef-4f81-b2a6-7471c71b5d2e-download.png',
     },
-    'zh-TW': language('繁體', 'zh-TW', { placeSearch: true, compactCloudHeadings: true, releaseNotesLanguage: 'zh',
+    'zh-TW': language('繁体中文', 'zh-TW', { placeSearch: true, compactCloudHeadings: true, releaseNotesLanguage: 'zh',
         cloudHelpImage: 'https://community.windy.com/assets/uploads/files/1788950340643-74dd941b-faef-4f81-b2a6-7471c71b5d2e-download.png' }),
     en: language('English', 'en-US', { secondaryName: '英语', secondaryLocale: 'zh-CN', clockLocale: 'en-GB' }),
     ar: language('عربي', 'ar'),
