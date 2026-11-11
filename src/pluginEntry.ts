@@ -1,6 +1,8 @@
 import store from '@windy/store';
+import build from 'virtual:diagnostic-build';
 import { DEFAULT_UI_LANGUAGE, UI_LANGUAGES, resolveUiLanguage, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
 import { prepareUiLanguage } from './localeMessages';
+import { configureLanguageLocation } from './languageResources';
 import Plugin from './plugin.svelte';
 import DiagnosticReport from './DiagnosticReport.svelte';
 import LanguageChoice from './LanguageChoice.svelte';
@@ -24,6 +26,7 @@ export default class DiagnosticPlugin {
     private pendingOpen: { params?: LatLon } | null = null;
     private bootstrapRevision = 0;
     private languageFailed = false;
+    private languageRequest: AbortController | null = null;
 
     constructor(options: { target: HTMLElement; anchor?: HTMLElement }) {
         this.container = document.createElement('div');
@@ -48,6 +51,7 @@ export default class DiagnosticPlugin {
     $destroy() {
         if (this.closed) { return; }
         this.closed = true;
+        this.languageRequest?.abort();
         this.bootstrapRevision += 1;
         this.pendingOpen = null;
         this.lifecycle.dispose();
@@ -66,6 +70,9 @@ export default class DiagnosticPlugin {
     private bootstrap(preference: UiLanguagePreference, persist = false) {
         if (this.closed) { return; }
         const revision = ++this.bootstrapRevision;
+        this.languageRequest?.abort();
+        this.languageRequest = new AbortController();
+        configureLanguageLocation(store.get('ipLocation'), build.local);
         this.languageChoice?.$destroy();
         this.languageChoice = null;
         this.failureReport?.$destroy();
@@ -91,7 +98,7 @@ export default class DiagnosticPlugin {
         loading.lang = UI_LANGUAGES.en.locale;
         loading.style.padding = '16px';
         this.container.replaceChildren(loading);
-        void prepareUiLanguage(language).then(() => {
+        void prepareUiLanguage(language, this.languageRequest.signal).then(() => {
             if (!this.closed && revision === this.bootstrapRevision) { this.mount(language, preference, persist); }
         }, error => {
             if (!this.closed && revision === this.bootstrapRevision) { this.showLanguageFailure(error); }
@@ -163,6 +170,7 @@ export default class DiagnosticPlugin {
             language,
             initialPreference: loadLanguagePreference(),
             choose: (preference: UiLanguagePreference) => this.bootstrap(preference, true),
+            useEnglish: () => this.bootstrap('en'),
         } });
         this.failureReport = new DiagnosticReport({ target: this.container, props: {
             report: this.runtime.report, uiLanguage: language,

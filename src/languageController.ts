@@ -14,7 +14,7 @@ export const createLanguageController = (options: {
     apply: (selection: LanguageSelection) => void;
     status: (loading: boolean, failed: boolean) => void;
     persist: (preference: UiLanguagePreference) => void;
-    prepare?: (language: UiLanguage) => Promise<void>;
+    prepare?: (language: UiLanguage, signal?: AbortSignal) => Promise<void>;
 }) => {
     let current = options.initial;
     let desiredPreference = current.preference;
@@ -22,6 +22,7 @@ export const createLanguageController = (options: {
     let failedPreference: UiLanguagePreference | null = null;
     let revision = 0;
     let destroyed = false;
+    let pending: AbortController | null = null;
     const select = async (preference: UiLanguagePreference, persist = true): Promise<void> => {
         if (destroyed) { return; }
         desiredPreference = preference;
@@ -30,10 +31,13 @@ export const createLanguageController = (options: {
         // to follow Windy. Otherwise the UI would follow only until the next reopen.
         shouldPersist ||= persist;
         const request = ++revision;
+        pending?.abort();
+        const controller = new AbortController();
+        pending = controller;
         options.status(true, false);
         try {
             const language = resolveUiLanguage(preference, options.usedLang());
-            await (options.prepare ?? prepareUiLanguage)(language);
+            await (options.prepare ?? prepareUiLanguage)(language, controller.signal);
             if (destroyed || request !== revision) { return; }
             const next = { language, preference };
             options.apply(next);
@@ -55,6 +59,7 @@ export const createLanguageController = (options: {
         syncHost: () => desiredPreference === 'auto' ? select('auto', false) : Promise.resolve(),
         destroy: () => {
             destroyed = true;
+            pending?.abort();
             revision += 1;
         },
     };

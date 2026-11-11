@@ -436,7 +436,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(settingsSource).toContain('{radarOpacityPercent}%');
         expect(settingsSource).toContain('on:input={changeRadarOpacity}');
         expect(pluginSource).toContain('radarOverlayController.setOpacity(radarOpacityPercent);');
-        expect(translations.zh.radarOpacityLabel).toBe('雷达图层透明度');
+        expect(translations.zh.radarOpacityLabel).toBe('雷达图层不透明度');
         expect(translations.en.radarOpacityLabel).toBe('Radar overlay opacity');
 
         const radarOpacityStart = settingsSource.indexOf('class="settings-range settings-range--radar-opacity"');

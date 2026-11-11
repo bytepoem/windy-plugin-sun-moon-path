@@ -20,7 +20,7 @@ export const messages = defineMessages({
         rainbowPlanning: '彩虹规划',
         chooseSunOrMoonToSeeDaily: '选择日虹／月虹，查看当日主虹时段、顶部高度和左右方位；开启双彩虹可同时查看副虹。时段按分钟估算，仅表示光源在地平线上且虹弧部分高于水平地平线，不是彩虹出现预报。月虹还需要足够月光，通常需长曝光。',
         theMapIsATopDownSky: '地图为天空俯视投影，不表示距离；实线／虚线区分地平线上下。完整圆圈只提供俯视方向参考，仍需受光水滴和无遮挡视线。彩色同心圆标记光源反方向，不预测佛光。',
-        assessSelectedTimeSeparatelyScreensHourlyRain: '「评估当前时刻」单独检查白天主虹的小时雨光条件，并展示地形、能见度风险。结果可信度低，不是出现概率，也不能证明同一瞬间雨滴受光；月虹不参与评估。山体提示不等于一定遮挡，未发现风险也不等于视线畅通。',
+        assessSelectedTimeSeparatelyScreensHourlyRain: '「评估所选时刻」单独检查白天主虹的小时雨光条件，并展示地形、能见度风险。结果可信度低，不是出现概率，也不能证明同一瞬间雨滴受光；月虹不参与评估。山体提示不等于一定遮挡，未发现风险也不等于视线畅通。',
         tidePlanning: '潮汐规划',
         theTopRightIconSwitchesBetweenCurve: '右上角图标切换曲线与表格；表格按面板宽度分两组或三组展示当天全部可用小时数据，每组从上往下阅读。',
         selectTidesFromTheNavigationDropdownTo: '从主导航下拉菜单选择「潮汐」，自动加载当前机位的 Open-Meteo 模型水位，无需 Key。统一使用顶部时间条调整拍摄时间；点击估算高低水位或日光事件也可同步顶部拍摄时间。可选择机位当地今天起 10 天内的日期，实际覆盖以模型数据为准。无数据时仍可使用日光时刻。',

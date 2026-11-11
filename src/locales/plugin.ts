@@ -9,12 +9,12 @@ export const messages = defineMessages({
         unavailableEvent: (name: string, moon: boolean, reason: string) => {
             const body = moon ? '月亮' : '太阳';
             if (reason === 'always-up') {
-                return `当天${body}始终在地平线以上，没有可用的${name}时刻。`;
+                return `所选日期${body}始终在地平线以上，没有可用的${name}时刻。`;
             }
             if (reason === 'always-down') {
-                return `当天${body}始终在地平线以下，没有可用的${name}时刻。`;
+                return `所选日期${body}始终在地平线以下，没有可用的${name}时刻。`;
             }
-            return `当天没有可用的${name}时刻。`;
+            return `所选日期没有可用的${name}时刻。`;
         },
         centreRainbowSkyChart: '居中彩虹方向图',
         fitHorizonRadius: '适配地平线范围',
@@ -36,12 +36,12 @@ export const messages = defineMessages({
         unavailableEvent: localized((t, name: string, moon: boolean, reason: string) => {
             const body = moon ? t("moon") : t("sun");
             if (reason === 'always-up') {
-                return t("The {{0}} stays above the horizon today; no {{1}} time is available.", body, name);
+                return t("The {{0}} stays above the horizon on the selected date; no {{1}} time is available.", body, name);
             }
             if (reason === 'always-down') {
-                return t("The {{0}} stays below the horizon today; no {{1}} time is available.", body, name);
+                return t("The {{0}} stays below the horizon on the selected date; no {{1}} time is available.", body, name);
             }
-            return t("No {{0}} time is available today.", name);
+            return t("No {{0}} time is available on the selected date.", name);
         }),
         centreRainbowSkyChart: 'Centre rainbow sky chart',
         fitHorizonRadius: 'Fit horizon radius',

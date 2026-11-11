@@ -1,4 +1,5 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { languageResourceFixture } from './test/languageResourceFixture';
 import { DEFAULT_UI_LANGUAGE, isUiLanguage, UI_LANGUAGES, UI_LANGUAGE_OPTIONS, type UiLanguage } from './uiLanguage';
 import { translations } from './pluginTranslations';
 import { prepareUiLanguage } from './localeMessages';
@@ -7,7 +8,10 @@ import { messages as cloudMessages } from './locales/CloudObstruction';
 import { compileRenderer, type RenderComponent } from './test/renderSvelte';
 
 const catalogs = import.meta.glob<Record<string, Record<UiLanguage, unknown>>>('./locales/*.ts', { eager: true });
-beforeAll(() => prepareUiLanguage('fr'));
+beforeAll(async () => {
+    vi.stubGlobal('fetch', async (url: string) => languageResourceFixture(url));
+    for (const { value } of UI_LANGUAGE_OPTIONS) { await prepareUiLanguage(value); }
+});
 
 /** Check nested copy and array cardinality, so a new locale cannot omit an entire feature or row. */
 const checkShape = (reference: unknown, value: unknown, path: string): void => {

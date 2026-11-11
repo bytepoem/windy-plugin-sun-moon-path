@@ -38,11 +38,21 @@ jobs:
                   # npm 10.9.8 crashes while resolving the current Vitest peer dependency tree.
                   npm exec --yes --package=npm@11.12.1 -- npm install
                   npm test
+                  npx --no-install tsc --noEmit --incremental false
+                  npx --no-install eslint src --ext .ts,.svelte
                   node --test scripts/verify-update-site.test.mjs
                   python3 scripts/test_publish_update_mirrors.py
+                  python3 scripts/test_publish_language_resources.py
+                  node --test scripts/verify-language-resources.test.mjs
                   npm run build
                   node scripts/build-update-site.mjs "$RUNNER_TEMP/update-site"
                   node scripts/verify-update-site.mjs "$RUNNER_TEMP/update-site"
+                  node scripts/language-resources.mjs --check
+                  node scripts/language-resources.mjs "$RUNNER_TEMP/language-site"
+            - name: Publish and verify immutable language resources before Windy upload
+              run: |
+                  python3 scripts/publish-language-resources.py "$RUNNER_TEMP/language-site"
+                  node scripts/verify-language-resources.mjs "$RUNNER_TEMP/language-site"
             - name: Retain exact diagnostic build artifacts
               uses: actions/upload-artifact@v4
               with:
@@ -65,8 +75,8 @@ jobs:
                   mv plugin.json /tmp
                   jq -s '.[0] * .[1]' /tmp/plugin.json /tmp/plugin-info.json > plugin.json
                   # Source maps and the readable development bundle are not runtime assets.
-                  # Ship plugin.min.js without duplicating its embedded language catalogs.
-                  tar --exclude='*.map' --exclude='./plugin.js' --exclude='./plugin.js.build.json' -cf ../plugin.tar .
+                  # Dictionaries are published and verified separately before this step.
+                  tar --exclude='./languages' --exclude='*.map' --exclude='./plugin.js' --exclude='./plugin.js.build.json' -cf ../plugin.tar .
                   # Keep a safety margin below Windy's 4 MB request limit so package
                   # growth fails here with an actionable message instead of at upload.
                   max_plugin_archive_bytes=3800000

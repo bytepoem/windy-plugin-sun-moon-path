@@ -5,6 +5,7 @@ import { copyFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { languageResources } from './scripts/language-resources.mjs';
 
 import serve from 'rollup-plugin-serve';
 import rollupSvelte from 'rollup-plugin-svelte';
@@ -146,6 +147,18 @@ export default {
         clearScreen: false,
     },
     plugins: [
+        {
+            name: 'external-language-resources',
+            async buildStart() {
+                this.addWatchFile('src/locales/source.en.json');
+                for (const file of readdirSync('src/locales/generated')) {
+                    this.addWatchFile('src/locales/generated/' + file);
+                }
+                execFileSync(process.execPath, ['scripts/language-resources.mjs', '--check']);
+                // Local previews use the exact production bytes, outside uploaded dist assets.
+                if (serveBuild) { await languageResources('dist', 'local'); }
+            },
+        },
         betaReleaseNotesPlugin(),
         diagnosticBuildPlugin(),
         rollupSvelte({

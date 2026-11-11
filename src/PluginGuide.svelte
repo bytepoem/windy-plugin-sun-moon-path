@@ -1,7 +1,7 @@
 <script lang="ts">
     import { messages } from './locales/PluginGuide';
     import CelestialIcon from './CelestialIcon.svelte';
-    import { translations } from './pluginTranslations';
+    import { translations, languageResourceHelp } from './pluginTranslations';
     import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import {
         formatDistanceKm, formatPrecipitationMm, formatTemperatureC, formatVisibilityKm,
@@ -37,6 +37,7 @@
         <p>{messages[uiLanguage].chooseALocationThenSetTheLocal}</p>
         <p>{messages[uiLanguage].useTheNavigationDropdownForCloudsRainbow}</p>
         <p>{text.keyboardNavigationDescription}</p>
+        <p lang={UI_LANGUAGES[uiLanguage].releaseNotesLanguage === 'zh' ? 'zh-CN' : 'en'}>{languageResourceHelp[UI_LANGUAGES[uiLanguage].releaseNotesLanguage]}</p>
         <p>{messages[uiLanguage].forIncompleteDisplaysOrLoadingErrorsExpand}</p>
     </section>
 

@@ -6,7 +6,7 @@ export const messages = defineMessages({
         conditionLevels: { favourable: '条件较有利', mixed: '条件一般', unfavourable: '条件不利', insufficient: '数据不足' },
         primaryRainbowConditions: '主虹条件评估',
         primaryBowConditions: '主虹条件',
-        assessSelectedTime: '评估当前时刻',
+        assessSelectedTime: '评估所选时刻',
         assessAgain: '重新评估',
         heightAboveGround: '视点离地高度',
         enterAValidHeightFromToM: '请输入 0–1000 m 的有效离地高度。',

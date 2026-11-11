@@ -5,6 +5,9 @@ import nodeResolve from '@rollup/plugin-node-resolve';
 import rollupSvelte from 'rollup-plugin-svelte';
 import rollupSwc from 'rollup-plugin-swc3';
 import sveltePreprocess from 'svelte-preprocess';
+import { createRequire } from 'node:module';
+import { languageResourceFixture } from './languageResourceFixture';
+import { UI_LANGUAGE_OPTIONS } from '../uiLanguage';
 
 export type RenderComponent = (props: Record<string, unknown>) => string;
 
@@ -94,10 +97,13 @@ export const compileRenderer = async (component: string): Promise<RenderComponen
         } };
         runInNewContext(entry.code, {
             module, exports: module.exports, __testMetrics: hostMetrics,
-            atob, Blob, Response, DecompressionStream,
+            atob, Blob, Response, DecompressionStream, AbortController, DOMException,
+            crypto, TextEncoder, TextDecoder, URL, setTimeout, clearTimeout,
+            fetch: async (url: string) => languageResourceFixture(url),
+            require: createRequire(import.meta.url), __filename: resolve('src/test/compiled.cjs'),
         }, { timeout: 1000 });
-        // Exercise the same bundled decode used by real consumers before rendering any locale.
-        await module.exports.prepareUiLanguage('fr');
+        // Exercise the verified remote resource path before rendering a translated component.
+        for (const { value } of UI_LANGUAGE_OPTIONS) { await module.exports.prepareUiLanguage(value); }
         return props => module.exports.default.render(props).html;
     } finally {
         await bundle.close();

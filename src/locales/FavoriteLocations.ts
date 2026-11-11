@@ -34,7 +34,7 @@ export const labels = defineMessages({
         orderedByDistance: 'Nearest',
         orderedByRecent: 'Most recent',
         orderedByElevation: 'Highest elevation',
-        orderedByLightPollution: 'Lowest pollution',
+        orderedByLightPollution: 'Lowest light pollution',
         sortLabel: 'Sort favorites',
         close: 'Close favorite locations',
         current: 'Current',

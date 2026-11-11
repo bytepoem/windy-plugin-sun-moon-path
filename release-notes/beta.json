@@ -6,6 +6,14 @@
     "summary": "修复设置页空白和面板切换失去响应的问题。",
     "items": [
       {
+        "type": "fixed",
+        "text": "明确所有语言中最小化选项同时隐藏的内容；修正所选日期被写为“今天”的提示，并补全光污染排序、直线距离、中国搜索 API Key 及临时英语恢复的说明，统一不透明度名称。"
+      },
+      {
+        "type": "improved",
+        "text": "简体中文和英语保持内置，其他语言改为首次使用时按需下载并缓存，减少插件下载体积；启动加载失败可重试或临时使用英语，保留原语言偏好。"
+      },
+      {
         "type": "improved",
         "text": "支持 Windy 设置中的 42 种语言，默认跟随 Windy；也可在设置顶部单独选择并记住语言，或切回跟随。语言列表优先显示简体中文、繁体中文和英语。新增语言的机器初译已进行术语与语义复核，尚未逐语言由母语者人工审校；说明图片与历史更新说明仍使用中文或英文。"
       },
@@ -27,6 +35,14 @@
     "title": "Settings and panel navigation fixes",
     "summary": "Fixed blank Settings and unresponsive panel navigation.",
     "items": [
+      {
+        "type": "fixed",
+        "text": "Clarified what each minimize option hides in every language. Fixed messages that called the selected date “today”, and clarified light-pollution sorting, straight-line distance, China search API keys and temporary English recovery. Chinese opacity labels now match the controls."
+      },
+      {
+        "type": "improved",
+        "text": "Simplified Chinese and English remain built in. Other languages download individually on first use and are cached, reducing plugin size. Retry a failed startup load or temporarily use English while keeping your saved preference."
+      },
       {
         "type": "improved",
         "text": "Supports the 42 languages in Windy Settings and follows Windy by default. Choose and remember a separate language at the top of Settings, or switch back to following Windy. Manual language choices start with Simplified Chinese, Traditional Chinese and English, in that order. Machine translations for new languages have received terminology and semantic checks, but not human native-speaker review in every language; guide images and historical update notes remain in Chinese or English."

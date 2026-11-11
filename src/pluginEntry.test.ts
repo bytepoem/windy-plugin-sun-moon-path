@@ -18,6 +18,8 @@ beforeAll(async () => {
         './LanguageChoice.svelte': 'export default class {constructor(options){fixture.choice=options.props;} $destroy(){}}',
         './diagnosticRuntime': 'export const startDiagnosticRuntime=()=>{fixture.runtimeStarts++;return {mounted(){},stop(){},error(stage,error){fixture.errors.push(error);},report:{}};};',
         './localeMessages': 'export const prepareUiLanguage=()=>fixture.preparation;',
+        './languageResources': 'export const configureLanguageLocation=()=>{};',
+        'virtual:diagnostic-build': 'export default {local:false};',
         './pluginPreferences': 'export const loadLanguagePreference=()=>fixture.preference; export const saveLanguagePreference=p=>fixture.saved.push(p);',
         './pluginTranslations': 'export const translations={zh:{diagnosticStartupFailed:"failed"},en:{diagnosticStartupFailed:"failed"}};',
     };
@@ -47,7 +49,7 @@ const setup = (preference = 'auto', host = 'fr') => {
         mounts: [] as { initialLanguageSelection: { language: string; preference: string } }[],
         opens: [] as unknown[], saved: [] as string[], destroyed: 0,
         reports: 0, reportsDestroyed: 0, runtimeStarts: 0, errors: [] as unknown[],
-        choice: null as null | { choose: (preference: string) => void },
+        choice: null as null | { choose: (preference: string) => void; useEnglish: () => void },
     };
     const element = () => ({
         style: {}, removed: false,
@@ -57,7 +59,7 @@ const setup = (preference = 'auto', host = 'fr') => {
     const module = { exports: null as unknown as new (options: { target: unknown }) => {
         onopen: (params?: unknown) => void; $destroy: () => void;
     } };
-    runInNewContext(entryCode, { module, fixture, document: { createElement: element }, console });
+    runInNewContext(entryCode, { module, fixture, document: { createElement: element }, console, AbortController });
     const plugin = new module.exports({ target: element() });
     const flush = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
     return { fixture, plugin, complete, fail, flush };
@@ -107,6 +109,16 @@ describe('asynchronous language bootstrap boundary', () => {
         expect(test.fixture.saved).toEqual(['en']);
         expect(test.fixture.reportsDestroyed).toBe(1);
         expect(test.fixture.runtimeStarts).toBe(2);
+        test.plugin.$destroy();
+    });
+
+    it('uses English temporarily after startup failure without overwriting the saved preference', async () => {
+        const test = setup('ja');
+        test.fail();
+        await test.flush();
+        test.fixture.choice!.useEnglish();
+        expect(test.fixture.mounts[0].initialLanguageSelection).toEqual({ language: 'en', preference: 'en' });
+        expect(test.fixture.saved).toEqual([]);
         test.plugin.$destroy();
     });
 

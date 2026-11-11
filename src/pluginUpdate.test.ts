@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 import {
     checkPluginUpdate as checkUpdate,
@@ -134,6 +135,19 @@ describe('plugin update reminder acknowledgement', () => {
 });
 
 describe('checkPluginUpdate', () => {
+    it('parses the actual local beta preview including external-language guidance', async () => {
+        const result = await checkPluginUpdate({
+            currentVersion: '0.12.5', repositoryUrl,
+            betaNotesUrl: 'https://localhost:9999/release-notes/beta.json',
+            fetchImpl: async url => new Response(readFileSync('release-notes/' + String(url).split('/').at(-1), 'utf8')),
+            sessionCache: null,
+        });
+        expect(result.notesStatus).toBe('loaded');
+        expect(result.channel).toBe('beta');
+        expect(result.notes?.zh.items.some(item => item.text.includes('按需下载'))).toBe(true);
+        expect(result.notes?.en.items.some(item => item.text.includes('download individually'))).toBe(true);
+    });
+
     it('uses an uncached local beta JSON before formal GitHub metadata', async () => {
         const sessionCache = { getItem: vi.fn(), setItem: vi.fn() };
         const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(userNotes));

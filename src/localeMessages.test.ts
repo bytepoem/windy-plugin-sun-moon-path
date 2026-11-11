@@ -1,15 +1,26 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { gunzipSync } from 'node:zlib';
 import { execFileSync } from 'node:child_process';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { packedTranslations } from './locales/packedTranslations';
+import { createHash } from 'node:crypto';
+import { languageManifest } from './languageManifest';
+import { languageResourceFixture } from './test/languageResourceFixture';
 import { prepareUiLanguage } from './localeMessages';
 import { translations } from './pluginTranslations';
 import { messages as pluginMessages } from './locales/plugin';
 import { labels as favoriteLabels } from './locales/FavoriteLocations';
 import { UI_LANGUAGE_OPTIONS } from './uiLanguage';
 
-beforeAll(() => prepareUiLanguage('fr'));
+const sources: Record<string, string> = JSON.parse(readFileSync('src/locales/source.en.json', 'utf8'));
+const resource = (code: string) => {
+    const catalog = JSON.parse(readFileSync('src/locales/generated/' + code + '.json', 'utf8'));
+    return JSON.stringify({ schema: 1, language: code, contract: languageManifest.contract,
+        messages: Object.fromEntries(Object.entries(sources).map(([id, source]) => [source, catalog[id]])) }) + '\n';
+};
+beforeAll(async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => languageResourceFixture(url)));
+    // Runtime consumers below intentionally exercise every language, loading each independently.
+    for (const { value } of UI_LANGUAGE_OPTIONS) { await prepareUiLanguage(value); }
+});
 const placeholders = (text: string) => (text.match(/\{\{\d+\}\}|\{provider\}/g) ?? []).sort();
 const properNames = ['Windy', 'Open-Meteo', 'RainViewer', 'ECMWF', 'GFS', 'ICON', 'CAMS', 'WGS84', 'GCJ-02', 'DNI', 'SQM', 'MSL', 'AMSL', 'AGL', 'Bortle'];
 
@@ -24,26 +35,6 @@ describe('complete translated language payload', () => {
         }
     });
 
-    it('shares a failed decode and permits retry through the real gzip decoder', async () => {
-        vi.resetModules();
-        const fresh = await import('./localeMessages');
-        const nativeDecoder = globalThis.DecompressionStream;
-        let attempts = 0;
-        vi.stubGlobal('DecompressionStream', class {
-            constructor() {
-                attempts += 1;
-                throw new Error('decoder unavailable');
-            }
-        });
-        try {
-            const results = await Promise.allSettled([fresh.prepareUiLanguage('fr'), fresh.prepareUiLanguage('ja')]);
-            expect(results.map(result => result.status)).toEqual(['rejected', 'rejected']);
-            expect(attempts).toBe(1);
-        } finally { vi.stubGlobal('DecompressionStream', nativeDecoder); }
-        await expect(fresh.prepareUiLanguage('fr')).resolves.toBeUndefined();
-        expect(fresh.defineMessages({ zh: { title: '日期' }, en: { title: 'Date' } }).fr.title).toBeTruthy();
-    });
-
     it('matches the 42 language codes observed in Windy settings', () => {
         const windy = 'en,zh-TW,zh,ja,fr,ko,it,ru,nl,cs,tr,pl,sv,fi,ro,el,hu,hr,ca,da,ar,fa,hi,ta,sk,uk,bg,he,is,lt,et,vi,sl,sr,id,th,sq,pt,nb,es,de,bn';
         expect(UI_LANGUAGE_OPTIONS.map(option => option.value).sort()).toEqual(windy.split(',').sort());
@@ -51,14 +42,13 @@ describe('complete translated language payload', () => {
 
     it('contains exactly the readable catalogs with complete messages and preserved parameters', () => {
         const source: Record<string, string> = JSON.parse(readFileSync('src/locales/source.en.json', 'utf8'));
-        const payload = JSON.parse(gunzipSync(Buffer.from(packedTranslations, 'base64')).toString());
-        expect(payload.sources).toEqual(source);
+
         const files = readdirSync('src/locales/generated').filter(file => file.endsWith('.json'));
         expect(files).toHaveLength(40);
         for (const filename of files) {
             const catalog: Record<string, string> = JSON.parse(readFileSync('src/locales/generated/' + filename, 'utf8'));
             expect(Object.keys(catalog).sort(), filename).toEqual(Object.keys(source).sort());
-            expect(payload.languages[filename.slice(0, -5)], filename).toEqual(catalog);
+            expect(createHash('sha256').update(resource(filename.slice(0, -5))).digest('hex')).toBe(languageManifest.hashes[filename.slice(0, -5) as keyof typeof languageManifest.hashes]);
             for (const [id, target] of Object.entries(catalog)) {
                 expect(target.trim(), filename + '/' + id).not.toBe('');
                 expect(placeholders(target), filename + '/' + id).toEqual(placeholders(source[id]));
@@ -69,7 +59,7 @@ describe('complete translated language payload', () => {
                 if (source[id].length > 100) { expect(target, filename + '/' + id).not.toBe(source[id]); }
             }
         }
-        expect(() => execFileSync(process.execPath, ['scripts/pack-translations.mjs', '--check'])).not.toThrow();
+        expect(() => execFileSync(process.execPath, ['scripts/language-resources.mjs', '--check'])).not.toThrow();
     });
 
     it.each(UI_LANGUAGE_OPTIONS)('interpolates dynamic values and both conditional branches in $nativeName', ({ value }) => {

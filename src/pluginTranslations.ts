@@ -1,4 +1,16 @@
 import { defineMessages, localized } from './localeMessages';
+
+/** Startup recovery is displayed in a built-in language before remote copy is ready. */
+export const temporaryEnglishAction = {
+    zh: '临时使用英语（不更改语言偏好）',
+    en: 'Use English for now (keep language preference)',
+};
+
+/** Network-dependent language guidance remains available in both built-in languages. */
+export const languageResourceHelp = {
+    zh: '简体中文和英语无需下载。其他语言首次使用时联网加载，成功后缓存在此浏览器。加载失败可重试；启动时也可临时使用英语，不改变已保存的偏好。',
+    en: 'Simplified Chinese and English need no download. Other languages load online on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup without changing your saved preference.',
+};
 import type { ObservationEvent as DirectionEvent } from './observationPlanner';
 import type { AstronomyInterval } from './solar';
 import type { RadarProvider, RadarOverlayStatus } from './radarOverlay';
@@ -288,7 +300,7 @@ export const translations: Record<UiLanguage, {
         locationResolvingLabel: '地点解析中…',
         elevationLabel: '海拔',
         calculating: '正在计算…',
-        noInterval: '当天无可用时段',
+        noInterval: '所选日期无可用时段',
         intervalUnavailable: '暂不可用',
         timelineEnded: '今日天文时段已结束',
         timelinePrefix: '距离',
@@ -334,7 +346,7 @@ export const translations: Record<UiLanguage, {
             },
             mobileMode: {
                 title: '移动端方位线模式',
-                description: '收起面板默认保留搜索、日期、事件、实时方位和当天事件时间。在设置的“最小化范围”中可进一步隐藏时间栏，或同时隐藏地点日月栏。展开后恢复完整内容，并记住方位线模式或小窗口的选择。',
+                description: '收起面板默认保留搜索、日期、事件、实时方位和所选日期的事件时间。在设置的“最小化范围”中可隐藏事件时间栏，或同时隐藏事件时间栏与地点日月栏。展开后恢复完整内容，并记住方位线模式或小窗口的选择。',
             },
             mapControls: {
                 title: '地图视图按钮',
@@ -342,7 +354,7 @@ export const translations: Record<UiLanguage, {
             },
             radarOverlay: {
                 title: '气象雷达叠加',
-                description: '使用标题栏或移动端窗口上方的降雨云按钮快速开关 RainViewer；开启后按钮高亮，雷达跟随 Windy 时间条切换，透明度可在设置中调整。回波按中央气象台分段色阶显示，数据来源仍为 RainViewer，回波范围和更新时间可能与 Windy 原生雷达不同。',
+                description: '使用标题栏或移动端窗口上方的降雨云按钮快速开关 RainViewer；开启后按钮高亮，雷达跟随 Windy 时间条切换，不透明度可在设置中调整。回波按中央气象台分段色阶显示，数据来源仍为 RainViewer，回波范围和更新时间可能与 Windy 原生雷达不同。',
             },
             lightPollutionOverlay: {
                 title: '光污染地图',
@@ -387,16 +399,16 @@ export const translations: Record<UiLanguage, {
             error: '雷达图层加载失败，请检查网络',
         },
         rainViewerDescription: 'RainViewer 使用无需 Key 的公共接口并按中央气象台色阶显示；拖动 Windy 底部时间条可切换可用历史帧。',
-        radarOpacityLabel: '雷达图层透明度',
+        radarOpacityLabel: '雷达图层不透明度',
         radarOpacityDescription: '实时调整第三方雷达图层的显示强度。0% 为完全透明，100% 为完全不透明。设置会保存在当前浏览器。',
-        lineOpacityLabel: '线条透明度',
+        lineOpacityLabel: '线条不透明度',
         lineOpacityDescription: '调整地图上全部日月方位线、银心视线及云层参考线的显示强度。设置会保存在当前浏览器。',
         show600Label: distance => `显示 ${distance} 点`,
         show600Description: distance => `开启后事件方向线会延伸到 ${distance}，并在该距离增加一个参考点。设置会保存在当前浏览器。`,
         locationSearchHiddenNotice: '地点搜索已隐藏，可在设置中关闭“隐藏地点搜索框”重新显示。',
         hideLocationSearchLabel: '隐藏地点搜索框',
         hideLocationSearchDescription: '开启后不再显示面板顶部的名称和经纬度搜索；已保存的地图 API Key 不会清除。设置会保存在当前浏览器。',
-        locationApiKeyLabel: '国内地址搜索 API Key',
+        locationApiKeyLabel: '中国地点搜索 API Key',
         locationApiKeyPlaceholder: '请输入 API Key',
         locationApiKeyDescription: '可配置高德、百度和腾讯，并在搜索框中切换。各 Key 仅保存在当前浏览器。',
         locationApiKeySave: '保存',
@@ -582,7 +594,7 @@ export const translations: Record<UiLanguage, {
         locationResolvingLabel: 'Resolving place…',
         elevationLabel: 'Elevation',
         calculating: 'Calculating…',
-        noInterval: 'No window today',
+        noInterval: 'No window on the selected date',
         intervalUnavailable: 'Unavailable',
         timelineEnded: 'Today’s astronomy windows have ended',
         timelinePrefix: '',
@@ -648,7 +660,7 @@ export const translations: Record<UiLanguage, {
         minimizeScopeLabel: 'Minimize scope',
         minimizeScopeStandard: 'Default: keep event times and location / Sun / Moon',
         minimizeScopeHideTimes: 'Smaller: hide event times',
-        minimizeScopeHideSummary: 'Smallest: also hide location / Sun / Moon',
+        minimizeScopeHideSummary: 'Smallest: hide event times and location / Sun / Moon',
         minimizeScopeDescription: 'Choose what the minimize button hides on phones and tablets. Expanding restores all content. This setting is saved in this browser.',
         initialOverlayLabel: 'Layer when opening the plugin',
         initialOverlayDescription: 'Lists layers supported by the plugin and available in Windy. Switch immediately and keep using the selected layer whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
@@ -690,7 +702,7 @@ export const translations: Record<UiLanguage, {
         locationSearchHiddenNotice: 'Location search hidden. Turn off “Hide location search” in Settings to show it again.',
         hideLocationSearchLabel: 'Hide location search',
         hideLocationSearchDescription: 'Hide place-name and coordinate search without removing saved map API keys. This setting is saved in this browser.',
-        locationApiKeyLabel: 'Domestic location search API keys',
+        locationApiKeyLabel: 'China location search API keys',
         locationApiKeyPlaceholder: 'Enter API Key',
         locationApiKeyDescription: 'Configure Amap, Baidu, and Tencent, then switch providers in search. Keys stay in this browser.',
         locationApiKeySave: 'Save',

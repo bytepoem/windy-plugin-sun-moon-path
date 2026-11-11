@@ -1,5 +1,5 @@
 import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
-import { packedTranslations } from './locales/packedTranslations';
+import { loadLanguageResource } from './languageResources';
 
 type Translator = (source: string, ...values: unknown[]) => string;
 const LOCALIZE = Symbol('localized-message');
@@ -7,42 +7,17 @@ type LocalizedFunction<Args extends unknown[]> = ((...args: Args) => string) & {
     [LOCALIZE]: (language: UiLanguage) => (...args: Args) => string;
 };
 
-let dictionaries: Map<string, Map<string, string>> | null = null;
-let loading: Promise<void> | null = null;
+const dictionaries = new Map<string, Map<string, string>>();
 const fixedTemplates = new Map<string, { source: string; values: unknown[] }>();
 const interpolate = (source: string, values: unknown[]) => source.replace(/\{\{(\d+)\}\}/g, (_, index: string) => String(values[Number(index)]));
-const placeholders = (source: string) => (source.match(/\{\{\d+\}\}|\{provider\}/g) ?? []).sort().join('|');
 
-/** The complete catalog travels inside the bundle. Install it atomically after validation;
- * a failed decode can be retried and never leaves partially translated components. */
-export const prepareUiLanguage = async (language: UiLanguage): Promise<void> => {
-    if (language === 'zh' || language === 'en' || dictionaries) { return; }
-    if (!loading) {
-        loading = (async () => {
-            const bytes = Uint8Array.from(atob(packedTranslations), character => character.charCodeAt(0));
-            const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-            const payload: { sources: Record<string, string>; languages: Record<string, Record<string, string>> } = await new Response(stream).json();
-            const sources = Object.entries(payload.sources);
-            const next = new Map<string, Map<string, string>>();
-            for (const code of Object.keys(UI_LANGUAGES).filter(value => value !== 'zh' && value !== 'en')) {
-                const catalog = payload.languages[code];
-                if (!catalog || Object.keys(catalog).length !== sources.length || sources.length === 0) {
-                    throw new Error('Incomplete language catalog: ' + code);
-                }
-                const translated = new Map<string, string>();
-                for (const [id, source] of sources) {
-                    const target = catalog[id];
-                    if (typeof target !== 'string' || !target.trim() || placeholders(source) !== placeholders(target)) {
-                        throw new Error('Invalid language message: ' + code + '/' + id);
-                    }
-                    translated.set(source, target);
-                }
-                next.set(code, translated);
-            }
-            dictionaries = next;
-        })().finally(() => { loading = null; });
-    }
-    await loading;
+/** Built-ins require no request. Install only a complete, verified selected catalog. */
+export const prepareUiLanguage = async (language: UiLanguage, signal?: AbortSignal): Promise<void> => {
+    signal?.throwIfAborted();
+    if (language === 'zh' || language === 'en' || dictionaries.has(language)) { return; }
+    const messages = await loadLanguageResource(language, signal);
+    signal?.throwIfAborted();
+    dictionaries.set(language, messages);
 };
 
 const translator = (language: UiLanguage): Translator => (source, ...values) => {

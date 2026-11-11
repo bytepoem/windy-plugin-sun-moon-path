@@ -1,10 +1,11 @@
 <script lang="ts">
     import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, DEFAULT_UI_LANGUAGE, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
-    import { translations } from './pluginTranslations';
+    import { translations, temporaryEnglishAction } from './pluginTranslations';
 
     export let language: UiLanguage = DEFAULT_UI_LANGUAGE;
     export let initialPreference: UiLanguagePreference = 'auto';
     export let choose: (preference: UiLanguagePreference) => void = () => undefined;
+    export let useEnglish: () => void = () => undefined;
     let selected = initialPreference;
     $: text = translations[language];
 </script>
@@ -21,6 +22,7 @@
         </select>
         <button type="submit">{text.retry}</button>
     </form>
+    <button type="button" on:click={useEnglish}>{temporaryEnglishAction[UI_LANGUAGES[language].releaseNotesLanguage]}</button>
 </section>
 
 <style>

@@ -19,7 +19,7 @@ export const labels = defineMessages({
         noResults: '没有找到可定位的地址，请换个关键词。',
         error: '地址搜索失败，请检查 API Key 或稍后重试。',
         suggestions: '地址推荐',
-        distance: '直线',
+        distance: '直线距离',
         elevation: '海拔',
         latitude: '纬度',
         longitude: '经度',
@@ -49,7 +49,7 @@ export const labels = defineMessages({
         error: 'Location search failed. Check the API Key or try again later.',
         suggestions: 'Suggested locations',
         // Straight-line distance to a search result, not direct solar radiation.
-        distance: 'Direct',
+        distance: 'Straight-line distance',
         elevation: 'Elevation',
         latitude: 'Lat',
         longitude: 'Lon',
