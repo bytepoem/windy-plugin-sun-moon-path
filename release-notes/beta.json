@@ -7,6 +7,14 @@
     "items": [
       {
         "type": "fixed",
+        "text": "重开收藏对比或切换日期、机位、数据源时，立即禁用自选时段输入并重新确认当地时间，避免加载期间沿用旧机位的时间上下文。"
+      },
+      {
+        "type": "new",
+        "text": "收藏机位对比新增整天、目标窗口和自选时段，用于同一时区的机位，可比较无月、银河或日落前后条件，并展开查看原始云量、风速与累计降水；跨午夜时标注日期，修正时段行分隔线；Open-Meteo 简写为 OM，顶部标签精简为“数据源”“时段”，与目标窗口紧凑排列。"
+      },
+      {
+        "type": "fixed",
         "text": "调整语言选择框的箭头与右侧边框间距，统一箭头样式并保持文字居中。"
       },
       {
@@ -51,6 +59,14 @@
     "title": "Settings and panel navigation fixes",
     "summary": "Fixed blank Settings and unresponsive panel navigation.",
     "items": [
+      {
+        "type": "fixed",
+        "text": "Reopening comparisons or changing dates, sites or data sources now immediately disables custom-period inputs until local time is confirmed again, preventing the previous site's time context from being used during loading."
+      },
+      {
+        "type": "new",
+        "text": "Favorite comparisons now support whole days, target windows and custom periods for sites in one time zone, with moonless, Milky Way or sunset conditions and original cloud, wind and accumulated precipitation samples. Dates mark midnight crossings and period-row borders are aligned. Open-Meteo is shortened to OM; compact Data source and Period labels share a toolbar with the target-window selector."
+      },
       {
         "type": "fixed",
         "text": "Adjusted the language selector’s arrow spacing from the right edge, matching other navigation arrows while keeping the label centered."

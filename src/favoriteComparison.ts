@@ -59,6 +59,10 @@ export type FavoriteComparisonResult = {
     weatherStatus: 'ready' | 'empty' | 'error';
     dateSelection: WeatherDateSelection;
     dailyWeatherPoints: WeatherPoint[];
+    /** Full forecast retained for windows crossing a local date boundary. */
+    weatherPoints: WeatherPoint[];
+    /** Provider timestamps alone determine weather coverage, independently of CAMS. */
+    forecastPoints: WeatherPoint[];
     windows: ObservationWindow[];
 };
 
@@ -323,6 +327,8 @@ export const createFavoriteComparisonPlanner = (
                                     weatherStatus: 'error',
                                     dateSelection: emptyDateSelection(),
                                     dailyWeatherPoints: [],
+                                    weatherPoints: [],
+                                    forecastPoints: [],
                                     windows: [],
                                 } satisfies FavoriteComparisonResult;
                             }
@@ -356,6 +362,8 @@ export const createFavoriteComparisonPlanner = (
                                     prepared,
                                     weatherStatus: baseWeatherPoints.length > 0 ? 'ready' : 'empty',
                                     dateSelection,
+                                    weatherPoints,
+                                    forecastPoints: baseWeatherPoints,
                                     // Weather rows describe the selected local date, independently of night windows.
                                     dailyWeatherPoints: weatherPoints.filter(point =>
                                         dateInputForInstant(new Date(point.timestamp), prepared.timeZone) === dateInput),
@@ -387,6 +395,8 @@ export const createFavoriteComparisonPlanner = (
                                     weatherStatus: 'error',
                                     dateSelection,
                                     diagnosticError: error,
+                                    weatherPoints: atmosphereOnlyPoints,
+                                    forecastPoints: [],
                                     dailyWeatherPoints: atmosphereOnlyPoints.filter(point =>
                                         dateInputForInstant(new Date(point.timestamp), prepared.timeZone) === dateInput),
                                     windows: buildObservationWindows({

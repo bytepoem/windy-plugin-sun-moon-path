@@ -1,5 +1,6 @@
 <script lang="ts">
     import { messages } from './locales/PluginGuide';
+    import { labels as comparisonLabels } from './locales/FavoriteComparison';
     import CelestialIcon from './CelestialIcon.svelte';
     import { translations, languageResourceHelp } from './pluginTranslations';
     import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
@@ -118,7 +119,7 @@
             </div>
             <div>
                 <dt>{text.featureGuide.comparison.title}</dt>
-                <dd>{text.featureGuide.comparison.description}</dd>
+                <dd>{text.featureGuide.comparison.description} OM = Open-Meteo. {comparisonLabels[uiLanguage].eventRule} {comparisonLabels[uiLanguage].customRule} {comparisonLabels[uiLanguage].invalidPeriod}</dd>
             </div>
             <div>
                 <dt>{text.featureGuide.mobileMode.title}</dt>

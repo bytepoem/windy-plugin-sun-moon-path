@@ -34,6 +34,16 @@
         type AstronomyIntervalKind,
     } from './solar';
     import { DEFAULT_UI_LANGUAGE, type UiLanguage } from './uiLanguage';
+    import ComparisonPeriodDetails from './ComparisonPeriodDetails.svelte';
+    import {
+        comparisonIntervalLabels,
+        comparisonTargetIntervals,
+        resolveComparisonCivilTime,
+        selectComparisonPeriod,
+        type ComparisonMode,
+        type ComparisonTargetWindow,
+        type ComparisonPeriod,
+    } from './favoriteComparisonPeriod';
     import type { PluginDiagnostics } from './pluginDiagnostics';
 
     export let open = false;
@@ -88,6 +98,7 @@
     let previousOpen = false;
     let previousSelectedDate = selectedDate;
     let previousSource = source;
+    let previousInitialModel = initialModel;
     let panelElement: HTMLElement | null = null;
     let model: WeatherModel = 'ecmwf';
     let session: FavoriteComparisonSession | null = null;
@@ -100,6 +111,38 @@
     let modelAbortController: AbortController | null = null;
     let destroyed = false;
     let comparisonMetrics: ComparisonMetric[] = [];
+    let mode: ComparisonMode = 'day';
+    let targetWindow: ComparisonTargetWindow = 'milky-way';
+    let segments: Record<string, 'all' | number> = {};
+    let customStart = `${selectedDate}T18:00`;
+    let customEnd = `${selectedDate}T23:00`;
+    let previousTargets = '';
+    let customDate = selectedDate;
+    let segmentContext = '';
+    let periods = new Map<FavoriteComparisonResult, ComparisonPeriod>();
+    $: targetKey = JSON.stringify(targets);
+    // These assignments must stay visible to Svelte's dependency graph: inputs
+    // and the UTC interval must change in the same flush, even while closed.
+    $: if (selectedDate !== customDate) {
+        customDate = selectedDate;
+        customStart = `${selectedDate}T18:00`;
+        customEnd = `${selectedDate}T23:00`;
+    }
+    $: nextSegmentContext = JSON.stringify([selectedDate, source, targetKey]);
+    $: if (nextSegmentContext !== segmentContext) {
+        segmentContext = nextSegmentContext;
+        segments = {};
+    }
+    // The comparison owns a verified local clock. Never borrow the parent map's
+    // provisional system/previous-location time zone while context is loading.
+    $: customTimeZone = session?.preparedTargets.flatMap(prepared => prepared.status === 'ready' ? [prepared.timeZone] : [])[0] ?? null;
+    $: customStartInstant = customTimeZone ? resolveComparisonCivilTime(customStart, customTimeZone) : null;
+    $: customEndInstant = customTimeZone ? resolveComparisonCivilTime(customEnd, customTimeZone) : null;
+    $: customInterval = customStartInstant !== null && customEndInstant !== null && customEndInstant > customStartInstant
+        ? { start: customStartInstant, end: customEndInstant } : null;
+    $: periods = new Map(results.map(result => [result, selectComparisonPeriod({
+        result, mode, target: targetWindow, segment: segments[result.prepared.target.id] ?? 'all', custom: customInterval,
+    })]));
 
     $: text = labels[language];
     $: comparisonMetrics = [
@@ -115,24 +158,33 @@
         { label: text.visibility, metric: 'visibilityKm', evidenceField: 'visibilityKm' },
         { label: text.aod, metric: 'aod550', evidenceField: 'aod550' },
     ];
-    $: if (open !== previousOpen) {
-        previousOpen = open;
-        if (open) {
-            model = initialModel;
+    // An explicit assignment orders context invalidation before local-time
+    // derivation in the same Svelte flush, including a pending preparation.
+    $: session = synchronizeContext(open, selectedDate, source, targetKey, initialModel);
+
+    /** Input invalidation also runs while closed. Opening and context changes share
+     * one request entry so a new target/date cannot start duplicate preparations.
+     */
+    const synchronizeContext = (isOpen: boolean, date: string, weatherSource: WeatherSource, key: string, hostModel: WeatherModel) => {
+        const opening = isOpen && !previousOpen;
+        const closing = !isOpen && previousOpen;
+        const contextChanged = date !== previousSelectedDate || weatherSource !== previousSource || key !== previousTargets;
+        const hostModelChanged = hostModel !== previousInitialModel;
+        previousOpen = isOpen;
+        previousSelectedDate = date;
+        previousSource = weatherSource;
+        previousTargets = key;
+        previousInitialModel = hostModel;
+        if (opening || hostModelChanged) { model = hostModel; }
+        if (closing) { cancelRequests(); }
+        if (isOpen && (opening || contextChanged)) {
             void prepareComparison();
-            void tick().then(() => panelElement?.focus());
-        } else {
-            cancelRequests();
+            if (opening) { void tick().then(() => { if (!destroyed && open) { panelElement?.focus(); } }); }
+        } else if (isOpen && hostModelChanged && session) {
+            void loadModel(session, hostModel);
         }
-    }
-    $: if (!open) {
-        previousSelectedDate = selectedDate;
-        previousSource = source;
-    } else if (selectedDate !== previousSelectedDate || source !== previousSource) {
-        previousSelectedDate = selectedDate;
-        previousSource = source;
-        void prepareComparison();
-    }
+        return session;
+    };
 
     const cancelRequests = () => {
         prepareRequestId += 1;
@@ -151,6 +203,7 @@
         const requestId = ++modelRequestId;
         const operation = diagnostics?.begin('comparison') ?? 0;
         modelLoading = true;
+        results = [];
         try {
             const nextResults = await nextSession.loadModel(nextModel, abortController.signal);
             if (
@@ -281,7 +334,7 @@
 
     const handlePanelScrollGesture = (event: WheelEvent | TouchEvent) => {
         const target = event.target instanceof Element ? event.target : null;
-        if (!target?.closest('.favorite-comparison__table-wrap')) {
+        if (!target?.closest('.favorite-comparison__table-wrap, .favorite-comparison__conditions, .favorite-comparison__period-controls')) {
             event.preventDefault();
         }
     };
@@ -303,8 +356,8 @@
     const selectedWindow = (result: FavoriteComparisonResult, kind: AstronomyIntervalKind) =>
         result.windows.find(window => window.kind === kind) || null;
 
-    const localTime = (timestamp: number, timeZone: string): string => new Intl.DateTimeFormat('en-GB', {
-        timeZone,
+    const localTime = (timestamp: number, zone: string): string => new Intl.DateTimeFormat('en-GB', {
+        timeZone: zone,
         hour: '2-digit',
         minute: '2-digit',
         hourCycle: 'h23',
@@ -333,10 +386,14 @@
             | 'temperatureC' | 'dewPointC' | 'precipitationMm' | 'windMs' | 'humidityPercent'
             | 'visibilityKm' | 'aod550',
         selectedUnits: UnitPreferences,
+        period: ComparisonPeriod | undefined,
+        copy: typeof labels.zh,
+        weatherSource: WeatherSource,
     ): string => {
-        // Night windows may precede the forecast; weather rows use available samples on the local date.
+        // Keep Svelte dependencies explicit so a period change updates every metric cell.
         const metric = field === 'precipitationMm' ? 'precipMm' : field;
-        const values = result.dailyWeatherPoints.flatMap(point => {
+        const points = field === 'precipitationMm' ? period?.precipitationPoints ?? [] : period?.points ?? [];
+        const values = points.flatMap(point => {
             const value = point[metric];
             return value === null || !Number.isFinite(value) ? [] : [value];
         });
@@ -346,32 +403,42 @@
                 maximum: Math.max(...values),
             }
             : null;
+        const independent = field === 'aod550' || (weatherSource === 'windy' && field === 'visibilityKm');
+        const weatherSamples = result.forecastPoints.filter(point => period?.intervals.some(interval =>
+            point.timestamp >= interval.start && point.timestamp < interval.end));
+        const providerTimestamps = new Set(result.forecastPoints.map(point => point.timestamp));
+        const missingValues = !independent && (field === 'precipitationMm'
+            ? points.filter(point => providerTimestamps.has(point.timestamp)) : weatherSamples)
+            .some(point => point[metric] === null || !Number.isFinite(point[metric]));
+        const withCoverage = (value: string) => missingValues ? `${value} · ${copy.partial}` : value;
         if (!range) {
             if (result.prepared.status === 'ready'
                 && ((field === 'aod550' && result.prepared.aodStatus === 'error')
                     || (field === 'visibilityKm' && result.prepared.visibilityStatus === 'error'))) {
-                return text.atmosphereError;
+                return copy.atmosphereError;
             }
-            const independentField = field === 'aod550' || (source === 'windy' && field === 'visibilityKm');
+            const independentField = field === 'aod550' || (weatherSource === 'windy' && field === 'visibilityKm');
             if (result.weatherStatus === 'error' && !independentField) {
-                return text.weatherError;
+                return copy.weatherError;
             }
-            if (result.dateSelection.coverage !== 'covered') {
-                return text.outsideForecast;
+            if (period?.coverage === 'no-window') { return copy.noWindow; }
+            if (period?.coverage === 'invalid') { return '--'; }
+            if (period?.coverage === 'outside') {
+                return copy.outsideForecast;
             }
-            return '--';
+            return copy.missing;
         }
         if (field === 'windMs') {
-            return formatWindSpeedRange(range, selectedUnits.wind);
+            return withCoverage(formatWindSpeedRange(range, selectedUnits.wind));
         }
         if (field === 'precipitationMm') {
-            return formatPrecipitationRangeMm(range, selectedUnits.precipitation);
+            return withCoverage(formatPrecipitationRangeMm(range, selectedUnits.precipitation));
         }
         if (field === 'visibilityKm') {
-            return formatVisibilityRangeKm(range, selectedUnits.distance);
+            return withCoverage(formatVisibilityRangeKm(range, selectedUnits.distance));
         }
         if (field === 'temperatureC' || field === 'dewPointC') {
-            return formatTemperatureRangeC(range, selectedUnits.temperature);
+            return withCoverage(formatTemperatureRangeC(range, selectedUnits.temperature));
         }
         const format = (value: number) => {
             if (field === 'precipitationMm') {
@@ -386,13 +453,14 @@
             ? format(range.minimum)
             : `${format(range.minimum)}–${format(range.maximum)}`;
         if (field === 'aod550') {
-            return formattedRange;
+            return withCoverage(formattedRange);
         }
-        return `${formattedRange}%`;
+        return withCoverage(`${formattedRange}%`);
     };
 
-    const weatherLabel = (result: FavoriteComparisonResult): string => {
-        const codes = result.dailyWeatherPoints.flatMap(point => {
+    const weatherLabel = (result: FavoriteComparisonResult, period: ComparisonPeriod | undefined, currentLanguage: UiLanguage): string => {
+        const copy = labels[currentLanguage];
+        const codes = (period?.points ?? []).flatMap(point => {
             const code = point.iconCode;
             return code === null ? [] : [code];
         });
@@ -408,13 +476,19 @@
                     dominantCount = count;
                 }
             }
-            return weatherConditionLabel(dominantCode, language);
+            return weatherConditionLabel(dominantCode, currentLanguage);
         }
         if (result.weatherStatus === 'error') {
-            return text.weatherError;
+            return copy.weatherError;
         }
-        return result.dateSelection.coverage === 'covered' ? '--' : text.outsideForecast;
+        const coverage = period?.coverage;
+        return coverage === 'outside' ? copy.outsideForecast : coverage === 'no-window' ? copy.noWindow : copy.missing;
     };
+
+    const coverageLabel = (coverage: ComparisonPeriod['coverage'] | undefined, copy: typeof labels.zh) => coverage === 'full' ? copy.full
+        : coverage === 'partial' ? copy.partial : coverage === 'outside' ? copy.outsideForecast
+        : coverage === 'error' ? copy.weatherError : coverage === 'no-window' ? copy.noWindow
+        : coverage === 'invalid' ? '--' : copy.missing;
 
     const bortleLabel = (result: FavoriteComparisonResult): string => {
         if (result.prepared.status === 'error') {
@@ -510,13 +584,41 @@
             </button>
         </header>
 
-        <label class="favorite-comparison__source">
-            {messages[language].weatherSource}
-            <select bind:value={source}>
-                <option value="windy">Windy</option>
-                <option value="open-meteo">Open-Meteo</option>
-            </select>
-        </label>
+        <div class="favorite-comparison__controls">
+            <label class="favorite-comparison__source">
+                {messages[language].weatherSource}
+                <select bind:value={source} title={source === 'open-meteo' ? 'Open-Meteo' : 'Windy'}>
+                    <option value="windy">Windy</option>
+                    <option value="open-meteo" title="Open-Meteo">OM</option>
+                </select>
+            </label>
+            <div class="favorite-comparison__period-controls">
+                <label>{text.mode}
+                    <select bind:value={mode}>
+                        <option value="day">{text.day}</option>
+                        <option value="target">{text.target}</option>
+                        <option value="custom">{text.custom}</option>
+                    </select>
+                </label>
+            </div>
+            {#if mode === 'target'}
+                <div class="favorite-comparison__target-controls">
+                    <label>
+                        <select aria-label={text.target} bind:value={targetWindow} on:change={() => segments = {}}>
+                            <option value="milky-way">{text.milkyWay}</option>
+                            <option value="moonless-night">{text.moonless}</option>
+                            <option value="sunset">{text.sunset}</option>
+                        </select>
+                    </label>
+                </div>
+            {:else if mode === 'custom'}
+                <div class="favorite-comparison__custom-controls">
+                    <label>{text.start}<input type="datetime-local" step="60" disabled={!customTimeZone} bind:value={customStart} /></label>
+                    <label>{text.end}<input type="datetime-local" step="60" disabled={!customTimeZone} bind:value={customEnd} /></label>
+                </div>
+            {/if}
+        </div>
+        {#if mode === 'custom' && customTimeZone && !customInterval}<p class="favorite-comparison__forecast-note" role="alert">{text.invalidPeriod}</p>{/if}
         {#if prepareStatus === 'loading'}
             <div class="favorite-comparison__message" role="status">
                 <span class="favorite-comparison__spinner" aria-hidden="true"></span>
@@ -529,7 +631,7 @@
             </div>
         {:else}
             <section class="favorite-comparison__conditions" class:loading={modelLoading} aria-label={text.conditions}>
-                <p class="favorite-comparison__forecast-note">{text.conditions}</p>
+                <p class="favorite-comparison__forecast-note">{mode === 'day' ? text.conditions : mode === 'target' ? text.eventRule : text.customRule}</p>
                 {#if modelLoading}
                     <p class="favorite-comparison__model-status" role="status">
                         <span class="favorite-comparison__spinner" aria-hidden="true"></span>
@@ -576,6 +678,36 @@
                             </tr>
                         </thead>
                         <tbody>
+                            <tr class="favorite-comparison__period-row">
+                                <th scope="row">{text.period}</th>
+                                {#each results as result, index (result.prepared.target.id)}
+                                    <td class={`column-${index + 1}`}>
+                                        {#if mode === 'target' && comparisonTargetIntervals(result, targetWindow).length > 1}
+                                            <select aria-label={`${text.target} · ${result.prepared.target.title}`}
+                                                value={segments[result.prepared.target.id] ?? 'all'}
+                                                on:change={event => segments = { ...segments, [result.prepared.target.id]: event.currentTarget.value === 'all' ? 'all' : Number(event.currentTarget.value) }}>
+                                                <option value="all">{text.allSegments}</option>
+                                                {#each comparisonTargetIntervals(result, targetWindow) as interval, segmentIndex}
+                                                    <option value={segmentIndex}>{segmentIndex + 1} · {result.prepared.status === 'ready' ? localTime(interval.start, result.prepared.timeZone) : ''}</option>
+                                                {/each}
+                                            </select>
+                                        {/if}
+                                        {#if result.prepared.status !== 'ready'}
+                                            <span>{text.timeZoneError}</span>
+                                        {:else if periods.get(result)?.intervals.length}
+                                            {#each periods.get(result)?.intervals ?? [] as interval}
+                                                {@const endpoints = comparisonIntervalLabels(interval, result.prepared.timeZone, selectedDate, text.shortDate)}
+                                                <div class="favorite-comparison__interval">
+                                                    <span>{endpoints.start}</span><span aria-hidden="true">–</span><span>{endpoints.end}</span>
+                                                </div>
+                                            {/each}
+                                        {:else}
+                                            <span>{periods.get(result)?.coverage === 'invalid' ? '--' : text.noWindow}</span>
+                                        {/if}
+                                        <small>{coverageLabel(periods.get(result)?.coverage, text)}</small>
+                                    </td>
+                                {/each}
+                            </tr>
                             {#each windowKinds as kind}
                                 <tr
                                     class="favorite-comparison__window-row"
@@ -611,7 +743,7 @@
                                     <span>{text.weather}</span>
                                 </th>
                                 {#each results as result, index (result.prepared.target.id)}
-                                    <td class={`column-${index + 1}`}>{weatherLabel(result)}</td>
+                                    <td class={`column-${index + 1}`}>{weatherLabel(result, periods.get(result), language)}</td>
                                 {/each}
                             </tr>
                             {#each comparisonMetrics as metric}
@@ -625,6 +757,9 @@
                                             result,
                                             metric.evidenceField,
                                             units,
+                                            periods.get(result),
+                                            text,
+                                            source,
                                         )}</td>
                                     {/each}
                                 </tr>
@@ -638,6 +773,14 @@
                         </tbody>
                     </table>
                 </div>
+                <details class="favorite-comparison__details">
+                    <summary>{text.details}</summary>
+                    <p>{text.resolution}</p>
+                    <p>{text.precipitationRule}</p>
+                    {#each results as result (result.prepared.target.id)}
+                        <ComparisonPeriodDetails {result} period={periods.get(result)} {language} {units} />
+                    {/each}
+                </details>
             </section>
 
         {/if}
@@ -652,22 +795,67 @@
 {/if}
 
 <style lang="less">
-    .favorite-comparison__source {
+    .favorite-comparison__controls {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 8px;
-        font-size: 12px;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+        padding: 8px 8px 4px;
     }
-    .favorite-comparison__source select {
-        color: inherit;
-        background: var(--panel-bg, #1d263d);
-        border: 1px solid var(--panel-border);
-        border-radius: 4px;
+    .favorite-comparison__source,
+    .favorite-comparison__period-controls,
+    .favorite-comparison__target-controls,
+    .favorite-comparison__custom-controls,
+    .favorite-comparison__controls label {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        max-width: 100%;
+    }
+    // Target windows share the compact toolbar; custom dates keep a separate row.
+    .favorite-comparison__custom-controls { flex-basis: 100%; }
+    .favorite-comparison__target-controls select { field-sizing: content; }
+    .favorite-comparison__source select,
+    .favorite-comparison__period-controls select,
+    .favorite-comparison__target-controls select,
+    .favorite-comparison__custom-controls input,
+    .favorite-comparison__period-row select {
+        max-width: 100%;
+        min-width: 0;
+        min-height: 30px;
+        box-sizing: border-box;
         padding: 4px 8px;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        color: inherit;
+        background: #0e161f;
         font: inherit;
     }
-    .favorite-comparison__source select:focus-visible { outline: 2px solid #8ac8ff; outline-offset: 2px; }
+    .favorite-comparison__controls select,
+    .favorite-comparison__period-row select {
+        appearance: none;
+        padding-inline: 8px 22px;
+        background-image: linear-gradient(45deg, transparent 50%, #b9c2ce 50%), linear-gradient(135deg, #b9c2ce 50%, transparent 50%);
+        background-position: calc(100% - 11px) 50%, calc(100% - 7px) 50%;
+        background-size: 4px 4px;
+        background-repeat: no-repeat;
+        cursor: pointer;
+    }
+    .favorite-comparison__controls select:focus-visible,
+    .favorite-comparison__controls input:focus-visible,
+    .favorite-comparison__period-row select:focus-visible {
+        outline: 2px solid var(--panel-accent);
+        outline-offset: 2px;
+    }
+    .favorite-comparison__period-row td { padding: 6px 4px; white-space: normal; }
+    .favorite-comparison__period-row select { width: 100%; margin-bottom: 4px; color: var(--panel-text); }
+    .favorite-comparison__interval { display: flex; flex-wrap: wrap; gap: 0 3px; justify-content: center; margin: 2px 0; line-height: 1.5; }
+    .favorite-comparison__interval + .favorite-comparison__interval { margin-top: 6px; }
+    .favorite-comparison__interval span { white-space: nowrap; }
+    .favorite-comparison__period-row small { display: block; margin-top: 4px; color: #d6c592; }
+    .favorite-comparison__details { padding: 8px; }
+    .favorite-comparison__details summary { cursor: pointer; min-height: 28px; }
+    .favorite-comparison__details p { color: var(--panel-muted); margin: 4px 0 8px; }
     .favorite-comparison {
         position: absolute;
         z-index: 25;
@@ -855,6 +1043,7 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.12);
         border-left: 1px solid rgba(255, 255, 255, 0.12);
         text-align: center;
+        vertical-align: middle;
         font-variant-numeric: tabular-nums;
     }
 
@@ -926,32 +1115,37 @@
     }
 
     tbody th {
-        display: grid;
-        grid-template-columns: 14px max-content;
-        gap: 3px;
-        align-items: center;
-        justify-content: center;
+        // Keep table-cell layout so the border spans the full multi-line row.
+        display: table-cell;
+        overflow: hidden;
         color: var(--panel-text);
         font-size: 9px;
         font-weight: 500;
         text-align: center;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
 
+    tbody th > span {
+        display: inline-block;
+        vertical-align: middle;
+    }
+
     tbody th > span:nth-child(2) {
+        max-width: calc(100% - 22px);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
     tbody th > span:first-child {
+        margin-inline-end: 3px;
         color: var(--panel-muted);
         text-align: center;
     }
 
     .favorite-comparison__window-row th > span:first-child {
-        display: grid;
-        place-items: center;
+        display: inline-flex;
     }
 
     .favorite-comparison__window-row svg {
@@ -1117,6 +1311,7 @@
     }
 
     .favorite-comparison.mobile .favorite-comparison__header,
+    .favorite-comparison.mobile .favorite-comparison__controls,
     .favorite-comparison.mobile .favorite-comparison__footer {
         flex: 0 0 auto;
     }
@@ -1126,11 +1321,11 @@
         flex: 1 1 auto;
         flex-direction: column;
         min-height: 0;
-        overflow: hidden;
+        overflow-y: auto;
     }
 
     .favorite-comparison.mobile .favorite-comparison__table-wrap {
-        flex: 1 1 auto;
+        flex: 0 0 auto;
         min-height: 0;
         overflow: auto;
         overscroll-behavior: none;

@@ -335,7 +335,7 @@ export const translations: Record<UiLanguage, {
             },
             comparison: {
                 title: '收藏地点对比',
-                description: '从收藏中选择 2–5 个地点，在同一观测日期下对比无月、银河时段、天气、光污染和月相。天气统计所选当地日期的可用预报，不限于夜间窗口；覆盖可能不完整，缺测保持未知。',
+                description: '从收藏中选择 2–5 个地点，按整天、目标窗口或自选时段对比。目标可选无月、银河或日落前后各一小时；展开条件变化查看原始云量、风速与累计降水。',
             },
             coordinates: {
                 title: '坐标精确定位',
@@ -629,7 +629,7 @@ export const translations: Record<UiLanguage, {
             },
             comparison: {
                 title: 'Favorite location comparison',
-                description: 'Select 2–5 favorites to compare moonless and Milky Way windows, weather, light pollution, and moon phase for the same observing date. Weather summarizes available forecasts for the selected local date, independently of night windows; coverage may be partial and missing values remain unknown.',
+                description: 'Choose Whole day, Target window or Custom period for 2–5 favorites. Targets: moonless, Milky Way or sunset ±1 hour. Expand original cloud, wind and precipitation samples.',
             },
             coordinates: {
                 title: 'Exact coordinate location',

@@ -50,7 +50,7 @@ The desktop title back button supports keyboard focus. In the cloud function men
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
 | Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
 | Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position; independent loading and retry for AOD and supplementary visibility |
-| Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
+| Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution by whole day, target window or custom period |
 | Light pollution map | Overlay Lorenz 2025 sky brightness and use location SQM and estimated Bortle values to shortlist dark-sky photography sites |
 | Radar and display | RainViewer overlays using the China NMC stepped reflectivity palette, Windy units, and collapsed, compact or fullscreen mobile views |
 
@@ -104,7 +104,13 @@ AOD and supplementary visibility for Windy load independently; a failure leaves 
 
 Use the top favorites button to save the current location or search and open existing Windy favorites. Select Compare, choose 2–5 locations and start the comparison to check weather, observing windows, elevation and light pollution for the same date and shortlist alternative shooting locations.
 
-Weather rows summarize available forecasts for each location's selected local date, independently of moonless or Milky Way windows. Coverage may be partial; missing values remain unknown. After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.
+Whole day retains weather summaries for each site's local date. Target window supports moonless or Milky Way windows, or one hour before and after sunset. All windows intersecting the selected date are included by default, with a per-site option to select one segment. Windows crossing midnight show both dates.
+
+OM in Data source means Open-Meteo. Data source, Period and the target-window selector share a compact toolbar and wrap when space is limited.
+
+Custom period uses local dates and times for the compared sites. Use the next date when crossing midnight. This version compares sites in one time zone. Expand Conditions through the period to inspect original cloud, wind and precipitation samples without interpolation. Precipitation retains complete source accumulation periods without proration or summation. Forecast range, partial coverage, outside range, missing data and loading failures are shown separately; unknown conditions do not mean good weather.
+
+After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.
 
 ### Light pollution map, radar and display
 
