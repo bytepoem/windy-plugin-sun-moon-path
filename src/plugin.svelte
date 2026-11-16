@@ -263,7 +263,7 @@
             on:now={jumpToNow}
             on:datetime={event => selectPlanningDateTime(event.detail)}
             on:preview={event => previewPlanningTime(event.detail)}
-            on:commit={() => { planningTimePreview = false; }} />
+            on:commit={() => { planningState = transitionPlanningState(planningState, { type: 'commit' }); }} />
     </div>
 
     <div class="control-grid control-grid--favorites">
@@ -1082,7 +1082,8 @@
     import EventNavigation from './EventNavigation.svelte';
     import MultiDayOverview from './MultiDayOverview.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
-    import { resolvePlanningTime, type PlanningTimeSelection } from './planningTime';
+    import { resolvePlanningTime } from './planningTime';
+    import { createPlanningState, planningDateForLocation, transitionPlanningState } from './planningState';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import { translations } from './pluginTranslations';
@@ -1438,9 +1439,11 @@
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
     $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
     $: horizonVisible = mapTab === 'clouds' && cloudView === 'horizon';
-    let planningSelection: PlanningTimeSelection = { mode: 'instant', timestamp: Date.now() };
-    let planningTimePreview = false;
-    let hostTimeSelectionActive = false;
+    let planningState = createPlanningState(Date.now());
+    let planningSelection = planningState.selection;
+    // Preview/host-input flags alone must not invalidate the civil-date derivation.
+    $: if (planningSelection !== planningState.selection) { planningSelection = planningState.selection; }
+    $: planningTimePreview = planningState.preview;
     let rainbowBody: 'sun' | 'moon' = 'sun';
     let rainbowSecondary = false;
     let rainbowFullCircle = false;
@@ -1463,9 +1466,11 @@
     $: cloudPlanningTimestamp = planningTime.timestamp;
     // Host and one-shot current instants remain absolute across time-zone resolution; derive their
     // civil date only after the selected location's context has arrived.
-    $: if ((planningSelection.mode === 'windy' || planningSelection.mode === 'instant')
-        && resolvedContextLocationKey === locationKey) {
-        selectedDate = dateInputForInstant(new Date(planningSelection.timestamp), timeZone);
+    $: {
+        const instantDate = planningDateForLocation(planningSelection, timeZone, resolvedContextLocationKey === locationKey);
+        // Do not depend on selectedDate here: comparison binds its input before
+        // the change handler releases an absolute instant to a civil clock.
+        if (instantDate !== null) { selectedDate = instantDate; }
     }
     let cloudDirectionRangeKm = 0;
     let cloudBounds: [[number, number], [number, number]] | null = null;
@@ -1966,9 +1971,7 @@
     /** A chosen segment uses its absolute instant, including the following civil date. */
     const selectOverviewDay = (event: CustomEvent<{ timestamp: number; date: string }>) => {
         overviewScrollTop = overviewFrame?.scrollTop ?? 0;
-        hostTimeSelectionActive = false;
-        planningTimePreview = false;
-        planningSelection = { mode: 'instant', timestamp: event.detail.timestamp };
+        planningState = transitionPlanningState(planningState, { type: 'instant', timestamp: event.detail.timestamp });
         eventView = 'single';
     };
 
@@ -2132,27 +2135,17 @@
 
     /** Capture now once; the resolved location supplies its local date and clock. */
     const jumpToNow = () => {
-        hostTimeSelectionActive = false;
-        planningTimePreview = false;
-        planningSelection = { mode: 'instant', timestamp: Date.now() };
+        planningState = transitionPlanningState(planningState, { type: 'instant', timestamp: Date.now() });
     };
 
     /** Model samples and estimated events use UTC timestamps; preserve that instant in the shared clock. */
     const selectTideTime = (timestamp: number) => {
-        hostTimeSelectionActive = false;
-        planningTimePreview = false;
-        planningSelection = { mode: 'instant', timestamp };
+        planningState = transitionPlanningState(planningState, { type: 'instant', timestamp });
     };
 
     /** A manual date edit releases an absolute instant but retains its displayed clock. */
     const selectPlanningDate = () => {
-        hostTimeSelectionActive = false;
-        if (planningSelection.mode === 'windy' || planningSelection.mode === 'instant') {
-            planningSelection = {
-                mode: 'clock',
-                clock: formatLocalClock(new Date(planningSelection.timestamp), timeZone),
-            };
-        }
+        planningState = transitionPlanningState(planningState, { type: 'date', timeZone });
     };
 
     /** Manual edits keep the selected body/long rays, but clear event highlighting. */
@@ -2162,24 +2155,21 @@
         const [date, clock] = value.split('T');
         selectedDate = date;
         if (summaryTab === 'events' && eventView === 'overview') { overviewStartDate = date; }
-        hostTimeSelectionActive = false;
-        planningTimePreview = false;
-        planningSelection = { mode: 'clock', clock };
+        planningState = transitionPlanningState(planningState, { type: 'clock', clock, preview: false });
     };
 
     /** Slider edits preview locally until committed. */
     const previewPlanningTime = (clock: string) => {
-        hostTimeSelectionActive = false;
-        planningTimePreview = true;
-        planningSelection = { mode: 'clock', clock };
+        planningState = transitionPlanningState(planningState, { type: 'clock', clock, preview: true });
     };
 
     /** Both shortcut rows select one exact event instant without changing Tab. */
     const jumpPlanningEvent = (event: string) => {
-        if (eventSkyReadyKey !== astronomyKey || !summaryTimelineItems.some(item => item.kind === event && item.time)) {return;}
-        hostTimeSelectionActive = false;
-        planningSelection = { mode: 'event', event };
-        planningTimePreview = false;
+        const nextState = transitionPlanningState(planningState, {
+            type: 'event', event, events: summaryTimelineItems, ready: eventSkyReadyKey === astronomyKey,
+        });
+        if (nextState === planningState) { return; }
+        planningState = nextState;
         const directionEvent = event === 'dawn' ? 'sunrise' : event === 'dusk' ? 'sunset' : event as CloudTimelineEventType;
         selectedEvent = directionEvent;
         cloudTimelineEvent = directionEvent;
@@ -2195,10 +2185,8 @@
             if (summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)) {return;}
             // Explicitly requesting all directions releases the previous hidden cloud planner.
             if (summaryTab !== 'clouds') {mapTab = 'events';}
-            hostTimeSelectionActive = false;
             selectedEvent = event;
-            planningSelection = { mode: 'current' };
-            planningTimePreview = false;
+            planningState = transitionPlanningState(planningState, { type: 'current' });
         } else {
             jumpPlanningEvent(event);
         }
@@ -2254,13 +2242,13 @@
      */
     const syncRadarTimestamp = (timestampMs: number, source?: string) => {
         radarOverlayController.setTimestamp(timestampMs);
-        if (!isMounted || source === name || !Number.isFinite(timestampMs) || !Number.isFinite(new Date(timestampMs).getTime())
-            || timestampMs === planningTime.timestamp) {return;}
+        if (!isMounted) { return; }
         // Windy's forecast and radar/satellite initialization publish times without
         // a source. Keep local selections until the user operates a host timeline.
-        if (planningSelection.mode !== 'windy' && !source && !hostTimeSelectionActive) {return;}
-        planningTimePreview = false;
-        planningSelection = { mode: 'windy', timestamp: timestampMs };
+        const nextState = transitionPlanningState(planningState, {
+            type: 'host-time', timestamp: timestampMs, source, pluginName: name, currentTimestamp: planningTime.timestamp,
+        });
+        if (nextState !== planningState) { planningState = nextState; }
     };
 
     /** Distinguish host timeline input from automatic time/frame initialization. */
@@ -2269,7 +2257,7 @@
         if (event instanceof KeyboardEvent) {
             if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight')
                 && !event.target.closest('input, textarea, select, [contenteditable]')) {
-                hostTimeSelectionActive = true;
+                planningState = transitionPlanningState(planningState, { type: 'host-input' });
             }
         } else if (event.target.closest([
             '#plugin-progress-bar',
@@ -2278,7 +2266,7 @@
             '#plugin-radar-plus .play-pause',
             '#plugin-radar-plus .radsat__segments',
         ].join(', '))) {
-            hostTimeSelectionActive = true;
+            planningState = transitionPlanningState(planningState, { type: 'host-input' });
         }
     };
 
