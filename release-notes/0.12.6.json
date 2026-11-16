@@ -1,0 +1,24 @@
+{
+  "version": "0.12.6",
+  "releasedAt": "2026-11-16",
+  "zh": {
+    "title": "修复移动端时间条拖动",
+    "summary": "修复按钮透明区域遮挡 Windy 时间条的问题，保留原有紧凑布局。",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "修复移动端圆形控制按钮及关闭按钮的透明区域挡住 Windy 时间条拖动的问题，保留原有按钮位置与紧凑布局。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Mobile timeline dragging fix",
+    "summary": "Fixed transparent button areas blocking Windy’s timeline while preserving the compact layout.",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed transparent areas around mobile circular controls and the close button blocking Windy timeline dragging, while keeping the existing button positions and compact layout."
+      }
+    ]
+  }
+}
