@@ -1,10 +1,14 @@
 {
-  "version": "0.12.5",
-  "releasedAt": "2026-11-05",
+  "version": "0.12.6",
+  "releasedAt": "2026-11-16",
   "zh": {
-    "title": "修复设置与面板切换",
-    "summary": "修复设置页空白和面板切换失去响应的问题。",
+    "title": "修复移动端时间条拖动",
+    "summary": "修复按钮透明区域遮挡 Windy 时间条的问题，保留原有紧凑布局。",
     "items": [
+      {
+        "type": "fixed",
+        "text": "修复移动端圆形控制按钮及关闭按钮的透明区域挡住 Windy 时间条拖动的问题，保留原有按钮位置与紧凑布局。"
+      },
       {
         "type": "fixed",
         "text": "重开收藏对比或切换日期、机位、数据源时，立即禁用自选时段输入并重新确认当地时间，避免加载期间沿用旧机位的时间上下文。"
@@ -56,9 +60,13 @@
     ]
   },
   "en": {
-    "title": "Settings and panel navigation fixes",
-    "summary": "Fixed blank Settings and unresponsive panel navigation.",
+    "title": "Mobile timeline dragging fix",
+    "summary": "Fixed transparent button areas blocking Windy’s timeline while preserving the compact layout.",
     "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed transparent areas around mobile circular controls and the close button blocking Windy timeline dragging, while keeping the existing button positions and compact layout."
+      },
       {
         "type": "fixed",
         "text": "Reopening comparisons or changing dates, sites or data sources now immediately disables custom-period inputs until local time is confirmed again, preventing the previous site's time context from being used during loading."

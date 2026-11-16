@@ -3530,7 +3530,8 @@
         font-size: 0;
         line-height: 1;
         z-index: 1002 !important;
-        pointer-events: auto;
+        /* Only the visible close icon handles input above Windy's timeline. */
+        pointer-events: none;
     }
 
     :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small > .closing-x::before) {
@@ -3538,6 +3539,7 @@
         width: var(--mobile-window-icon-size);
         height: var(--mobile-window-icon-size);
         margin-bottom: -10px;
+        pointer-events: auto;
         place-items: center;
         border-radius: 50%;
         color: #fff;
@@ -3579,6 +3581,8 @@
         cursor: pointer;
         touch-action: manipulation;
         z-index: 1001;
+        /* Transparent space must pass gestures through to Windy's timeline. */
+        pointer-events: none;
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed.favorites_open .mobile-window-control {
@@ -3654,6 +3658,7 @@
         width: var(--mobile-window-icon-size);
         height: var(--mobile-window-icon-size);
         margin-bottom: -10px;
+        pointer-events: auto;
         place-items: center;
         border: 1px solid var(--panel-border);
         border-radius: 50%;
@@ -3698,6 +3703,7 @@
 
     .mobile-window-control:disabled .mobile-window-control__icon {
         background: var(--panel-bg);
+        pointer-events: none;
     }
 
     .mobile-window-control:focus-visible {
@@ -3799,6 +3805,7 @@
         top: env(safe-area-inset-top, 0px) !important;
         right: var(--mobile-window-control-edge) !important;
         align-items: center;
+        pointer-events: auto;
     }
 
     :global(#plugin-windy-plugin-sun-moon-path.plugin-mobile-bottom-small.sun-path-mobile-fullscreen > .closing-x::before) {
@@ -3814,6 +3821,7 @@
     .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-control {
         top: env(safe-area-inset-top, 0px);
         align-items: center;
+        pointer-events: auto;
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .mobile-window-control__icon {
