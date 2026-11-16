@@ -61,6 +61,7 @@
     $: extendedDistanceLabel = `${formatDistanceKm(600, units.distance)} ${units.distance}`;
 </script>
 
+<div class="settings-panel">
 <div class="settings-header">
     <div class="settings-pages" role="group" aria-label={text.settingsTab}>
         <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{messages[uiLanguage].preferences}</button>
@@ -320,8 +321,23 @@
     {/if}
 </section>
 {/if}
+</div>
 
 <style>
+    /* Keep the header fixed; preferences and guide each own one vertical scroller. */
+    .settings-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .settings-panel > :global(.module-about) {
+        flex: 1;
+        min-height: 0;
+        height: auto;
+    }
+
     .language-status { margin: 4px 12px 8px; font-size: 12px; line-height: 1.4; }
     .language-status button {
         margin-inline-start: 6px; min-height: 36px; padding: 4px 8px;

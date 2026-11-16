@@ -11,7 +11,7 @@
       },
       {
         "type": "fixed",
-        "text": "修复切换多日总览时面板高度变化的问题；桌面、移动端小窗口与全屏均使用其他 Tab 的内容区高度，总览内容在面板内滚动。收窄事件与规划 Tab 的下拉箭头按钮，并收紧两侧留白，减少横向占位。"
+        "text": "修复切换多日总览时面板高度变化的问题；桌面、移动端小窗口与全屏均使用其他 Tab 的内容区高度，总览内容在面板内滚动。修复部分语言切换摄影规划子功能时，标签换行导致窗口高度变化的问题。收窄事件与规划 Tab 的下拉箭头按钮，并收紧两侧留白，减少横向占位。"
       },
       {
         "type": "improved",
@@ -101,7 +101,7 @@
       },
       {
         "type": "fixed",
-        "text": "Fixed panel resizing when switching to the multi-day overview. Desktop, compact mobile and fullscreen views now share the content height used by other tabs, with overview content scrolling inside. Narrowed the Events and planning tab dropdown arrow buttons and reduced their side spacing."
+        "text": "Fixed panel resizing when switching to the multi-day overview. Desktop, compact mobile and fullscreen views now share the content height used by other tabs, with overview content scrolling inside. Fixed wrapped labels changing the window height when switching photography planners in some languages. Narrowed the Events and planning tab dropdown arrow buttons and reduced their side spacing."
       },
       {
         "type": "improved",

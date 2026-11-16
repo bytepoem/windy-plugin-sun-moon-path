@@ -5,6 +5,7 @@ import { translations } from './pluginTranslations';
 import { prepareUiLanguage } from './localeMessages';
 import { createCloudSettings } from './cloudProfile';
 import { messages as cloudMessages } from './locales/CloudObstruction';
+import { messages as navigationMessages } from './locales/CloudNavigation';
 import { compileRenderer, type RenderComponent } from './test/renderSvelte';
 
 const catalogs = import.meta.glob<Record<string, Record<UiLanguage, unknown>>>('./locales/*.ts', { eager: true });
@@ -85,6 +86,19 @@ beforeAll(async () => {
 }, 20_000);
 
 describe('compiled language consumers', () => {
+    it.each(['bn', 'cs', 'lt', 'de', 'ar'] as UiLanguage[])('exposes only the selected planning name to assistive technology in %s', language => {
+        for (const view of ['obstruction', 'rainbow', 'horizon', 'tide'] as const) {
+            const html = renderNavigation({ language, active: true, view });
+            const tab = html.match(/<button id="summary-tab-clouds"[\s\S]*?<\/button>/)?.[0];
+            expect(tab).toBeTruthy();
+            // Layout-only names must not become part of the selected Tab's accessible name.
+            const exposedNames = Array.from(tab!.matchAll(/<span\b([^>]*)>([^<>]+)<\/span>/g))
+                .filter(([, attributes]) => !attributes.includes('aria-hidden="true"'))
+                .map(([, , label]) => label.trim());
+            expect(exposedNames).toEqual([navigationMessages[language].views[view]]);
+        }
+    });
+
     it.each(['fr', 'ja', 'zh-TW', 'ar'] as UiLanguage[])('renders cloud column headings as complete phrases in %s', language => {
         const html = renderClouds({
             language, location: { lat: 23, lon: 113 }, forecast: null, status: 'idle', model: 'ecmwf',

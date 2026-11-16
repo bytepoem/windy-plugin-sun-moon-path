@@ -512,16 +512,11 @@
             </span>
         {/if}
 
-        <div
+        <TabPanelFrame
             id="summary-panel"
-            class="summary-panel-frame"
-            class:summary-panel-frame--settings={!isMobileCollapsed && summaryTab === 'settings'}
-            class:summary-panel-frame--events={isMobileCollapsed || summaryTab === 'events'}
-            class:summary-panel-frame--clouds={!isMobileCollapsed && summaryTab === 'clouds'}
-            class:summary-panel-frame--overview={!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
-            role={isMobileCollapsed ? 'region' : 'tabpanel'}
-            aria-label={isMobileCollapsed ? text.eventTab : undefined}
-            aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
+            mode={isMobileCollapsed ? 'collapsed' : isMobileOrTablet ? 'mobile' : 'desktop'}
+            labelledBy={`summary-tab-${summaryTab}`}
+            collapsedLabel={text.eventTab}
         >
             {#if isMounted && overviewStartDate}
                 <!-- Keep the range, expanded rows and scroll container mounted while visiting a single day. -->
@@ -1030,7 +1025,7 @@
                     />
                 </div>
             {/if}
-        </div>
+        </TabPanelFrame>
     </section>
 
     {#if !isMobileOrTablet || isMobileFullscreen}
@@ -1131,6 +1126,7 @@
     } from './pluginPreferences';
     import config from './pluginConfig';
     import PluginSettings from './PluginSettings.svelte';
+    import TabPanelFrame from './TabPanelFrame.svelte';
     import TidePlanning from './TidePlanning.svelte';
     import PluginAbout from './PluginAbout.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
@@ -3523,8 +3519,6 @@
         --weather-tone-cool: #9092ba;
         --weather-tone-mild: #aff5c0;
         --weather-tone-freezing: #f7f7f7;
-        --summary-panel-height: 268px;
-        --events-summary-panel-height: 280px;
         --desktop-weather-panel-height: 592px;
 
         box-sizing: border-box;
@@ -3605,9 +3599,6 @@
     }
 
     .sun-path-panel.mobile_ui {
-        --summary-panel-height: 250px;
-        --events-summary-panel-height: 270px;
-
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -3943,10 +3934,6 @@
     .cloud-view {
         height: 100%;
         min-height: 0;
-    }
-
-    .map-bottom-module--mobile-collapsed .summary-panel-frame {
-        height: auto;
     }
 
     .map-bottom-module--mobile-collapsed .astronomy-panel {
@@ -4673,17 +4660,6 @@
         grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
     }
 
-    .summary-panel-frame--settings {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .summary-panel-frame--settings > :global(.module-about) {
-        flex: 1;
-        min-height: 0;
-        height: auto;
-    }
-
     .summary-tabs button {
         display: flex;
         align-items: center;
@@ -4738,21 +4714,6 @@
         box-shadow: inset 0 0 0 2px var(--panel-accent);
     }
 
-    .summary-panel-frame {
-        height: var(--summary-panel-height);
-        overflow: hidden;
-        background: #1d263d;
-    }
-
-    .summary-panel-frame--events {
-        height: var(--events-summary-panel-height);
-    }
-
-    .summary-panel-frame--clouds {
-        height: 440px;
-        max-height: 65dvh;
-    }
-
     /* The shared Tab frame owns height; long overview content scrolls inside it. */
     .multi-day-frame {
         height: 100%;
@@ -4762,18 +4723,6 @@
     }
 
     .multi-day-frame[hidden] { display: none; }
-
-    /* Desktop summary Tabs share the event height; the standalone weather module has its own frame. */
-    .sun-path-panel:not(.mobile_ui) .summary-panel-frame {
-        height: var(--events-summary-panel-height);
-        max-height: none;
-    }
-
-    /* All expanded mobile Tabs share the event frame, including the overview. */
-    .sun-path-panel.mobile_ui:not(.mobile_collapsed) .summary-panel-frame {
-        height: var(--events-summary-panel-height);
-        max-height: none;
-    }
 
     .desktop-weather-module {
         flex: 0 0 auto;
@@ -5689,13 +5638,6 @@
 
         .astronomy-panel__heading {
             min-height: 38px;
-        }
-    }
-
-    @media (orientation: landscape) {
-        .sun-path-panel.mobile_ui {
-            --summary-panel-height: 256px;
-            --events-summary-panel-height: 276px;
         }
     }
 

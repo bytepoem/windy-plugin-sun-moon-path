@@ -74,7 +74,15 @@
         tabindex={active ? 0 : -1}
         on:click={() => dispatch('activate')}
         on:keydown={event => dispatch('tabkeydown', event)}
-    ><span class="tab-label">{labels[view]}</span></button>
+    >
+        <span class="tab-label">
+            {#each views as candidate}
+                <span class:current={candidate === view} aria-hidden={candidate !== view ? 'true' : undefined}>
+                    {labels[candidate]}
+                </span>
+            {/each}
+        </span>
+    </button>
     <button
         class="arrow"
         bind:this={trigger}
@@ -128,8 +136,19 @@
     button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: -2px; }
     button:hover, .active > button { color: var(--panel-text); }
     button[role='tab'] { flex: 1; min-width: 0; padding: 0; text-align: center; }
-    /* Wrap the translated name within the space left by the separate arrow. */
-    .tab-label { display: block; width: 100%; text-align: center; white-space: normal; overflow-wrap: anywhere; }
+    /* Reserve the tallest translated option at the current width. Switching
+     * planners must not resize the shared Tab bar; only the current name is exposed. */
+    .tab-label {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+        width: 100%;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    .tab-label > span { grid-area: 1 / 1; visibility: hidden; }
+    .tab-label > span.current { visibility: visible; }
     /* Reserve real layout space so the entire button, not just its glyph, clears the title. */
     .arrow { flex: 0 0 24px; align-self: center; display: flex; align-items: center; justify-content: center; width: 24px; min-height: 28px; margin: 4px 2px; padding: 0; border-radius: 4px; color: var(--panel-text); background: rgba(255, 255, 255, 0.06); }
     .arrow:hover, .arrow[aria-expanded='true'] { background: rgba(99, 185, 238, 0.2); }

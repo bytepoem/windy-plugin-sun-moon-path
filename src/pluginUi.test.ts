@@ -329,7 +329,6 @@ describe('plugin astronomy loading presentation', () => {
         const compactScrollLockStart = pluginSource.indexOf(
             '.sun-path-panel.mobile_ui.mobile_compact:not(.mobile_fullscreen) .mobile-scroll-content',
         );
-        const landscapeMediaStart = pluginSource.indexOf('@media (orientation: landscape)');
 
         expect(pluginSource).toContain("&& mobilePanelMode === 'compact'");
         expect(pluginSource).toContain("&& summaryTab === 'events'");
@@ -342,7 +341,6 @@ describe('plugin astronomy loading presentation', () => {
             "'sun-path-mobile-compact',\n            isMobileOrTablet && !isMobileCollapsed && !isMobileFullscreen,",
         );
         expect(compactScrollLockStart).toBeGreaterThanOrEqual(0);
-        expect(compactScrollLockStart).toBeLessThan(landscapeMediaStart);
         expect(pluginSource).toMatch(
             /\.sun-path-panel\.mobile_ui\.mobile_compact:not\(\.mobile_fullscreen\) \.mobile-scroll-content\s*{[\s\S]*?overflow: clip;[\s\S]*?overscroll-behavior-y: none;/,
         );
@@ -697,7 +695,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('visible: shouldLoadVisibleWeatherData');
     });
 
-    it('reserves desktop Events headroom and separates live direction metrics', () => {
+    it('separates live direction metrics within the shared Tab viewport', () => {
         const desktopMetricRule = pluginSource.match(
             /\.live-position \.live-position__metric\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
@@ -710,23 +708,9 @@ describe('plugin astronomy loading presentation', () => {
         const mobileMetricRule = mobileSource.match(
             /\.live-position \.live-position__metric\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
-        const landscapeStart = pluginSource.indexOf('@media (orientation: landscape)');
-        const landscapeEnd = pluginSource.indexOf('@media (prefers-reduced-motion: reduce)', landscapeStart);
-        const landscapeSource = pluginSource.slice(landscapeStart, landscapeEnd);
-
-        expect(pluginSource).toContain("class:summary-panel-frame--events={isMobileCollapsed || summaryTab === 'events'}");
         expect(pluginSource).toContain(
             'grid-template-columns: minmax(112px, 1fr) max-content minmax(112px, 1fr);',
         );
-        expect(pluginSource).toContain(
-            '--summary-panel-height: 268px;\n        --events-summary-panel-height: 280px;',
-        );
-        expect(pluginSource).toContain(
-            '--summary-panel-height: 250px;\n        --events-summary-panel-height: 270px;',
-        );
-        expect(landscapeSource).toContain('--summary-panel-height: 256px;');
-        expect(landscapeSource).toContain('--events-summary-panel-height: 276px;');
-        expect(pluginSource).toContain('height: var(--events-summary-panel-height);');
         expect(pluginSource).toContain('column-gap: 0.5ch;');
         expect(desktopMetricRule).toContain('grid-template-columns: 7ch 4.4ch 5.1ch;');
         expect(desktopMetricRule).toContain('column-gap: 4px;');
