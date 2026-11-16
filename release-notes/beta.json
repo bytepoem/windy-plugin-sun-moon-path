@@ -3,165 +3,45 @@
   "releasedAt": "2026-11-16",
   "zh": {
     "title": "摄影规划、多语言与反馈",
-    "summary": "新增多日总览、拍摄时段对比和反馈入口，完善多语言体验与紧凑布局。",
+    "summary": "新增多日摄影规划与机位时段对比，支持 42 种语言，并提供反馈入口。",
     "items": [
       {
         "type": "new",
-        "text": "「关于」赞助入口下方新增紧凑的「反馈与建议」按钮，可提交 Bug、功能建议或其他反馈，并附上插件版本与可选截图。"
-      },
-      {
-        "type": "fixed",
-        "text": "修复短观测窗口缺少瞬时预报点时，相交的累计降水与原始累计区间被隐藏的问题；其他指标仍保留缺测状态。"
-      },
-      {
-        "type": "fixed",
-        "text": "修复切换多日总览时面板高度变化的问题；桌面、移动端小窗口与全屏均使用其他 Tab 的内容区高度，总览内容在面板内滚动。修复部分语言切换摄影规划子功能时，标签换行导致窗口高度变化的问题。收窄事件与规划 Tab 的下拉箭头按钮，并收紧两侧留白，减少横向占位。"
-      },
-      {
-        "type": "improved",
-        "text": "7 天总览统一使用图标对比表，图标下方配小号指标名称，中文「观测日期」「预报范围」表头按词组分成两行。支持日期「竖向 / 横向」切换：横向日期为列、指标为行，竖向日期为行、指标为列；首列固定，支持滚动，选择日期查看窗口与原始预报点。保留周末标记、单位、指标提示和无障碍标签；修正切换按钮的分隔边框。"
-      },
-      {
-        "type": "improved",
-        "text": "7 天总览补全天气状况、降水、气温、湿度、能见度、AOD 与露点，和云量、风速紧凑排列；展开可查看全部指标的原始预报点。降水保留来源累计区间，不拆分、不求和；AOD、能见度独立显示加载与失败状态，并可分别重试。"
-      },
-      {
-        "type": "improved",
-        "text": "月度天文日历改为周日开头，周六、周日在月度网格和 7 天总览中统一以暖色、加粗及下划线突出显示。"
-      },
-      {
-        "type": "improved",
-        "text": "多日总览的数据源与预报模型改为与天气表一致的分段按钮，可直接切换 Windy / Open-Meteo 及 EC / GFS / ICON，保持紧凑排列。"
-      },
-      {
-        "type": "fixed",
-        "text": "统一移动端事件与摄影规划下拉菜单项的高度、上下内边距及箭头按钮留白；修正多日总览触屏控件过高，统一按钮、选择框与日期框高度，收紧日列表、展开详情和月度网格间距，收窄开始日期框并移除日历图标。"
+        "text": "多日总览：在「事件」中比较未来 7 天的拍摄窗口与天气，或查看 30 天天文日历，快速选择拍摄日期。"
       },
       {
         "type": "new",
-        "text": "「事件」下拉菜单新增多日总览，按无月、银河或日落前后目标比较 7 天窗口内天气，或用月度天文查看连续 30 天；单日与总览通过下拉菜单切换，保留浏览范围，窗口可定位到单日时刻。跨午夜、多段窗口、天气覆盖、缺测和加载失败分别提示；控件、日期与天气紧凑排列，减少间距，规则说明默认折叠，字号沿用现有面板风格。"
-      },
-      {
-        "type": "fixed",
-        "text": "重开收藏对比或切换日期、机位、数据源时，立即禁用自选时段输入并重新确认当地时间，避免加载期间沿用旧机位的时间上下文。"
+        "text": "机位时段对比：收藏机位支持按整天、无月、银河、日落前后或自选时段比较天气，目前限同一时区。"
       },
       {
         "type": "new",
-        "text": "收藏机位对比新增整天、目标窗口和自选时段，用于同一时区的机位，可比较无月、银河或日落前后条件，并展开查看原始云量、风速与累计降水；跨午夜时标注日期，修正时段行分隔线；Open-Meteo 简写为 OM，顶部标签精简为“数据源”“时段”，与目标窗口紧凑排列。"
-      },
-      {
-        "type": "fixed",
-        "text": "调整语言选择框的箭头与右侧边框间距，统一箭头样式并保持文字居中。"
-      },
-      {
-        "type": "fixed",
-        "text": "事件时刻标签按各语言的完整语序显示，避免事件名与“时间”粘连；修正部分天气、天空盘、收藏排序和功能说明的译名与语法，并同步相关入口和说明引用。"
-      },
-      {
-        "type": "fixed",
-        "text": "修正孟加拉语降水、荷兰语中层云、日语和韩语彩虹方向图的译名，并统一丹麦语与挪威语的地图方位线术语，避免误解为行为准则。"
-      },
-      {
-        "type": "fixed",
-        "text": "精简日语「关于」标签和更新徽标，修正日语天气、云层表头与说明，以及部分语言把事件倒计时译成「下一步」的问题。"
-      },
-      {
-        "type": "fixed",
-        "text": "明确所有语言中最小化选项同时隐藏的内容；修正所选日期被写为“今天”的提示，并补全光污染排序、直线距离、中国搜索 API Key 及临时英语恢复的说明，统一不透明度名称。"
+        "text": "反馈与建议：在「关于」中提交问题或功能建议，可附截图。"
       },
       {
         "type": "improved",
-        "text": "简体中文和英语保持内置，其他语言改为首次使用时按需下载并缓存，减少插件下载体积；启动加载失败可重试或临时使用英语，保留原语言偏好。"
-      },
-      {
-        "type": "improved",
-        "text": "支持 Windy 设置中的 42 种语言，默认跟随 Windy；也可在设置顶部单独选择并记住语言，或切回跟随。语言列表优先显示简体中文、繁体中文和英语。新增语言的机器初译已进行术语与语义复核，尚未逐语言由母语者人工审校；说明图片与历史更新说明仍使用中文或英文。"
-      },
-      {
-        "type": "fixed",
-        "text": "修复窄屏下较长的功能标签相互重叠、遮挡相邻按钮的问题，完整显示文字并保留规划下拉箭头的操作空间。"
+        "text": "多语言：支持 42 种语言，可跟随 Windy 或单独设置；其他语言按需下载并缓存，减小插件体积。新增翻译尚未全部经母语者审校。"
       }
     ]
   },
   "en": {
     "title": "Photography planning, languages and feedback",
-    "summary": "Adds multi-day overviews, shooting-window comparisons and feedback, with improved language support and compact layouts.",
+    "summary": "Plan shoots across days, compare time windows at favorite sites, choose from 42 languages and share feedback.",
     "items": [
       {
         "type": "new",
-        "text": "Added a compact Feedback button below author support in About to report bugs, suggest features or share other feedback, including the plugin version and optional screenshots."
-      },
-      {
-        "type": "fixed",
-        "text": "Fixed overlapping rain accumulations and their original periods being hidden when a short observing window contains no instantaneous forecast samples. Other metrics retain their missing-data state."
-      },
-      {
-        "type": "fixed",
-        "text": "Fixed panel resizing when switching to the multi-day overview. Desktop, compact mobile and fullscreen views now share the content height used by other tabs, with overview content scrolling inside. Fixed wrapped labels changing the window height when switching photography planners in some languages. Narrowed the Events and planning tab dropdown arrow buttons and reduced their side spacing."
-      },
-      {
-        "type": "improved",
-        "text": "The seven-day overview now uses one icon comparison table with small metric names below each icon. Chinese observing-date and forecast-range headings use two lines split at word boundaries. Horizontal puts dates in columns and metrics in rows; Vertical transposes those axes. The first column stays fixed while scrolling. Select a date for windows and original samples. Weekend markers, units, tooltips and accessible labels are retained, and the switch-button divider is fixed."
-      },
-      {
-        "type": "improved",
-        "text": "The seven-day overview now adds weather conditions, precipitation, temperature, humidity, visibility, AOD and dew point alongside cloud cover and wind in compact rows, with original samples for every metric. Precipitation retains source accumulation periods without splitting or summation. AOD and visibility show independent loading and failure states, with separate retries."
-      },
-      {
-        "type": "improved",
-        "text": "Monthly astronomy calendars now start on Sunday. Saturdays and Sundays use warm, bold, underlined dates in both the monthly grid and seven-day overview."
-      },
-      {
-        "type": "improved",
-        "text": "The multi-day overview now uses the weather table's segmented buttons to switch directly between Windy / Open-Meteo and EC / GFS / ICON in a compact layout."
-      },
-      {
-        "type": "fixed",
-        "text": "Matched mobile Events and photography-planning dropdown row heights, vertical padding and arrow-button spacing. Fixed oversized touch controls in the multi-day overview, aligned button, select and date-input heights, tightened day rows, expanded details and the monthly grid, and narrowed the start-date field while removing its calendar icon."
+        "text": "Multi-day overview: compare shooting windows and weather over seven days in Events, or browse a 30-day astronomy calendar to choose a shooting date."
       },
       {
         "type": "new",
-        "text": "The Events dropdown now switches between single-day events and a multi-day overview, retaining the browsing range. Compare seven days of weather within moonless, Milky Way or sunset windows, or browse 30 days of astronomy; select a window to open its single-day time. Cross-midnight windows, separate segments, forecast coverage, missing data and loading failures remain distinct. Controls, dates and weather use compact rows and spacing, with rules folded by default and typography matching existing panels."
-      },
-      {
-        "type": "fixed",
-        "text": "Reopening comparisons or changing dates, sites or data sources now immediately disables custom-period inputs until local time is confirmed again, preventing the previous site's time context from being used during loading."
+        "text": "Site comparisons: compare favorite sites over whole days, moonless, Milky Way, sunset or custom windows. Currently limited to sites in one time zone."
       },
       {
         "type": "new",
-        "text": "Favorite comparisons now support whole days, target windows and custom periods for sites in one time zone, with moonless, Milky Way or sunset conditions and original cloud, wind and accumulated precipitation samples. Dates mark midnight crossings and period-row borders are aligned. Open-Meteo is shortened to OM; compact Data source and Period labels share a toolbar with the target-window selector."
-      },
-      {
-        "type": "fixed",
-        "text": "Adjusted the language selector’s arrow spacing from the right edge, matching other navigation arrows while keeping the label centered."
-      },
-      {
-        "type": "fixed",
-        "text": "Event-time labels now follow each language’s word order and spacing. Corrected terminology and grammar in weather, sky charts, favorite sorting and feature guidance, with matching control labels and guide references."
-      },
-      {
-        "type": "fixed",
-        "text": "Corrected Bengali precipitation, Dutch mid-level cloud and Japanese/Korean rainbow direction-chart labels. Clarified map azimuth-line terminology in Danish and Norwegian so it is not confused with guidelines."
-      },
-      {
-        "type": "fixed",
-        "text": "Shortened the Japanese About tab and update badge, corrected Japanese weather labels and explanations, and fixed event countdown labels translated as a navigation action in several languages."
-      },
-      {
-        "type": "fixed",
-        "text": "Clarified what each minimize option hides in every language. Fixed messages that called the selected date “today”, and clarified light-pollution sorting, straight-line distance, China search API keys and temporary English recovery. Chinese opacity labels now match the controls."
+        "text": "Feedback: report issues or suggest features from About, with optional screenshots."
       },
       {
         "type": "improved",
-        "text": "Simplified Chinese and English remain built in. Other languages download individually on first use and are cached, reducing plugin size. Retry a failed startup load or temporarily use English while keeping your saved preference."
-      },
-      {
-        "type": "improved",
-        "text": "Supports the 42 languages in Windy Settings and follows Windy by default. Choose and remember a separate language at the top of Settings, or switch back to following Windy. Manual language choices start with Simplified Chinese, Traditional Chinese and English, in that order. Machine translations for new languages have received terminology and semantic checks, but not human native-speaker review in every language; guide images and historical update notes remain in Chinese or English."
-      },
-      {
-        "type": "fixed",
-        "text": "Fixed long tab labels overlapping and blocking adjacent buttons on narrow screens. Labels remain fully visible and the planning dropdown arrow retains its own space."
+        "text": "Languages: choose from 42 languages, follow Windy or set your own. Other languages download individually and are cached to reduce plugin size. New translations have not all been reviewed by native speakers."
       }
     ]
   }
