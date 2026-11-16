@@ -45,6 +45,7 @@
         <p>{messages[uiLanguage].useTheNavigationDropdownForCloudsRainbow}</p>
         <p>{text.keyboardNavigationDescription}</p>
         <p lang={UI_LANGUAGES[uiLanguage].releaseNotesLanguage === 'zh' ? 'zh-CN' : 'en'}>{languageResourceHelp[UI_LANGUAGES[uiLanguage].releaseNotesLanguage]}</p>
+        <p>{text.feedbackGuideHint}</p>
         <p>{messages[uiLanguage].forIncompleteDisplaysOrLoadingErrorsExpand}</p>
     </section>
 

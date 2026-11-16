@@ -1,10 +1,14 @@
 {
-  "version": "0.12.6",
+  "version": "0.13.0",
   "releasedAt": "2026-11-16",
   "zh": {
-    "title": "修复移动端时间条拖动",
-    "summary": "修复按钮透明区域遮挡 Windy 时间条的问题，保留原有紧凑布局。",
+    "title": "摄影规划、多语言与反馈",
+    "summary": "新增多日总览、拍摄时段对比和反馈入口，完善多语言体验与紧凑布局。",
     "items": [
+      {
+        "type": "new",
+        "text": "「关于」赞助入口下方新增紧凑的「反馈与建议」按钮，可提交 Bug、功能建议或其他反馈，并附上插件版本与可选截图。"
+      },
       {
         "type": "fixed",
         "text": "修复短观测窗口缺少瞬时预报点时，相交的累计降水与原始累计区间被隐藏的问题；其他指标仍保留缺测状态。"
@@ -36,10 +40,6 @@
       {
         "type": "new",
         "text": "「事件」下拉菜单新增多日总览，按无月、银河或日落前后目标比较 7 天窗口内天气，或用月度天文查看连续 30 天；单日与总览通过下拉菜单切换，保留浏览范围，窗口可定位到单日时刻。跨午夜、多段窗口、天气覆盖、缺测和加载失败分别提示；控件、日期与天气紧凑排列，减少间距，规则说明默认折叠，字号沿用现有面板风格。"
-      },
-      {
-        "type": "fixed",
-        "text": "修复移动端圆形控制按钮及关闭按钮的透明区域挡住 Windy 时间条拖动的问题，保留原有按钮位置与紧凑布局。"
       },
       {
         "type": "fixed",
@@ -80,21 +80,17 @@
       {
         "type": "fixed",
         "text": "修复窄屏下较长的功能标签相互重叠、遮挡相邻按钮的问题，完整显示文字并保留规划下拉箭头的操作空间。"
-      },
-      {
-        "type": "fixed",
-        "text": "修复 Windy 新增飞行危险图层后设置页空白、切换云层和关于失去响应的问题。"
-      },
-      {
-        "type": "improved",
-        "text": "启动图层选项支持飞行危险，并只展示插件支持且当前 Windy 提供的图层。"
       }
     ]
   },
   "en": {
-    "title": "Mobile timeline dragging fix",
-    "summary": "Fixed transparent button areas blocking Windy’s timeline while preserving the compact layout.",
+    "title": "Photography planning, languages and feedback",
+    "summary": "Adds multi-day overviews, shooting-window comparisons and feedback, with improved language support and compact layouts.",
     "items": [
+      {
+        "type": "new",
+        "text": "Added a compact Feedback button below author support in About to report bugs, suggest features or share other feedback, including the plugin version and optional screenshots."
+      },
       {
         "type": "fixed",
         "text": "Fixed overlapping rain accumulations and their original periods being hidden when a short observing window contains no instantaneous forecast samples. Other metrics retain their missing-data state."
@@ -126,10 +122,6 @@
       {
         "type": "new",
         "text": "The Events dropdown now switches between single-day events and a multi-day overview, retaining the browsing range. Compare seven days of weather within moonless, Milky Way or sunset windows, or browse 30 days of astronomy; select a window to open its single-day time. Cross-midnight windows, separate segments, forecast coverage, missing data and loading failures remain distinct. Controls, dates and weather use compact rows and spacing, with rules folded by default and typography matching existing panels."
-      },
-      {
-        "type": "fixed",
-        "text": "Fixed transparent areas around mobile circular controls and the close button blocking Windy timeline dragging, while keeping the existing button positions and compact layout."
       },
       {
         "type": "fixed",
@@ -170,14 +162,6 @@
       {
         "type": "fixed",
         "text": "Fixed long tab labels overlapping and blocking adjacent buttons on narrow screens. Labels remain fully visible and the planning dropdown arrow retains its own space."
-      },
-      {
-        "type": "fixed",
-        "text": "Fixed blank Settings and unresponsive Clouds/About navigation after Windy introduced the Flight dangers layer."
-      },
-      {
-        "type": "improved",
-        "text": "Startup layer choices now include Flight dangers and only list layers supported by the plugin and available in Windy."
       }
     ]
   }

@@ -53,6 +53,7 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.6/plugin.min.
 | 收藏对比 | 复用 Windy 收藏，按整天、目标窗口或自选时段比较天气、天文事件、海拔与光污染 |
 | 光污染地图 | 叠加 Lorenz 2025 天空亮度地图，结合机位 SQM 与估算 Bortle 筛选暗夜拍摄地点 |
 | 雷达与显示 | 按中央气象台分段色阶叠加 RainViewer 雷达；单位跟随 Windy，移动端支持收起、小窗口与全屏 |
+| 反馈与建议 | 从「关于」打开中英双语问卷，提交 Bug、功能建议或其他反馈 |
 
 ## 功能怎么用
 
@@ -152,6 +153,8 @@ npm start
 
 ## 反馈与许可
 
+在「关于」的赞助入口下方点击「反馈与建议」，或打开[反馈问卷](https://tally.so/r/jeoe2Q)，提交 Bug、功能建议或其他反馈。反馈类型、详细描述和插件版本为必填；截图、设备与浏览器、联系邮箱选填。提交成功后会打开支持作者页面，打赏完全自愿。
+
 界面显示不完整或加载异常时，可展开「关于」底部的「查看诊断信息」并复制报告，随问题反馈提供。初始化失败时也会显示诊断入口。报告包含版本、运行环境、加载状态和脱敏错误，不包含机位坐标、收藏或 API Key；插件文件本身未能加载时，仍需提供截图和浏览器错误信息。
 
-[提交问题或建议](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [作者 bytepoem](https://github.com/bytepoem) · [小红书关注](https://xhslink.cn/o/rXpBcBK0Qy) · [爱发电自愿打赏](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)
+[反馈问卷](https://tally.so/r/jeoe2Q) · [GitHub Issues](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [作者 bytepoem](https://github.com/bytepoem) · [小红书关注](https://xhslink.cn/o/rXpBcBK0Qy) · [爱发电自愿打赏](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)

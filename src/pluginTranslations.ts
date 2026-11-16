@@ -162,6 +162,9 @@ export const translations: Record<UiLanguage, {
     aboutVersionLabel: string;
     aboutCurrentVersionDateLabel: string;
     aboutLinksLabel: string;
+    aboutFeedbackLabel: string;
+    aboutFeedbackHint: string;
+    feedbackGuideHint: string;
     aboutGithubLabel: string;
     aboutIssuesLabel: string;
     aboutStarLabel: string;
@@ -440,6 +443,9 @@ export const translations: Record<UiLanguage, {
         aboutVersionLabel: '版本',
         aboutCurrentVersionDateLabel: '更新日期',
         aboutLinksLabel: '项目链接',
+        aboutFeedbackLabel: '反馈与建议',
+        aboutFeedbackHint: '报告 Bug、提出功能建议或其他反馈',
+        feedbackGuideHint: '在「关于 → 反馈与建议」提交 Bug、功能建议或其他反馈，请填写插件版本。',
         aboutGithubLabel: 'GitHub',
         aboutIssuesLabel: 'Issues',
         aboutStarLabel: 'Star',
@@ -738,6 +744,9 @@ export const translations: Record<UiLanguage, {
         aboutVersionLabel: 'Version',
         aboutCurrentVersionDateLabel: 'Updated',
         aboutLinksLabel: 'Project links',
+        aboutFeedbackLabel: 'Feedback',
+        aboutFeedbackHint: 'Report a bug, suggest a feature, or share other feedback.',
+        feedbackGuideHint: 'Use About → Feedback to report bugs, suggest features, or share other feedback. Include your plugin version.',
         aboutGithubLabel: 'GitHub',
         aboutIssuesLabel: 'Issues',
         aboutStarLabel: 'Star', // GitHub repository action; not the celestial object.

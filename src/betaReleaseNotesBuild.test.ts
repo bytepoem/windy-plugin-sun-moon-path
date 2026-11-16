@@ -18,10 +18,12 @@ describe('beta release notes development asset', () => {
         };
         const formalNotes = JSON.parse(formalNotesSource) as typeof notes;
 
-        expect(notes.version).toBe('0.12.6');
+        expect(notes.version).toBe('0.13.0');
         expect(notes.releasedAt).toBe('2026-11-16');
-        // Local preview can include new changes without rewriting the published snapshot.
-        expect(formalNotes.version).toBe(notes.version);
+        // Development notes retain their own version after merging a formal patch release.
+        expect(formalNotes.version).toBe('0.12.6');
+        expect(formalNotes.zh.items).toHaveLength(1);
+        expect(formalNotes.en.items).toHaveLength(1);
         expect(notes.zh.items.length).toBeGreaterThan(0);
         expect(notes.en.items.length).toBeGreaterThan(0);
         expect(pluginSource).toContain("import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';");
@@ -39,6 +41,34 @@ describe('beta release notes development asset', () => {
 /** Exercise real release files through the same parser used by installed plugins. */
 describe('release note publishing contract', () => {
     const sources = import.meta.glob('../release-notes/*.json', { query: '?raw', import: 'default', eager: true });
+
+    it('keeps published changes out of the next-minor development preview', async () => {
+        const result = await checkPluginUpdate({
+            currentVersion: JSON.parse(packageSource).version,
+            repositoryUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
+            betaNotesUrl: 'https://localhost:9999/release-notes/beta.json',
+            sessionCache: null,
+            fetchImpl: async url => {
+                const filename = String(url).split('/').at(-1);
+                const source = sources[`../release-notes/${filename}`];
+                return new Response(source as string | undefined, { status: source ? 200 : 404 });
+            },
+        });
+
+        expect(result.channel).toBe('beta');
+        expect(result.latestVersion).toBe('0.13.0');
+        expect(result.notesStatus).toBe('loaded');
+        expect(result.seriesNotes.map(notes => notes.version)).toEqual(['0.13.0']);
+        for (const language of ['zh', 'en'] as const) {
+            const publishedTexts = Object.entries(sources)
+                .filter(([path]) => !path.endsWith('/beta.json'))
+                .flatMap(([, source]) => JSON.parse(source as string)[language].items.map((item: { text: string }) => item.text));
+            for (const item of result.notes?.[language].items ?? []) {
+                expect(publishedTexts).not.toContain(item.text);
+            }
+        }
+    });
+
     it.each(['0.9.1', '0.10.1', '0.10.2', '0.10.3', '0.10.4', '0.11.0', '0.11.1', '0.11.2', '0.11.3', '0.11.4', '0.12.0', '0.12.1', '0.12.2', '0.12.3', '0.12.4', '0.12.5', '0.12.6'])('loads the full current snapshot for installed %s', async currentVersion => {
         const manifest = JSON.parse(packageSource);
         const requested: string[] = [];

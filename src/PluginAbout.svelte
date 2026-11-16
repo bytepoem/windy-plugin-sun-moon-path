@@ -64,6 +64,12 @@
                 </svg>
                 <span>{text.aboutSupportLabel}</span>
             </a>
+            <a class="about-actions__feedback" href="https://tally.so/r/jeoe2Q" target="_blank" rel="noopener noreferrer" title={text.aboutFeedbackHint}>
+                <span>{text.aboutFeedbackLabel}</span>
+                <svg class="about-feedback-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                    <path d="M6 3H3v10h10v-3M9 3h4v4M7 9l6-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </a>
         </div>
         <p>{text.aboutStarHint}</p>
         <div
@@ -517,7 +523,19 @@
         outline-offset: 2px;
     }
 
-    .about-actions__issues {
+    .about-actions a.about-actions__feedback {
+        grid-column: 1 / -1;
+        gap: 6px;
+    }
+
+    .about-feedback-icon {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+    }
+
+    .about-actions__issues,
+    .about-actions__feedback {
         --about-action-border: #90c4e8;
         --about-action-text: #164c70;
         --about-action-bg: #cce8fa;

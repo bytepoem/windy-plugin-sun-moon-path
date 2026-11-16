@@ -53,6 +53,7 @@ The desktop title back button supports keyboard focus. Events and Clouds tabs us
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution by whole day, target window or custom period |
 | Light pollution map | Overlay Lorenz 2025 sky brightness and use location SQM and estimated Bortle values to shortlist dark-sky photography sites |
 | Radar and display | RainViewer overlays using the China NMC stepped reflectivity palette, Windy units, and collapsed, compact or fullscreen mobile views |
+| Feedback | Open the bilingual form in About to report bugs, suggest features or share other feedback |
 
 ## How to use the features
 
@@ -152,6 +153,8 @@ Run `npm run build` to generate `dist/`, including scripts, `plugin.json` and th
 
 ## Feedback and license
 
+Choose **Feedback** below the author support button in **About**, or open the [feedback form](https://tally.so/r/jeoe2Q), to report bugs, suggest features or share other feedback. Feedback type, details and plugin version are required; screenshots, device and browser details, and email are optional. Successful submissions redirect to the author support page; donations are entirely optional.
+
 If the interface is incomplete or loading fails, expand **View diagnostics** at the bottom of **About**, copy the report and include it with your issue. A diagnostic entry is also shown when initialization fails. Reports include the version, environment, loading states and sanitized errors, excluding location coordinates, favorites and API keys. If the plugin file itself cannot load, provide screenshots and browser errors instead.
 
-[Report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [RedNote](https://xhslink.cn/o/rXpBcBK0Qy) · [Optional support on Afdian](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)
+[Feedback form](https://tally.so/r/jeoe2Q) · [GitHub Issues](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [RedNote](https://xhslink.cn/o/rXpBcBK0Qy) · [Optional support on Afdian](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)
