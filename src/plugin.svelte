@@ -470,7 +470,8 @@
         aria-label={text.sunMoonPanelLabel}
     >
         <div class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
-            <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => selectSummaryTab('events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
+            <EventNavigation active={summaryTab === 'events'} bind:view={eventView} language={uiLanguage}
+                on:activate={activateEventView} on:tabkeydown={event => handleSummaryTabKeydown(event.detail, 'events')} />
             {#if isMobileOrTablet && !isMobileFullscreen}
                 <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
             {/if}
@@ -517,11 +518,32 @@
             class:summary-panel-frame--settings={!isMobileCollapsed && summaryTab === 'settings'}
             class:summary-panel-frame--events={isMobileCollapsed || summaryTab === 'events'}
             class:summary-panel-frame--clouds={!isMobileCollapsed && summaryTab === 'clouds'}
+            class:summary-panel-frame--overview={!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
             role={isMobileCollapsed ? 'region' : 'tabpanel'}
             aria-label={isMobileCollapsed ? text.eventTab : undefined}
             aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
         >
-            {#if isMobileCollapsed || summaryTab === 'events'}
+            {#if isMounted && overviewStartDate}
+                <!-- Keep the range, expanded rows and scroll container mounted while visiting a single day. -->
+                <div class="multi-day-frame" bind:this={overviewFrame} hidden={isMobileCollapsed || summaryTab !== 'events' || eventView !== 'overview'}
+                    on:scroll={() => {
+                        if (!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview') {
+                            overviewScrollTop = overviewFrame.scrollTop;
+                        }
+                    }}>
+                    <MultiDayOverview active={!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
+                        contextReady={resolvedContextLocationKey === locationKey} contextError={status === 'error'}
+                        location={selectedLocation} locationName={locationDisplayName} {timeZone} {elevationM}
+                        bind:startDate={overviewStartDate} language={uiLanguage} points={weatherPoints}
+                        {weatherStatus} {aodStatus} {visibilityStatus} source={weatherSource} model={weatherModel} {units}
+                        on:select={selectOverviewDay} on:retry={retryWeather} on:contextretry={() => refreshPaths(astronomyKey)}
+                        on:sourcechange={handleWeatherSourceChange} on:modelchange={handleWeatherModelChange}
+                        on:atmosphereretry={retryAtmosphere} />
+                </div>
+            {/if}
+            {#if !isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
+                <!-- The mounted overview above owns this view. -->
+            {:else if isMobileCollapsed || summaryTab === 'events'}
                 <span class="visually-hidden" role="status" aria-live="polite">
                     {status === 'loading' ? text.calculating : ''}
                 </span>
@@ -1062,6 +1084,8 @@
     import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
     import CloudNavigation from './CloudNavigation.svelte';
+    import EventNavigation from './EventNavigation.svelte';
+    import MultiDayOverview from './MultiDayOverview.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
     import { resolvePlanningTime, type PlanningTimeSelection } from './planningTime';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
@@ -1402,6 +1426,10 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let eventView: 'single' | 'overview' = 'single';
+    let overviewStartDate = '';
+    let overviewFrame: HTMLDivElement;
+    let overviewScrollTop = 0;
     // Only map-planning tabs take ownership of layers. Settings, About and Weather
     // keep the preceding planner alive, including its local time and asynchronous work.
     let mapTab: SummaryTab = 'events';
@@ -1932,10 +1960,37 @@
         pluginUpdateReminderVersion = null;
     };
 
+    /** Navigation selects only the view. Range browsing never writes planning time. */
+    const activateEventView = () => {
+        if (eventView === 'overview' && !overviewStartDate) { overviewStartDate = selectedDate; }
+        if (eventView === 'overview' && overviewFrame?.hidden) { void showOverview(); }
+        void selectSummaryTab('events');
+    };
+
+    /** A chosen segment uses its absolute instant, including the following civil date. */
+    const selectOverviewDay = (event: CustomEvent<{ timestamp: number; date: string }>) => {
+        overviewScrollTop = overviewFrame?.scrollTop ?? 0;
+        hostTimeSelectionActive = false;
+        planningTimePreview = false;
+        planningSelection = { mode: 'instant', timestamp: event.detail.timestamp };
+        eventView = 'single';
+    };
+
+    const showOverview = async () => {
+        eventView = 'overview';
+        await tick();
+        if (isMounted && eventView === 'overview' && overviewFrame) { overviewFrame.scrollTop = overviewScrollTop; }
+    };
+
     const selectSummaryTab = async (nextTab: SummaryTab) => {
+        const returningToOverview = nextTab === 'events' && eventView === 'overview' && summaryTab !== 'events';
+        if (summaryTab === 'events' && eventView === 'overview' && nextTab !== 'events') {
+            overviewScrollTop = overviewFrame?.scrollTop ?? 0;
+        }
         const fitRequestId = ++horizonFitRequestId;
         pluginUsage?.setTab(nextTab, true, cloudView);
         summaryTab = nextTab;
+        if (returningToOverview) { void showOverview(); }
         // Recheck on entry even if this mounted plugin previously found no update.
         // The update service reuses fresh results and revalidates expired metadata.
         if (nextTab === 'about' && pluginUpdateStatus !== 'loading') {
@@ -2110,6 +2165,7 @@
         // browser's system zone, converts them to an instant once context is ready.
         const [date, clock] = value.split('T');
         selectedDate = date;
+        if (summaryTab === 'events' && eventView === 'overview') { overviewStartDate = date; }
         hostTimeSelectionActive = false;
         planningTimePreview = false;
         planningSelection = { mode: 'clock', clock };
@@ -3761,11 +3817,11 @@
     }
 
     .sun-path-panel.mobile_ui .summary-tabs {
-        grid-template-columns: minmax(0, 1fr) minmax(108px, 1fr) repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(74px, 1fr) minmax(96px, 1fr) repeat(2, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui .summary-tabs.summary-tabs--weather {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(108px, 1.4fr) repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(74px, 1fr) minmax(0, 1fr) minmax(96px, 1.4fr) repeat(2, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
@@ -3859,7 +3915,7 @@
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {
-        grid-template-columns: minmax(0, 1fr) minmax(108px, 1fr) repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(74px, 1fr) minmax(96px, 1fr) repeat(2, minmax(0, 1fr));
     }
 
     .panel-intro,
@@ -4614,7 +4670,7 @@
     }
 
     .summary-tabs.summary-tabs--weather {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
     }
 
     .summary-panel-frame--settings {
@@ -4697,13 +4753,23 @@
         max-height: 65dvh;
     }
 
+    /* The shared Tab frame owns height; long overview content scrolls inside it. */
+    .multi-day-frame {
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+    }
+
+    .multi-day-frame[hidden] { display: none; }
+
     /* Desktop summary Tabs share the event height; the standalone weather module has its own frame. */
     .sun-path-panel:not(.mobile_ui) .summary-panel-frame {
         height: var(--events-summary-panel-height);
         max-height: none;
     }
 
-    /* All expanded mobile Tabs share the event frame; collapsed mode keeps its content-sized summary. */
+    /* All expanded mobile Tabs share the event frame, including the overview. */
     .sun-path-panel.mobile_ui:not(.mobile_collapsed) .summary-panel-frame {
         height: var(--events-summary-panel-height);
         max-height: none;

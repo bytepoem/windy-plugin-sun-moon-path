@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Datenquellen und Lizenz",
   "m_0a9566a139b8": "Untere Grenze der Wolkenbasis unbekannt",
   "m_0ab0b4c34423": "Höhe löschen",
+  "m_0abba441f16e": "Horizontal",
   "m_0b10287e4fba": "Temperatur − Taupunkt",
   "m_0bcd66e677f4": "Schichten",
   "m_0bd9a305f1d8": "Sonnen- und Mondsymbole kennzeichnen den Himmelskörper; ↑ bedeutet Aufgang und ↓ Untergang. Die Zeiten entsprechen der Ortszeit am Beobachtungsort.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Verdeckung von {{0}}",
   "m_721c455d6dc4": "Bedeckt",
   "m_722b6abce4b3": "Regenbogenwinkel und tägliche Zeitfenster",
+  "m_727cd3a64d79": "Vertikal",
   "m_728ecc4322c6": "Geländedaten sind unvollständig; andere Richtungen bleiben unbekannt.",
   "m_72bdd2121b76": "Kein Zeitfenster verfügbar",
   "m_72d42a55ce2f": "Maximale wolkenfreie Entfernung",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Helles dunkelgelbes Leuchten",
   "m_fe18013d93d2": "Jetzt",
   "m_ff3b63f08641": "Temperatur-/Taupunktprofil · Schätzt mögliche Schichten anhand der Temperatur-Taupunkt-Differenz. Die Einzelansicht nutzt den niedrigsten Kandidaten; die Schichtansicht behält separate Kandidaten. Keine gemessenen Wolkenbasen; keine Eissättigungskorrektur.",
-  "m_ffb8abdf558c": "Modellschätzungen dienen der Fotoplanung, nicht der örtlichen Wassertiefe oder Zugangssicherheit."
+  "m_ffb8abdf558c": "Modellschätzungen dienen der Fotoplanung, nicht der örtlichen Wassertiefe oder Zugangssicherheit.",
+  "m_023792bdb1d9": "Ereignisse eines Tages",
+  "m_41fd2a7fbf61": "Mehrtagesübersicht",
+  "m_d69d4d09ca8f": "7-Tage-Übersicht",
+  "m_9f9c89ac5706": "Monatsastronomie",
+  "m_eb77a9fb01dc": "Nächte zählen von lokalem Mittag bis zum nächsten Mittag; die Mondphase gilt für Mittag.",
+  "m_1991374c2d48": "Nur Astronomie; die Balkenlänge zeigt die Fensterdauer, nicht das Wetter oder eine Erfolgswahrscheinlichkeit.",
+  "m_2cf18a16aa8e": "Ereignisse → Mehrtagesübersicht: Zeitfenster und Wetter für sieben Tage oder Monatsastronomie. Ein Fenster öffnet die Ereignisse des Tages.",
+  "m_7202ca076942": "Vorhersagezeitraum",
+  "m_d6f15ea119df": "Über Mittag fortgesetzt"
 }

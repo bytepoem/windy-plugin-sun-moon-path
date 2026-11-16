@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Zdroje dat a licence",
   "m_0a9566a139b8": "Dolní mez základny je neznámá",
   "m_0ab0b4c34423": "Vymazat výšku",
+  "m_0abba441f16e": "Vodorovně",
   "m_0b10287e4fba": "Teplota − rosný bod",
   "m_0bcd66e677f4": "Vrstvy",
   "m_0bd9a305f1d8": "Ikony Slunce a Měsíce označují nebeské těleso; ↑ znamená východ a ↓ západ. Časy jsou místní pro polohu pozorovatele.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Zakrytí {{0}}",
   "m_721c455d6dc4": "Zataženo",
   "m_722b6abce4b3": "Úhly duhy a denní okna",
+  "m_727cd3a64d79": "Svisle",
   "m_728ecc4322c6": "Údaje terénu jsou neúplné; ostatní směry zůstávají neznámé.",
   "m_72bdd2121b76": "Žádné dostupné okno",
   "m_72d42a55ce2f": "Největší vzdálenost bez oblaků",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Jasná tmavožlutá záře",
   "m_fe18013d93d2": "Nyní",
   "m_ff3b63f08641": "Profil teploty/rosného bodu · Odhaduje kandidátní vrstvy z rozdílu teploty a rosného bodu. Jednotlivé zobrazení používá nejnižšího kandidáta; vrstvené zachovává samostatné kandidáty. Nejde o naměřené základny; bez korekce nasycení vůči ledu.",
-  "m_ffb8abdf558c": "Modelové odhady slouží fotografování, nikoli místní hloubce nebo bezpečnosti přístupu."
+  "m_ffb8abdf558c": "Modelové odhady slouží fotografování, nikoli místní hloubce nebo bezpečnosti přístupu.",
+  "m_023792bdb1d9": "Události jednoho dne",
+  "m_41fd2a7fbf61": "Vícedenní přehled",
+  "m_d69d4d09ca8f": "Přehled na 7 dní",
+  "m_9f9c89ac5706": "Měsíční astronomie",
+  "m_eb77a9fb01dc": "Noc se počítá od místního poledne do dalšího poledne; fáze Měsíce platí pro poledne.",
+  "m_1991374c2d48": "Pouze astronomie; délka pruhu značí trvání okna, nikoli počasí ani pravděpodobnost úspěchu.",
+  "m_2cf18a16aa8e": "Události → Vícedenní přehled: okna a počasí na sedm dní nebo měsíční astronomie. Výběrem okna otevřete události daného dne.",
+  "m_7202ca076942": "Rozsah předpovědi",
+  "m_d6f15ea119df": "Pokračuje přes poledne"
 }

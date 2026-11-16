@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Źródła danych i licencja",
   "m_0a9566a139b8": "Dolna granica podstawy nieznana",
   "m_0ab0b4c34423": "Wyczyść wysokość",
+  "m_0abba441f16e": "Poziomo",
   "m_0b10287e4fba": "Temperatura − punkt rosy",
   "m_0bcd66e677f4": "Warstwy",
   "m_0bd9a305f1d8": "Ikony Słońca i Księżyca wskazują ciało niebieskie; ↑ oznacza wschód, a ↓ zachód. Godziny są podane w czasie lokalnym miejsca obserwatora.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Przesłonięcie {{0}}",
   "m_721c455d6dc4": "Całkowite zachmurzenie",
   "m_722b6abce4b3": "Kąty tęczy i dzienne okna",
+  "m_727cd3a64d79": "Pionowo",
   "m_728ecc4322c6": "Dane terenu są niepełne; inne kierunki pozostają nieznane.",
   "m_72bdd2121b76": "Brak dostępnego okna",
   "m_72d42a55ce2f": "Największa odległość bez chmur",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Jasna ciemnożółta poświata",
   "m_fe18013d93d2": "Teraz",
   "m_ff3b63f08641": "Profil temperatury/punktu rosy · Szacuje możliwe warstwy z różnicy temperatury i punktu rosy. Widok pojedynczy używa najniższego kandydata; warstwowy zachowuje oddzielnych kandydatów. Nie są to zmierzone podstawy; bez poprawki na nasycenie względem lodu.",
-  "m_ffb8abdf558c": "Szacunki modelu są odniesieniem fotograficznym, nie lokalną głębokością ani oceną bezpieczeństwa dostępu."
+  "m_ffb8abdf558c": "Szacunki modelu są odniesieniem fotograficznym, nie lokalną głębokością ani oceną bezpieczeństwa dostępu.",
+  "m_023792bdb1d9": "Wydarzenia jednego dnia",
+  "m_41fd2a7fbf61": "Przegląd wielu dni",
+  "m_d69d4d09ca8f": "Przegląd 7 dni",
+  "m_9f9c89ac5706": "Astronomia miesięczna",
+  "m_eb77a9fb01dc": "Noce liczone są od lokalnego południa do następnego; faza Księżyca dotyczy południa.",
+  "m_1991374c2d48": "Tylko astronomia; długość paska oznacza czas trwania okna, nie pogodę ani prawdopodobieństwo powodzenia.",
+  "m_2cf18a16aa8e": "Wydarzenia → Przegląd wielu dni: okna i pogoda na siedem dni lub astronomia miesięczna. Wybierz okno, aby otworzyć wydarzenia dnia.",
+  "m_7202ca076942": "Zakres prognozy",
+  "m_d6f15ea119df": "Trwa przez południe"
 }

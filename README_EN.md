@@ -39,13 +39,13 @@ Simplified Chinese and English are built in and need no language download. The o
 
 Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers. You can also keep Windy's current layer.
 
-The desktop title back button supports keyboard focus. In the cloud function menu, use arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
+The desktop title back button supports keyboard focus. Events and Clouds tabs use narrow dropdown arrow buttons with compact spacing; their menus support arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
 
 ## Features
 
 | Feature | Purpose |
 | --- | --- |
-| Sun, Moon and Milky Way | Rise/set times, direction lines, Moon phase, moonless and Milky Way observing windows, plus a sky chart for composition |
+| Sun, Moon and Milky Way | Rise/set times, direction lines, Moon phase, moonless and Milky Way observing windows, plus a sky chart; compare seven days of windows or pick astronomical dates in a month |
 | Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections as cloud-region references for sunrise/sunset glow, fiery clouds and other photography; supports single/layered views and satellite comparison |
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
 | Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
@@ -59,6 +59,14 @@ The desktop title back button supports keyboard focus. In the cloud function men
 ### Sun, Moon and Milky Way
 
 Choose a location and date, then open Events for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
+
+Choose Multi-day overview from the Events dropdown to compare seven days of moonless, Milky Way or sunset ±1 hour windows and weather within each window. Monthly astronomy covers 30 consecutive days. Expanding a date keeps map time; choosing Single-day events within a window jumps to that time. Return through the Events dropdown to preserve the browsing range. Segmented buttons at the top of the seven-day overview switch between Windy / Open-Meteo sources and EC / GFS / ICON models. Controls use a compact layout, with window rules folded under User guide. Nights belong to the local-noon-to-next-noon period, with separate segments; Moon phase is calculated at noon. Weather uses the selected source and model, retaining partial coverage, out-of-range, missing-data and loading-failure states. Monthly bars show astronomical duration, not weather scores or shooting success probabilities.
+
+Monthly calendars start on Sunday. Saturdays and Sundays use warm, bold, underlined dates in both the monthly grid and seven-day overview. The seven-day overview still begins on the selected observing date.
+
+Seven-day windows show weather conditions, cloud cover, wind, precipitation, temperature, humidity, visibility, AOD and dew point, with expandable original forecast samples. Numeric ranges use available samples within each window. Precipitation shows the range of overlapping source accumulations with their full periods, without splitting or summation. Short windows without instantaneous samples still retain overlapping rain accumulations while other metrics remain missing. AOD and visibility show loading, failure and missing data independently, with separate retries for failed requests.
+
+Switch the date layout between Vertical and Horizontal beside the date. Horizontal is the default: seven dates form columns and metrics form rows. Vertical places dates in rows and metrics in columns. The overview keeps the same panel height as other tabs, with content scrolling inside. Scroll horizontally when needed; the first column stays fixed for reference. Chinese observing-date and forecast-range headings use two lines split at word boundaries. Select a date to view full windows and original samples below the table. Only Single-day events changes map time; separate windows retain separate weather ranges. Metrics use the weather table icons with small names below them; hover for details such as the precipitation rule.
 
 Toggle “Show sky chart” in Settings or use the first window button with the orbit icon; both controls stay synchronized and remember your choice.
 

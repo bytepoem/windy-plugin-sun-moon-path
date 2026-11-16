@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Tietojen lähteet ja lisenssi",
   "m_0a9566a139b8": "Pilven alarajan alaraja tuntematon",
   "m_0ab0b4c34423": "Tyhjennä korkeus",
+  "m_0abba441f16e": "Vaaka",
   "m_0b10287e4fba": "Lämpötila − kastepiste",
   "m_0bcd66e677f4": "Kerrokset",
   "m_0bd9a305f1d8": "Auringon ja Kuun kuvakkeet ilmaisevat taivaankappaleen; ↑ tarkoittaa nousua ja ↓ laskua. Ajat ovat havaintopaikan paikallista aikaa.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Este kohteelle {{0}}",
   "m_721c455d6dc4": "Täysin pilvistä",
   "m_722b6abce4b3": "Sateenkaaren kulmat ja päivittäiset aikaikkunat",
+  "m_727cd3a64d79": "Pysty",
   "m_728ecc4322c6": "Maastotiedot ovat puutteelliset; muut suunnat jäävät tuntemattomiksi.",
   "m_72bdd2121b76": "Ei saatavilla olevaa aikaikkunaa",
   "m_72d42a55ce2f": "Kaukaisin pilvetön etäisyys",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Kirkas tummankeltainen hohde",
   "m_fe18013d93d2": "Nyt",
   "m_ff3b63f08641": "Lämpötila-/kastepisteprofiili · Arvioi ehdokaskerrokset lämpötilan ja kastepisteen erosta. Yksittäisnäkymä käyttää alinta ehdokasta; kerrosnäkymä säilyttää erilliset ehdokkaat. Ei mitattuja pilven alarajoja; ei jääkyllästyskorjausta.",
-  "m_ffb8abdf558c": "Malliarviot ovat valokuvausviitteitä, eivät paikalliseen syvyyteen tai turvalliseen pääsyyn."
+  "m_ffb8abdf558c": "Malliarviot ovat valokuvausviitteitä, eivät paikalliseen syvyyteen tai turvalliseen pääsyyn.",
+  "m_023792bdb1d9": "Yhden päivän tapahtumat",
+  "m_41fd2a7fbf61": "Usean päivän yleiskuva",
+  "m_d69d4d09ca8f": "7 päivän yleiskuva",
+  "m_9f9c89ac5706": "Kuukauden tähtitiede",
+  "m_eb77a9fb01dc": "Yöt lasketaan paikallisesta keskipäivästä seuraavaan; Kuun vaihe määritetään keskipäivällä.",
+  "m_1991374c2d48": "Vain tähtitiede; palkin pituus kuvaa aikaikkunan kestoa, ei säätä tai onnistumisen todennäköisyyttä.",
+  "m_2cf18a16aa8e": "Tapahtumat → Usean päivän yleiskuva: seitsemän päivän aikaikkunat ja sää tai kuukauden tähtitiede. Valitse aikaikkuna avataksesi päivän tapahtumat.",
+  "m_7202ca076942": "Ennusteen aikaväli",
+  "m_d6f15ea119df": "Jatkuu keskipäivän yli"
 }

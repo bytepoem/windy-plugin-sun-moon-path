@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Atribución de datos y licencia",
   "m_0a9566a139b8": "Límite inferior de la base de nubes desconocido",
   "m_0ab0b4c34423": "Borrar altura",
+  "m_0abba441f16e": "Horizontal",
   "m_0b10287e4fba": "Temperatura − punto de rocío",
   "m_0bcd66e677f4": "Capas",
   "m_0bd9a305f1d8": "Los iconos del Sol y la Luna identifican el astro; ↑ significa salida y ↓ puesta. Las horas usan la hora local del lugar de observación.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Obstrucción de {{0}}",
   "m_721c455d6dc4": "Cubierto",
   "m_722b6abce4b3": "Ángulos del arcoíris y ventanas diarias",
+  "m_727cd3a64d79": "Vertical",
   "m_728ecc4322c6": "Los datos del terreno están incompletos; las otras direcciones siguen siendo desconocidas.",
   "m_72bdd2121b76": "Sin ventana disponible",
   "m_72d42a55ce2f": "Distancia máxima sin nubes",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Resplandor intenso de amarillo oscuro",
   "m_fe18013d93d2": "Ahora",
   "m_ff3b63f08641": "Perfil de temperatura/punto de rocío · Estima capas candidatas a partir de la diferencia entre temperatura y punto de rocío. La vista individual usa la candidata más baja; la vista por capas conserva candidatas separadas. No son bases medidas; sin corrección de saturación respecto al hielo.",
-  "m_ffb8abdf558c": "Las estimaciones del modelo son una referencia fotográfica, no para profundidad local ni seguridad de acceso."
+  "m_ffb8abdf558c": "Las estimaciones del modelo son una referencia fotográfica, no para profundidad local ni seguridad de acceso.",
+  "m_023792bdb1d9": "Eventos de un día",
+  "m_41fd2a7fbf61": "Resumen de varios días",
+  "m_d69d4d09ca8f": "Resumen de 7 días",
+  "m_9f9c89ac5706": "Astronomía mensual",
+  "m_eb77a9fb01dc": "Las noches van del mediodía local al siguiente; la fase lunar se calcula al mediodía.",
+  "m_1991374c2d48": "Solo astronomía; la longitud indica la duración de la ventana, no el tiempo ni la probabilidad de éxito.",
+  "m_2cf18a16aa8e": "Eventos → Resumen de varios días: ventanas y tiempo de siete días, o astronomía mensual. Elige una ventana para abrir los eventos de un día.",
+  "m_7202ca076942": "Alcance del pronóstico",
+  "m_d6f15ea119df": "Continúa más allá del mediodía"
 }

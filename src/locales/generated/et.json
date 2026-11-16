@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Andmeallikad ja litsents",
   "m_0a9566a139b8": "Pilvealuse alumine piir teadmata",
   "m_0ab0b4c34423": "Tühjenda kõrgus",
+  "m_0abba441f16e": "Horisontaalne",
   "m_0b10287e4fba": "Temperatuur − kastepunkt",
   "m_0bcd66e677f4": "Kihid",
   "m_0bd9a305f1d8": "Päikese ja Kuu ikoonid tähistavad taevakeha; ↑ tähendab tõusu ja ↓ loojangut. Ajad on vaatluskoha kohaliku aja järgi.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Takistus objektile {{0}}",
   "m_721c455d6dc4": "Lauspilves",
   "m_722b6abce4b3": "Vikerkaare nurgad ja igapäevased ajavahemikud",
+  "m_727cd3a64d79": "Vertikaalne",
   "m_728ecc4322c6": "Maastikuandmed on puudulikud; teised suunad jäävad teadmata.",
   "m_72bdd2121b76": "Saadaval ajavahemik puudub",
   "m_72d42a55ce2f": "Kaugeim pilvevaba kaugus",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Hele tumekollane kuma",
   "m_fe18013d93d2": "Nüüd",
   "m_ff3b63f08641": "Temperatuuri/kastepunkti profiil · Hindab võimalikke kihte temperatuuri ja kastepunkti erinevusest. Üksikvaade kasutab madalaimat kandidaati; kihivaade säilitab eraldi kandidaadid. Need pole mõõdetud pilvealused; jääküllastuse parandust ei tehta.",
-  "m_ffb8abdf558c": "Mudeli hinnangud on fotograafia abiks, mitte kohaliku sügavuse ega ligipääsu ohutuse jaoks."
+  "m_ffb8abdf558c": "Mudeli hinnangud on fotograafia abiks, mitte kohaliku sügavuse ega ligipääsu ohutuse jaoks.",
+  "m_023792bdb1d9": "Ühe päeva sündmused",
+  "m_41fd2a7fbf61": "Mitme päeva ülevaade",
+  "m_d69d4d09ca8f": "7 päeva ülevaade",
+  "m_9f9c89ac5706": "Kuu astronoomia",
+  "m_eb77a9fb01dc": "Ööd arvestatakse kohalikust keskpäevast järgmise keskpäevani; Kuu faas on keskpäeva kohta.",
+  "m_1991374c2d48": "Ainult astronoomia; riba pikkus näitab ajavahemiku kestust, mitte ilma ega õnnestumise tõenäosust.",
+  "m_2cf18a16aa8e": "Sündmused → Mitme päeva ülevaade: seitsme päeva ajavahemikud ja ilm või kuu astronoomia. Vali ajavahemik päeva sündmuste avamiseks.",
+  "m_7202ca076942": "Prognoosi ulatus",
+  "m_d6f15ea119df": "Jätkub üle keskpäeva"
 }

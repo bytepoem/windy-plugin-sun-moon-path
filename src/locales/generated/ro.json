@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Atribuirea datelor și licența",
   "m_0a9566a139b8": "Limita inferioară a bazei este necunoscută",
   "m_0ab0b4c34423": "Șterge înălțimea",
+  "m_0abba441f16e": "Orizontal",
   "m_0b10287e4fba": "Temperatură − punct de rouă",
   "m_0bcd66e677f4": "Straturi",
   "m_0bd9a305f1d8": "Pictogramele Soarelui și Lunii identifică astrul; ↑ înseamnă răsărit și ↓ apus. Orele folosesc ora locală a locului de observație.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Obstrucție pentru {{0}}",
   "m_721c455d6dc4": "Acoperit",
   "m_722b6abce4b3": "Unghiurile curcubeului și ferestrele zilnice",
+  "m_727cd3a64d79": "Vertical",
   "m_728ecc4322c6": "Datele reliefului sunt incomplete; alte direcții rămân necunoscute.",
   "m_72bdd2121b76": "Nicio fereastră disponibilă",
   "m_72d42a55ce2f": "Distanța maximă fără nori",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Strălucire intensă galben-închis",
   "m_fe18013d93d2": "Acum",
   "m_ff3b63f08641": "Profil temperatură/punct de rouă · Estimează straturi candidate din diferența temperatură/punct de rouă. Vederea unică folosește cel mai jos candidat; vederea stratificată păstrează candidați separați. Nu sunt baze măsurate; fără corecție de saturație față de gheață.",
-  "m_ffb8abdf558c": "Estimările modelului sunt referințe fotografice, nu pentru adâncime locală sau siguranța accesului."
+  "m_ffb8abdf558c": "Estimările modelului sunt referințe fotografice, nu pentru adâncime locală sau siguranța accesului.",
+  "m_023792bdb1d9": "Evenimentele unei zile",
+  "m_41fd2a7fbf61": "Prezentare pe mai multe zile",
+  "m_d69d4d09ca8f": "Prezentare pe 7 zile",
+  "m_9f9c89ac5706": "Astronomie lunară",
+  "m_eb77a9fb01dc": "Nopțile se calculează de la amiaza locală până la următoarea; faza Lunii este pentru amiază.",
+  "m_1991374c2d48": "Doar astronomie; lungimea barei arată durata ferestrei, nu vremea sau probabilitatea de succes.",
+  "m_2cf18a16aa8e": "Evenimente → Prezentare pe mai multe zile: ferestre și vreme pentru șapte zile sau astronomie lunară. Alegeți o fereastră pentru evenimentele zilei.",
+  "m_7202ca076942": "Intervalul prognozei",
+  "m_d6f15ea119df": "Continuă peste amiază"
 }

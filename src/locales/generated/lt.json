@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Duomenų šaltiniai ir licencija",
   "m_0a9566a139b8": "Debesų pado apatinė riba nežinoma",
   "m_0ab0b4c34423": "Išvalyti aukštį",
+  "m_0abba441f16e": "Horizontaliai",
   "m_0b10287e4fba": "Temperatūra − rasos taškas",
   "m_0bcd66e677f4": "Sluoksniai",
   "m_0bd9a305f1d8": "Saulės ir Mėnulio piktogramos nurodo dangaus kūną; ↑ reiškia patekėjimą, o ↓ nusileidimą. Laikai pateikiami stebėjimo vietos vietiniu laiku.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Kliūtis {{0}}",
   "m_721c455d6dc4": "Apsiniaukę",
   "m_722b6abce4b3": "Vaivorykštės kampai ir dienos laiko tarpai",
+  "m_727cd3a64d79": "Vertikaliai",
   "m_728ecc4322c6": "Reljefo duomenys nepilni; kitos kryptys lieka nežinomos.",
   "m_72bdd2121b76": "Nėra prieinamo laiko tarpo",
   "m_72d42a55ce2f": "Didžiausias atstumas be debesų",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Ryškus tamsiai geltonas švytėjimas",
   "m_fe18013d93d2": "Dabar",
   "m_ff3b63f08641": "Temperatūros / rasos taško profilis · Vertina galimus sluoksnius pagal temperatūros ir rasos taško skirtumą. Vienas vaizdas naudoja žemiausią kandidatą; sluoksniuotas vaizdas išlaiko atskirus kandidatus. Tai ne išmatuoti debesų padai; be prisotinimo ledo atžvilgiu pataisos.",
-  "m_ffb8abdf558c": "Modelio įverčiai skirti fotografiniam orientavimuisi, ne vietiniam gyliui ar saugiam priėjimui."
+  "m_ffb8abdf558c": "Modelio įverčiai skirti fotografiniam orientavimuisi, ne vietiniam gyliui ar saugiam priėjimui.",
+  "m_023792bdb1d9": "Vienos dienos įvykiai",
+  "m_41fd2a7fbf61": "Kelių dienų apžvalga",
+  "m_d69d4d09ca8f": "7 dienų apžvalga",
+  "m_9f9c89ac5706": "Mėnesio astronomija",
+  "m_eb77a9fb01dc": "Naktys skaičiuojamos nuo vietos vidurdienio iki kito; Mėnulio fazė nustatoma vidurdienį.",
+  "m_1991374c2d48": "Tik astronomija; juostos ilgis rodo lango trukmę, ne orą ar sėkmės tikimybę.",
+  "m_2cf18a16aa8e": "Įvykiai → Kelių dienų apžvalga: septynių dienų langai ir orai arba mėnesio astronomija. Pasirinkite langą dienos įvykiams atverti.",
+  "m_7202ca076942": "Prognozės laikotarpis",
+  "m_d6f15ea119df": "Tęsiasi per vidurdienį"
 }

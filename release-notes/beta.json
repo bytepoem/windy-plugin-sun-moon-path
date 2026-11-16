@@ -7,6 +7,38 @@
     "items": [
       {
         "type": "fixed",
+        "text": "修复短观测窗口缺少瞬时预报点时，相交的累计降水与原始累计区间被隐藏的问题；其他指标仍保留缺测状态。"
+      },
+      {
+        "type": "fixed",
+        "text": "修复切换多日总览时面板高度变化的问题；桌面、移动端小窗口与全屏均使用其他 Tab 的内容区高度，总览内容在面板内滚动。收窄事件与规划 Tab 的下拉箭头按钮，并收紧两侧留白，减少横向占位。"
+      },
+      {
+        "type": "improved",
+        "text": "7 天总览统一使用图标对比表，图标下方配小号指标名称，中文「观测日期」「预报范围」表头按词组分成两行。支持日期「竖向 / 横向」切换：横向日期为列、指标为行，竖向日期为行、指标为列；首列固定，支持滚动，选择日期查看窗口与原始预报点。保留周末标记、单位、指标提示和无障碍标签；修正切换按钮的分隔边框。"
+      },
+      {
+        "type": "improved",
+        "text": "7 天总览补全天气状况、降水、气温、湿度、能见度、AOD 与露点，和云量、风速紧凑排列；展开可查看全部指标的原始预报点。降水保留来源累计区间，不拆分、不求和；AOD、能见度独立显示加载与失败状态，并可分别重试。"
+      },
+      {
+        "type": "improved",
+        "text": "月度天文日历改为周日开头，周六、周日在月度网格和 7 天总览中统一以暖色、加粗及下划线突出显示。"
+      },
+      {
+        "type": "improved",
+        "text": "多日总览的数据源与预报模型改为与天气表一致的分段按钮，可直接切换 Windy / Open-Meteo 及 EC / GFS / ICON，保持紧凑排列。"
+      },
+      {
+        "type": "fixed",
+        "text": "统一移动端事件与摄影规划下拉菜单项的高度、上下内边距及箭头按钮留白；修正多日总览触屏控件过高，统一按钮、选择框与日期框高度，收紧日列表、展开详情和月度网格间距，收窄开始日期框并移除日历图标。"
+      },
+      {
+        "type": "new",
+        "text": "「事件」下拉菜单新增多日总览，按无月、银河或日落前后目标比较 7 天窗口内天气，或用月度天文查看连续 30 天；单日与总览通过下拉菜单切换，保留浏览范围，窗口可定位到单日时刻。跨午夜、多段窗口、天气覆盖、缺测和加载失败分别提示；控件、日期与天气紧凑排列，减少间距，规则说明默认折叠，字号沿用现有面板风格。"
+      },
+      {
+        "type": "fixed",
         "text": "修复移动端圆形控制按钮及关闭按钮的透明区域挡住 Windy 时间条拖动的问题，保留原有按钮位置与紧凑布局。"
       },
       {
@@ -63,6 +95,38 @@
     "title": "Mobile timeline dragging fix",
     "summary": "Fixed transparent button areas blocking Windy’s timeline while preserving the compact layout.",
     "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed overlapping rain accumulations and their original periods being hidden when a short observing window contains no instantaneous forecast samples. Other metrics retain their missing-data state."
+      },
+      {
+        "type": "fixed",
+        "text": "Fixed panel resizing when switching to the multi-day overview. Desktop, compact mobile and fullscreen views now share the content height used by other tabs, with overview content scrolling inside. Narrowed the Events and planning tab dropdown arrow buttons and reduced their side spacing."
+      },
+      {
+        "type": "improved",
+        "text": "The seven-day overview now uses one icon comparison table with small metric names below each icon. Chinese observing-date and forecast-range headings use two lines split at word boundaries. Horizontal puts dates in columns and metrics in rows; Vertical transposes those axes. The first column stays fixed while scrolling. Select a date for windows and original samples. Weekend markers, units, tooltips and accessible labels are retained, and the switch-button divider is fixed."
+      },
+      {
+        "type": "improved",
+        "text": "The seven-day overview now adds weather conditions, precipitation, temperature, humidity, visibility, AOD and dew point alongside cloud cover and wind in compact rows, with original samples for every metric. Precipitation retains source accumulation periods without splitting or summation. AOD and visibility show independent loading and failure states, with separate retries."
+      },
+      {
+        "type": "improved",
+        "text": "Monthly astronomy calendars now start on Sunday. Saturdays and Sundays use warm, bold, underlined dates in both the monthly grid and seven-day overview."
+      },
+      {
+        "type": "improved",
+        "text": "The multi-day overview now uses the weather table's segmented buttons to switch directly between Windy / Open-Meteo and EC / GFS / ICON in a compact layout."
+      },
+      {
+        "type": "fixed",
+        "text": "Matched mobile Events and photography-planning dropdown row heights, vertical padding and arrow-button spacing. Fixed oversized touch controls in the multi-day overview, aligned button, select and date-input heights, tightened day rows, expanded details and the monthly grid, and narrowed the start-date field while removing its calendar icon."
+      },
+      {
+        "type": "new",
+        "text": "The Events dropdown now switches between single-day events and a multi-day overview, retaining the browsing range. Compare seven days of weather within moonless, Milky Way or sunset windows, or browse 30 days of astronomy; select a window to open its single-day time. Cross-midnight windows, separate segments, forecast coverage, missing data and loading failures remain distinct. Controls, dates and weather use compact rows and spacing, with rules folded by default and typography matching existing panels."
+      },
       {
         "type": "fixed",
         "text": "Fixed transparent areas around mobile circular controls and the close button blocking Windy timeline dragging, while keeping the existing button positions and compact layout."

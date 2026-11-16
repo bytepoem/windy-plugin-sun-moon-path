@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Izvori podataka i licencija",
   "m_0a9566a139b8": "Donja granica baze nije poznata",
   "m_0ab0b4c34423": "Izbriši visinu",
+  "m_0abba441f16e": "Vodoravno",
   "m_0b10287e4fba": "Temperatura − rosište",
   "m_0bcd66e677f4": "Slojevi",
   "m_0bd9a305f1d8": "Ikone Sunca i Mjeseca označuju nebesko tijelo; ↑ znači izlazak, a ↓ zalazak. Vremena su lokalna za lokaciju promatrača.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Zapreka {{0}}",
   "m_721c455d6dc4": "Potpuno oblačno",
   "m_722b6abce4b3": "Kutovi duge i dnevni prozori",
+  "m_727cd3a64d79": "Okomito",
   "m_728ecc4322c6": "Podaci terena su nepotpuni; ostali smjerovi ostaju nepoznati.",
   "m_72bdd2121b76": "Nema dostupnog prozora",
   "m_72d42a55ce2f": "Najveća udaljenost bez oblaka",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Jarki tamnožuti sjaj",
   "m_fe18013d93d2": "Sada",
   "m_ff3b63f08641": "Profil temperature/rosišta · Procjenjuje moguće slojeve iz razlike temperature i rosišta. Pojedinačni prikaz koristi najniži mogući sloj; slojeviti čuva zasebne kandidate. To nisu izmjerene baze; nema korekcije zasićenja u odnosu na led.",
-  "m_ffb8abdf558c": "Procjene modela služe kao fotografska referenca, ne za lokalnu dubinu ili sigurnost pristupa."
+  "m_ffb8abdf558c": "Procjene modela služe kao fotografska referenca, ne za lokalnu dubinu ili sigurnost pristupa.",
+  "m_023792bdb1d9": "Događaji jednog dana",
+  "m_41fd2a7fbf61": "Višednevni pregled",
+  "m_d69d4d09ca8f": "Pregled za 7 dana",
+  "m_9f9c89ac5706": "Mjesečna astronomija",
+  "m_eb77a9fb01dc": "Noći se računaju od lokalnog podneva do sljedećeg; Mjesečeva mijena vrijedi za podne.",
+  "m_1991374c2d48": "Samo astronomija; duljina trake prikazuje trajanje prozora, ne vrijeme ni vjerojatnost uspjeha.",
+  "m_2cf18a16aa8e": "Događaji → Višednevni pregled: prozori i vrijeme za sedam dana ili mjesečna astronomija. Odaberite prozor za događaje dana.",
+  "m_7202ca076942": "Raspon prognoze",
+  "m_d6f15ea119df": "Nastavlja se preko podneva"
 }

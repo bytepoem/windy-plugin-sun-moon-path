@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Burimet e të dhënave dhe licenca",
   "m_0a9566a139b8": "Kufiri i poshtëm i bazës është i panjohur",
   "m_0ab0b4c34423": "Pastro lartësinë",
+  "m_0abba441f16e": "Horizontalisht",
   "m_0b10287e4fba": "Temperatura − pika e vesës",
   "m_0bcd66e677f4": "Shtresat",
   "m_0bd9a305f1d8": "Ikonat e Diellit dhe Hënës tregojnë trupin qiellor; ↑ do të thotë lindje dhe ↓ perëndim. Orët janë lokale për vendndodhjen e vëzhguesit.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Pengesë {{0}}",
   "m_721c455d6dc4": "Plotësisht me re",
   "m_722b6abce4b3": "Këndet e ylberit dhe dritaret ditore",
+  "m_727cd3a64d79": "Vertikalisht",
   "m_728ecc4322c6": "Të dhënat e terrenit janë të paplota; drejtimet e tjera mbeten të panjohura.",
   "m_72bdd2121b76": "Nuk ka dritare të disponueshme",
   "m_72d42a55ce2f": "Largësia më e madhe pa re",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Shkëlqim i fortë i verdhë i errët",
   "m_fe18013d93d2": "Tani",
   "m_ff3b63f08641": "Profili i temperaturës/pikës së vesës · Vlerëson shtresat kandidate nga diferenca e temperaturës dhe pikës së vesës. Pamja e vetme përdor kandidatin më të ulët; ajo me shtresa ruan kandidatë të veçantë. Nuk janë baza të matura; pa korrigjim ngopjeje kundrejt akullit.",
-  "m_ffb8abdf558c": "Vlerësimet e modelit janë referencë për fotografi, jo për thellësinë lokale ose sigurinë e hyrjes."
+  "m_ffb8abdf558c": "Vlerësimet e modelit janë referencë për fotografi, jo për thellësinë lokale ose sigurinë e hyrjes.",
+  "m_023792bdb1d9": "Ngjarjet e një dite",
+  "m_41fd2a7fbf61": "Përmbledhje shumëditore",
+  "m_d69d4d09ca8f": "Përmbledhje 7-ditore",
+  "m_9f9c89ac5706": "Astronomi mujore",
+  "m_eb77a9fb01dc": "Netët llogariten nga mesdita vendore në tjetrën; faza e Hënës merret në mesditë.",
+  "m_1991374c2d48": "Vetëm astronomi; gjatësia e shiritit tregon kohëzgjatjen e intervalit, jo motin apo mundësinë e suksesit.",
+  "m_2cf18a16aa8e": "Ngjarjet → Përmbledhje shumëditore: intervale dhe mot për shtatë ditë ose astronomi mujore. Zgjidhni një interval për të hapur ngjarjet e ditës.",
+  "m_7202ca076942": "Shtrirja e parashikimit",
+  "m_d6f15ea119df": "Vazhdon përtej mesditës"
 }

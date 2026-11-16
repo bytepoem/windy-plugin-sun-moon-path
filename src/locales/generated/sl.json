@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Viri podatkov in licenca",
   "m_0a9566a139b8": "Spodnja meja baze je neznana",
   "m_0ab0b4c34423": "Počisti višino",
+  "m_0abba441f16e": "Vodoravno",
   "m_0b10287e4fba": "Temperatura − rosišče",
   "m_0bcd66e677f4": "Plasti",
   "m_0bd9a305f1d8": "Ikoni Sonca in Lune označujeta nebesno telo; ↑ pomeni vzhod, ↓ pa zahod. Časi so krajevni za lokacijo opazovalca.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Ovira {{0}}",
   "m_721c455d6dc4": "Povsem oblačno",
   "m_722b6abce4b3": "Koti mavrice in dnevna okna",
+  "m_727cd3a64d79": "Navpično",
   "m_728ecc4322c6": "Podatki terena so nepopolni; druge smeri ostajajo neznane.",
   "m_72bdd2121b76": "Ni razpoložljivega okna",
   "m_72d42a55ce2f": "Največja razdalja brez oblakov",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Svetel temno rumen sij",
   "m_fe18013d93d2": "Zdaj",
   "m_ff3b63f08641": "Profil temperature/rosišča · Ocenjuje možne plasti iz razlike temperature in rosišča. Posamični pogled uporabi najnižjo možno plast; večplastni ohrani ločene možne plasti. To niso izmerjene baze; brez popravka nasičenja glede na led.",
-  "m_ffb8abdf558c": "Modelske ocene so fotografska referenca, ne podatki o krajevni globini ali varnosti dostopa."
+  "m_ffb8abdf558c": "Modelske ocene so fotografska referenca, ne podatki o krajevni globini ali varnosti dostopa.",
+  "m_023792bdb1d9": "Dogodki enega dne",
+  "m_41fd2a7fbf61": "Večdnevni pregled",
+  "m_d69d4d09ca8f": "7-dnevni pregled",
+  "m_9f9c89ac5706": "Mesečna astronomija",
+  "m_eb77a9fb01dc": "Noči se štejejo od krajevnega poldneva do naslednjega; Lunina mena velja za poldne.",
+  "m_1991374c2d48": "Samo astronomija; dolžina traku kaže trajanje okna, ne vremena ali verjetnosti uspeha.",
+  "m_2cf18a16aa8e": "Dogodki → Večdnevni pregled: okna in vreme za sedem dni ali mesečna astronomija. Izberite okno za odprtje dnevnih dogodkov.",
+  "m_7202ca076942": "Obdobje napovedi",
+  "m_d6f15ea119df": "Se nadaljuje čez poldne"
 }

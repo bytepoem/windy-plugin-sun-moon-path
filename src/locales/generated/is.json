@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Uppruni gagna og leyfi",
   "m_0a9566a139b8": "Neðri mörk skýjabotns óþekkt",
   "m_0ab0b4c34423": "Hreinsa hæð",
+  "m_0abba441f16e": "Lárétt",
   "m_0b10287e4fba": "Hitastig − daggarmark",
   "m_0bcd66e677f4": "Lög",
   "m_0bd9a305f1d8": "Sólar- og tungltákn auðkenna himintunglið; ↑ merkir ris og ↓ setur. Tímar miðast við staðartíma athugunarstaðarins.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Hindrun fyrir {{0}}",
   "m_721c455d6dc4": "Alskýjað",
   "m_722b6abce4b3": "Regnbogahorn og dagleg tímabil",
+  "m_727cd3a64d79": "Lóðrétt",
   "m_728ecc4322c6": "Landslagsgögn eru ófullkomin; aðrar stefnur eru áfram óþekktar.",
   "m_72bdd2121b76": "Ekkert tiltækt tímabil",
   "m_72d42a55ce2f": "Mesta skýjalausa fjarlægð",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Bjartur dökkgulur bjarmi",
   "m_fe18013d93d2": "Núna",
   "m_ff3b63f08641": "Hitastigs-/daggarmarkssnið · Áætlar möguleg lög út frá mun hitastigs og daggarmarks. Einföld sýn notar lægsta valkostinn; lagskipt sýn varðveitir aðskilda valkosti. Ekki mældir skýjabotnar; engin leiðrétting fyrir ísmettun.",
-  "m_ffb8abdf558c": "Líkanaáætlanir eru ljósmyndaviðmið, ekki fyrir staðbundið dýpi eða öruggt aðgengi."
+  "m_ffb8abdf558c": "Líkanaáætlanir eru ljósmyndaviðmið, ekki fyrir staðbundið dýpi eða öruggt aðgengi.",
+  "m_023792bdb1d9": "Atburðir eins dags",
+  "m_41fd2a7fbf61": "Yfirlit yfir marga daga",
+  "m_d69d4d09ca8f": "7 daga yfirlit",
+  "m_9f9c89ac5706": "Mánaðarleg stjörnufræði",
+  "m_eb77a9fb01dc": "Nætur teljast frá staðbundnu hádegi til næsta hádegis; tunglfasi miðast við hádegi.",
+  "m_1991374c2d48": "Aðeins stjörnufræði; lengd súlu sýnir lengd tímabils, ekki veður eða líkur á árangri.",
+  "m_2cf18a16aa8e": "Atburðir → Yfirlit yfir marga daga: tímabil og veður sjö daga eða mánaðarleg stjörnufræði. Veldu tímabil til að opna atburði dagsins.",
+  "m_7202ca076942": "Spátímabil",
+  "m_d6f15ea119df": "Heldur áfram yfir hádegi"
 }

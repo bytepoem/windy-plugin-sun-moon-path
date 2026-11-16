@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Ghi công dữ liệu và giấy phép",
   "m_0a9566a139b8": "Chưa rõ cận dưới đáy mây",
   "m_0ab0b4c34423": "Xóa độ cao",
+  "m_0abba441f16e": "Ngang",
   "m_0b10287e4fba": "Nhiệt độ − điểm sương",
   "m_0bcd66e677f4": "Các lớp",
   "m_0bd9a305f1d8": "Biểu tượng Mặt Trời và Mặt Trăng xác định thiên thể; ↑ là mọc, ↓ là lặn. Giờ theo giờ địa phương tại vị trí người quan sát.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Che {{0}}",
   "m_721c455d6dc4": "U ám",
   "m_722b6abce4b3": "Góc cầu vồng và khung giờ hằng ngày",
+  "m_727cd3a64d79": "Dọc",
   "m_728ecc4322c6": "Dữ liệu địa hình không đầy đủ; các hướng khác chưa rõ.",
   "m_72bdd2121b76": "Không có khung giờ",
   "m_72d42a55ce2f": "Khoảng cách không mây xa nhất",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Ánh sáng vàng sẫm rực rỡ",
   "m_fe18013d93d2": "Bây giờ",
   "m_ff3b63f08641": "Phân bố nhiệt độ/điểm sương theo độ cao · Ước tính lớp ứng viên từ chênh lệch nhiệt độ và điểm sương. Chế độ đơn dùng ứng viên thấp nhất; chế độ nhiều lớp giữ các ứng viên riêng. Không phải đáy mây đo được; không hiệu chỉnh bão hòa trên băng.",
-  "m_ffb8abdf558c": "Ước tính mô hình để tham khảo nhiếp ảnh, không phải độ sâu tại chỗ hay an toàn tiếp cận."
+  "m_ffb8abdf558c": "Ước tính mô hình để tham khảo nhiếp ảnh, không phải độ sâu tại chỗ hay an toàn tiếp cận.",
+  "m_023792bdb1d9": "Sự kiện trong ngày",
+  "m_41fd2a7fbf61": "Tổng quan nhiều ngày",
+  "m_d69d4d09ca8f": "Tổng quan 7 ngày",
+  "m_9f9c89ac5706": "Thiên văn theo tháng",
+  "m_eb77a9fb01dc": "Đêm được tính từ trưa địa phương đến trưa hôm sau; pha Mặt Trăng được tính lúc trưa.",
+  "m_1991374c2d48": "Chỉ so sánh thiên văn; độ dài thanh là thời lượng khung giờ, không phải thời tiết hay xác suất thành công.",
+  "m_2cf18a16aa8e": "Sự kiện → Tổng quan nhiều ngày: khung giờ và thời tiết bảy ngày hoặc thiên văn theo tháng. Chọn khung giờ để mở sự kiện trong ngày.",
+  "m_7202ca076942": "Phạm vi dự báo",
+  "m_d6f15ea119df": "Tiếp tục qua buổi trưa"
 }

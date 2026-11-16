@@ -107,6 +107,7 @@ export const translations: Record<UiLanguage, {
         | 'comparison'
         | 'coordinates'
         | 'observationEvidence'
+        | 'multiDay'
         | 'mobileMode'
         | 'mapControls'
         | 'radarOverlay'
@@ -316,6 +317,10 @@ export const translations: Record<UiLanguage, {
         buttonHintsHeading: '按钮提示',
         buttonHintsDescription: '将鼠标停留在图标或紧凑型按钮上片刻，可查看该按钮的功能说明；按钮的键盘和屏幕阅读器名称保持一致。',
         featureGuide: {
+            multiDay: {
+                title: '多日总览',
+                description: '事件 → 多日总览：查看 7 天窗口与天气，或按月度天文选日期。选择窗口进入单日事件。',
+            },
             cloudPlanning: {
                 title: '云层遮挡与时间规划',
                 description: '云高支持预报云底、云量剖面、温湿剖面或手动海拔。单层显示最低检出层，分层按离地高度归类；温湿剖面是估算，卫星图使用独立实况时间。',
@@ -610,6 +615,10 @@ export const translations: Record<UiLanguage, {
         buttonHintsHeading: 'Button hints',
         buttonHintsDescription: 'Pause the pointer over an icon or compact control to see what it does. The same name is also exposed to keyboard and screen-reader users.',
         featureGuide: {
+            multiDay: {
+                title: 'Multi-day overview',
+                description: 'Events → Multi-day overview: seven days of windows and weather, or monthly astronomy. Choose a window to open single-day events.',
+            },
             cloudPlanning: {
                 title: 'Cloud planning and time controls',
                 description: 'Choose forecast base, cloud-cover profile, temperature/dew-point profile or manual altitude. Single mode uses the lowest detected layer; layered mode groups by height above ground. Profiles are estimates; satellite images use their own observation time.',

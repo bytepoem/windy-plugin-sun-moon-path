@@ -1,7 +1,11 @@
 <script lang="ts">
     import { messages } from './locales/PluginGuide';
-    import { labels as comparisonLabels } from './locales/FavoriteComparison';
+    import { labels as comparisonLabels, messages as comparisonMessages } from './locales/FavoriteComparison';
+    import { messages as multiDayMessages } from './locales/MultiDayOverview';
+    import { translations as weatherText } from './locales/WeatherTable';
+    import { MULTI_DAY_METRICS } from './multiDayWeatherPresentation';
     import CelestialIcon from './CelestialIcon.svelte';
+    import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import { translations, languageResourceHelp } from './pluginTranslations';
     import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import {
@@ -29,6 +33,8 @@
         .map(value => formatPrecipitationMm(value, units.precipitation));
     $: visibilityLegendValues = [0.8, 1.5, 3.5, 7, 12]
         .map(value => formatVisibilityKm(value, units.distance));
+    $: calendarWeekdays = Array.from({ length:7 }, (_, index) => new Intl.DateTimeFormat(UI_LANGUAGES[uiLanguage].locale,
+        { weekday:'short', timeZone:'UTC' }).format(new Date(Date.UTC(2024, 0, 7 + index))));
 
 </script>
 
@@ -47,6 +53,18 @@
         <p>{messages[uiLanguage].afterLeavingCloudPlanningAllRestoresEvent}</p>
         <p>{messages[uiLanguage].toggleShowSkyChartInSettingsOr}</p>
         <p>{messages[uiLanguage].viewSunMoonAndGalacticCentreEvents}</p>
+        <p>{text.featureGuide.multiDay.description} {multiDayMessages[uiLanguage].nightRule} {multiDayMessages[uiLanguage].monthRule}</p>
+        <p class="calendar-week-order"><span>{multiDayMessages[uiLanguage].month}:</span>
+            {#each calendarWeekdays as weekday, index}<span class:weekend={index === 0 || index === 6}>{weekday}</span>{/each}
+        </p>
+        <p>{comparisonMessages[uiLanguage].weatherSource}: Windy / Open-Meteo · {comparisonLabels[uiLanguage].modelLabel}: EC / GFS / ICON</p>
+        <p>{comparisonLabels[uiLanguage].dateControl}: {multiDayMessages[uiLanguage].vertical} ↕ / {multiDayMessages[uiLanguage].horizontal} ↔</p>
+        <p class="metric-legend"><span>{comparisonLabels[uiLanguage].weather}</span>
+            {#each MULTI_DAY_METRICS as metric}
+                <span class="metric-legend-item"><WeatherMetricIcon {metric} size={14} /><span>{weatherText[uiLanguage].metrics[metric][0]}</span></span>
+            {/each}
+        </p>
+        <p>{comparisonLabels[uiLanguage].precipitationRule}</p>
         <p>{messages[uiLanguage].northIsUpEastIsRightThe}</p>
     </section>
 
@@ -456,6 +474,12 @@
     .module-about p:first-child {
         margin-top: 0;
     }
+
+    .calendar-week-order { display:flex; flex-wrap:wrap; gap:4px 6px; }
+    .calendar-week-order .weekend { color:var(--panel-warning); font-weight:600; text-decoration:underline; text-underline-offset:2px; }
+
+    .metric-legend { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; }
+    .metric-legend-item { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:10px; line-height:1.15; }
 
     .module-guide {
         gap: 8px;

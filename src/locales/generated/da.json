@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Datakilder og licens",
   "m_0a9566a139b8": "Skybasens nedre grænse er ukendt",
   "m_0ab0b4c34423": "Ryd højde",
+  "m_0abba441f16e": "Vandret",
   "m_0b10287e4fba": "Temperatur − dugpunkt",
   "m_0bcd66e677f4": "Lag",
   "m_0bd9a305f1d8": "Sol- og måneikoner angiver himmellegemet; ↑ betyder opgang og ↓ nedgang. Tider bruger lokal tid på observationsstedet.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Blokering af {{0}}",
   "m_721c455d6dc4": "Overskyet",
   "m_722b6abce4b3": "Regnbuevinkler og daglige tidsvinduer",
+  "m_727cd3a64d79": "Lodret",
   "m_728ecc4322c6": "Terrændata er ufuldstændige; andre retninger forbliver ukendte.",
   "m_72bdd2121b76": "Intet tilgængeligt tidsvindue",
   "m_72d42a55ce2f": "Største skyfri afstand",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Kraftigt mørkegult skær",
   "m_fe18013d93d2": "Nu",
   "m_ff3b63f08641": "Temperatur-/dugpunktsprofil · Estimerer mulige lag ud fra temperatur-/dugpunktsforskellen. Enkeltvisning bruger den laveste kandidat; lagvis visning bevarer separate kandidater. Ikke målte skybaser; ingen korrektion for ismætning.",
-  "m_ffb8abdf558c": "Modelestimater er til fotografisk reference, ikke lokal dybde eller adgangssikkerhed."
+  "m_ffb8abdf558c": "Modelestimater er til fotografisk reference, ikke lokal dybde eller adgangssikkerhed.",
+  "m_023792bdb1d9": "Hændelser for én dag",
+  "m_41fd2a7fbf61": "Oversigt over flere dage",
+  "m_d69d4d09ca8f": "7-dages oversigt",
+  "m_9f9c89ac5706": "Månedlig astronomi",
+  "m_eb77a9fb01dc": "Nætter regnes fra lokal middag til næste middag; månefasen beregnes ved middag.",
+  "m_1991374c2d48": "Kun astronomi; bjælkens længde viser vinduets varighed, ikke vejret eller sandsynligheden for succes.",
+  "m_2cf18a16aa8e": "Hændelser → Oversigt over flere dage: syv dages vinduer og vejr eller månedlig astronomi. Vælg et vindue for at åbne dagens hændelser.",
+  "m_7202ca076942": "Prognoseperiode",
+  "m_d6f15ea119df": "Fortsætter hen over middag"
 }

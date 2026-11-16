@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Atribusi data & lisensi",
   "m_0a9566a139b8": "Batas bawah dasar awan tidak diketahui",
   "m_0ab0b4c34423": "Hapus ketinggian",
+  "m_0abba441f16e": "Horizontal",
   "m_0b10287e4fba": "Suhu − titik embun",
   "m_0bcd66e677f4": "Lapisan",
   "m_0bd9a305f1d8": "Ikon matahari dan bulan menunjukkan benda langit; ↑ berarti terbit dan ↓ berarti terbenam. Waktu menggunakan waktu lokal lokasi pengamat.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Menghalangi {{0}}",
   "m_721c455d6dc4": "Mendung",
   "m_722b6abce4b3": "Sudut pelangi dan jendela harian",
+  "m_727cd3a64d79": "Vertikal",
   "m_728ecc4322c6": "Data medan tidak lengkap; arah lain tetap tidak diketahui.",
   "m_72bdd2121b76": "Tidak ada jendela tersedia",
   "m_72d42a55ce2f": "Jarak bebas halangan terjauh",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Pijar kuning tua terang",
   "m_fe18013d93d2": "Sekarang",
   "m_ff3b63f08641": "Profil suhu/titik embun · Memperkirakan kandidat lapisan dari selisih suhu dan titik embun. Tampilan tunggal memakai kandidat terendah; tampilan berlapis mempertahankan kandidat terpisah. Bukan dasar awan terukur; tanpa koreksi kejenuhan es.",
-  "m_ffb8abdf558c": "Perkiraan model untuk referensi fotografi, bukan kedalaman setempat atau keselamatan akses."
+  "m_ffb8abdf558c": "Perkiraan model untuk referensi fotografi, bukan kedalaman setempat atau keselamatan akses.",
+  "m_023792bdb1d9": "Peristiwa satu hari",
+  "m_41fd2a7fbf61": "Ringkasan beberapa hari",
+  "m_d69d4d09ca8f": "Ringkasan 7 hari",
+  "m_9f9c89ac5706": "Astronomi bulanan",
+  "m_eb77a9fb01dc": "Malam dihitung dari tengah hari setempat hingga tengah hari berikutnya; fase Bulan dihitung pada tengah hari.",
+  "m_1991374c2d48": "Hanya astronomi; panjang batang menunjukkan durasi jendela, bukan cuaca atau peluang keberhasilan.",
+  "m_2cf18a16aa8e": "Peristiwa → Ringkasan beberapa hari: jendela dan cuaca tujuh hari, atau astronomi bulanan. Pilih jendela untuk membuka peristiwa satu hari.",
+  "m_7202ca076942": "Rentang prakiraan",
+  "m_d6f15ea119df": "Berlanjut melewati tengah hari"
 }

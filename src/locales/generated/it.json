@@ -43,6 +43,7 @@
   "m_0a1a398ea803": "Attribuzione dei dati e licenza",
   "m_0a9566a139b8": "Limite inferiore della base delle nubi sconosciuto",
   "m_0ab0b4c34423": "Cancella altezza",
+  "m_0abba441f16e": "Orizzontale",
   "m_0b10287e4fba": "Temperatura − punto di rugiada",
   "m_0bcd66e677f4": "Strati",
   "m_0bd9a305f1d8": "Le icone di Sole e Luna identificano l’astro; ↑ indica il sorgere e ↓ il tramontare. Gli orari usano l’ora locale del luogo di osservazione.",
@@ -355,6 +356,7 @@
   "m_720a09e793ef": "Ostruzione di {{0}}",
   "m_721c455d6dc4": "Coperto",
   "m_722b6abce4b3": "Angoli dell’arcobaleno e finestre giornaliere",
+  "m_727cd3a64d79": "Verticale",
   "m_728ecc4322c6": "Dati del terreno incompleti; le altre direzioni restano sconosciute.",
   "m_72bdd2121b76": "Nessuna finestra disponibile",
   "m_72d42a55ce2f": "Distanza massima senza nubi",
@@ -796,5 +798,14 @@
   "m_fdf834db0b08": "Bagliore intenso giallo scuro",
   "m_fe18013d93d2": "Ora",
   "m_ff3b63f08641": "Profilo temperatura/punto di rugiada · Stima gli strati candidati dalla differenza temperatura/punto di rugiada. La vista singola usa il candidato più basso; quella multistrato conserva candidati separati. Non sono basi misurate; nessuna correzione di saturazione rispetto al ghiaccio.",
-  "m_ffb8abdf558c": "Le stime del modello sono riferimenti fotografici, non per profondità locale o sicurezza di accesso."
+  "m_ffb8abdf558c": "Le stime del modello sono riferimenti fotografici, non per profondità locale o sicurezza di accesso.",
+  "m_023792bdb1d9": "Eventi di un giorno",
+  "m_41fd2a7fbf61": "Panoramica di più giorni",
+  "m_d69d4d09ca8f": "Panoramica di 7 giorni",
+  "m_9f9c89ac5706": "Astronomia mensile",
+  "m_eb77a9fb01dc": "Le notti vanno dal mezzogiorno locale al successivo; la fase lunare è calcolata a mezzogiorno.",
+  "m_1991374c2d48": "Solo astronomia; la barra indica la durata della finestra, non il meteo o la probabilità di successo.",
+  "m_2cf18a16aa8e": "Eventi → Panoramica di più giorni: finestre e meteo di sette giorni o astronomia mensile. Scegli una finestra per aprire gli eventi del giorno.",
+  "m_7202ca076942": "Intervallo di previsione",
+  "m_d6f15ea119df": "Continua oltre mezzogiorno"
 }
