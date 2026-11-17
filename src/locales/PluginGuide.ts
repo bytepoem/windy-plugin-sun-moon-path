@@ -4,9 +4,9 @@ export const messages = defineMessages({
     zh: {
         gettingStarted: '开始使用',
         chooseALocationThenSetTheLocal: '先选地点，再调整顶部当地日期和时间；「现在」返回当前时刻，升落按钮可直接跳转。Windy 时间轴也会同步规划时间，切换 Tab 不会重置。重新打开插件从当前时刻开始。',
-        useTheNavigationDropdownForCloudsRainbow: '主导航下拉菜单切换云层遮挡、彩虹、地平线与潮汐；插件默认跟随 Windy 实际使用的语言，也可在设置顶部单独选择，或切回「跟随 Windy」。计量单位跟随 Windy，其他偏好在设置中修改。启动图层只列出插件支持且当前 Windy 提供的选项，也可保持当前图层。',
+        useTheNavigationDropdownForCloudsRainbow: '主导航下拉菜单切换云层遮挡、彩虹、地平线与潮汐；插件默认跟随 Windy 实际使用的语言，也可在设置顶部单独选择，或切回「自动」。计量单位跟随 Windy，其他偏好在设置中修改。启动图层只列出插件支持且当前 Windy 提供的选项，也可保持当前图层。',
         forIncompleteDisplaysOrLoadingErrorsExpand: '显示不完整或加载异常时，展开「关于」底部的「查看诊断信息」，复制报告并随问题反馈提供。初始化失败时也会显示诊断入口；文件本身无法加载时，请提供截图与浏览器错误。',
-        eventsAndSkyChart: '事件与天空盘',
+        eventsAndSkyChart: '天文与天空盘',
         afterLeavingCloudPlanningAllRestoresEvent: '离开云层规划后，点击「全部」可恢复事件方向。云层高度未知时，范围按钮适配已有方向线，放大按钮恢复机位缩放。',
         toggleShowSkyChartInSettingsOr: '在设置中切换「显示天空盘」，或点击窗口栏首个天体轨道图标按钮；两处同步并记住选择。',
         viewSunMoonAndGalacticCentreEvents: '查看日月、银心升落和无月黑夜／银河时段，点击事件时刻跳转。今天的高亮与倒计时指向下一个真实事件。天空盘跟随规划时间；标有 now 的日月长线始终表示现在。',
@@ -30,9 +30,9 @@ export const messages = defineMessages({
     en: {
         gettingStarted: 'Getting started',
         chooseALocationThenSetTheLocal: 'Choose a location, then set the local date and time above. Now returns to the current instant; rise/set shortcuts jump to events. The Windy timeline also updates planning time. Tabs preserve your selection; reopening starts at the current instant.',
-        useTheNavigationDropdownForCloudsRainbow: 'Use the navigation dropdown for Clouds, Rainbow, Horizon or Tides. The plugin follows the language actually used by Windy by default. Choose a separate language at the top of Settings, or switch back to Follow Windy. Units follow Windy, and other preferences are in Settings. Startup layers list choices supported by the plugin and available in Windy; you can also keep the current layer.',
+        useTheNavigationDropdownForCloudsRainbow: 'Use the navigation dropdown for Clouds, Rainbow, Horizon or Tides. The plugin follows the language actually used by Windy by default. Choose a separate language at the top of Settings, or switch back to auto. Units follow Windy, and other preferences are in Settings. Startup layers list choices supported by the plugin and available in Windy; you can also keep the current layer.',
         forIncompleteDisplaysOrLoadingErrorsExpand: 'For incomplete displays or loading errors, expand View diagnostics at the bottom of About, copy the report and include it with your issue. Initialization failures also show this entry. If the file itself cannot load, provide screenshots and browser errors.',
-        eventsAndSkyChart: 'Events and sky chart',
+        eventsAndSkyChart: 'Astro and sky chart',
         afterLeavingCloudPlanningAllRestoresEvent: 'After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.',
         toggleShowSkyChartInSettingsOr: 'Toggle “Show sky chart” in Settings or use the first window button with the orbit icon. Both controls stay synchronized and remember your choice.',
         viewSunMoonAndGalacticCentreEvents: 'View Sun, Moon and galactic centre events, moonless nights and Milky Way windows. Click an event time to jump. Today’s highlight and countdown identify the next real event. The sky chart follows planning time; Sun/Moon bearings labelled now always mean the current instant.',

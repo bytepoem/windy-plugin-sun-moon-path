@@ -2,7 +2,7 @@
     import { messages } from './locales/PluginSettings';
     import PluginGuide from './PluginGuide.svelte';
     import { translations } from './pluginTranslations';
-    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
+    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, automaticLanguageLabel, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
     import { KEEP_CURRENT_OVERLAY, initialOverlayLabel, type InitialOverlayPreference, type WindyOverlay } from './initialOverlay';
     import { RADAR_PROVIDERS, RAINVIEWER_WEBSITE_URL, type RadarProvider, type RadarOverlayStatus } from './radarOverlay';
     import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
@@ -57,6 +57,8 @@
         tencent: 'https://lbs.qq.com/webApi/javascriptGL/glGuide/glBasic',
     };
     $: text = translations[uiLanguage];
+    $: selectedLanguageName = languagePreference === 'auto'
+        ? text.followWindyLanguageLabel : UI_LANGUAGES[languagePreference].nativeName;
     $: radarStatusText = text.radarStatusLabels[radarOverlayStatus];
     $: extendedDistanceLabel = `${formatDistanceKm(600, units.distance)} ${units.distance}`;
 </script>
@@ -71,12 +73,12 @@
         <select
             class="language-toggle"
             aria-label={text.languageLabel}
-            title={text.languageLabel}
+            title={`${text.languageLabel}: ${selectedLanguageName}`}
             value={languagePreference}
             aria-busy={languageLoading}
             on:change={changeLanguage}
         >
-            <option value="auto">{text.followWindyLanguageLabel}</option>
+            <option value="auto" aria-label={`${automaticLanguageLabel(uiLanguage)}: ${text.followWindyLanguageLabel}`}>{automaticLanguageLabel(uiLanguage)}</option>
             {#each UI_LANGUAGE_OPTIONS as option}
                 <option value={option.value}>{option.nativeName}</option>
             {/each}
@@ -370,14 +372,16 @@
         width: 100%;
         min-width: 0;
         min-height: 36px;
-        /* Equal padding keeps the label centered while reserving arrow space. */
-        padding: 4px 24px;
+        /* Keep the arrow clear while long selected names end with an ellipsis. */
+        padding: 4px 26px 4px 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
         color: var(--panel-text);
         background: #0e161f;
         font: inherit;
-        font-size: 12px;
         cursor: pointer;
         transition: color 160ms ease, background 160ms ease;
     }
@@ -390,6 +394,8 @@
     .settings-header {
         flex-shrink: 0;
         display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
         gap: 8px;
         padding: 8px 12px;
         border-bottom: 1px solid var(--panel-border);
@@ -398,20 +404,27 @@
     .settings-pages {
         display: flex;
         flex: 1;
-        min-width: 0;
+        /* Move the language selector to the next row before splitting a page name. */
+        min-width: min-content;
         gap: 8px;
     }
 
     .language-control {
         position: relative;
-        flex: 0 0 auto;
-        width: 120px;
+        display: flex;
+        /* Fit the Chinese choices without growing for other languages. */
+        flex: 0 0 96px;
+        width: 96px;
+        max-width: 100%;
+        margin-left: auto;
+        /* The arrow must track the select, not the height of wrapped page buttons. */
+        align-self: flex-start;
     }
 
     .language-chevron {
         position: absolute;
         top: 50%;
-        right: 8px;
+        right: 6px;
         width: 16px;
         height: 16px;
         transform: translateY(-50%);
@@ -425,12 +438,15 @@
 
     .settings-pages button {
         flex: 1;
+        min-width: 0;
         min-height: 36px;
+        padding: 4px 6px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
         background: transparent;
         color: var(--panel-muted);
         font: inherit;
+        white-space: nowrap;
         cursor: pointer;
     }
 

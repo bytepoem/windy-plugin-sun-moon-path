@@ -105,6 +105,8 @@ describe('compiled settings panel states', () => {
     it.each(UI_LANGUAGE_OPTIONS)('renders all registered language choices while displaying $nativeName', option => {
         const html = renderSettings({ ...settingsProps, uiLanguage: option.value });
         expect(html).toMatch(/<select[^>]*class="language-toggle(?:\s[^"]*)?"/);
+        const languageTitle = html.match(/<select[^>]*class="language-toggle(?:\s[^"]*)?"[^>]*title="([^"]*)"/)?.[1];
+        expect(languageTitle?.endsWith(`: ${option.nativeName}`)).toBe(true);
         for (const language of UI_LANGUAGE_OPTIONS) {
             expect(html).toContain(`<option value="${language.value}">${language.nativeName}</option>`);
         }
@@ -139,6 +141,6 @@ describe('compiled settings panel states', () => {
         expect(chinese).toMatch(/<button[^>]*type="submit"[^>]*disabled/);
         const english = renderSettings({ ...settingsProps, uiLanguage: 'en' });
         expect(english).not.toContain('id="amap-api-key"');
-        expect(english).toContain('Preferences');
+        expect(english).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Settings<\/button>/);
     });
 });

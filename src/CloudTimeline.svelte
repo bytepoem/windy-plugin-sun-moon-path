@@ -10,6 +10,7 @@
     export let language: UiLanguage;
     const dispatch = createEventDispatcher<{ preview: string; datetime: string; commit: void; now: void }>();
     $: minute = cloudClockMinute(clock);
+    $: nowLabel = language === 'zh' || language === 'zh-TW' ? messages[language].now : messages.en.now;
 </script>
 
 <div class="cloud-timeline" aria-label={messages[language].localTimeAndCelestialEvents}>
@@ -23,10 +24,11 @@
                     if (event.currentTarget.value) { dispatch('datetime', event.currentTarget.value); }
                 }} />
         </label>
+        <!-- Keep the time track usable with a short label and a localized full description. -->
         <button class="time-now" type="button"
-            aria-label={messages[language].jumpToTheCurrentDateAndTime}
+            aria-label={`${nowLabel}: ${messages[language].jumpToTheCurrentDateAndTime}`}
             title={messages[language].jumpToTheCurrentDateAndTime}
-            on:click={() => dispatch('now')}>{messages[language].now}</button>
+            on:click={() => dispatch('now')}>{nowLabel}</button>
         <div class="time-track">
             <input type="range" min="0" max="1439" step="1" value={minute}
                 aria-label={messages[language].localCalculationTime} aria-valuetext={clock || '--:--'}

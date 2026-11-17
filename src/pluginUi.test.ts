@@ -217,7 +217,6 @@ describe('plugin astronomy loading presentation', () => {
     it('adds delayed native hints to compact and icon-only controls', () => {
         expect(pluginSource).toContain(': text.eventButtonTitles[option.value]}');
         expect(pluginMessages.en.cloudPlanningRequiresASingleEvent).toBe('Cloud planning requires a single event');
-        expect(settingsSource).toContain('title={text.languageLabel}');
         expect(pluginSource).toContain(
             'title={text.locationCopyLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
         );

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, DEFAULT_UI_LANGUAGE, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
+    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, DEFAULT_UI_LANGUAGE, automaticLanguageLabel, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
     import { translations, temporaryEnglishAction } from './pluginTranslations';
 
     export let language: UiLanguage = DEFAULT_UI_LANGUAGE;
@@ -15,7 +15,7 @@
     <form on:submit|preventDefault={() => choose(selected)}>
         <label for="startup-language">{text.languageLabel}</label>
         <select id="startup-language" bind:value={selected}>
-            <option value="auto">{text.followWindyLanguageLabel}</option>
+            <option value="auto" aria-label={`${automaticLanguageLabel(language)}: ${text.followWindyLanguageLabel}`}>{automaticLanguageLabel(language)}</option>
             {#each UI_LANGUAGE_OPTIONS as option}
                 <option value={option.value} lang={option.locale}>{option.nativeName}</option>
             {/each}

@@ -8,8 +8,8 @@ export const temporaryEnglishAction = {
 
 /** Network-dependent language guidance remains available in both built-in languages. */
 export const languageResourceHelp = {
-    zh: '简体中文和英语无需下载。其他语言首次使用时联网加载，成功后缓存在此浏览器。加载失败可重试；启动时也可临时使用英语，不改变已保存的偏好。',
-    en: 'Simplified Chinese and English need no download. Other languages load online on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup without changing your saved preference.',
+    zh: '简体中文和英语无需下载。其他语言首次使用时联网加载，成功后缓存在此浏览器。加载失败可重试；启动时也可临时使用英语，不改变已保存的偏好。选择“自动”可跟随 Windy 的语言。非中文界面的“全部”和“现在”按钮使用 All 和 Now，完整提示仍使用所选语言。语言框的长名称以省略号显示，展开可查看完整选项。',
+    en: 'Simplified Chinese and English need no download. Other languages load online on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup without changing your saved preference. Choose auto to follow Windy’s language. Non-Chinese interfaces use All and Now for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.',
 };
 import type { ObservationEvent as DirectionEvent } from './observationPlanner';
 import type { AstronomyInterval } from './solar';
@@ -253,7 +253,7 @@ export const translations: Record<UiLanguage, {
         enableRadarOverlayLabel: '开启气象雷达叠加',
         showSkyChartLabel: '显示天空盘',
         hideSkyChartLabel: '隐藏天空盘',
-        showSkyChartDescription: '控制事件视图的天空盘显示，与窗口栏首个按钮同步，并记住选择。',
+        showSkyChartDescription: '控制天文视图的天空盘显示，与窗口栏首个按钮同步，并记住选择。',
         disableRadarOverlayLabel: '关闭气象雷达叠加',
         panelIntro: '日月关键时刻、各事件前后 30 分钟的方位线和夜间观测时段。',
         sunMoonPanelLabel: '日月信息面板',
@@ -282,7 +282,7 @@ export const translations: Record<UiLanguage, {
         removeCurrentLocationFavoriteLabel: '取消收藏当前地点',
         pinCurrentLocationLabel: '钉住当前地点',
         unpinCurrentLocationLabel: '取消钉住当前地点',
-        eventTab: '事件',
+        eventTab: '天文',
         weatherTab: '天气',
         guideTab: '说明',
         settingsTab: '设置',
@@ -322,7 +322,7 @@ export const translations: Record<UiLanguage, {
         featureGuide: {
             multiDay: {
                 title: '多日总览',
-                description: '事件 → 多日总览：查看 7 天窗口与天气，或按月度天文选日期。选择窗口进入单日事件。',
+                description: '天文 → 多日总览：查看 7 天窗口与天气，或按月度天文选日期。选择窗口进入单日事件。',
             },
             cloudPlanning: {
                 title: '云层遮挡与时间规划',
@@ -554,7 +554,7 @@ export const translations: Record<UiLanguage, {
         enableRadarOverlayLabel: 'Enable radar overlay',
         showSkyChartLabel: 'Show sky chart',
         hideSkyChartLabel: 'Hide sky chart',
-        showSkyChartDescription: 'Show the sky chart in the Events view. This setting stays synchronized with the first window button and remembers your choice.',
+        showSkyChartDescription: 'Show the sky chart in the Astro view. This setting stays synchronized with the first window button and remembers your choice.',
         disableRadarOverlayLabel: 'Disable radar overlay',
         panelIntro: 'Key sun and moon times, direction lines 30m before and after each event, and night observing windows.',
         sunMoonPanelLabel: 'Sun and moon information panel',
@@ -583,7 +583,7 @@ export const translations: Record<UiLanguage, {
         removeCurrentLocationFavoriteLabel: 'Remove current location from favorites',
         pinCurrentLocationLabel: 'Pin current location',
         unpinCurrentLocationLabel: 'Unpin current location',
-        eventTab: 'Events',
+        eventTab: 'Astro',
         weatherTab: 'Weather',
         guideTab: 'Guide',
         settingsTab: 'Settings',
@@ -623,7 +623,7 @@ export const translations: Record<UiLanguage, {
         featureGuide: {
             multiDay: {
                 title: 'Multi-day overview',
-                description: 'Events → Multi-day overview: seven days of windows and weather, or monthly astronomy. Choose a window to open single-day events.',
+                description: 'Astro → Multi-day overview: seven days of windows and weather, or monthly astronomy. Choose a window to open single-day events.',
             },
             cloudPlanning: {
                 title: 'Cloud planning and time controls',

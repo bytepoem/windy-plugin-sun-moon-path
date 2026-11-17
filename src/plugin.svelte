@@ -278,7 +278,8 @@
                         disabled={eventSkyReadyKey !== astronomyKey || (option.value === 'all'
                             ? summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)
                             : !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
-                        aria-label={text.events[option.value]}
+                        aria-label={option.value === 'all' && compactAllLabel !== text.events.all
+                            ? `${compactAllLabel}: ${text.events.all}` : text.events[option.value]}
                         title={summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible) && option.value === 'all'
                             ? (rainbowVisible
                                 ? (messages[uiLanguage].rainbowPlanningRequiresASingleEvent)
@@ -287,7 +288,8 @@
                         on:click={() => selectEvent(option.value)}
                     >
                         {#if option.value === 'all'}
-                            <span class="event-button__text">{text.events.all}</span>
+                            <!-- Short visible labels keep all seven event controls equal in width. -->
+                            <span class="event-button__text">{compactAllLabel}</span>
                         {:else}
                             <span
                                 class:event-button__icon--moon={option.value === 'moonrise' || option.value === 'moonset'}
@@ -473,7 +475,7 @@
             <EventNavigation active={summaryTab === 'events'} bind:view={eventView} language={uiLanguage}
                 on:activate={activateEventView} on:tabkeydown={event => handleSummaryTabKeydown(event.detail, 'events')} />
             {#if isMobileOrTablet && !isMobileFullscreen}
-                <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
+                <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}><span class="summary-tab__label" title={text.weatherTab}>{text.weatherTab}</span></button>
             {/if}
             <CloudNavigation
                 active={summaryTab === 'clouds'}
@@ -482,7 +484,7 @@
                 on:activate={() => selectSummaryTab('clouds')}
                 on:tabkeydown={event => handleSummaryTabKeydown(event.detail, 'clouds')}
             />
-            <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => selectSummaryTab('settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
+            <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => selectSummaryTab('settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}><span class="summary-tab__label" title={text.settingsTab}>{text.settingsTab}</span></button>
             <button
                 id="summary-tab-about"
                 type="button"
@@ -500,7 +502,7 @@
                 }}
                 on:keydown={event => handleSummaryTabKeydown(event, 'about')}
             >
-                <span>{text.aboutTab}</span>
+                <span class="summary-tab__label" title={text.aboutTab}>{text.aboutTab}</span>
                 {#if pluginUpdateReminderVersion}
                     <span class="summary-tab__badge" aria-hidden="true">{text.aboutTabUpdateBadge}</span>
                 {/if}
@@ -1561,6 +1563,7 @@
     let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
+    $: compactAllLabel = uiLanguage === 'zh' || uiLanguage === 'zh-TW' ? text.events.all : translations.en.events.all;
     /** Mirror Windy's global units without mutating the host preferences. */
     const handleMetricChange = (ident?: string, unit?: string) => {
         // Windy broadcasts the new unit before every consumer can safely reread
@@ -3952,6 +3955,7 @@
         height: 10px;
         padding: 0 3px;
         font-size: 7px;
+        line-height: 10px;
     }
 
     .panel-title {
@@ -4662,24 +4666,34 @@
         font: inherit;
         font-size: 15px;
         cursor: pointer;
-        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+
+    /* Keep translated navigation names whole; the accessible name retains all text. */
+    .summary-tab__label {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .summary-tab__badge {
         box-sizing: border-box;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+        display: block;
         min-width: 16px;
+        max-width: 100%;
         height: 14px;
         padding: 0 3px;
         border-radius: 999px;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         color: #0b1e2b;
         background: var(--panel-accent);
         font-size: 8px;
         font-weight: 800;
-        line-height: 1;
+        line-height: 14px;
     }
 
     .summary-tabs button + button {

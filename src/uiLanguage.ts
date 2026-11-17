@@ -25,12 +25,12 @@ const language = (nativeName: string, locale: string, options: Partial<UiLanguag
 export const UI_LANGUAGES = {
     // Lead shared manual-language dropdowns with Chinese variants, then English.
     zh: {
-        nativeName: '简体中文', secondaryName: 'Simplified Chinese', secondaryLocale: 'en',
+        nativeName: '中文(简)', secondaryName: 'Simplified Chinese', secondaryLocale: 'en',
         locale: 'zh-CN', clockLocale: 'zh-CN', placeSearch: true, compactCloudHeadings: true,
         releaseNotesLanguage: 'zh',
         cloudHelpImage: 'https://community.windy.com/assets/uploads/files/1788950340643-74dd941b-faef-4f81-b2a6-7471c71b5d2e-download.png',
     },
-    'zh-TW': language('繁体中文', 'zh-TW', { placeSearch: true, compactCloudHeadings: true, releaseNotesLanguage: 'zh',
+    'zh-TW': language('中文(繁)', 'zh-TW', { placeSearch: true, compactCloudHeadings: true, releaseNotesLanguage: 'zh',
         cloudHelpImage: 'https://community.windy.com/assets/uploads/files/1788950340643-74dd941b-faef-4f81-b2a6-7471c71b5d2e-download.png' }),
     en: language('English', 'en-US', { secondaryName: '英语', secondaryLocale: 'zh-CN', clockLocale: 'en-GB' }),
     ar: language('عربي', 'ar'),
@@ -78,6 +78,10 @@ export const UI_LANGUAGES = {
 export type UiLanguage = keyof typeof UI_LANGUAGES;
 export type UiLanguagePreference = UiLanguage | 'auto';
 export const DEFAULT_UI_LANGUAGE: UiLanguage = 'zh';
+/** Shared compact label for following Windy; the stored preference remains `auto`. */
+export const automaticLanguageLabel = (uiLanguage: UiLanguage): string =>
+    uiLanguage === 'zh' ? '自动' : uiLanguage === 'zh-TW' ? '自動' : 'auto';
+
 export const UI_LANGUAGE_OPTIONS = Object.entries(UI_LANGUAGES).map(([value, definition]) => ({
     value: value as UiLanguage,
     ...definition,

@@ -55,7 +55,7 @@
 <div class="event-navigation" class:active bind:this={root} role="presentation">
     <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel"
         aria-selected={active} tabindex={active ? 0 : -1} on:click={() => dispatch('activate')}
-        on:keydown={event => dispatch('tabkeydown', event)}><span class="tab-label">{translations[language].eventTab}</span></button>
+        on:keydown={event => dispatch('tabkeydown', event)}><span class="tab-label" title={translations[language].eventTab}>{translations[language].eventTab}</span></button>
     <button class="arrow" bind:this={trigger} type="button" aria-label={text.overview}
         aria-haspopup="menu" aria-expanded={open} aria-controls="event-view-menu" on:click={toggle}
         on:keydown={event => {
@@ -85,14 +85,14 @@
     button { border:0; background:transparent; color:var(--panel-muted); font:inherit; font-size:15px; cursor:pointer; min-height:36px; }
     button:focus-visible { outline:2px solid var(--panel-accent); outline-offset:-2px; }
     button:hover, .active > button { color:var(--panel-text); }
-    button[role=tab] { flex:1; min-width:0; padding:0 2px; overflow-wrap:anywhere; }
-    .tab-label { display:block; width:100%; text-align:center; white-space:normal; overflow-wrap:anywhere; }
+    button[role=tab] { flex:1; min-width:0; padding:0 2px; }
+    .tab-label { display:block; width:100%; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .arrow { flex:0 0 24px; align-self:center; display:flex; align-items:center; justify-content:center; width:24px; min-height:28px; margin:4px 2px; padding:0; border-radius:4px; color:var(--panel-text); background:rgba(255,255,255,.06); }
     .arrow:hover, .arrow[aria-expanded=true] { background:rgba(99,185,238,.2); }
     .arrow svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
     .menu { position:absolute; top:100%; left:0; z-index:20; width:auto; max-width:min(260px,80vw); min-width:164px; padding:4px; border:1px solid var(--panel-border); border-radius:6px; background:#1d263d; box-shadow:0 4px 16px rgba(0,0,0,.3); }
     /* Keep menu rows and arrow spacing identical to CloudNavigation on touch devices too. */
-    .menu button { position:relative; width:100%; min-height:30px; padding:0 24px; text-align:center; overflow-wrap:anywhere; }
+    .menu button { position:relative; width:100%; min-height:30px; padding:0 24px; text-align:center; overflow-wrap:break-word; }
     .menu button span { position:absolute; left:6px; top:50%; width:16px; transform:translateY(-50%); text-align:center; }
     .menu button[aria-checked=true], .menu button:hover { color:var(--panel-text); background:rgba(99,185,238,.14); }
     :global(.mobile_ui) button { font-size:13px; }

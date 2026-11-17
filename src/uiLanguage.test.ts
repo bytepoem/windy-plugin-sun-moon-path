@@ -142,7 +142,7 @@ describe('compiled language consumers', () => {
     it('offers following Windy and every manual choice on the startup recovery screen', () => {
         const html = renderChoice({});
         expect(html).toContain('value="auto"');
-        expect(html).toContain('跟随 Windy');
+        expect(html).toMatch(/<option value="auto"[^>]*>自动<\/option>/);
         for (const option of UI_LANGUAGE_OPTIONS) {
             expect(html).toContain(`value="${option.value}"`);
             expect(html).toContain(option.nativeName);
