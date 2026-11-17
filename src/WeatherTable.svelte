@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher, tick } from 'svelte';
-    import { UI_LANGUAGES } from './uiLanguage';
+    import { formatDisplayDate } from './dateDisplay';
     import { translations, messages } from './locales/WeatherTable';
 
     import CelestialIcon from './CelestialIcon.svelte';
@@ -143,12 +143,7 @@
         if (![year, month, day].every(Number.isFinite)) {
             return dateInput;
         }
-        return new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            timeZone: 'UTC',
-        }).format(Date.UTC(year, month - 1, day, 12));
+        return formatDisplayDate(dateInput, true);
     };
 
     const selectModel = (nextModel: WeatherModel) => {

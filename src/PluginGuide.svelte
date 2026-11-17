@@ -6,7 +6,7 @@
     import { MULTI_DAY_METRICS } from './multiDayWeatherPresentation';
     import CelestialIcon from './CelestialIcon.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
-    import { translations, languageResourceHelp } from './pluginTranslations';
+    import { translations, languageResourceHelp, dateSelectionHelp } from './pluginTranslations';
     import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import {
         formatDistanceKm, formatPrecipitationMm, formatTemperatureC, formatVisibilityKm,
@@ -45,6 +45,7 @@
         <p>{messages[uiLanguage].useTheNavigationDropdownForCloudsRainbow}</p>
         <p>{text.keyboardNavigationDescription}</p>
         <p lang={UI_LANGUAGES[uiLanguage].releaseNotesLanguage === 'zh' ? 'zh-CN' : 'en'}>{languageResourceHelp[UI_LANGUAGES[uiLanguage].releaseNotesLanguage]}</p>
+        <p lang={UI_LANGUAGES[uiLanguage].releaseNotesLanguage === 'zh' ? 'zh-CN' : 'en'}>{dateSelectionHelp[UI_LANGUAGES[uiLanguage].releaseNotesLanguage]}</p>
         <p>{text.feedbackGuideHint}</p>
         <p>{messages[uiLanguage].forIncompleteDisplaysOrLoadingErrorsExpand}</p>
     </section>
@@ -138,7 +139,8 @@
             </div>
             <div>
                 <dt>{text.featureGuide.comparison.title}</dt>
-                <dd>{text.featureGuide.comparison.description} OM = Open-Meteo. {comparisonLabels[uiLanguage].eventRule} {comparisonLabels[uiLanguage].customRule} {comparisonLabels[uiLanguage].invalidPeriod}</dd>
+                <dd>{text.featureGuide.comparison.description} OM = Open-Meteo. {comparisonLabels[uiLanguage].eventRule} {comparisonLabels[uiLanguage].customRule} {comparisonLabels[uiLanguage].invalidPeriod}
+                </dd>
             </div>
             <div>
                 <dt>{text.featureGuide.mobileMode.title}</dt>

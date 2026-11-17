@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { comparisonInstantLabel, comparisonIntervalLabels, comparisonTargetIntervals, resolveComparisonCivilTime, selectComparisonPeriod } from './favoriteComparisonPeriod';
+import { minimumSelectableDate } from './dateSelection';
 import { calculateAstronomyTimeline } from './solar';
 import { compileRenderer, type RenderComponent } from './test/renderSvelte';
 import type { FavoriteComparisonResult } from './favoriteComparison';
@@ -30,6 +31,21 @@ const select = (result: FavoriteComparisonResult, start: number, end: number) =>
 });
 
 describe('comparison periods and original forecast resolution', () => {
+    it('moves the minimum from the previous local year when the current year changes', () => {
+        expect(minimumSelectableDate(new Date(2026, 11, 31, 23, 59))).toBe('2025-01-01');
+        expect(minimumSelectableDate(new Date(2027, 0, 1))).toBe('2026-01-01');
+    });
+    it.each(['0100-06-12T18:00', '0999-06-12T18:00', '1000-01-01T00:00', '2024-12-31T23:59'])(
+        'rejects %s before the previous-year boundary without throwing', value => {
+            expect(resolveComparisonCivilTime(value, 'UTC', '2025-01-01')).toBeNull();
+        },
+    );
+
+    it('accepts the minimum date and retains offset sampling across the final four-digit year', () => {
+        expect(resolveComparisonCivilTime('2025-01-01T00:00', 'UTC', '2025-01-01')).toBe(Date.UTC(2025, 0, 1));
+        expect(resolveComparisonCivilTime('9999-12-31T23:59', 'UTC', '2025-01-01')).toBe(Date.UTC(9999, 11, 31, 23, 59));
+    });
+
     it('keeps day semantics and reveals improvement only in the selected period', () => {
         const result = fixture();
         const day = selectComparisonPeriod({ result, mode: 'day', target: 'milky-way', custom: null });
@@ -98,7 +114,7 @@ describe('comparison periods and original forecast resolution', () => {
         ['2026-11-13T18:00', 'Asia/Kathmandu', Date.UTC(2026, 10, 13, 12, 15)],
         ['2026-11-13T00:30', 'Pacific/Kiritimati', Date.UTC(2026, 10, 12, 10, 30)],
     ])('resolves %s in %s without silent DST normalization', (civil, zone, expected) => {
-        expect(resolveComparisonCivilTime(civil as string, zone as string)).toBe(expected);
+        expect(resolveComparisonCivilTime(civil as string, zone as string, '2025-01-01')).toBe(expected);
     });
 
     it.each([['2026-03-08', 23], ['2026-11-01', 25]] as const)('uses the real %s day length', (dateInput, hours) => {

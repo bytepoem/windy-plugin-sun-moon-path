@@ -8,8 +8,12 @@
 
 1. 组件使用完整语句或完整表头，不拼接已翻译的词组。动态文案用 `localized((t, value: string) => t('Source {{0}}', value))`，参数仅作插值；静态常量插值使用 `localizedText`。
 2. 运行 `node scripts/translation-sources.mjs`，将结果通过编辑补丁更新 `source.en.json`。源文修改会生成新 ID；为所有生成词典补齐目标语并移除旧 ID。保留参数占位符、数值含义、单位和品牌名称，结合摄影、天文与气象上下文翻译。
-3. 运行 `node scripts/pack-translations.mjs`，检查输出的补丁并应用到 `packedTranslations.ts`。`--check` 验证词典、参数和压缩资源与源码完全一致。压缩资源随插件提供，不在运行时请求翻译服务。
+3. 运行 `node scripts/language-resources.mjs`，检查并应用其输出的 `src/languageManifest.ts` 补丁；命令不直接写入该文件。随后运行 `node scripts/language-resources.mjs --check`，验证英文源契约、40 份词典的键与参数，以及 manifest 中的不可变资源版本和哈希。`node scripts/pack-translations.mjs` 是保留的校验入口，仅执行上述 `--check`，不生成词典或补丁。
 4. 运行类型检查、lint、测试和生产构建。检查默认跟随、手动覆盖、切回跟随、重新打开、失败重试、连续切换和关闭清理；实际界面验证长文本、动态提示、地图标注和移动布局，确认阿拉伯语、波斯语及希伯来语也保持原控件顺序与布局，并检查上传包体积。
+
+简体中文和英语随插件内置；其他语言是按需下载的独立 JSON 资源，不进入 Windy 上传包。本地 watcher 自动生成 `dist/languages/local/<manifest-version>/`，生产资源可用 `node scripts/language-resources.mjs /tmp/windy-language-site` 在独立临时目录生成，路径为 `languages/release/<manifest-version>/`。日期展示统一采用月在前、日在后的顺序，不通过翻译改变月日顺序。
+
+正式发布由工作流先运行 `scripts/publish-language-resources.py`，保留并原子追加两个镜像的不可变资源目录，再用 `scripts/verify-language-resources.mjs` 检查全部 40 份资源的哈希和 Windy CORS，验证成功后才上传 Windy 插件。旧目录和旧版本哈希保留，回退到旧包仍读取其固定版本。以上发布脚本会写入外部仓库，只能在已获发布授权的流程中执行；本地维护仅生成资源和校验，不能据此自行发布。
 
 审校不能只对照英文短词：先找到所属组件和中英文原文，区分 `Clear height`（清空高度输入）、天气 `Clear`（晴）、`Direct`（搜索结果的直线距离）、`Body`（天体）、`Blue`（蓝调时段）及 GitHub `Star`（加星操作）。高度角与海拔、云底离地高度与云层海拔也必须按上下文区分。固定数值可采用目标语言的小数点与千分组格式，但不能改变数量、单位、公式或判断边界；动态数值文案应避免仅适用于某一个数字的词形。
 

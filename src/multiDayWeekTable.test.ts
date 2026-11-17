@@ -24,6 +24,14 @@ const cells = (html: string) => Object.fromEntries([...html.matchAll(/<td\b[^>]*
     .sort(([left], [right]) => left.localeCompare(right)));
 
 describe('compiled seven-day date axes', () => {
+    it.each(['fr', 'de', 'ru'])('keeps month before day in %s date headers', language => {
+        const html = renderTable({ ...props, language, orientation: 'horizontal' });
+        const header = html.match(/<th\b[^>]*id="week-date-2027-06-12"[^>]*>([\s\S]*?)<\/th>/)![1];
+        expect(header).toContain('6/12');
+        expect(header).not.toContain('12/06');
+        expect(header).not.toContain('12.6');
+    });
+
     it.each(['horizontal', 'vertical'])('shows overlapping accumulated rain independently of missing instants in %s', orientation => {
         const row = createMultiDayCalculator({ lat:23.06, lon:113.36 }, 'Asia/Shanghai', 0)('2027-01-10');
         const hourlyRain = [21, 22].map(hour => ({ ...points[0],

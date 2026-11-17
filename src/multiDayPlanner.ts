@@ -2,18 +2,14 @@ import {
     addDaysToDateInput, calculateAstronomyTimeline, dateInputToUtcNoon,
     type AstronomyInterval, type AstronomyTimeline, type Coordinates,
 } from './solar';
+import { isSelectableDate, maximumSelectableDate, minimumSelectableDate } from './dateSelection';
 import type { WeatherLoadStatus, WeatherMetric, WeatherPoint } from './weather';
 
 export type MultiDayTarget = 'moonless-night' | 'milky-way' | 'sunset';
 export type MultiDayInterval = { start: Date; end: Date };
 /** Include the neighbouring dates scanned by the existing daily calculator. */
-export const isValidMultiDayRange = (date: string, count: number): boolean => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number(date.slice(0, 4)) < 100 || (count !== 7 && count !== 30)) { return false; }
-    const instant = new Date(date + 'T12:00:00Z');
-    if (!Number.isFinite(instant.getTime()) || instant.toISOString().slice(0, 10) !== date) { return false; }
-    return /^\d{4}-/.test(addDaysToDateInput(date, count + 2))
-        && Number(addDaysToDateInput(date, -2).slice(0, 4)) >= 100;
-};
+export const isValidMultiDayRange = (date: string, count: number, minimumDate = minimumSelectableDate()): boolean =>
+    (count === 7 || count === 30) && isSelectableDate(date, minimumDate, maximumSelectableDate(count));
 export type MultiDayRow = {
     date: string;
     timeline: AstronomyTimeline;

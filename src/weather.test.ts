@@ -144,8 +144,8 @@ describe('weather forecast transformation', () => {
         const points = transformWeatherPayload(makePayload(timestamps), timestamps[0]);
 
         expect(buildWeatherDateGroups(points, 'Asia/Shanghai', 'zh')).toEqual([
-            { key: '2026-08-19', label: '8.19', startIndex: 0, length: 1 },
-            { key: '2026-08-20', label: '8.20', startIndex: 1, length: 2 },
+            { key: '2026-08-19', label: '8/19', startIndex: 0, length: 1 },
+            { key: '2026-08-20', label: '8/20', startIndex: 1, length: 2 },
         ]);
         expect(buildWeatherDateGroups(points, 'Asia/Shanghai', 'en')).toEqual([
             { key: '2026-08-19', label: '8/19', startIndex: 0, length: 1 },

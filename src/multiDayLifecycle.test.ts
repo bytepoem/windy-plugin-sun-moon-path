@@ -6,6 +6,8 @@ import sveltePreprocess from 'svelte-preprocess';
 import * as internal from 'svelte/internal';
 import * as planner from './multiDayPlanner';
 import * as solar from './solar';
+import * as dateDisplay from './dateDisplay';
+import * as dateSelection from './dateSelection';
 import { comparisonIntervalLabels } from './favoriteComparisonPeriod';
 import { messages } from './locales/MultiDayOverview';
 import { labels, messages as comparisonMessages } from './locales/FavoriteComparison';
@@ -21,6 +23,7 @@ type State = {
     rows: planner.MultiDayRow[]; startDate: string; mode: 'week' | 'month'; selectedDate: string;
     dateOrientation: 'vertical' | 'horizontal';
     invalidRange: boolean; building: boolean; showSelectedWeek: () => void;
+    changeRange: (date: string) => void;
     dateLabel: (date: string, weekday?: boolean) => string;
 };
 type Instance = {
@@ -47,7 +50,7 @@ afterEach(() => vi.useRealTimers());
 
 /** Actual compiled instance and scheduler, without mounting a browser DOM. */
 const create = () => {
-    const context: Record<string, unknown> = { ...boundaries, ...internal, ...planner, ...solar,
+    const context: Record<string, unknown> = { ...boundaries, ...internal, ...planner, ...solar, ...dateDisplay, ...dateSelection,
         messages, labels, comparisonMessages, translations, weatherText, horizonText, settingsMessages, UI_LANGUAGES,
         comparisonIntervalLabels, dispatch_dev: () => undefined,
         setTimeout, clearTimeout, Date, Intl, Map, Set, JSON,
@@ -69,6 +72,21 @@ const create = () => {
 };
 
 describe('compiled multi-day calculation lifecycle', () => {
+    it('rejects all old date inputs and advances retained dates at the local year boundary', async () => {
+        const component = create();
+        component.$set({ currentInstant: new Date(2026, 11, 31), startDate: '2025-01-01' });
+        await tick();
+        await vi.runAllTimersAsync();
+        component.$capture_state().changeRange('2024-12-31');
+        await tick();
+        expect(component.$capture_state()).toMatchObject({ startDate: '2025-01-01', invalidRange: true });
+        component.$set({ currentInstant: new Date(2027, 0, 1) });
+        await tick();
+        await vi.runAllTimersAsync();
+        expect(component.$capture_state().startDate).toBe('2026-01-01');
+        expect(component.$capture_state().rows[0].date).toBe('2026-01-01');
+        component.$destroy();
+    });
     it('changes weather presentation without rebuilding astronomy and retains it while hidden', async () => {
         const component = create();
         await vi.runAllTimersAsync();
@@ -135,5 +153,24 @@ describe('compiled multi-day calculation lifecycle', () => {
         expect(component.$capture_state()).toMatchObject({ startDate: '2027-06-12', invalidRange: true });
         expect(component.$capture_state().rows).toBe(rows);
         component.$destroy();
+    });
+    it.each(['local input', 'shared clock'])('clears a rejected %s after the parent supplies a new valid date', async source => {
+        const component = create();
+        await vi.runAllTimersAsync();
+        if (source === 'local input') {
+            component.$capture_state().changeRange('');
+        } else {
+            component.$set({ startDate: '9999-12-20' });
+        }
+        await tick();
+        expect(component.$capture_state()).toMatchObject({ startDate: '2027-06-12', invalidRange: true });
+
+        component.$set({ startDate: '2027-06-13' });
+        await tick();
+        await vi.runAllTimersAsync();
+        expect(component.$capture_state()).toMatchObject({ startDate: '2027-06-13', invalidRange: false });
+        expect(component.$capture_state().rows[0].date).toBe('2027-06-13');
+        component.$destroy();
+        expect(vi.getTimerCount()).toBe(0);
     });
 });

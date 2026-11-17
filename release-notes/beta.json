@@ -7,7 +7,7 @@
     "items": [
       {
         "type": "new",
-        "text": "多日总览：在「天文」中比较未来 7 天的拍摄窗口与天气，或查看 30 天天文日历，快速选择拍摄日期。"
+        "text": "多日总览：在「天文」中比较未来 7 天的拍摄窗口与天气，或查看 30 天天文日历，快速选择拍摄日期。所有日期选择统一从浏览器当前年份的上一年 1 月 1 日开始，跨年后自动更新。"
       },
       {
         "type": "new",
@@ -19,7 +19,7 @@
       },
       {
         "type": "improved",
-        "text": "多语言：支持 42 种语言，可跟随 Windy 或单独设置；其他语言按需下载并缓存，减小插件体积。紧凑按钮与设置页采用简短文案，窄屏导航和语言框以省略号显示长名称，避免拆词撑高。核对 Windy 术语，修正城市热力图、热气流、户外地图、晴空湍流及波浪功率等图层名称。新增翻译尚未全部经母语者审校。"
+        "text": "多语言：支持 42 种语言，可跟随 Windy 或单独设置；所有语言的短日期统一为月/日，其他语言按需下载并缓存，减小插件体积。紧凑按钮与设置页采用简短文案，窄屏导航和语言框以省略号显示长名称，避免拆词撑高。核对 Windy 术语，修正城市热力图、热气流、户外地图、晴空湍流及波浪功率等图层名称。新增翻译尚未全部经母语者审校。"
       }
     ]
   },
@@ -29,7 +29,7 @@
     "items": [
       {
         "type": "new",
-        "text": "Multi-day overview: compare shooting windows and weather over seven days in Astro, or browse a 30-day astronomy calendar to choose a shooting date."
+        "text": "Multi-day overview: compare shooting windows and weather over seven days in Astro, or browse a 30-day astronomy calendar to choose a shooting date. All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year."
       },
       {
         "type": "new",
@@ -41,7 +41,7 @@
       },
       {
         "type": "improved",
-        "text": "Languages: choose from 42 languages, follow Windy or set your own. Other languages download individually and are cached to reduce plugin size. Compact controls and Settings use shorter labels, while narrow navigation and language selectors show ellipses for long names instead of splitting words across lines. Reviewed Windy terminology and corrected labels for city heatmaps, thermals, outdoor maps, clear air turbulence and wave power. New translations have not all been reviewed by native speakers."
+        "text": "Languages: choose from 42 languages, follow Windy or set your own. Short dates use month/day in every language. Other languages download individually and are cached to reduce plugin size. Compact controls and Settings use shorter labels, while narrow navigation and language selectors show ellipses for long names instead of splitting words across lines. Reviewed Windy terminology and corrected labels for city heatmaps, thermals, outdoor maps, clear air turbulence and wave power. New translations have not all been reviewed by native speakers."
       }
     ]
   }

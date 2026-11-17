@@ -1,5 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import { formatDisplayDate, formatDisplayDateTime } from './dateDisplay';
+    import { maximumSelectableDate, minimumSelectableDate } from './dateSelection';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
     import { messages } from './locales/MultiDayOverview';
     import { labels, messages as comparisonMessages } from './locales/FavoriteComparison';
@@ -28,6 +30,7 @@
     export let timeZone: string;
     export let elevationM: number;
     export let startDate: string;
+    export let currentInstant = new Date();
     export let language: UiLanguage;
     export let points: WeatherPoint[];
     export let weatherStatus: WeatherLoadStatus;
@@ -63,7 +66,14 @@
     let lastValidStartDate = dateInputForInstant(new Date(), timeZone);
     // The shared date/time control is another input boundary. Validate it here
     // as well as local controls, before any range formatting or calculation.
-    $: if (isValidMultiDayRange(startDate, 30)) {
+    $: minimumDate = minimumSelectableDate(currentInstant);
+    $: if (!isValidMultiDayRange(lastValidStartDate, 30, minimumDate)) {
+        lastValidStartDate = minimumDate;
+    }
+    $: if (isValidMultiDayRange(startDate, 30, minimumDate)) {
+        // A new valid shared date resolves the rejected input. Restoring the
+        // last valid date after rejection must retain its validation message.
+        if (startDate !== lastValidStartDate) { invalidRange = false; }
         lastValidStartDate = startDate;
     } else {
         startDate = lastValidStartDate;
@@ -130,9 +140,13 @@
         const minutes = Math.round(durationMs(intervals) / 60_000);
         return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
     };
-    $: dateLabel = (date: string, weekday = false) => new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
-        timeZone:'UTC', month:'numeric', day:'numeric', ...(weekday ? { weekday:'short' as const } : {}),
-    }).format(new Date(date + 'T12:00:00Z'));
+    $: dateLabel = (date: string, weekday = false) => {
+        const label = formatDisplayDate(date);
+        const weekdayLabel = weekday ? new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
+            timeZone: 'UTC', weekday: 'short',
+        }).format(new Date(date + 'T12:00:00Z')) : '';
+        return weekdayLabel ? `${label} ${weekdayLabel}` : label;
+    };
     $: intervalLabel = (interval: MultiDayInterval, date: string) => {
         const value = comparisonIntervalLabels({ start:interval.start.getTime(), end:interval.end.getTime() }, timeZone, date, common.shortDate);
         return `${value.start} – ${value.end}`;
@@ -149,20 +163,17 @@
     });
     const showSelectedWeek = () => {
         if (!selectedRow) { return; }
-        invalidRange = !isValidMultiDayRange(selectedRow.date, 30);
+        invalidRange = !isValidMultiDayRange(selectedRow.date, 30, minimumDate);
         if (!invalidRange) { startDate = selectedRow.date; mode = 'week'; }
     };
     /** Reject the whole proposed range before changing reactive rendering inputs. */
     const changeRange = (date: string) => {
-        invalidRange = !isValidMultiDayRange(date, 30);
+        invalidRange = !isValidMultiDayRange(date, 30, minimumDate);
         if (!invalidRange) { startDate = date; }
     };
-    // Forecast coverage keeps its real year even when browsing a future range;
-    // seconds and a repeated end year add no useful precision to this summary.
+    // Retain the forecast's actual year independently of the browsed range.
     $: forecastRangeLabel = forecastFirst !== null && forecastLast !== null
-        ? new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
-            timeZone, year:'numeric', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23',
-        }).formatRange(new Date(forecastFirst), new Date(forecastLast)) : '';
+        ? `${formatDisplayDateTime(forecastFirst, timeZone, true)} – ${formatDisplayDateTime(forecastLast, timeZone, true)}` : '';
 </script>
 
 <section class="multi-day" aria-label={text.overview} aria-busy={building || !contextReady}>
@@ -176,13 +187,17 @@
     </div>
     <div class="planning-controls">
       <div class="range-controls">
-        <button aria-label={common.start} disabled={!isValidMultiDayRange(addDaysToDateInput(startDate, -count), 30)} on:click={() => changeRange(addDaysToDateInput(startDate, -count))}>‹</button>
-        <input type="date" aria-label={common.dateControl} value={startDate} min="0100-01-03" max="9999-11-28" aria-invalid={invalidRange} on:change={event => {
-            changeRange(event.currentTarget.value);
-            event.currentTarget.value = startDate;
-        }} />
+        <button aria-label={common.start} disabled={!isValidMultiDayRange(addDaysToDateInput(startDate, -count), 30, minimumDate)} on:click={() => changeRange(addDaysToDateInput(startDate, -count))}>‹</button>
+        <div class="range-date">
+            <span aria-hidden="true">{formatDisplayDate(startDate, true)}</span>
+            <input type="date" aria-label={common.dateControl} value={startDate} min={minimumDate} max={maximumSelectableDate(30)} aria-invalid={invalidRange}
+                on:change={event => {
+                    changeRange(event.currentTarget.value);
+                    event.currentTarget.value = startDate;
+                }} />
+        </div>
         <span>– {dateLabel(addDaysToDateInput(startDate, count - 1))}</span>
-        <button aria-label={common.end} disabled={!isValidMultiDayRange(addDaysToDateInput(startDate, count), 30)} on:click={() => changeRange(addDaysToDateInput(startDate, count))}>›</button>
+        <button aria-label={common.end} disabled={!isValidMultiDayRange(addDaysToDateInput(startDate, count), 30, minimumDate)} on:click={() => changeRange(addDaysToDateInput(startDate, count))}>›</button>
       </div>
       {#if mode === 'week'}
         <div class="segments date-orientation" role="group" aria-label={common.dateControl}>
@@ -293,8 +308,12 @@
     .planning-controls { margin-top:4px; gap:4px; }
     .range-controls { flex-wrap:nowrap; gap:3px; max-width:100%; }
     .range-controls button { flex:0 0 28px; padding-inline:3px; }
-    .range-controls input { field-sizing:content; width:auto; min-width:0; flex:0 0 auto; padding-inline:4px; }
-    .range-controls input::-webkit-calendar-picker-indicator { display:none; }
+    /* Native focus opens iOS editing; focused segments stay visible for keys. */
+    .range-date { position:relative; display:inline-flex; align-items:center; flex:0 0 auto; box-sizing:border-box; min-width:124px; min-height:30px; padding:3px 6px; border:1px solid var(--panel-border); border-radius:6px; background:#0e161f; }
+    .range-date > span { white-space:nowrap; }
+    .range-date input { position:absolute; inset:0; width:100%; height:100%; min-width:0; margin:0; opacity:0; cursor:text; }
+    .range-date input:focus { opacity:1; }
+    .range-date:focus-within { outline:2px solid var(--panel-accent); outline-offset:2px; }
     .range-controls > span { white-space:nowrap; font-size:12px; }
     .forecast-controls { gap:4px; }
     /* Use the weather table's segmented controls, including its compact typography. */

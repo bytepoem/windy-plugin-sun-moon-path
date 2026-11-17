@@ -1,6 +1,6 @@
 <script lang="ts">
     import { messages } from './locales/RainbowConditions';
-    import { UI_LANGUAGES } from './uiLanguage';
+    import { formatDisplayDateTime } from './dateDisplay';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
     import RainbowSightlineEvidence from './RainbowSightlineEvidence.svelte';
     import { createRainbowConditionsLoader, rainbowSampleSignal, type RainbowConditions } from './rainbowConditions';
@@ -34,9 +34,6 @@
         sightlineLoader.reset();
     }
     $: labels = messages[language].conditionLevels;
-    $: timeFormat = new Intl.DateTimeFormat(UI_LANGUAGES[language].clockLocale, {
-        timeZone, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    });
     const assess = () => {
         if (eligible && heightValid && source && timestamp !== null && cameraHeightM !== undefined) {
             void loader.load({ location, source, timestamp, model });
@@ -69,7 +66,7 @@
             <p>{messages[language].insufficientDataTheWeatherRequestFailedTry}</p>
         {:else if state.result}
             <div class="verdict"><span>{messages[language].rainLight}</span><strong>{labels[state.result.level]}</strong><span class="confidence">{messages[language].lowConfidenceNotAProbability}</span></div>
-            <p class="assessment-meta">{timeFormat.format(state.result.start)} – {timeFormat.format(state.result.end)} <span>({timeZone})</span></p>
+            <p class="assessment-meta">{formatDisplayDateTime(state.result.start, timeZone)} – {formatDisplayDateTime(state.result.end, timeZone)} <span>({timeZone})</span></p>
             <p>{messages[language].sampleSummary(state.result.wetCount, state.result.litWetCount)}</p>
             {#if state.result.level === 'insufficient'}
                 <p>{messages[language].someFieldsAreMissingOrTheSelected}</p>

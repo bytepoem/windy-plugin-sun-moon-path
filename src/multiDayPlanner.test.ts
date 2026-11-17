@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMultiDayCalculator, isValidMultiDayRange, multiDayMetricRange, multiDayPrecipitationPoints, multiDayWindowWeather, nightBucketIntervals } from './multiDayPlanner';
-import { dateInputToUtcNoon, type AstronomyInterval } from './solar';
+import { addDaysToDateInput, dateInputToUtcNoon, type AstronomyInterval } from './solar';
+import { maximumSelectableDate } from './dateSelection';
 import type { WeatherPoint } from './weather';
 
 const interval = (start: string, end: string): AstronomyInterval => ({
@@ -14,13 +15,22 @@ const point = (hour: number, cloud: number | null = 20): WeatherPoint => ({
 });
 
 describe('night ownership', () => {
+    it.each([7, 30])('finishes the final permitted %i-day range including its adjacent timeline', count => {
+        const start = maximumSelectableDate(count);
+        const last = addDaysToDateInput(start, count - 1);
+        expect(isValidMultiDayRange(start, count, '2025-01-01')).toBe(true);
+        expect(isValidMultiDayRange(addDaysToDateInput(start, 1), count, '2025-01-01')).toBe(false);
+        expect(() => createMultiDayCalculator({ lat: 23.1, lon: 113.3 }, 'Asia/Shanghai', 0)(last)).not.toThrow();
+    });
     it('rejects invalid dates and complete ranges outside the daily calculator domain', () => {
         for (const date of ['', '0099-01-01', '0100-01-01', '9999-12-31', '2027-02-29', '2027-13-01']) {
             expect(isValidMultiDayRange(date, 30)).toBe(false);
         }
         expect(isValidMultiDayRange('2027-06-12', 30)).toBe(true);
         expect(isValidMultiDayRange('2028-02-29', 7)).toBe(true);
-        expect(isValidMultiDayRange('0100-01-03', 30)).toBe(true);
+        expect(isValidMultiDayRange('0100-01-03', 30)).toBe(false);
+        expect(isValidMultiDayRange('2024-12-31', 30, '2025-01-01')).toBe(false);
+        expect(isValidMultiDayRange('2025-01-01', 30, '2025-01-01')).toBe(true);
     });
     it('assigns a cross-midnight window once and keeps separated segments', () => {
         const first = interval('2027-06-12T22:00Z', '2027-06-13T01:00Z');

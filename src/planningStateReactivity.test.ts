@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { compile, preprocess } from 'svelte/compiler';
 import sveltePreprocess from 'svelte-preprocess';
 import * as internal from 'svelte/internal';
-import { createPlanningState, planningDateForLocation, transitionPlanningState, type PlanningState } from './planningState';
+import { constrainPlanningDate, createPlanningState, planningDateForLocation, transitionPlanningState, type PlanningState } from './planningState';
 
 const { tick } = internal as unknown as { tick: () => Promise<void> };
 type State = { selectedDate: string; planningState: PlanningState; timeZone: string; resolvedContextLocationKey: string };
@@ -28,8 +28,8 @@ beforeAll(async () => {
     // Svelte attaches source offsets to ESTree nodes; its ESTree type omits them.
     const nodes = compiled.ast.instance!.content.body as unknown as { type: string; start: number; end: number }[];
     const declarations = nodes.filter(node => node.type === 'LabeledStatement'
-        && /planningDateForLocation\(|planningSelection = planningState.selection/.test(processed.code.slice(node.start, node.end)));
-    if (declarations.length !== 2) { throw new Error('Shell date derivation not found'); }
+        && /constrainPlanningDate\(|planningDateForLocation\(|planningSelection = planningState.selection/.test(processed.code.slice(node.start, node.end)));
+    if (declarations.length !== 3) { throw new Error('Shell date derivation not found'); }
     const source = `<script>
         export let selectedDate = '2026-11-16';
         export let planningState = createPlanningState(Date.parse('2026-11-16T12:00:00Z'));
@@ -37,6 +37,7 @@ beforeAll(async () => {
         export let timeZone = 'Asia/Shanghai';
         export let resolvedContextLocationKey = 'place';
         export let locationKey = 'place';
+        export let minimumDate = '2025-01-01';
         ${declarations.map(node => processed.code.slice(node.start, node.end)).join('\n')}
     </script><DateInput bind:selectedDate />`;
     code = compile(source, { filename: 'PlanningDateSchedule.svelte', generate: 'dom', dev: true }).js.code
@@ -47,7 +48,7 @@ beforeAll(async () => {
 
 const create = (): Instance => {
     let inputDate!: (date: string) => void;
-    const context: Record<string, unknown> = { ...internal, createPlanningState, planningDateForLocation,
+    const context: Record<string, unknown> = { ...internal, constrainPlanningDate, createPlanningState, planningDateForLocation,
         Date, dispatch_dev: () => undefined,
         // Keep the compiler-generated parent binding. The date field's actual
         // DOM input/change handlers are exercised in Windy separately.
@@ -71,6 +72,24 @@ const create = (): Instance => {
 };
 
 describe('compiled shell date scheduling', () => {
+    it('constrains a cross-midnight window before deriving its date and normalizes relocation in the same flush', async () => {
+        const component = create();
+        try {
+            component.$inject_state({ timeZone: 'Antarctica/Rothera',
+                planningState: createPlanningState(Date.parse('2025-01-01T02:20:00Z')) });
+            await tick();
+            expect(component.$capture_state()).toMatchObject({ selectedDate: '2025-01-01',
+                planningState: { selection: { mode: 'instant', timestamp: Date.parse('2025-01-01T03:00:00Z') } } });
+            component.$inject_state({ timeZone: 'Pacific/Kiritimati',
+                planningState: createPlanningState(Date.parse('2024-12-31T10:30:27Z')) });
+            await tick();
+            expect(component.$capture_state().selectedDate).toBe('2025-01-01');
+            component.$inject_state({ timeZone: 'Pacific/Pago_Pago' });
+            await tick();
+            expect(component.$capture_state()).toMatchObject({ selectedDate: '2025-01-01',
+                planningState: { selection: { mode: 'instant', timestamp: Date.parse('2025-01-01T11:00:00Z') } } });
+        } finally { component.$destroy(); }
+    });
     it('does not create a date self-dependency when only the date or host-input flag changes', async () => {
         const component = create();
         try {

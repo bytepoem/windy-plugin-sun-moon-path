@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import { UI_LANGUAGES } from './uiLanguage';
+    import { formatDisplayDateTime } from './dateDisplay';
     import { messages } from './locales/EventHorizon';
     import { renderHorizonIcon } from './horizonIcon';
     import { eventHorizonPoints, horizonDistanceKm, MAX_OBSERVER_HEIGHT_M } from './eventHorizon';
@@ -34,9 +34,7 @@
     let showHelp = false;
     // Display the map's accepted forecast time, including any host range clamp,
     // rather than labelling an unsynchronized planning time as map evidence.
-    $: forecastTimeLabel = mapTimestamp === null ? '—' : new Intl.DateTimeFormat(UI_LANGUAGES[language].clockLocale, {
-        timeZone, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    }).format(mapTimestamp);
+    $: forecastTimeLabel = mapTimestamp === null ? '—' : formatDisplayDateTime(mapTimestamp, timeZone);
     $: distanceKm = horizonDistanceKm(horizonHeightM);
     $: missingElevation = heightSource === 'elevation' && elevationM === null;
     $: distanceLabel = distanceKm === null ? '—' : `${formatDistanceKm(distanceKm, distanceUnit)} ${distanceUnit}`;

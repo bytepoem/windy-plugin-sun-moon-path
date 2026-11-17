@@ -8,8 +8,8 @@ export const temporaryEnglishAction = {
 
 /** Network-dependent language guidance remains available in both built-in languages. */
 export const languageResourceHelp = {
-    zh: '简体中文和英语无需下载。其他语言首次使用时联网加载，成功后缓存在此浏览器。加载失败可重试；启动时也可临时使用英语，不改变已保存的偏好。选择“自动”可跟随 Windy 的语言。非中文界面的“全部”和“现在”按钮使用 All 和 Now，完整提示仍使用所选语言。语言框的长名称以省略号显示，展开可查看完整选项。',
-    en: 'Simplified Chinese and English need no download. Other languages load online on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup without changing your saved preference. Choose auto to follow Windy’s language. Non-Chinese interfaces use All and Now for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.',
+    zh: '简体中文和英语无需下载。其他语言首次使用时联网加载，成功后缓存在此浏览器。加载失败可重试；启动时也可临时使用英语，不改变已保存的偏好。选择“自动”可跟随 Windy 的语言。短日期统一为“月/日”，完整日期保留“年-月-日”，不随界面语言切换。非中文界面的“全部”和“现在”按钮使用 All 和 Now，完整提示仍使用所选语言。语言框的长名称以省略号显示，展开可查看完整选项。',
+    en: 'Simplified Chinese and English need no download. Other languages load online on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup without changing your saved preference. Choose auto to follow Windy’s language. Short dates always use month/day; full dates retain year-month-day, regardless of interface language. Non-Chinese interfaces use All and Now for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.',
 };
 import type { ObservationEvent as DirectionEvent } from './observationPlanner';
 import type { AstronomyInterval } from './solar';
@@ -17,6 +17,11 @@ import type { RadarProvider, RadarOverlayStatus } from './radarOverlay';
 import type { LightPollutionOverlayStatus } from './lightPollutionOverlay';
 import type { LocationProvider } from './locationProvider';
 import type { UpdateNoteKind } from './pluginUpdate';
+
+export const dateSelectionHelp = {
+    zh: '所有日期选择最早从浏览器当前年份的上一年 1 月 1 日开始，跨年后自动更新。日期和时间按所选机位的当地时区解释；超出预报范围的日期可能没有天气数据。',
+    en: 'All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year. Dates and times use the selected site’s local time zone; dates outside the forecast range may have no weather data.',
+};
 import type { TemperatureUnit, PrecipitationUnit, WindUnit, DistanceUnit } from './unitPreferences';
 
 import type { UiLanguage } from './uiLanguage';

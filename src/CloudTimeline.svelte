@@ -2,12 +2,14 @@
     import { createEventDispatcher } from 'svelte';
     import { messages } from './locales/CloudTimeline';
     import { cloudClockMinute, cloudMinuteClock } from './cloudTimeline';
+    import { isSelectableDate, maximumSelectableDate, minimumSelectableDate } from './dateSelection';
     import type { UiLanguage } from './uiLanguage';
 
     export let clock: string;
     export let date: string;
     export let dateLabel: string;
     export let language: UiLanguage;
+    export let minimumDate = minimumSelectableDate();
     const dispatch = createEventDispatcher<{ preview: string; datetime: string; commit: void; now: void }>();
     $: minute = cloudClockMinute(clock);
     $: nowLabel = language === 'zh' || language === 'zh-TW' ? messages[language].now : messages.en.now;
@@ -17,11 +19,16 @@
     <div class="time-row">
         <label class="datetime-entry">
             <span aria-hidden="true">{dateLabel} <span>{clock || '--:--'}</span></span>
-            <input type="datetime-local" step="60" value={clock ? `${date}T${clock}` : ''}
+            <input type="datetime-local" step="60" min={`${minimumDate}T00:00`} max={`${maximumSelectableDate()}T23:59`} value={clock ? `${date}T${clock}` : ''}
                 aria-label={messages[language].chooseLocalDateAndTime}
                 on:click={event => event.currentTarget.showPicker?.()}
                 on:input={event => {
-                    if (event.currentTarget.value) { dispatch('datetime', event.currentTarget.value); }
+                    const input = event.currentTarget;
+                    if (input.validity.valid && isSelectableDate(input.value.slice(0, 10), minimumDate)) { dispatch('datetime', input.value); }
+                }} on:change={event => {
+                    if (!event.currentTarget.validity.valid || !isSelectableDate(event.currentTarget.value.slice(0, 10), minimumDate)) {
+                        event.currentTarget.value = clock ? `${date}T${clock}` : '';
+                    }
                 }} />
         </label>
         <!-- Keep the time track usable with a short label and a localized full description. -->

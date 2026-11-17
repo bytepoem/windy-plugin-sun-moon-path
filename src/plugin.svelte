@@ -258,7 +258,7 @@
     {/if}
 
     <div class="planning-datetime">
-        <CloudTimeline clock={planningTime.clock} date={selectedDate}
+        <CloudTimeline clock={planningTime.clock} date={selectedDate} minimumDate={minimumDate}
             dateLabel={formatDateControlLabel(selectedDate)} language={uiLanguage}
             on:now={jumpToNow}
             on:datetime={event => selectPlanningDateTime(event.detail)}
@@ -530,7 +530,7 @@
                     }}>
                     <MultiDayOverview active={!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
                         contextReady={resolvedContextLocationKey === locationKey} contextError={status === 'error'}
-                        location={selectedLocation} locationName={locationDisplayName} {timeZone} {elevationM}
+                        location={selectedLocation} locationName={locationDisplayName} {timeZone} {elevationM} {currentInstant}
                         bind:startDate={overviewStartDate} language={uiLanguage} points={weatherPoints}
                         {weatherStatus} {aodStatus} {visibilityStatus} source={weatherSource} model={weatherModel} {units}
                         on:select={selectOverviewDay} on:retry={retryWeather} on:contextretry={() => refreshPaths(astronomyKey)}
@@ -1075,6 +1075,7 @@
     import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
     import { UI_LANGUAGES, DEFAULT_UI_LANGUAGE, isUiLanguagePreference } from './uiLanguage';
+    import { formatDisplayDate } from './dateDisplay';
     import { createLanguageController, type LanguageSelection } from './languageController';
     import { messages } from './locales/plugin';
     import { loadObservationTimeZone } from './observationTimeZone';
@@ -1084,8 +1085,9 @@
     import EventNavigation from './EventNavigation.svelte';
     import MultiDayOverview from './MultiDayOverview.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
+    import { isSelectableDate, minimumSelectableDate } from './dateSelection';
     import { resolvePlanningTime } from './planningTime';
-    import { createPlanningState, planningDateForLocation, transitionPlanningState } from './planningState';
+    import { constrainPlanningDate, createPlanningState, planningDateForLocation, transitionPlanningState } from './planningState';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
     import { translations } from './pluginTranslations';
@@ -1211,6 +1213,7 @@
         calculateCurrentSolarDirection,
         dateInputForInstant,
         dateInputToUtcNoon,
+        dateInputToUtcMidnight,
         formatLocalClock,
         formatLocalDateTime,
         coordinatesFromLocation,
@@ -1403,6 +1406,7 @@
     let currentMoonInfo: CurrentMoonInfo | null = null;
     let displayedMoonIllumination: { fraction: number; waxing: boolean } | null = null;
     let currentInstant = new Date();
+    $: minimumDate = minimumSelectableDate(currentInstant);
     let timelineLeadLabel = text.calculating;
     let timelineLeadTime = '';
     let locationDisplayName = '';
@@ -1466,6 +1470,10 @@
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
     $: cloudPlanningTimestamp = planningTime.timestamp;
+    $: {
+        const constrained = constrainPlanningDate(planningState, timeZone, minimumDate, resolvedContextLocationKey === locationKey);
+        if (constrained !== planningState) { planningState = constrained; }
+    }
     // Host and one-shot current instants remain absolute across time-zone resolution; derive their
     // civil date only after the selected location's context has arrived.
     $: {
@@ -1591,7 +1599,7 @@
 
     $: selectedDateIsToday = dateInputForInstant(currentInstant, timeZone) === selectedDate;
 
-    $: accessibleSelectedDateLabel = formatAccessibleDateLabel(selectedDate, uiLanguage);
+    $: accessibleSelectedDateLabel = formatAccessibleDateLabel(selectedDate);
 
     $: isMobileCollapsed = isMobileOrTablet && mobilePanelMode === 'collapsed';
 
@@ -2156,6 +2164,7 @@
         // Keep the civil date and clock together; the location resolver, not the
         // browser's system zone, converts them to an instant once context is ready.
         const [date, clock] = value.split('T');
+        if (!isSelectableDate(date, minimumDate) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(clock ?? '')) { return; }
         selectedDate = date;
         if (summaryTab === 'events' && eventView === 'overview') { overviewStartDate = date; }
         planningState = transitionPlanningState(planningState, { type: 'clock', clock, preview: false });
@@ -2485,6 +2494,13 @@
 
     const refreshCurrentDirectionValues = () => {
         currentInstant = new Date();
+        const minimum = minimumSelectableDate(currentInstant);
+        // A year rollover expires the earliest selectable year. Release an old
+        // absolute instant before recalculating the newly valid civil date.
+        if (selectedDate < minimum) {
+            selectedDate = minimum;
+            planningState = createPlanningState(dateInputToUtcMidnight(minimum, timeZone).getTime());
+        }
         try {
             currentSolarDirection = calculateCurrentSolarDirection({
                 date: currentInstant,
@@ -3124,17 +3140,12 @@
             : dateInput;
     };
 
-    const formatAccessibleDateLabel = (dateInput: string, language: UiLanguage): string => {
+    const formatAccessibleDateLabel = (dateInput: string): string => {
         const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
         if (![year, month, day].every(Number.isFinite)) {
             return dateInput;
         }
-        return new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            timeZone: 'UTC',
-        }).format(Date.UTC(year, month - 1, day, 12));
+        return formatDisplayDate(dateInput, true);
     };
 
     const formatRemaining = (milliseconds: number): string => {

@@ -18,7 +18,7 @@ beforeAll(async () => {
         './DiagnosticReport.svelte': 'export default class {constructor(){fixture.reports++;} $destroy(){fixture.reportsDestroyed++;}}',
         './LanguageChoice.svelte': 'export default class {constructor(options){fixture.choice=options.props;} $destroy(){}}',
         './diagnosticRuntime': 'export const startDiagnosticRuntime=()=>{fixture.runtimeStarts++;return {mounted(){},stop(){},error(stage,error){fixture.errors.push(error);},report:{}};};',
-        './localeMessages': 'export const prepareUiLanguage=()=>fixture.preparation;',
+        './localeMessages': 'export const prepareUiLanguage=language=>{fixture.preparedLanguages.push(language);return fixture.preparation;};',
         './languageResources': 'export const configureLanguageLocation=()=>{};',
         'virtual:diagnostic-build': 'export default {local:false};',
         './pluginPreferences': 'export const loadLanguagePreference=()=>fixture.preference; export const saveLanguagePreference=p=>fixture.saved.push(p);',
@@ -47,10 +47,11 @@ const setup = (preference = 'auto', host = 'fr') => {
     let fail!: () => void;
     const fixture = {
         preference, host, preparation: new Promise<void>((yes, no) => { complete = yes; fail = () => no(Error('decode failed')); }),
+        preparedLanguages: [] as string[],
         mounts: [] as { initialLanguageSelection: { language: string; preference: string } }[],
         opens: [] as unknown[], saved: [] as string[], destroyed: 0, initialChoices: 0,
         reports: 0, reportsDestroyed: 0, runtimeStarts: 0, errors: [] as unknown[],
-        choice: null as null | { choose: (preference: string) => void; useEnglish: () => void },
+        choice: null as null | { initialPreference: string; choose: (preference: string) => void; useEnglish: () => void },
     };
     const element = () => ({
         style: {}, removed: false,
@@ -67,6 +68,20 @@ const setup = (preference = 'auto', host = 'fr') => {
 };
 
 describe('asynchronous language bootstrap boundary', () => {
+    it('retries the last recovery language after repeated failures without saving it', async () => {
+        const test = setup('auto', 'fr');
+        test.fail();
+        await test.flush();
+        test.fixture.choice!.choose('ja');
+        await test.flush();
+        expect(test.fixture.choice!.initialPreference).toBe('ja');
+        test.fixture.choice!.choose(test.fixture.choice!.initialPreference);
+        await test.flush();
+        expect(test.fixture.preparedLanguages).toEqual(['fr', 'ja', 'ja']);
+        expect(test.fixture.saved).toEqual([]);
+        test.plugin.$destroy();
+    });
+
     it('loads the host language before constructing consumers and replays only the latest pending open', async () => {
         const test = setup();
         test.plugin.onopen({ lat: 1, lon: 2 });

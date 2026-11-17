@@ -2,6 +2,8 @@
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
     import { createEventDispatcher, tick } from 'svelte';
     import { labels, messages } from './locales/FavoriteComparison';
+    import { formatDisplayDate } from './dateDisplay';
+    import { isSelectableDate, maximumSelectableDate, minimumSelectableDate } from './dateSelection';
     import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
 
@@ -136,8 +138,9 @@
     // The comparison owns a verified local clock. Never borrow the parent map's
     // provisional system/previous-location time zone while context is loading.
     $: customTimeZone = session?.preparedTargets.flatMap(prepared => prepared.status === 'ready' ? [prepared.timeZone] : [])[0] ?? null;
-    $: customStartInstant = customTimeZone ? resolveComparisonCivilTime(customStart, customTimeZone) : null;
-    $: customEndInstant = customTimeZone ? resolveComparisonCivilTime(customEnd, customTimeZone) : null;
+    $: customMinimumDate = minimumSelectableDate(currentInstant);
+    $: customStartInstant = customTimeZone ? resolveComparisonCivilTime(customStart, customTimeZone, customMinimumDate) : null;
+    $: customEndInstant = customTimeZone ? resolveComparisonCivilTime(customEnd, customTimeZone, customMinimumDate) : null;
     $: customInterval = customStartInstant !== null && customEndInstant !== null && customEndInstant > customStartInstant
         ? { start: customStartInstant, end: customEndInstant } : null;
     $: periods = new Map(results.map(result => [result, selectComparisonPeriod({
@@ -349,7 +352,18 @@
     const openDatePicker = (event: MouseEvent) => {
         const input = event.currentTarget;
         if (input instanceof HTMLInputElement) {
-            input.showPicker();
+            input.showPicker?.();
+        }
+    };
+
+    /** Commit a valid observing date once, before the parent changes its time intent. */
+    const changeSelectedDate = (event: Event) => {
+        const input = event.currentTarget as HTMLInputElement;
+        if (isSelectableDate(input.value, customMinimumDate)) {
+            selectedDate = input.value;
+            dispatch('datechange');
+        } else {
+            input.value = selectedDate;
         }
     };
 
@@ -526,6 +540,13 @@
         return labels[currentLanguage].shortDate(month, day);
     };
 
+    /** Native datetime-local values remain local civil times, without UTC conversion. */
+    const customDateLabel = (value: string): string => {
+        if (!value) { return '—'; }
+        const [date, clock] = value.split('T');
+        return `${formatDisplayDate(date, true)} ${clock}`;
+    };
+
     const windowKindLabel = (kind: AstronomyIntervalKind): string => kind === 'moonless-night'
         ? text.moonless
         : text.milkyWay;
@@ -567,8 +588,10 @@
                     </svg>
                     <input
                         type="date"
-                        bind:value={selectedDate}
-                        on:change={() => dispatch('datechange')}
+                        min={customMinimumDate}
+                        max={maximumSelectableDate()}
+                        value={selectedDate}
+                        on:change={changeSelectedDate}
                         aria-label={text.dateControl}
                         on:click={openDatePicker}
                     />
@@ -613,8 +636,14 @@
                 </div>
             {:else if mode === 'custom'}
                 <div class="favorite-comparison__custom-controls">
-                    <label>{text.start}<input type="datetime-local" step="60" disabled={!customTimeZone} bind:value={customStart} /></label>
-                    <label>{text.end}<input type="datetime-local" step="60" disabled={!customTimeZone} bind:value={customEnd} /></label>
+                    <div class="custom-date-control"><span>{text.start}</span><span class="custom-date-field">
+                        <span aria-hidden="true">{customDateLabel(customStart)}</span>
+                        <input type="datetime-local" step="60" min={`${customMinimumDate}T00:00`} max="9999-12-31T23:59" disabled={!customTimeZone} bind:value={customStart} aria-label={text.start} />
+                    </span></div>
+                    <div class="custom-date-control"><span>{text.end}</span><span class="custom-date-field">
+                        <span aria-hidden="true">{customDateLabel(customEnd)}</span>
+                        <input type="datetime-local" step="60" min={`${customMinimumDate}T00:00`} max="9999-12-31T23:59" disabled={!customTimeZone} bind:value={customEnd} aria-label={text.end} />
+                    </span></div>
                 </div>
             {/if}
         </div>
@@ -805,6 +834,7 @@
     .favorite-comparison__period-controls,
     .favorite-comparison__target-controls,
     .favorite-comparison__custom-controls,
+    .custom-date-control,
     .favorite-comparison__controls label {
         display: flex;
         flex-wrap: wrap;
@@ -814,6 +844,12 @@
     }
     // Target windows share the compact toolbar; custom dates keep a separate row.
     .favorite-comparison__custom-controls { flex-basis: 100%; }
+    /* Actual native inputs own pointer and keyboard editing on every platform.
+       The fixed display yields to visible native segments while focused. */
+    .custom-date-field { position:relative; display:inline-flex; align-items:center; box-sizing:border-box; min-width:205px; min-height:30px; padding:4px 8px; border:1px solid var(--panel-border); border-radius:6px; background:#0e161f; white-space:nowrap; }
+    .custom-date-field input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:text; }
+    .custom-date-field input:focus { opacity:1; }
+    .custom-date-field:focus-within { outline:2px solid var(--panel-accent); outline-offset:2px; }
     .favorite-comparison__target-controls select { field-sizing: content; }
     .favorite-comparison__source select,
     .favorite-comparison__period-controls select,

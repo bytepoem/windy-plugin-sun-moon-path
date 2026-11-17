@@ -27,6 +27,7 @@ export default class DiagnosticPlugin {
     private bootstrapRevision = 0;
     private languageFailed = false;
     private languageRequest: AbortController | null = null;
+    private attemptedPreference: UiLanguagePreference = 'auto';
 
     constructor(options: { target: HTMLElement; anchor?: HTMLElement }) {
         this.container = document.createElement('div');
@@ -69,6 +70,9 @@ export default class DiagnosticPlugin {
      * opening during preparation is delivered once after the main component exists. */
     private bootstrap(preference: UiLanguagePreference, persist = false, userInitiated = persist) {
         if (this.closed) { return; }
+        // Keep the latest recovery choice in memory; only a successful mount
+        // may replace the user's saved preference.
+        this.attemptedPreference = preference;
         const revision = ++this.bootstrapRevision;
         this.languageRequest?.abort();
         this.languageRequest = new AbortController();
@@ -169,7 +173,7 @@ export default class DiagnosticPlugin {
         const language = store.get('usedLang') === 'zh' ? 'zh' : 'en';
         this.languageChoice = new LanguageChoice({ target: this.container, props: {
             language,
-            initialPreference: loadLanguagePreference(),
+            initialPreference: this.attemptedPreference,
             choose: (preference: UiLanguagePreference) => this.bootstrap(preference, true),
             useEnglish: () => this.bootstrap('en', false, true),
         } });

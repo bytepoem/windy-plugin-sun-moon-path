@@ -1,7 +1,7 @@
 import { defineMessages, localized } from '../localeMessages';
 export const labels = defineMessages({
     zh: {
-        shortDate: (month: number, day: number) => `${month}月${day}日`,
+        shortDate: (month: number, day: number) => `${month}/${day}`,
         title: '收藏地点时间窗口对比',
         back: '返回收藏',
         close: '关闭地点对比',

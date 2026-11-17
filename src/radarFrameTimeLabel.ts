@@ -1,5 +1,5 @@
 import { messages } from './locales/radarFrameTimeLabel';
-import { UI_LANGUAGES } from './uiLanguage';
+import { formatDisplayDateTime } from './dateDisplay';
 import type { UiLanguage } from './uiLanguage';
 import type { RadarOverlayStatus, RadarProvider } from './radarOverlay';
 
@@ -22,13 +22,7 @@ export const formatRadarFrameTimeLabel = (state: RadarFrameTimeLabelState): stri
     }
     const source = 'RainViewer';
     if (state.timestampMs !== null) {
-        const time = new Intl.DateTimeFormat(UI_LANGUAGES[state.language].locale, {
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hourCycle: 'h23',
-        }).format(new Date(state.timestampMs));
+        const time = formatDisplayDateTime(state.timestampMs);
         return `${source} · ${time}`;
     }
     if (state.status === 'out-of-range') {

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { messages } from './locales/RainbowSightlineEvidence';
-    import { UI_LANGUAGES } from './uiLanguage';
+    import { formatDisplayDateTime } from './dateDisplay';
     import { LOW_VISIBILITY_KM, type SightlineState } from './rainbowSightlines';
     import type { UiLanguage } from './uiLanguage';
 
@@ -13,9 +13,6 @@
     $: obstructed = terrain?.directions.filter(item => item.potentialObstruction).length ?? 0;
     $: visibilityComplete = visibility !== null && visibility.routes.length > 0 && visibility.routes.every(item => item.complete);
     $: poorRoutes = visibility?.routes.filter(item => item.lowVisibility).length ?? 0;
-    $: timeFormat = new Intl.DateTimeFormat(UI_LANGUAGES[language].clockLocale, {
-        timeZone, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    });
     const number = (value: number | null | undefined, decimals = 1) => value == null ? '—' : value.toFixed(decimals);
 </script>
 
@@ -59,7 +56,7 @@
                 <p>{messages[language].visibilityDataAreIncompleteRisksOnOther}</p>
             {/if}
             {#if visibility}
-                <p class="assessment-meta">{messages[language].forecastTime}{timeFormat.format(visibility.timestamp)} ({timeZone})</p>
+                <p class="assessment-meta">{messages[language].forecastTime}{formatDisplayDateTime(visibility.timestamp, timeZone)} ({timeZone})</p>
                 <details class="assessment-details">
                     <summary>{messages[language].routeVisibilityEvidence}</summary>
                     <table class="assessment-table">

@@ -30,12 +30,12 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.6/plugin.min.
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
-2. **Choose a time:** select a date, then use the local time strip or Sun, Moon and galactic centre rise/set shortcuts.
+2. **Choose a time:** select a date, then use the local time strip or Sun, Moon and galactic centre rise/set shortcuts. All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year.
 3. **Check conditions:** explore events and weather, use cloud or rainbow planning, or compare 2–5 favorite locations.
 
 The plugin follows the language actually used by Windy by default and supports the 42 languages in Windy Settings. Choose a separate language at the top of Settings, or switch back to `auto` to follow Windy. Manual choices, including existing ones, are remembered. New languages are machine translated with AI language checks and have not been reviewed by native speakers of every language; cloud-guide images and historical update notes remain in Chinese or English. Display options are also in Settings, with detailed legends under Settings → Guide. The features below describe the current repository; refer to release notes for published-version availability.
 
-Simplified Chinese and English are built in and need no language download. The other 40 languages load individually on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup while keeping your saved language preference. Non-Chinese interfaces use `All` and `Now` for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.
+Simplified Chinese and English are built in and need no language download. The other 40 languages load individually on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup while keeping your saved language preference. Short dates always use month/day; full dates retain year-month-day, regardless of interface language. Non-Chinese interfaces use `All` and `Now` for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.
 
 Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers, City heatmaps, Thermals and Outdoor map. You can also keep Windy's current layer.
 
@@ -117,7 +117,7 @@ Whole day retains weather summaries for each site's local date. Target window su
 
 OM in Data source means Open-Meteo. Data source, Period and the target-window selector share a compact toolbar and wrap when space is limited.
 
-Custom period uses local dates and times for the compared sites. Use the next date when crossing midnight. This version compares sites in one time zone. Expand Conditions through the period to inspect original cloud, wind and precipitation samples without interpolation. Precipitation retains complete source accumulation periods without proration or summation. Forecast range, partial coverage, outside range, missing data and loading failures are shown separately; unknown conditions do not mean good weather.
+Custom period uses local dates and times for the compared sites. Use the next date when crossing midnight. This version compares sites in one time zone. Custom periods begin no earlier than January 1 of the previous year, based on the browser’s current year; dates outside the forecast range may still have no weather data. Expand Conditions through the period to inspect original cloud, wind and precipitation samples without interpolation. Precipitation retains complete source accumulation periods without proration or summation. Forecast range, partial coverage, outside range, missing data and loading failures are shown separately; unknown conditions do not mean good weather.
 
 After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.
 

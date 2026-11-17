@@ -8,6 +8,9 @@ import { prepareUiLanguage } from './localeMessages';
 import { translations } from './pluginTranslations';
 import { messages as pluginMessages } from './locales/plugin';
 import { labels as favoriteLabels } from './locales/FavoriteLocations';
+import { labels as comparisonLabels } from './locales/FavoriteComparison';
+import { comparisonIntervalLabels } from './favoriteComparisonPeriod';
+import { buildWeatherDateGroups, type WeatherPoint } from './weather';
 import { UI_LANGUAGE_OPTIONS } from './uiLanguage';
 
 const sources: Record<string, string> = JSON.parse(readFileSync('src/locales/source.en.json', 'utf8'));
@@ -25,6 +28,25 @@ const placeholders = (text: string) => (text.match(/\{\{\d+\}\}|\{provider\}/g) 
 const properNames = ['Windy', 'Open-Meteo', 'RainViewer', 'ECMWF', 'GFS', 'ICON', 'CAMS', 'WGS84', 'GCJ-02', 'DNI', 'SQM', 'MSL', 'AMSL', 'AGL', 'Bortle'];
 
 describe('complete translated language payload', () => {
+    it('uses month/day in every language for forecast headers and cross-midnight windows', () => {
+        const start = Date.UTC(2026, 10, 12, 23);
+        const end = Date.UTC(2026, 10, 13, 1);
+        const points: WeatherPoint[] = [start, end].map(timestamp => ({
+            timestamp, iconCode: null, isDay: false, totalCloudPercent: null,
+            highCloudPercent: null, mediumCloudPercent: null, lowCloudPercent: null,
+            temperatureC: null, dewPointC: null, humidityPercent: null, precipMm: null,
+            windMs: null, windDirectionDeg: null, aod550: null, visibilityKm: null,
+        }));
+
+        for (const { value } of UI_LANGUAGE_OPTIONS) {
+            const dates = ['11/12', '11/13'];
+            expect(buildWeatherDateGroups(points, 'UTC', value).map(group => group.label), value).toEqual(dates);
+            expect(comparisonLabels[value].shortDate(11, 12), value).toBe(dates[0]);
+            expect(comparisonIntervalLabels({ start, end }, 'UTC', '2026-11-12', comparisonLabels[value].shortDate), value)
+                .toEqual({ start: `${dates[0]} 23:00`, end: `${dates[1]} 01:00` });
+        }
+    });
+
     it('keeps the visible About tab name in its accessible update label', () => {
         for (const { value } of UI_LANGUAGE_OPTIONS) {
             const text = translations[value];

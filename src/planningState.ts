@@ -1,4 +1,5 @@
-import { dateInputForInstant, formatLocalClock } from './solar';
+import { addDaysToDateInput, dateInputForInstant, dateInputToUtcMidnight, formatLocalClock } from './solar';
+import { maximumSelectableDate } from './dateSelection';
 import type { PlanningTimeSelection } from './planningTime';
 
 /** The shell owns location/date; this value owns only the user's time intent. */
@@ -23,6 +24,25 @@ export const createPlanningState = (timestamp: number): PlanningState => ({
     preview: false,
     hostInputActive: false,
 });
+
+/** Apply UI date bounds after the site's time zone resolves. A cross-midnight
+ * window, host instant or relocation can put an otherwise valid absolute instant
+ * outside the allowed civil dates. Clamp the instant itself before date/render
+ * derivation, so the clock, date and map always describe the same moment.
+ */
+export const constrainPlanningDate = (
+    state: PlanningState, timeZone: string, minimumDate: string, contextReady: boolean,
+): PlanningState => {
+    const selection = state.selection;
+    if (!contextReady || (selection.mode !== 'instant' && selection.mode !== 'windy')) { return state; }
+    const date = dateInputForInstant(new Date(selection.timestamp), timeZone);
+    const maximumDate = maximumSelectableDate();
+    if (date < minimumDate) { return createPlanningState(dateInputToUtcMidnight(minimumDate, timeZone).getTime()); }
+    if (date > maximumDate) {
+        return createPlanningState(dateInputToUtcMidnight(addDaysToDateInput(maximumDate, 1), timeZone).getTime() - 60_000);
+    }
+    return state;
+};
 
 /**
  * Apply one time intent atomically. Local choices release host control; automatic

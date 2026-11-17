@@ -1,4 +1,5 @@
 import { dateInputForInstant } from './solar';
+import { isSelectableDate, minimumSelectableDate, resolveCivilMinute } from './dateSelection';
 import type { FavoriteComparisonResult } from './favoriteComparison';
 import type { WeatherPoint } from './weather';
 
@@ -18,25 +19,10 @@ const HOUR_MS = 3_600_000;
  * Offsets on both sides of a transition also cover half-hour DST. The comparison
  * UI supplies a prepared comparison site's time zone for nearby sites in one zone.
  */
-export const resolveComparisonCivilTime = (value: string, timeZone: string): number | null => {
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) { return null; }
-    const naive = Date.parse(value + ':00Z');
-    if (!Number.isFinite(naive)) { return null; }
-    const formatter = new Intl.DateTimeFormat('en-GB', {
-        timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    });
-    const civil = (instant: number) => {
-        const parts = formatter.formatToParts(instant);
-        const part = (type: string) => parts.find(item => item.type === type)?.value;
-        return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
-    };
-    const offsets = new Set([-48, -24, 0, 24, 48].map(hours => {
-        const instant = naive + hours * HOUR_MS;
-        return Date.parse(civil(instant) + ':00Z') - instant;
-    }));
-    const candidates = [...offsets].map(offset => naive - offset).filter(instant => civil(instant) === value);
-    return candidates.length === 1 ? candidates[0] : null;
+export const resolveComparisonCivilTime = (value: string, timeZone: string, minimumDate = minimumSelectableDate()): number | null => {
+    // Custom windows select weather instants, without astronomy's neighbouring-day scan.
+    return isSelectableDate(value.slice(0, 10), minimumDate, '9999-12-31')
+        ? resolveCivilMinute(value, timeZone, 'reject') : null;
 };
 
 /** Target windows retain their real endpoints, including portions after midnight.

@@ -6,11 +6,14 @@ import sveltePreprocess from 'svelte-preprocess';
 import * as internal from 'svelte/internal';
 import { labels, messages } from './locales/FavoriteComparison';
 import * as periodHelpers from './favoriteComparisonPeriod';
+import * as dateSelection from './dateSelection';
 
 // Svelte exposes tick at runtime here; its internal .d.ts omits that export.
 const { tick } = internal as unknown as { tick: () => Promise<void> };
 
 type CapturedState = {
+    selectedDate: string;
+    changeSelectedDate: (event: Event) => void;
     customStart: string;
     customEnd: string;
     customInterval: { start: number; end: number } | null;
@@ -20,6 +23,7 @@ type CapturedState = {
     rangeLabel: (...args: unknown[]) => string;
     session: { preparedTargets: { status: 'ready'; timeZone: string }[]; loadModel: ReturnType<typeof vi.fn> } | null;
     customTimeZone: string | null;
+    customMinimumDate: string;
     prepareStatus: string;
 };
 type Component = {
@@ -49,7 +53,7 @@ beforeAll(async () => {
         .replace(/export default FavoriteComparison;/, 'globalThis.CompiledComparison = FavoriteComparison;');
     create = (props, prepare) => {
         const context: Record<string, unknown> = {
-            ...boundaries, ...internal, ...periodHelpers,
+            ...boundaries, ...internal, ...periodHelpers, ...dateSelection,
             // Development registration events do not form part of runtime behavior.
             dispatch_dev: () => undefined,
             labels, messages, DEFAULT_UI_LANGUAGE: 'zh',
@@ -62,7 +66,7 @@ beforeAll(async () => {
         try {
             const component = new (context.CompiledComparison as new (options: { props: Record<string, unknown>; $$inline: boolean }) => Component)({
                 $$inline: true,
-                props: { open: false, selectedDate: '2026-11-13', targets: [], currentInstant: new Date(), language: 'en', ...props },
+                props: { open: false, selectedDate: '2026-11-13', targets: [], currentInstant: new Date(2026, 10, 17), language: 'en', ...props },
             });
             // No template has been mounted; skip DOM patching while preserving
             // the actual instance update function and destruction callbacks.
@@ -80,6 +84,38 @@ const deferred = <T>() => {
 const flush = async () => { await Promise.resolve(); await tick(); };
 
 describe('compiled comparison input and request lifecycle', () => {
+    it('commits only allowed header dates before starting comparison work', async () => {
+        const component = create({}, vi.fn());
+        const input = { value: '2024-12-31' };
+        component.$capture_state().changeSelectedDate({ currentTarget: input } as unknown as Event);
+        await tick();
+        expect(input.value).toBe('2026-11-13');
+        expect(component.$capture_state().selectedDate).toBe('2026-11-13');
+        input.value = '2025-01-01';
+        component.$capture_state().changeSelectedDate({ currentTarget: input } as unknown as Event);
+        await tick();
+        expect(component.$capture_state().selectedDate).toBe('2025-01-01');
+        component.$destroy();
+    });
+    it('rejects old custom values and updates the boundary after a local year change', async () => {
+        const component = create({}, vi.fn());
+        component.$inject_state({
+            session: { preparedTargets: [{ status: 'ready', timeZone: 'UTC' }], loadModel: vi.fn() },
+            customStart: '2024-12-31T23:00', customEnd: '2025-01-01T01:00',
+        });
+        await tick();
+        expect(component.$capture_state()).toMatchObject({ customMinimumDate: '2025-01-01', customInterval: null });
+
+        component.$inject_state({ customStart: '2025-01-01T00:00' });
+        await tick();
+        expect(component.$capture_state().customInterval).toEqual({ start: Date.UTC(2025, 0, 1), end: Date.UTC(2025, 0, 1, 1) });
+
+        component.$set({ currentInstant: new Date(2027, 0, 1) });
+        await tick();
+        expect(component.$capture_state()).toMatchObject({ customMinimumDate: '2026-01-01', customInterval: null });
+        component.$destroy();
+    });
+
     it.each([
         ['reopening', { open: true }],
         ['changing source', { source: 'open-meteo' }],

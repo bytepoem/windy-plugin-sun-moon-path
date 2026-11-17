@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import { UI_LANGUAGES } from './uiLanguage';
+    import { formatDisplayDateTime } from './dateDisplay';
     import { messages } from './locales/TidePlanning';
     import { onPluginDestroy as onDestroy } from './pluginLifecycle';
     import { addDaysToDateInput, dateInputToUtcMidnight, formatLocalClock, type Coordinates } from './solar';
@@ -180,7 +180,7 @@
     <details><summary>{messages[language].waterLevelAndTimeNotes}</summary>
         <p>{messages[language].levelsAreRelativeToGlobalMeanSea}{timeZone}</p>
         {#if state.day}
-            <p>{messages[language].modelGrid}{state.day.grid.lat.toFixed(3)}, {state.day.grid.lon.toFixed(3)} · {messages[language].fetched} {new Date(state.day.fetchedAt).toLocaleString(UI_LANGUAGES[language].clockLocale, { timeZone })}</p>
+            <p>{messages[language].modelGrid}{state.day.grid.lat.toFixed(3)}, {state.day.grid.lon.toFixed(3)} · {messages[language].fetched} {formatDisplayDateTime(state.day.fetchedAt, timeZone, true)}</p>
         {/if}
     </details>
     <footer><a href="https://open-meteo.com/en/docs/marine-weather-api" target="_blank" rel="noreferrer">Open-Meteo</a>

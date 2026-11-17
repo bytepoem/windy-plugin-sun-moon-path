@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import { formatDisplayDate } from './dateDisplay';
     import { labels } from './locales/FavoriteComparison';
     import { messages } from './locales/MultiDayOverview';
     import { messages as horizonText } from './locales/EventHorizon';
@@ -42,9 +43,10 @@
         const weather = intervals.length === 1 ? createMultiDayWeatherPresentation({
             interval:intervals[0], points, status, aodStatus, visibilityStatus, language, units,
         }) : null;
-        const label = new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
-            timeZone:'UTC', month:'numeric', day:'numeric', weekday:'short',
+        const weekdayLabel = new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
+            timeZone:'UTC', weekday:'short',
         }).format(new Date(row.date + 'T12:00:00Z'));
+        const label = `${formatDisplayDate(row.date)} ${weekdayLabel}`;
         const weekday = new Date(row.date + 'T12:00:00Z').getUTCDay();
         const clock = (kind: 'sunrise' | 'sunset') => {
             const time = row.timeline.items.find(item => item.kind === kind)?.time;
