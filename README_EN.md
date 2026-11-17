@@ -37,7 +37,7 @@ The plugin follows the language actually used by Windy by default and supports t
 
 Simplified Chinese and English are built in and need no language download. The other 40 languages load individually on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup while keeping your saved language preference. Non-Chinese interfaces use `All` and `Now` for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.
 
-Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers. You can also keep Windy's current layer.
+Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers, City heatmaps, Thermals and Outdoor map. You can also keep Windy's current layer.
 
 The desktop title back button supports keyboard focus. Astro and Clouds tabs use narrow dropdown arrow buttons with compact spacing; their menus support arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
 
