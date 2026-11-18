@@ -80,12 +80,19 @@ describe('selectPluginLinkVersion', () => {
     it('uses the installed version when current and the remote version only for an available update', () => {
         expect(selectPluginLinkVersion('0.9.1', {
             status: 'current',
+            channel: 'formal',
             latestVersion: '0.9.0',
         })).toBe('0.9.1');
         expect(selectPluginLinkVersion('0.9.1', {
             status: 'available',
+            channel: 'formal',
             latestVersion: '0.9.2',
         })).toBe('0.9.2');
+    });
+
+    it('has no public install link for a development preview', () => {
+        const preview = { status: 'available', channel: 'beta', latestVersion: '0.13.0' } as const;
+        expect(selectPluginLinkVersion('0.13.0', preview)).toBe('');
     });
 });
 

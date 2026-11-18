@@ -135,9 +135,11 @@
         segmentContext = nextSegmentContext;
         segments = {};
     }
-    // The comparison owns a verified local clock. Never borrow the parent map's
-    // provisional system/previous-location time zone while context is loading.
-    $: customTimeZone = session?.preparedTargets.flatMap(prepared => prepared.status === 'ready' ? [prepared.timeZone] : [])[0] ?? null;
+    // Resolve a shared local clock only after comparing all ready sites in this session.
+    $: customTimeZones = [...new Set(session?.preparedTargets.flatMap(prepared =>
+        prepared.status === 'ready' ? [prepared.timeZone] : []))];
+    $: customTimeZoneMismatch = customTimeZones.length > 1;
+    $: customTimeZone = customTimeZoneMismatch ? null : customTimeZones[0] ?? null;
     $: customMinimumDate = minimumSelectableDate(currentInstant);
     $: customStartInstant = customTimeZone ? resolveComparisonCivilTime(customStart, customTimeZone, customMinimumDate) : null;
     $: customEndInstant = customTimeZone ? resolveComparisonCivilTime(customEnd, customTimeZone, customMinimumDate) : null;
@@ -658,6 +660,8 @@
                 <span>{text.prepareError}</span>
                 <button type="button" on:click={() => void prepareComparison()}>{text.retry}</button>
             </div>
+        {:else if mode === 'custom' && customTimeZoneMismatch}
+            <p class="favorite-comparison__forecast-note" role="alert">{text.customRule}</p>
         {:else}
             <section class="favorite-comparison__conditions" class:loading={modelLoading} aria-label={text.conditions}>
                 <p class="favorite-comparison__forecast-note">{mode === 'day' ? text.conditions : mode === 'target' ? text.eventRule : text.customRule}</p>

@@ -93,24 +93,26 @@
                             : text.aboutUpdateAvailable}
                     </strong>
                 </div>
-                <div class="about-update__actions">
-                    <button type="button" on:click={copyLatestPluginLink}>
-                        {text.aboutCopyLatestPluginLink(latestPluginVersion)}
-                    </button>
-                    {#if pluginLinkCopyStatus !== 'idle'}
-                        <span
-                            class:about-update__copy-feedback--error={pluginLinkCopyStatus === 'error'}
-                            class="about-update__copy-feedback"
-                            role="status"
-                            aria-live="polite"
-                            aria-atomic="true"
-                        >
-                            {pluginLinkCopyStatus === 'copied'
-                                ? text.aboutPluginLinkCopied(latestPluginVersion)
-                                : text.aboutPluginLinkCopyError}
-                        </span>
-                    {/if}
-                </div>
+                {#if latestPluginVersion}
+                    <div class="about-update__actions">
+                        <button type="button" on:click={copyLatestPluginLink}>
+                            {text.aboutCopyLatestPluginLink(latestPluginVersion)}
+                        </button>
+                        {#if pluginLinkCopyStatus !== 'idle'}
+                            <span
+                                class:about-update__copy-feedback--error={pluginLinkCopyStatus === 'error'}
+                                class="about-update__copy-feedback"
+                                role="status"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            >
+                                {pluginLinkCopyStatus === 'copied'
+                                    ? text.aboutPluginLinkCopied(latestPluginVersion)
+                                    : text.aboutPluginLinkCopyError}
+                            </span>
+                        {/if}
+                    </div>
+                {/if}
                 {#if localizedUpdateNotes.length > 0}
                     <div class="about-update__notes">
                         {#each localizedUpdateNotes as releaseNote}

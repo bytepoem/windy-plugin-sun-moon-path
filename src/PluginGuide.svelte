@@ -155,6 +155,7 @@
                 <dt>{text.featureGuide.comparison.title}</dt>
                 <dd>{text.featureGuide.comparison.description} OM = Open-Meteo. {comparisonLabels[uiLanguage].eventRule} {comparisonLabels[uiLanguage].customRule} {comparisonLabels[uiLanguage].invalidPeriod}
                 </dd>
+                <dd>{comparisonLabels[uiLanguage].precipitationRule}</dd>
             </div>
             <div>
                 <dt>{text.featureGuide.mobileMode.title}</dt>

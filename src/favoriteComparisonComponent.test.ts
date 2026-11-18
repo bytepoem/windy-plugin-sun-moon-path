@@ -153,6 +153,21 @@ describe('compiled comparison input and request lifecycle', () => {
         component.$destroy();
     });
 
+    it('keeps custom time unresolved when the prepared sites use different time zones', async () => {
+        const pending = deferred<unknown>();
+        const component = create({ open: true }, vi.fn().mockReturnValue(pending.promise));
+        pending.resolve({
+            preparedTargets: [
+                { status: 'ready', timeZone: 'Asia/Shanghai' },
+                { status: 'ready', timeZone: 'Asia/Tokyo' },
+            ],
+            loadModel: vi.fn().mockResolvedValue([]),
+        });
+        await vi.waitFor(() => expect(component.$capture_state().prepareStatus).toBe('ready'));
+        expect(component.$capture_state()).toMatchObject({ customTimeZone: null, customInterval: null });
+        component.$destroy();
+    });
+
     it('does not count atmosphere-only timestamps as missing precipitation', () => {
         const component = create({}, vi.fn());
         const start = Date.UTC(2026, 10, 13);

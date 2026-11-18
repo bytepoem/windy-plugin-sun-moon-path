@@ -6,7 +6,7 @@
 - GitHub：`bytepoem/windy-plugin-sun-moon-path` 的 `update-metadata` 分支，通过 Raw 读取 JSON。
 - 每次检查从选定来源读取 `latest.json` 与 `<version>/notes.json`。只接受固定文件路径、匹配版本及完整 minor 系列，不在失败时自动切换来源。
 - 成功检查按来源和安装版本隔离缓存，最多复用五分钟；重新进入关于页时再次检查。失败不缓存，关闭插件通过已有 AbortController 取消请求。
-- 本地预览读取 localhost 的 `release-notes/beta.json` 及相邻历史日志，不进行地区选择或公网更新检查。
+- 本地预览读取 localhost 的 `release-notes/beta.json` 及相邻历史日志。正式更新检查结果才提供安装链接的复制入口。
 
 ## 发布契约
 
@@ -17,8 +17,9 @@ CI 使用仓库 Secret `GITEE_TOKEN` 和工作流自带的 `GITHUB_TOKEN`，后�
 | 状态与时序 | 对外结果 | 处理 |
 | --- | --- | --- |
 | 测试、构建、快照生成或本地生产解析失败 | 不发布 | 修复后重跑 |
+| 安装包与更新快照版本不同，或同名 tag 指向其他提交 | 不写入语言镜像或上传 Windy | 核对候选版本和提交 |
 | Windy 上传失败 | 两个镜像均保持原版本 | 不更新版本指针 |
-| Windy 成功 | 先同步 Gitee，再同步 GitHub | 每站 manifest 和全部快照在同一提交上线 |
+| Windy 成功 | `publish-update-mirrors` 下载本次构建已验证的快照，先同步 Gitee，再同步 GitHub | 每站 manifest 和全部快照在同一提交上线 |
 | 一个镜像成功、另一个失败 | 两边可能暂时处于不同版本，各站内容仍完整 | 修复后只重跑镜像同步及公网验收，成功站点幂等，不重复上传 Windy |
 | 两个镜像成功 | 分别用生产解析器验证当前版、旧版发现新版及完整系列 | 公网检查失败则发布任务失败 |
 | 并发发布 | CI concurrency 串行处理；普通 Git push 拒绝竞争写入 | 不强制覆盖，重新核对镜像再运行 |
@@ -38,4 +39,6 @@ node scripts/verify-update-site.mjs --source=github
 python3 scripts/test_publish_update_mirrors.py
 ```
 
-镜像发布失败后保留 Windy 已成功的版本，只重试镜像步骤。发现已发布日志或客户端错误时发布更高修复版本，不改写旧快照、旧 tag 或旧插件。已有 Netlify 文件不删除，但后续不再同步；仍依赖 Netlify 的旧插件需用户手动安装新版。
+镜像发布失败后，在原 Actions 运行记录中选择 `publish-update-mirrors` 的 **Re-run job**。快照保留 30 天，重试使用 Windy 上传 job 留下的同一份快照，随后自动校验两个公网镜像。若只有公网校验失败，重跑对应的 `verify-update-metadata` job 即可。`verify_only` 也可发起独立的只读公网检查。
+
+发现已发布日志或客户端错误时发布更高修复版本，不改写旧快照、旧 tag 或旧插件。已有 Netlify 文件不删除，但后续不再同步；仍依赖 Netlify 的旧插件需用户手动安装新版。

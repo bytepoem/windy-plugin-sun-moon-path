@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkPluginUpdate } from './pluginUpdate';
+import { checkPluginUpdate, compareSemanticVersions } from './pluginUpdate';
+import config, { currentVersionReleasedAt } from './pluginConfig';
 
 import formalNotesSource from '../release-notes/0.12.6.json?raw';
 import betaNotesSource from '../release-notes/beta.json?raw';
@@ -41,10 +42,13 @@ describe('beta release notes development asset', () => {
 /** Exercise real release files through the same parser used by installed plugins. */
 describe('release note publishing contract', () => {
     const sources = import.meta.glob('../release-notes/*.json', { query: '?raw', import: 'default', eager: true });
+    const manifest = JSON.parse(packageSource);
+    const [major, minor, patch] = manifest.version.split('.').map(Number);
+    const currentSeriesVersions = Array.from({ length: patch + 1 }, (_, index) => `${major}.${minor}.${patch - index}`);
 
     it('keeps published changes out of the next-minor development preview', async () => {
         const result = await checkPluginUpdate({
-            currentVersion: JSON.parse(packageSource).version,
+            currentVersion: manifest.version,
             repositoryUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
             betaNotesUrl: 'https://localhost:9999/release-notes/beta.json',
             sessionCache: null,
@@ -62,15 +66,30 @@ describe('release note publishing contract', () => {
         for (const language of ['zh', 'en'] as const) {
             const publishedTexts = Object.entries(sources)
                 .filter(([path]) => !path.endsWith('/beta.json'))
-                .flatMap(([, source]) => JSON.parse(source as string)[language].items.map((item: { text: string }) => item.text));
-            for (const item of result.notes?.[language].items ?? []) {
+                .map(([, source]) => JSON.parse(source as string))
+                .filter(notes => compareSemanticVersions(notes.version, result.latestVersion) < 0)
+                .flatMap(notes => notes[language].items.map((item: { text: string }) => item.text));
+            const preview = JSON.parse(betaNotesSource)[language];
+            expect(result.notes?.[language]).toEqual(preview);
+            for (const item of preview.items) {
                 expect(publishedTexts).not.toContain(item.text);
             }
         }
     });
 
-    it.each(['0.9.1', '0.10.1', '0.10.2', '0.10.3', '0.10.4', '0.11.0', '0.11.1', '0.11.2', '0.11.3', '0.11.4', '0.12.0', '0.12.1', '0.12.2', '0.12.3', '0.12.4', '0.12.5', '0.12.6'])('loads the full current snapshot for installed %s', async currentVersion => {
-        const manifest = JSON.parse(packageSource);
+    it('aligns the package, About date and formal release notes', () => {
+        const notes = JSON.parse(sources[`../release-notes/${manifest.version}.json`] as string);
+        expect(config.version).toBe(manifest.version);
+        expect(notes.version).toBe(manifest.version);
+        expect(notes.releasedAt).toBe(currentVersionReleasedAt);
+        const preview = JSON.parse(betaNotesSource);
+        if (preview.version === notes.version) {
+            expect(notes.zh).toEqual(preview.zh);
+            expect(notes.en).toEqual(preview.en);
+        }
+    });
+
+    it.each([...new Set(['0.9.1', '0.10.1', '0.10.2', '0.10.3', '0.10.4', '0.11.0', '0.11.1', '0.11.2', '0.11.3', '0.11.4', '0.12.0', '0.12.1', '0.12.2', '0.12.3', '0.12.4', '0.12.5', '0.12.6', manifest.version] as string[])])('loads the full current snapshot for installed %s', async currentVersion => {
         const requested: string[] = [];
         const base = `https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/update-metadata/${manifest.version}/`;
         const result = await checkPluginUpdate({
@@ -84,14 +103,14 @@ describe('release note publishing contract', () => {
                 if (address.endsWith('/latest.json')) {
                     return new Response(JSON.stringify({ ...manifest, notesUrl: `./${manifest.version}/notes.json` }), { status: 200 });
                 }
-                const seriesNotes = ['0.12.6', '0.12.5', '0.12.4', '0.12.3', '0.12.2', '0.12.1', '0.12.0'].map(version =>
+                const seriesNotes = currentSeriesVersions.map(version =>
                     JSON.parse(sources[`../release-notes/${version}.json`] as string));
                 return new Response(JSON.stringify({ version: manifest.version, seriesNotes }));
             },
         });
         expect(result.status).toBe(currentVersion === manifest.version ? 'current' : 'available');
         expect(result.notesStatus).toBe('loaded');
-        expect(result.seriesNotes.map(note => note.version)).toEqual(['0.12.6', '0.12.5', '0.12.4', '0.12.3', '0.12.2', '0.12.1', '0.12.0']);
+        expect(result.seriesNotes.map(note => note.version)).toEqual(currentSeriesVersions);
         expect(requested.slice(1)).toEqual([`${base}notes.json`]);
     });
 

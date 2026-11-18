@@ -35,14 +35,20 @@ describe('compiled about panel states', () => {
         expect(html).toContain('Planning improvements');
     });
     it('distinguishes formal updates, beta previews and the current version', () => {
-        expect(renderAbout(aboutProps)).toContain('发现新版本');
-        const beta = renderAbout({ ...aboutProps, pluginUpdateResult: { ...available, channel: 'beta' } });
+        const formal = renderAbout(aboutProps);
+        expect(formal).toContain('发现新版本');
+        expect(formal).toContain('复制 0.11.0 插件链接');
+        const beta = renderAbout({ ...aboutProps, latestPluginVersion: '', pluginLinkCopyStatus: 'copied',
+            pluginUpdateResult: { ...available, channel: 'beta' } });
         expect(beta).toContain('测试版更新预览');
+        expect(beta).toContain('修正视线');
         expect(beta).not.toContain('发现新版本');
+        expect(beta).not.toContain('about-update__actions');
         const current = renderAbout({ ...aboutProps, pluginUpdateStatus: 'current',
             pluginUpdateResult: { ...available, status: 'current' } });
         expect(current).not.toContain('发现新版本');
         expect(current).toContain('修正视线');
+        expect(current).toContain('复制 0.11.0 插件链接');
     });
 
     it('renders the selected language and only that language in the release notes', () => {

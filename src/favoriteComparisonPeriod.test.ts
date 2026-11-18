@@ -50,8 +50,9 @@ describe('comparison periods and original forecast resolution', () => {
         const result = fixture();
         const day = selectComparisonPeriod({ result, mode: 'day', target: 'milky-way', custom: null });
         expect(day.points).toEqual(result.dailyWeatherPoints);
-        // Whole day retains the existing timestamp-on-local-date semantics.
-        expect(day.precipitationPoints).toEqual(result.dailyWeatherPoints);
+        // Open-Meteo stamps the end of each accumulation. Midnight at the start
+        // belongs to yesterday, and midnight at the end belongs to this day.
+        expect(day.precipitationPoints).toEqual(result.forecastPoints.slice(1, 25));
         const period = select(result, base + 19 * hour, base + 20 * hour);
         expect(period.points.map(p => p.totalCloudPercent)).toEqual([10]);
         expect(period.points.map(p => p.windMs)).toEqual([1]);
@@ -156,6 +157,9 @@ describe('compiled period weather details', () => {
     });
     it.each(['day', 'custom'] as const)('does not present independent atmosphere timestamps as original weather samples in %s mode', mode => {
         const result = fixture();
+        if (result.prepared.status !== 'ready') { throw new Error('fixture'); }
+        result.prepared.timeline.dayStart = new Date(base + 19 * hour);
+        result.prepared.timeline.dayEnd = new Date(base + 20 * hour);
         result.weatherPoints = [...result.weatherPoints, { ...point(base + 19.5 * hour), totalCloudPercent: null, windMs: null, precipMm: null, aod550: 0.2 }];
         result.dailyWeatherPoints = result.weatherPoints.filter(p => p.timestamp >= base + 19 * hour && p.timestamp < base + 20 * hour);
         const period = mode === 'day' ? selectComparisonPeriod({ result, mode, target: 'sunset', custom: null })
@@ -163,6 +167,6 @@ describe('compiled period weather details', () => {
         const html = render({ result, period, language: 'en',
             units: { wind: 'm/s', precipitation: 'mm' } });
         expect(html).not.toContain('19:30');
-        expect(html).toContain(`Original forecast samples · ${mode === 'day' ? 1 : 2}`);
+        expect(html).toContain('Original forecast samples · 2');
     });
 });

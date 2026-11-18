@@ -66,7 +66,7 @@ export const selectComparisonPeriod = ({ result, mode, target, segment = 'all', 
     if (!intervals.length) { return empty(mode === 'custom' ? 'invalid' : 'no-window'); }
     const inside = (timestamp: number) => intervals.some(interval => timestamp >= interval.start && timestamp < interval.end);
     const points = mode === 'day' ? result.dailyWeatherPoints : result.weatherPoints.filter(point => inside(point.timestamp));
-    const precipitationPoints = mode === 'day' ? points : result.forecastPoints.filter(point =>
+    const precipitationPoints = result.forecastPoints.filter(point =>
         point.precipitationPeriodMs
             ? intervals.some(interval => point.timestamp > interval.start
                 && point.timestamp - point.precipitationPeriodMs! < interval.end)

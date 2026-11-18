@@ -11,7 +11,7 @@
       },
       {
         "type": "new",
-        "text": "机位时段对比：收藏机位支持按整天、无月、银河、日落前后或自选时段比较天气，目前限同一时区。"
+        "text": "机位时段对比：收藏机位支持按整天、无月、银河、日落前后或自选时段比较天气。自选时段限同一时区。"
       },
       {
         "type": "new",
@@ -37,7 +37,7 @@
       },
       {
         "type": "new",
-        "text": "Site comparisons: compare favorite sites over whole days, moonless, Milky Way, sunset or custom windows. Currently limited to sites in one time zone."
+        "text": "Site comparisons: compare favorite sites over whole days, moonless, Milky Way, sunset or custom windows. Custom periods require sites in one time zone."
       },
       {
         "type": "new",
