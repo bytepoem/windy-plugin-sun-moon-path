@@ -5,6 +5,7 @@ import {
     fetchOpenMeteoAtmosphereMetric,
     combineAtmospherePoints,
     fetchOpenMeteoWeather,
+    fetchOpenMeteoSnow,
     wmoWeatherIcon,
     mergeOpenMeteoAtmosphere,
 } from './openMeteo';
@@ -34,6 +35,56 @@ const weatherPoint = (timestamp: number): WeatherPoint => ({
 });
 
 describe('Open-Meteo atmosphere data', () => {
+    it('requests model snow fields and aggregates only complete Windy time steps', async () => {
+        const fetcher = vi.fn().mockResolvedValue(response({ hourly: {
+            time: [1, 3601, 7201, 10801, 14401], snow_depth: [0.15, 0, null, 0, 0],
+            snowfall: [9, 0.5, 0, 1, null],
+        } }));
+        const signal = new AbortController().signal;
+        const snow = await fetchOpenMeteoSnow({
+            model: 'gfs', location: { lat: 1, lon: 2 }, fetcher, signal,
+        });
+        const url = new URL(String(fetcher.mock.calls[0][0]));
+        expect(url.searchParams.get('models')).toBe('gfs_global');
+        expect(url.searchParams.get('hourly')).toBe('snowfall,snow_depth');
+        expect(url.searchParams.get('forecast_hours')).toBe('124');
+        expect(fetcher.mock.calls[0][1]).toEqual({ signal });
+        const atmosphere = combineAtmospherePoints([{ timestamp: 1000, aod550: 0.2, visibilityKm: null }],
+            [{ timestamp: 1000, aod550: null, visibilityKm: 10 }], snow);
+        const points = [
+            { ...weatherPoint(1000), snowWaterPeriodHours: 3 },
+            { ...weatherPoint(2000), snowWaterPeriodHours: 3 },
+            { ...weatherPoint(3_601_000), snowWaterPeriodHours: 1 },
+            { ...weatherPoint(7_201_000), snowWaterPeriodHours: 3 },
+            weatherPoint(10_801_000),
+        ] satisfies WeatherPoint[];
+        const merged = mergeOpenMeteoAtmosphere(points, atmosphere);
+        expect(merged[0]).toMatchObject({ aod550: 0.2, visibilityKm: 10, snowDepthCm: 15 });
+        expect(merged.map(point => point.snowDepthCm)).toEqual([15, null, 0, null, 0]);
+        expect(merged.map(point => point.snowfallCm)).toEqual([1.5, null, 0, null, null]);
+        expect(mergeOpenMeteoAtmosphere([{ ...points[0], snowfallCm: 9 }], atmosphere, false)[0].snowfallCm).toBe(9);
+    });
+
+    it('requests new snowfall and ground depth and keeps zero separate from missing data', async () => {
+        const now = Date.UTC(2026, 10, 18, 2);
+        const fetcher = vi.fn().mockResolvedValue(response({ hourly: {
+            time: [now / 1000, now / 1000 + 3600, now / 1000 + 7200],
+            snowfall: [0.77, 0, null], snow_depth: [0.03, 0.04, null], weather_code: [85, 77, 0],
+            snowfall_water_equivalent: [1.1, 0, null], wind_gusts_10m: [12.3, 0, null],
+        } }));
+        const points = await fetchOpenMeteoWeather({ location: { lat: 42.733, lon: 143.217 }, model: 'ecmwf', requestedAt: now, fetcher });
+        const url = new URL(String(fetcher.mock.calls[0][0]));
+
+        expect(url.searchParams.get('hourly')?.split(',')).toEqual(expect.arrayContaining([
+            'snowfall', 'snow_depth', 'snowfall_water_equivalent', 'wind_gusts_10m',
+        ]));
+        expect(points).toMatchObject([
+            { snowfallCm: 0.77, snowDepthCm: 3, snowWaterMm: 1.1, windGustMs: 12.3, snowCondition: 'snowShowers', snowIntensity: 'light' },
+            { snowfallCm: 0, snowDepthCm: 4, snowWaterMm: 0, windGustMs: 0, snowCondition: 'snowGrains', snowIntensity: null },
+            { snowfallCm: null, snowDepthCm: null, snowWaterMm: null, windGustMs: null, snowCondition: null },
+        ]);
+    });
+
     it('keeps model visibility, including null, when only enriching AOD', () => {
         const points = [weatherPoint(1), { ...weatherPoint(2), visibilityKm: 8 }];
         const supplement = points.map(point => ({ timestamp: point.timestamp, aod550: 0.1, visibilityKm: 99 }));

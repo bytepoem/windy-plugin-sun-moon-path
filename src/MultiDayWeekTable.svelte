@@ -9,7 +9,7 @@
     import { createMultiDayWeatherPresentation, multiDayMetricTitle, MULTI_DAY_METRICS, type MultiDayMetric } from './multiDayWeatherPresentation';
     import { comparisonInstantLabel } from './favoriteComparisonPeriod';
     import { formatLocalClock } from './solar';
-    import { weatherConditionLabel, type WeatherLoadStatus, type WeatherPoint } from './weather';
+    import { weatherConditionLabel, type WeatherLoadStatus, type WeatherPoint, type WeatherSource } from './weather';
     import WeatherIcon from './WeatherIcon.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
@@ -24,12 +24,16 @@
     export let status: WeatherLoadStatus;
     export let aodStatus: WeatherLoadStatus;
     export let visibilityStatus: WeatherLoadStatus;
+    export let snowStatus: WeatherLoadStatus = 'idle';
+    export let source: WeatherSource = 'windy';
+    export let metrics: MultiDayMetric[] = MULTI_DAY_METRICS;
     export let language: UiLanguage;
     export let timeZone: string;
     export let units: UnitPreferences;
     const dispatch = createEventDispatcher<{ select: string }>();
     type Field = MultiDayMetric | 'weather' | 'coverage';
-    const fields: Field[] = ['weather', ...MULTI_DAY_METRICS, 'coverage'];
+    let fields: Field[] = [];
+    $: fields = ['weather', ...metrics, 'coverage'];
     $: text = labels[language];
     $: copy = messages[language];
     $: pluginText = translations[language];
@@ -41,7 +45,7 @@
     $: dates = rows.map(row => {
         const intervals = row.windows[target];
         const weather = intervals.length === 1 ? createMultiDayWeatherPresentation({
-            interval:intervals[0], points, status, aodStatus, visibilityStatus, language, units,
+            interval:intervals[0], points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, units,
         }) : null;
         const weekdayLabel = new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
             timeZone:'UTC', weekday:'short',
@@ -62,7 +66,7 @@
             ? `${coverage}: ${comparisonInstantLabel(weather.evidence.coveredStart, timeZone)} – ${comparisonInstantLabel(weather.evidence.coveredEnd, timeZone)}` : coverage;
         const values = Object.fromEntries(fields.map(field => [field, field === 'coverage' ? coverage
             : field === 'weather' ? weather?.available ? text.missing : '—'
-                : weather && (weather.available || (field === 'precipMm' && weather.precipitationAvailable))
+                : weather?.hasMetricEvidence(field)
                     ? weather.values[field] : '—'])) as Record<Field, string>;
         return {
             date:row.date, label, weekend:weekday === 0 || weekday === 6, sunrise:clock('sunrise'), sunset:clock('sunset'),
@@ -94,7 +98,12 @@
                 </th>
                     {#each dates as date (date.date)}
                         <td class:weekend={date.weekend} headers={`week-date-${date.date} week-field-${field}`} title={date.coverageTitle}>
-                            {#if field === 'weather' && date.conditions.length}<span class="conditions">{#each date.conditions as point}<span title={weatherConditionLabel(point.iconCode, language)}><WeatherIcon code={point.iconCode} isDay={point.isDay} label={weatherConditionLabel(point.iconCode, language)} /></span>{/each}{#if date.missingConditions}<span>{text.missing}</span>{/if}</span>{:else}{date.values[field]}{/if}
+                            {#if field === 'weather' && date.conditions.length}
+                                <span class="conditions">{#each date.conditions as point}
+                                    {@const label = weatherConditionLabel(point.iconCode, language, point.snowCondition, point.snowIntensity)}
+                                    <span title={label}><WeatherIcon code={point.iconCode} isDay={point.isDay} snowIntensity={point.snowIntensity} {label} /></span>
+                                {/each}{#if date.missingConditions}<span>{text.missing}</span>{/if}</span>
+                            {:else}{date.values[field]}{/if}
                         </td>
                     {/each}
                 </tr>
@@ -114,7 +123,12 @@
                     </button>
                 </th>
                     {#each fields as field}<td class:weekend={date.weekend} headers={`week-date-${date.date} week-field-${field}`} title={date.coverageTitle}>
-                        {#if field === 'weather' && date.conditions.length}<span class="conditions">{#each date.conditions as point}<span title={weatherConditionLabel(point.iconCode, language)}><WeatherIcon code={point.iconCode} isDay={point.isDay} label={weatherConditionLabel(point.iconCode, language)} /></span>{/each}{#if date.missingConditions}<span>{text.missing}</span>{/if}</span>{:else}{date.values[field]}{/if}
+                        {#if field === 'weather' && date.conditions.length}
+                            <span class="conditions">{#each date.conditions as point}
+                                {@const label = weatherConditionLabel(point.iconCode, language, point.snowCondition, point.snowIntensity)}
+                                <span title={label}><WeatherIcon code={point.iconCode} isDay={point.isDay} snowIntensity={point.snowIntensity} {label} /></span>
+                            {/each}{#if date.missingConditions}<span>{text.missing}</span>{/if}</span>
+                        {:else}{date.values[field]}{/if}
                     </td>{/each}
                 </tr>
             {/each}</tbody>

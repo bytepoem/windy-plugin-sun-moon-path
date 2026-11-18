@@ -49,7 +49,7 @@ The desktop title back button supports keyboard focus. Astro and Clouds tabs use
 | Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections as cloud-region references for sunrise/sunset glow, fiery clouds and other photography; supports single/layered views and satellite comparison |
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
 | Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
-| Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position; independent loading and retry for AOD and supplementary visibility |
+| Weather and observing | Choose a Windy / Open-Meteo forecast model, check clouds, precipitation, snowfall and ground snow depth, and find observing windows using moonlight and target position |
 | Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution by whole day, target window or custom period |
 | Light pollution map | Overlay Lorenz 2025 sky brightness and use location SQM and estimated Bortle values to shortlist dark-sky photography sites |
 | Radar and display | RainViewer overlays using the China NMC stepped reflectivity palette, Windy units, and collapsed, compact or fullscreen mobile views |
@@ -65,7 +65,7 @@ Choose Multi-day overview from the Astro dropdown to compare seven days of moonl
 
 Monthly calendars start on Sunday. Saturdays and Sundays use warm, bold, underlined dates in both the monthly grid and seven-day overview. The seven-day overview still begins on the selected observing date.
 
-Seven-day windows show weather conditions, cloud cover, wind, precipitation, temperature, humidity, visibility, AOD and dew point, with expandable original forecast samples. Numeric ranges use available samples within each window. Precipitation shows the range of overlapping source accumulations with their full periods, without splitting or summation. Short windows without instantaneous samples still retain overlapping rain accumulations while other metrics remain missing. AOD and visibility show loading, failure and missing data independently, with separate retries for failed requests.
+Seven-day windows show weather conditions, cloud cover, wind, precipitation, temperature, humidity, visibility, AOD and dew point, with expandable original forecast samples. The Snow display setting also controls new snow, ground snow depth and Windy snow water equivalent. Precipitation, new snow and snow water equivalent retain full overlapping source accumulations and their periods. Other ranges use samples inside the window. Short windows without instantaneous samples can still show overlapping accumulations. AOD, visibility and supplementary Windy snow data can be retried separately.
 
 Switch the date layout between Vertical and Horizontal beside the date. Horizontal is the default: seven dates form columns and metrics form rows. Vertical places dates in rows and metrics in columns. The overview keeps the same panel height as other tabs, with content scrolling inside. Scroll horizontally when needed; the first column stays fixed for reference. Chinese observing-date and forecast-range headings use two lines split at word boundaries. Select a date to view full windows and original samples below the table. Only Single-day events changes map time; separate windows retain separate weather ranges. Metrics use the weather table icons with small names below them; hover for details such as the precipitation rule.
 
@@ -105,9 +105,15 @@ Choose dates within ten days from today at the camera location; actual coverage 
 
 ### Weather and observing
 
-Open Weather and choose a data source and forecast model in the weather table. Check cloud cover, precipitation, wind and visibility for your target period, alongside observing windows, moonlight and target position. Compare again after changing sources or models, and treat missing values as unknown.
+Open Weather and choose a data source and forecast model. Check cloud cover, precipitation, wind speed, gusts and visibility for your target period, alongside observing windows, moonlight and target position. Compare again after changing sources or models, and treat missing values as unknown.
+
+Snow rows appear below precipitation. Windy shows snow water equivalent (mm) plus new snow and ground snow depth (cm) from the selected Open-Meteo model. In Windy, new snow accumulates over the forecast step starting at the labeled time. In Open-Meteo, new snow covers the preceding hour. Ground snow depth is valid at the labeled time. Open-Meteo shows one, two or three snowflakes for light, moderate or heavy snow according to the weather code.
+
+Both sources can summarize 24 hours of snow water equivalent from the first forecast step of the selected date. Complete positive totals are graded under GB/T 28592—2012. Open-Meteo also summarizes new snow depth for the same period. Under Settings → Snow display, choose Show when snow is forecast, Always show or Hide. By default, each snow row or summary appears when it has a positive value.
 
 AOD and supplementary visibility for Windy load independently; a failure leaves the other metric available. Select Retry in the corresponding weather-table notice to reload only that metric. Open-Meteo weather retains visibility from the selected model. Favorite comparisons also retain available metrics and mark failed ones as Load failed; Refresh comparison reloads the entire comparison.
+
+See Settings → Guide → Weather legend for 24-hour snow water equivalent grades.
 
 ### Favorite comparisons
 

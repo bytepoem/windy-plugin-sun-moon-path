@@ -5,6 +5,10 @@ export type WeatherSource = 'windy' | 'open-meteo';
 
 export type WeatherLoadStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 
+export type SnowCondition = 'snow' | 'wetSnow' | 'rainAndSnow' | 'snowGrains' | 'snowShowers';
+export type SnowIntensity = 'light' | 'moderate' | 'heavy';
+type DailySnowGrade = SnowIntensity | 'trace' | 'snowstorm' | 'heavySnowstorm' | 'extremeSnowstorm';
+
 export type WeatherMetric =
     | 'totalCloudPercent'
     | 'highCloudPercent'
@@ -14,7 +18,11 @@ export type WeatherMetric =
     | 'dewPointC'
     | 'humidityPercent'
     | 'precipMm'
+    | 'snowWaterMm'
+    | 'snowfallCm'
+    | 'snowDepthCm'
     | 'windMs'
+    | 'windGustMs'
     | 'windDirectionDeg'
     | 'aod550'
     | 'visibilityKm';
@@ -42,7 +50,10 @@ export interface WeatherForecastPayload {
         isDay: NumericArray;
         temperature: NumericArray;
         precipAmount: NumericArray;
+        precipSnowAmount?: NumericArray;
+        precipType?: NumericArray;
         wind: NumericArray;
+        windGust?: NumericArray;
         windDir: NumericArray;
     };
     meteogram?: {
@@ -70,7 +81,14 @@ export interface WeatherPoint {
     dewPointC: number | null;
     humidityPercent: number | null;
     precipMm: number | null;
+    snowWaterMm?: number | null;
+    snowWaterPeriodHours?: 1 | 3 | null;
+    snowfallCm?: number | null;
+    snowDepthCm?: number | null;
+    snowCondition?: SnowCondition | null;
+    snowIntensity?: SnowIntensity | null;
     windMs: number | null;
+    windGustMs?: number | null;
     windDirectionDeg: number | null;
     aod550: number | null;
     visibilityKm: number | null;
@@ -224,6 +242,21 @@ export const combineCloudBands = (
     return Math.round((1 - clearFraction) * 100);
 };
 
+const WINDY_SNOW_CONDITIONS: Partial<Record<number, SnowCondition>> = {
+    4: 'snow',
+    5: 'wetSnow',
+    6: 'rainAndSnow',
+};
+
+/** Windy timestamps mark segment starts. The final row follows the preceding step. */
+const windySnowPeriodHours = (timestamps: number[], index: number): 1 | 3 | null => {
+    const start = timestamps[index];
+    const next = timestamps[index + 1];
+    const stepMs = next === undefined ? start - timestamps[index - 1] : next - start;
+    const hours = stepMs / 3_600_000;
+    return hours === 1 || hours === 3 ? hours : null;
+};
+
 export const transformWeatherPayload = (
     payload: WeatherForecastPayload,
     now = Date.now(),
@@ -261,7 +294,10 @@ export const transformWeatherPayload = (
             const dewPoint = valueAtTimestamp(payload.meteogram, meteogramIndex, 'dewPoint', timestamp);
             const humidity = valueAtTimestamp(payload.sounding, soundingIndex, 'rh-surface', timestamp);
             const precipAmount = finiteNumber(payload.data.precipAmount[dataIndex]);
+            const snowWater = finiteNumber(payload.data.precipSnowAmount?.[dataIndex]);
+            const precipType = payload.data.precipType?.[dataIndex];
             const wind = finiteNumber(payload.data.wind[dataIndex]);
+            const gust = finiteNumber(payload.data.windGust?.[dataIndex]);
 
             return {
                 timestamp,
@@ -279,9 +315,13 @@ export const transformWeatherPayload = (
                 dewPointC: kelvinToCelsius(dewPoint),
                 humidityPercent: normalizePercent(humidity),
                 precipMm: precipAmount === null ? null : roundTo(Math.max(0, precipAmount), 1),
+                snowWaterMm: snowWater !== null && snowWater >= 0 ? snowWater : null,
+                snowWaterPeriodHours: windySnowPeriodHours(payload.data.ts, dataIndex),
+                snowCondition: precipType == null ? null : WINDY_SNOW_CONDITIONS[precipType] ?? null,
                 // Windy's point forecast already returns metres per second. Normalize once
                 // to the table's 0.1 m/s precision so values, thresholds, and colors agree.
                 windMs: wind === null ? null : roundTo(Math.max(0, wind), 1),
+                windGustMs: gust === null || gust < 0 ? null : roundTo(gust, 1),
                 windDirectionDeg: normalizeDirection(finiteNumber(payload.data.windDir[dataIndex])),
                 aod550: null,
                 visibilityKm: null,
@@ -387,7 +427,7 @@ export const findCurrentTimePosition = (points: WeatherPoint[], now = Date.now()
 };
 
 export const weatherMetricValue = (point: WeatherPoint, metric: WeatherMetric): number | null =>
-    point[metric];
+    point[metric] ?? null;
 
 export const weatherMetricTone = (metric: WeatherMetric, value: number | null): WeatherTone => {
     if (value === null) {
@@ -455,10 +495,66 @@ export const weatherMetricTone = (metric: WeatherMetric, value: number | null): 
     return 'neutral';
 };
 
+export const snowGradeLabel = (grade: DailySnowGrade, language: UiLanguage): string =>
+    messages[language].snowGrades[grade];
+
 export const weatherConditionLabel = (
     iconCode: number | null,
     language: UiLanguage,
+    snowCondition?: SnowCondition | null,
+    snowIntensity?: SnowIntensity | null,
 ): string => {
+    if (snowIntensity) {
+        const intensity = snowGradeLabel(snowIntensity, language);
+        return snowCondition === 'snowShowers' ? `${messages[language].snowConditions.snowShowers} · ${intensity}` : intensity;
+    }
+    if (snowCondition) {
+        return messages[language].snowConditions[snowCondition];
+    }
     const labels = messages[language].conditions;
     return iconCode === null || !labels[iconCode] ? labels[0] : labels[iconCode];
+};
+
+// GB/T 28592—2012, table 2. All thresholds are 24-hour snow water equivalent in mm.
+export const DAILY_SNOW_GRADES: ReadonlyArray<{ minimumMm: number; grade: DailySnowGrade; tone: WeatherTone }> = [
+    { minimumMm: 30, grade: 'extremeSnowstorm', tone: 'danger' },
+    { minimumMm: 20, grade: 'heavySnowstorm', tone: 'orange' },
+    { minimumMm: 10, grade: 'snowstorm', tone: 'warning' },
+    { minimumMm: 5, grade: 'heavy', tone: 'cold' },
+    { minimumMm: 2.5, grade: 'moderate', tone: 'cool' },
+    { minimumMm: 0.1, grade: 'light', tone: 'freezing' },
+    { minimumMm: 0, grade: 'trace', tone: 'neutral' },
+];
+
+/** Windy accumulations start at the timestamp, Open-Meteo's end there. Both cover the same 24-hour window. */
+export const summarizeSnowWater24h = (points: WeatherPoint[], startIndex: number | null, source: WeatherSource) => {
+    if (startIndex === null || !points[startIndex]) { return null; }
+    const start = points[startIndex].timestamp;
+    const hour = 3_600_000;
+    const end = start + 24 * hour;
+    const hourly = source === 'open-meteo';
+    let cursor = start;
+    let waterMm: number | null = 0;
+    let snowfallCm: number | null = hourly ? 0 : null;
+    for (let index = startIndex + Number(hourly); cursor < end; index++) {
+        const point = points[index];
+        const step = hourly ? point?.precipitationPeriodMs : (point?.snowWaterPeriodHours ?? 0) * hour;
+        if (!point || !step || (hourly && step !== hour) || point.timestamp !== cursor + (hourly ? step : 0)) {
+            return null;
+        }
+        cursor += step;
+        waterMm = waterMm === null || point.snowWaterMm == null ? null : waterMm + point.snowWaterMm;
+        snowfallCm = snowfallCm === null || point.snowfallCm == null ? null : snowfallCm + point.snowfallCm;
+    }
+    if (cursor !== end || (waterMm === null && snowfallCm === null)) { return null; }
+    const amountMm = waterMm === null ? null : roundTo(waterMm, 2);
+    const classification = amountMm !== null && amountMm > 0
+        ? DAILY_SNOW_GRADES.find(({ minimumMm }) => amountMm >= minimumMm)
+        : undefined;
+    return {
+        start, end, amountMm,
+        snowfallCm: snowfallCm === null ? null : roundTo(snowfallCm, 2),
+        grade: classification?.grade ?? null,
+        tone: classification?.tone ?? 'neutral',
+    };
 };

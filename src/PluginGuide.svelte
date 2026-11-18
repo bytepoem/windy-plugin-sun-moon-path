@@ -3,9 +3,11 @@
     import { labels as comparisonLabels, messages as comparisonMessages } from './locales/FavoriteComparison';
     import { messages as multiDayMessages } from './locales/MultiDayOverview';
     import { translations as weatherText } from './locales/WeatherTable';
+    import { messages as settingsMessages } from './locales/PluginSettings';
     import { MULTI_DAY_METRICS } from './multiDayWeatherPresentation';
     import CelestialIcon from './CelestialIcon.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
+    import { DAILY_SNOW_GRADES, snowGradeLabel } from './weather';
     import { translations, languageResourceHelp, dateSelectionHelp } from './pluginTranslations';
     import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import {
@@ -19,6 +21,11 @@
 
     const OPEN_METEO_URL = 'https://open-meteo.com/';
     const CAMS_URL = 'https://atmosphere.copernicus.eu/';
+    const snowWaterLegend = [...DAILY_SNOW_GRADES].reverse().map(({ grade, minimumMm, tone }, index, grades) => {
+        const upper = grades[index + 1]?.minimumMm;
+        const range = upper === undefined ? `≥${minimumMm}` : `${minimumMm || '>0'}–<${upper}`;
+        return { grade, tone, range };
+    });
     const formatDistanceLabel = (distanceKm: number, unit: DistanceUnit): string =>
         `${formatDistanceKm(distanceKm, unit)} ${unit}`;
     $: text = translations[uiLanguage];
@@ -67,6 +74,7 @@
             {/each}
         </p>
         <p>{comparisonLabels[uiLanguage].precipitationRule}</p>
+        <p>{multiDayMessages[uiLanguage].snowRule}</p>
         <p>{messages[uiLanguage].northIsUpEastIsRightThe}</p>
     </section>
 
@@ -116,6 +124,12 @@
             <div>
                 <dt>{text.featureGuide.weatherSources.title}</dt>
                 <dd>{text.featureGuide.weatherSources.description}</dd>
+            </div>
+            <div>
+                <dt>{text.featureGuide.weatherSnow.title}</dt>
+                <dd>{text.featureGuide.weatherSnow.description}</dd>
+                <dd>{text.featureGuide.weatherSnow.supplement}</dd>
+                <dd>{settingsMessages[uiLanguage].preferences} → {settingsMessages[uiLanguage].snowDisplay} · {settingsMessages[uiLanguage].snowDisplayAuto} / {settingsMessages[uiLanguage].snowDisplayAlways} / {settingsMessages[uiLanguage].snowDisplayHidden}</dd>
             </div>
             <div>
                 <dt>{text.featureGuide.units.title}</dt>
@@ -290,6 +304,18 @@
                 precipitationLegendValues[1],
                 units.precipitation,
             )}</p>
+        </section>
+
+        <section class="weather-legend__section">
+            <h4>{weatherText[uiLanguage].metrics.snowWaterMm[0]} · 24 h</h4>
+            <div class="weather-legend__scale">
+                {#each snowWaterLegend as { grade, tone, range } (grade)}
+                    <span class={`weather-legend__swatch weather-legend__swatch--snow tone-${tone}`}>
+                        {snowGradeLabel(grade, uiLanguage)} · {range} mm
+                    </span>
+                {/each}
+            </div>
+            <p>{text.featureGuide.weatherSnow.classification} GB/T 28592-2012</p>
         </section>
 
         <section class="weather-legend__section">
@@ -675,6 +701,22 @@
         line-height: 1;
     }
 
+    .weather-legend__swatch--snow {
+        min-width: 0;
+        max-width: 100%;
+        height: auto;
+        min-height: 24px;
+        padding: 3px 6px;
+        overflow-wrap: anywhere;
+        text-align: center;
+        line-height: 1.25;
+    }
+
+    .weather-legend__swatch--snow.tone-neutral {
+        color: var(--panel-text);
+        background: var(--weather-tone-neutral, #303746);
+    }
+
     .weather-legend__scale--temperature {
         display: grid;
         grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -741,6 +783,10 @@
     .weather-legend .tone-cold {
         color: #07164e;
         background: var(--weather-tone-cold);
+    }
+
+    .weather-legend .weather-legend__swatch--snow.tone-cold {
+        color: #fff;
     }
 
     .weather-legend .tone-cool {

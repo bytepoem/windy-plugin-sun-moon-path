@@ -1,8 +1,8 @@
 <script lang="ts">
     import { labels } from './locales/FavoriteComparison';
     import { comparisonInstantLabel } from './favoriteComparisonPeriod';
-    import { createMultiDayWeatherPresentation, multiDayMetricTitle, MULTI_DAY_METRICS, type MultiDayMetric } from './multiDayWeatherPresentation';
-    import { weatherConditionLabel, type WeatherPoint, type WeatherLoadStatus } from './weather';
+    import { createMultiDayWeatherPresentation, isSnowAccumulation, multiDayMetricTitle, multiDaySnowPeriod, MULTI_DAY_METRICS, type MultiDayMetric } from './multiDayWeatherPresentation';
+    import { weatherConditionLabel, type WeatherPoint, type WeatherLoadStatus, type WeatherSource } from './weather';
     import WeatherIcon from './WeatherIcon.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
     import type { MultiDayInterval } from './multiDayPlanner';
@@ -14,40 +14,49 @@
     export let status: WeatherLoadStatus;
     export let aodStatus: WeatherLoadStatus = 'idle';
     export let visibilityStatus: WeatherLoadStatus = 'idle';
+    export let snowStatus: WeatherLoadStatus = 'idle';
+    export let source: WeatherSource = 'windy';
+    export let metrics: MultiDayMetric[] = MULTI_DAY_METRICS;
     export let language: UiLanguage;
     export let timeZone: string;
     export let units: UnitPreferences;
     export let expanded = false;
     export let showSummary = true;
     export let showCoverage = false;
-    const metrics = MULTI_DAY_METRICS;
-    // Four columns per strip keep every metric visible on narrow screens;
-    // wider panels place the two strips alongside each other.
-    const metricGroups = [metrics.slice(0, 4), metrics.slice(4)];
+    // Keep at most four columns per strip on narrow panels.
+    $: metricGroups = Array.from({ length: Math.ceil(metrics.length / 4) }, (_, index) => metrics.slice(index * 4, (index + 1) * 4));
     $: text = labels[language];
     $: metricTitle = (metric: MultiDayMetric) => multiDayMetricTitle(metric, language);
-    $: presentation = createMultiDayWeatherPresentation({ interval, points, status, aodStatus, visibilityStatus, language, units });
+    $: presentation = createMultiDayWeatherPresentation({
+        interval, points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, units,
+    });
     $: evidence = presentation.evidence;
-    $: precipitation = presentation.precipitation;
     $: samples = presentation.samples;
     $: conditions = presentation.conditions;
     $: missingConditions = presentation.missingConditions;
-    $: hasWindowEvidence = presentation.available || presentation.precipitationAvailable;
+    $: hasWindowEvidence = metrics.some(presentation.hasMetricEvidence);
     $: stateLabel = presentation.stateLabel;
     $: metricValue = presentation.metricValue;
+
+    const accumulationPeriod = (point: WeatherPoint, metric: MultiDayMetric, weatherSource: WeatherSource): [number, number] | null =>
+        isSnowAccumulation(metric) ? multiDaySnowPeriod(point, weatherSource)
+            : point.precipitationPeriodMs ? [point.timestamp - point.precipitationPeriodMs, point.timestamp] : null;
 </script>
 
 <div class="window-weather">
     {#if showSummary && hasWindowEvidence}
         <span class="conditions"><span class="visually-hidden">{text.weather}</span>
-            {#each conditions as point}<span class="condition" title={weatherConditionLabel(point.iconCode, language)}><WeatherIcon code={point.iconCode} isDay={point.isDay} label={weatherConditionLabel(point.iconCode, language)} /></span>{/each}
+            {#each conditions as point}
+                {@const label = weatherConditionLabel(point.iconCode, language, point.snowCondition, point.snowIntensity)}
+                <span class="condition" title={label}><WeatherIcon code={point.iconCode} isDay={point.isDay} snowIntensity={point.snowIntensity} {label} /></span>
+            {/each}
             {#if !conditions.length || missingConditions}<span>{text.missing}</span>{/if}
         </span>
         <div class="metric-tables">
             {#each metricGroups as group}
                 <table class="metric-table" aria-label={text.weather}>
                         <thead><tr>{#each group as metric}<th scope="col" title={metricTitle(metric)}><span class="metric-heading"><WeatherMetricIcon {metric} size={14} /></span><span class="visually-hidden">{metricTitle(metric)}</span></th>{/each}</tr></thead>
-                        <tbody><tr>{#each group as metric}<td>{metricValue(metric, metric === 'precipMm' ? precipitation : evidence.points)}</td>{/each}</tr></tbody>
+                        <tbody><tr>{#each group as metric}<td>{presentation.values[metric]}</td>{/each}</tr></tbody>
                 </table>
             {/each}
         </div>
@@ -67,12 +76,15 @@
                 <table><thead><tr><th scope="col">{text.period}</th><th scope="col">{text.weather}</th>{#each metrics as metric}<th scope="col" title={metricTitle(metric)}><span class="metric-heading"><WeatherMetricIcon {metric} size={14} /></span><span class="visually-hidden">{metricTitle(metric)}</span></th>{/each}</tr></thead><tbody>
                     {#each samples as point}
                         {@const inside = evidence.points.includes(point)}
-                        {@const rainInside = precipitation.includes(point)}
+                        {@const label = weatherConditionLabel(point.iconCode, language, point.snowCondition, point.snowIntensity)}
                         <tr><th scope="row">{comparisonInstantLabel(point.timestamp, timeZone)}</th>
-                            <td>{#if inside && point.iconCode !== null}<span class="condition" title={weatherConditionLabel(point.iconCode, language)}><WeatherIcon code={point.iconCode} isDay={point.isDay} label={weatherConditionLabel(point.iconCode, language)} /></span>{:else}{text.missing}{/if}</td>
+                            <td>{#if inside && point.iconCode !== null}<span class="condition" title={label}><WeatherIcon code={point.iconCode} isDay={point.isDay} snowIntensity={point.snowIntensity} {label} /></span>{:else}{text.missing}{/if}</td>
                             {#each metrics as metric}
-                                <td>{(metric === 'precipMm' ? rainInside : inside) ? metricValue(metric, [point]) : text.missing}
-                                    {#if metric === 'precipMm' && rainInside}<small>{point.precipitationPeriodMs ? `${comparisonInstantLabel(point.timestamp - point.precipitationPeriodMs, timeZone)} – ${comparisonInstantLabel(point.timestamp, timeZone)}` : text.sourceStep}</small>{/if}
+                                {@const matches = presentation.samplesForMetric(metric).includes(point)}
+                                {@const isAccumulation = metric === 'precipMm' || isSnowAccumulation(metric)}
+                                {@const period = isAccumulation && matches ? accumulationPeriod(point, metric, source) : null}
+                                <td>{matches ? metricValue(metric, [point]) : text.missing}
+                                    {#if isAccumulation && matches}<small>{period ? `${comparisonInstantLabel(period[0], timeZone)} – ${comparisonInstantLabel(period[1], timeZone)}` : text.sourceStep}</small>{/if}
                                 </td>
                             {/each}</tr>
                     {/each}

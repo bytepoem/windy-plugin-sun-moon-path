@@ -19,7 +19,9 @@
     import { comparisonIntervalLabels } from './favoriteComparisonPeriod';
     import MultiDayWeather from './MultiDayWeather.svelte';
     import MultiDayWeekTable from './MultiDayWeekTable.svelte';
+    import { multiDayWeatherMetrics } from './multiDayWeatherPresentation';
     import type { WeatherLoadStatus, WeatherModel, WeatherPoint, WeatherSource } from './weather';
+    import type { SnowDisplayPreference } from './pluginPreferences';
     import type { UnitPreferences } from './unitPreferences';
 
     export let active = false;
@@ -36,13 +38,16 @@
     export let weatherStatus: WeatherLoadStatus;
     export let aodStatus: WeatherLoadStatus = 'idle';
     export let visibilityStatus: WeatherLoadStatus = 'idle';
+    export let snowStatus: WeatherLoadStatus = 'idle';
+    export let snowDisplay: SnowDisplayPreference = 'auto';
+    export let mode: 'week' | 'month' = 'week';
     export let source: WeatherSource;
     export let model: WeatherModel;
     export let units: UnitPreferences;
     const dispatch = createEventDispatcher<{
         select: { timestamp: number; date: string };
         retry: void; contextretry: void; sourcechange: WeatherSource; modelchange: WeatherModel;
-        atmosphereretry: 'aod' | 'visibility';
+        atmosphereretry: 'aod' | 'visibility' | 'snow';
     }>();
     const sourceOptions: WeatherSource[] = ['windy', 'open-meteo'];
     const modelOptions: WeatherModel[] = ['ecmwf', 'gfs', 'icon'];
@@ -50,7 +55,6 @@
     // weekday without shifting it into the browser's own time zone.
     const weekdayIndex = (date: string) => new Date(date + 'T12:00:00Z').getUTCDay();
     const isWeekend = (date: string) => [0, 6].includes(weekdayIndex(date));
-    let mode: 'week' | 'month' = 'week';
     let dateOrientation: 'vertical' | 'horizontal' = 'horizontal';
     let target: MultiDayTarget = 'moonless-night';
     let rows: MultiDayRow[] = [];
@@ -83,6 +87,7 @@
     $: common = labels[language];
     $: pluginText = translations[language];
     $: count = mode === 'week' ? 7 : 30;
+    $: metrics = multiDayWeatherMetrics(rows.flatMap(row => row.windows[target]), points, source, snowDisplay);
     $: requestBuild(active && contextReady, `${location.lat}|${location.lon}|${timeZone}|${elevationM}|${startDate}|${count}`);
     $: selectedRow = rows.find(row => row.date === selectedDate) ?? rows[0];
     $: selectedWeekRow = rows.find(row => row.date === selectedWeekDate);
@@ -229,9 +234,13 @@
             {#if weatherStatus === 'error' || weatherStatus === 'empty'}<button on:click={() => dispatch('retry')}>{pluginText.retry}</button>{/if}
             {#if aodStatus === 'error'}<button on:click={() => dispatch('atmosphereretry', 'aod')}>{weatherText[language].aodRetry}</button>{/if}
             {#if source === 'windy' && visibilityStatus === 'error'}<button on:click={() => dispatch('atmosphereretry', 'visibility')}>{weatherText[language].visibilityRetry}</button>{/if}
+            {#if source === 'windy' && snowDisplay !== 'hidden' && snowStatus === 'error'}
+                <button on:click={() => dispatch('atmosphereretry', 'snow')}>{weatherText[language].snowSupplement} · {pluginText.retry}</button>
+            {/if}
         {/if}
         <details class="overview-notes"><summary>{settingsMessages[language].userGuide}</summary>
             <p>{text.nightRule}</p><p>{text.monthRule}</p><p>{common.precipitationRule}</p>
+            {#if mode === 'week' && snowDisplay !== 'hidden'}<p>{text.snowRule}</p>{/if}
         </details>
     </div>
     {#if failed || contextError}
@@ -242,7 +251,7 @@
     {:else if !contextReady || building}<p role="status">{pluginText.calculating} {rows.length}/{count}</p>{/if}
     {#if mode === 'week'}
         <MultiDayWeekTable {rows} {target} orientation={dateOrientation} selectedDate={selectedWeekDate}
-            {points} status={weatherStatus} {aodStatus} {visibilityStatus} {language} {timeZone} {units}
+            {points} status={weatherStatus} {aodStatus} {visibilityStatus} {snowStatus} {source} {metrics} {language} {timeZone} {units}
             on:select={event => selectedWeekDate = selectedWeekDate === event.detail ? '' : event.detail} />
         <div id="multi-day-week-details">
             {#if selectedWeekRow}
@@ -255,7 +264,7 @@
                         <div class="segment"><strong>{intervalLabel(interval, row.date)} · {duration([interval])}</strong>
                             {#if continues(interval, row.date)}<small>{text.continues}</small>{/if}
                             <!-- Single-window metrics already appear in the date matrix. -->
-                            <MultiDayWeather {interval} {points} status={weatherStatus} {aodStatus} {visibilityStatus} {language} {timeZone} {units}
+                            <MultiDayWeather {interval} {points} status={weatherStatus} {aodStatus} {visibilityStatus} {snowStatus} {source} {metrics} {language} {timeZone} {units}
                                 expanded showCoverage showSummary={intervals.length !== 1} />
                             <button on:click={() => openDay(row, interval)}>{text.single}</button>
                         </div>

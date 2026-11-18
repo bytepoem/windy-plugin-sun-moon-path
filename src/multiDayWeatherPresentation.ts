@@ -1,9 +1,11 @@
 import { labels } from './locales/FavoriteComparison';
 import { translations as weatherText, messages as weatherMessages } from './locales/WeatherTable';
 import { messages as cloudText } from './locales/CloudObstruction';
+import { messages as overviewText } from './locales/MultiDayOverview';
 import { multiDayMetricRange, multiDayPrecipitationPoints, multiDayWindowWeather, type MultiDayInterval } from './multiDayPlanner';
 import { formatPrecipitationRangeMm, formatTemperatureRangeC, formatVisibilityRangeKm, formatWindSpeedRange, type UnitPreferences } from './unitPreferences';
-import type { WeatherLoadStatus, WeatherMetric, WeatherPoint } from './weather';
+import { weatherMetricValue, type WeatherLoadStatus, type WeatherMetric, type WeatherPoint, type WeatherSource } from './weather';
+import type { SnowDisplayPreference } from './pluginPreferences';
 import type { UiLanguage } from './uiLanguage';
 
 export type MultiDayMetric = Exclude<WeatherMetric, 'windDirectionDeg'>;
@@ -12,30 +14,77 @@ export const MULTI_DAY_METRICS: MultiDayMetric[] = [
     'visibilityKm', 'aod550', 'dewPointC',
 ];
 
+const SNOW_METRICS = ['snowWaterMm', 'snowfallCm', 'snowDepthCm'] as const;
+type SnowMetric = typeof SNOW_METRICS[number];
+
+export const isSnowAccumulation = (metric: MultiDayMetric): boolean =>
+    metric === 'snowWaterMm' || metric === 'snowfallCm';
+
+/** Windy columns anchor the beginning of a period, OM columns anchor its end. */
+export const multiDaySnowPeriod = (point: WeatherPoint, source: WeatherSource): [number, number] | null => {
+    if (source === 'open-meteo' && point.precipitationPeriodMs) {
+        return [point.timestamp - point.precipitationPeriodMs, point.timestamp];
+    }
+    if (source === 'windy' && point.snowWaterPeriodHours) {
+        return [point.timestamp, point.timestamp + point.snowWaterPeriodHours * 3_600_000];
+    }
+    return null;
+};
+
+const snowOverlaps = (interval: MultiDayInterval, point: WeatherPoint, source: WeatherSource): boolean => {
+    const period = multiDaySnowPeriod(point, source);
+    return period ? period[0] < interval.end.getTime() && period[1] > interval.start.getTime()
+        : point.timestamp >= interval.start.getTime() && point.timestamp < interval.end.getTime();
+};
+
+export const multiDayWeatherMetrics = (
+    intervals: MultiDayInterval[], points: WeatherPoint[], source: WeatherSource, snowDisplay: SnowDisplayPreference,
+): MultiDayMetric[] => {
+    if (snowDisplay === 'hidden') { return MULTI_DAY_METRICS; }
+    const hasPositiveValue = (metric: SnowMetric) => points.some(point => (point[metric] ?? 0) > 0
+        && intervals.some(interval => metric === 'snowDepthCm'
+            ? point.timestamp >= interval.start.getTime() && point.timestamp < interval.end.getTime()
+            : snowOverlaps(interval, point, source)));
+    const snow = SNOW_METRICS.filter(metric => (metric !== 'snowWaterMm' || source === 'windy')
+        && (snowDisplay === 'always' || hasPositiveValue(metric)));
+    return MULTI_DAY_METRICS.flatMap(metric => metric === 'precipMm' ? [metric, ...snow] : [metric]);
+};
+
 export const multiDayMetricTitle = (metric: MultiDayMetric, language: UiLanguage): string =>
     `${weatherText[language].metrics[metric][0]}${metric === 'precipMm'
-        ? ` · ${labels[language].precipitationRule}` : metric === 'aod550'
+        ? ` · ${labels[language].precipitationRule}` : isSnowAccumulation(metric)
+            ? ` · ${overviewText[language].snowRule}` : metric === 'aod550'
             ? ` · ${weatherMessages[language].aODAtNanometresOpenMeteoSourcedFrom}` : ''}`;
 
 /** One projection per window is shared by the date matrix and original-sample
  * details. Display direction cannot change samples, units or channel states.
  */
-export const createMultiDayWeatherPresentation = ({ interval, points, status, aodStatus, visibilityStatus, language, units }: {
+export const createMultiDayWeatherPresentation = ({
+    interval, points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, units,
+}: {
     interval: MultiDayInterval; points: WeatherPoint[]; status: WeatherLoadStatus;
-    aodStatus: WeatherLoadStatus; visibilityStatus: WeatherLoadStatus; language: UiLanguage; units: UnitPreferences;
+    aodStatus: WeatherLoadStatus; visibilityStatus: WeatherLoadStatus; snowStatus: WeatherLoadStatus; source: WeatherSource;
+    metrics: MultiDayMetric[]; language: UiLanguage; units: UnitPreferences;
 }) => {
     const text = labels[language];
     const evidence = multiDayWindowWeather(interval, points, status);
     const precipitation = multiDayPrecipitationPoints(interval, points);
-    const samples = [...new Map([...evidence.points, ...precipitation].map(point => [point.timestamp, point])).values()]
+    const snowMetrics = metrics.filter(isSnowAccumulation);
+    const snow = snowMetrics.length ? points.filter(point => snowOverlaps(interval, point, source)) : [];
+    const snowSamples = snow.filter(point => snowMetrics.some(metric => weatherMetricValue(point, metric) !== null));
+    const samples = [...new Map([...evidence.points, ...precipitation, ...snowSamples].map(point => [point.timestamp, point])).values()]
         .sort((a, b) => a.timestamp - b.timestamp);
     const conditions = [...new Map(evidence.points.filter(point => point.iconCode !== null)
-        .map(point => [`${point.iconCode}|${point.isDay}`, point])).values()];
+        .map(point => [`${point.iconCode}|${point.isDay}|${point.snowCondition}|${point.snowIntensity}`, point])).values()];
     const missingConditions = evidence.points.some(point => point.iconCode === null);
     const available = evidence.state === 'full' || evidence.state === 'partial';
     // Accumulations cover periods, so valid rain can overlap a short window
     // even when none of the source's instantaneous timestamps falls inside it.
-    const precipitationAvailable = status === 'ready' && multiDayMetricRange(precipitation, 'precipMm') !== null;
+    const samplesForMetric = (metric: MultiDayMetric): WeatherPoint[] =>
+        metric === 'precipMm' ? precipitation : isSnowAccumulation(metric) ? snow : evidence.points;
+    const hasMetricEvidence = (metric: MultiDayMetric): boolean => available || (status === 'ready'
+        && (metric === 'precipMm' || isSnowAccumulation(metric))
+        && multiDayMetricRange(samplesForMetric(metric), metric) !== null);
     const stateLabel = evidence.state === 'loading' ? weatherText[language].loading
         : evidence.state === 'error' ? text.atmosphereError : evidence.state === 'outside' ? text.outsideForecast
         : evidence.state === 'missing' ? text.missing : evidence.state === 'partial' ? text.partial : text.full;
@@ -45,21 +94,26 @@ export const createMultiDayWeatherPresentation = ({ interval, points, status, ao
         if (metric === 'precipMm') { return formatPrecipitationRangeMm(value, units.precipitation); }
         if (metric === 'temperatureC' || metric === 'dewPointC') { return formatTemperatureRangeC(value, units.temperature); }
         if (metric === 'visibilityKm') { return formatVisibilityRangeKm(value, units.distance); }
-        const format = (number: number) => metric === 'aod550' ? number.toFixed(2) : String(Math.round(number));
+        const snowUnit = metric === 'snowWaterMm' ? ' mm' : metric === 'snowfallCm' || metric === 'snowDepthCm' ? ' cm' : '';
+        const format = (number: number) => {
+            if (snowUnit) { return number > 0 && number < 0.01 ? '<0.01' : String(Number(number.toFixed(2))); }
+            return metric === 'aod550' ? number.toFixed(2) : String(Math.round(number));
+        };
         const minimum = format(range.min);
         const maximum = format(range.max);
-        return `${minimum === maximum ? minimum : `${minimum}–${maximum}`}${metric === 'aod550' ? '' : '%'}`;
+        return `${minimum === maximum ? minimum : `${minimum}–${maximum}`}${snowUnit || (metric === 'aod550' ? '' : '%')}`;
     };
     const metricValue = (metric: MultiDayMetric, selected: WeatherPoint[]): string => {
-        const loadStatus = metric === 'aod550' ? aodStatus : metric === 'visibilityKm' ? visibilityStatus : status;
+        const loadStatus = metric === 'aod550' ? aodStatus : metric === 'visibilityKm' ? visibilityStatus
+            : source === 'windy' && (metric === 'snowfallCm' || metric === 'snowDepthCm') ? snowStatus : status;
         if (loadStatus === 'idle' || loadStatus === 'loading') { return cloudText[language].loading; }
         if (loadStatus === 'error') { return text.atmosphereError; }
         const range = multiDayMetricRange(selected, metric);
         if (!range) { return text.missing; }
         return `${formatRange(metric, range)}${range.missing ? ` (${text.missing})` : ''}`;
     };
-    const values = Object.fromEntries(MULTI_DAY_METRICS.map(metric => [
-        metric, metricValue(metric, metric === 'precipMm' ? precipitation : evidence.points),
+    const values = Object.fromEntries(metrics.map(metric => [
+        metric, metricValue(metric, samplesForMetric(metric)),
     ])) as Record<MultiDayMetric, string>;
-    return { evidence, precipitation, samples, conditions, missingConditions, available, precipitationAvailable, stateLabel, values, metricValue };
+    return { evidence, samples, conditions, missingConditions, available, hasMetricEvidence, samplesForMetric, stateLabel, values, metricValue };
 };

@@ -8,7 +8,7 @@
     import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
     import { formatDistanceKm, type UnitPreferences } from './unitPreferences';
     import { LIGHT_POLLUTION_ATLAS_URL, type LightPollutionOverlayStatus } from './lightPollutionOverlay';
-    import type { MinimizeScope } from './pluginPreferences';
+    import type { MinimizeScope, SnowDisplayPreference } from './pluginPreferences';
 
     // Controlled settings: the shell owns persistence and map side effects.
     export let uiLanguage: UiLanguage;
@@ -32,6 +32,8 @@
     export let hideLocationSearch: boolean;
     export let minimizeScope: MinimizeScope;
     export let changeMinimizeScope: (event: Event) => void;
+    export let snowDisplay: SnowDisplayPreference;
+    export let changeSnowDisplay: (event: Event) => void;
     export let showSkyChart: boolean;
     export let toggleSkyChart: () => void;
     export let directionLineOpacityPercent: number;
@@ -106,6 +108,14 @@
             <option value="hide-summary">{text.minimizeScopeHideSummary}</option>
         </select>
         <span id="minimize-scope-description" class="settings-select__description">{text.minimizeScopeDescription}</span>
+    </div>
+    <div class="settings-select">
+        <label for="snow-display">{messages[uiLanguage].snowDisplay}</label>
+        <select id="snow-display" value={snowDisplay} on:change={changeSnowDisplay}>
+            <option value="auto">{messages[uiLanguage].snowDisplayAuto}</option>
+            <option value="always">{messages[uiLanguage].snowDisplayAlways}</option>
+            <option value="hidden">{messages[uiLanguage].snowDisplayHidden}</option>
+        </select>
     </div>
     <label class="settings-toggle">
         <span class="settings-toggle__copy">

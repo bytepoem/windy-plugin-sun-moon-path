@@ -31,6 +31,7 @@ const base: ForecastInput = {
     requestedAt: now,
     contextReady: true,
     visible: true,
+    snowVisible: true,
     cloudsVisible: false,
 };
 
@@ -62,6 +63,8 @@ const harness = () => {
         task: ReturnType<typeof deferred<OpenMeteoAtmospherePoint[]>>;
     }[] = [];
     const visibilityRequests: typeof atmosphereRequests = [];
+    const snowRequests: typeof atmosphereRequests = [];
+    const supplementRequests = { aod: atmosphereRequests, visibility: visibilityRequests, snow: snowRequests };
     const onError = vi.fn();
     let state = emptyForecastState();
     const changed = vi.fn(next => {
@@ -81,17 +84,46 @@ const harness = () => {
             },
             atmosphere: request => {
                 const task = deferred<OpenMeteoAtmospherePoint[]>();
-                (request.metric === 'aod' ? atmosphereRequests : visibilityRequests).push({ request, task });
+                supplementRequests[request.metric].push({ request, task });
                 return task.promise;
             },
         },
         changed,
         onError,
     );
-    return { controller, requests, cloudRequests, atmosphereRequests, visibilityRequests, onError, changed, state: () => state };
+    return { controller, requests, cloudRequests, atmosphereRequests, visibilityRequests, snowRequests, onError, changed, state: () => state };
 };
 
 describe('forecast session behavior', () => {
+    it('loads OM depth for the visible Windy table and ignores stale model results', async () => {
+        const h = harness();
+        h.controller.update({ ...base, snowVisible: false });
+        expect(h.snowRequests).toHaveLength(0);
+        h.controller.update(base);
+        h.controller.update({ ...base, model: 'gfs' });
+        expect(h.snowRequests[0].request.signal.aborted).toBe(true);
+        expect(h.snowRequests[1].request.model).toBe('gfs');
+        h.requests[1].task.resolve(result);
+        h.snowRequests[1].task.reject(new Error('unavailable'));
+        await flush();
+        expect(h.state()).toMatchObject({ weatherStatus: 'ready', snowStatus: 'error' });
+        h.controller.retry('snow');
+        expect(h.requests).toHaveLength(2);
+        expect(h.visibilityRequests).toHaveLength(1);
+        h.snowRequests[2].task.resolve([{ timestamp: now, snowDepthCm: 4, aod550: null, visibilityKm: null }]);
+        h.snowRequests[0].task.resolve([{ timestamp: now, snowDepthCm: 99, aod550: null, visibilityKm: null }]);
+        await flush();
+        expect(h.state()).toMatchObject({ snowStatus: 'ready', points: [{ snowDepthCm: 4, precipMm: 0 }] });
+        h.controller.update({ ...base, source: 'open-meteo', model: 'gfs' });
+        h.requests[2].task.resolve({ points: [{ ...result.points[0], snowDepthCm: 7 }], cloudForecast: null });
+        await flush();
+        expect(h.snowRequests).toHaveLength(3);
+        expect(h.state().points[0].snowDepthCm).toBe(7);
+        h.controller.update(base);
+        h.controller.destroy();
+        expect(h.snowRequests[3].request.signal.aborted).toBe(true);
+    });
+
     it.each(['aod', 'visibility'] as const)('retains successful data and retries only failed %s', async failed => {
         const h = harness();
         h.controller.update(base);

@@ -6,6 +6,7 @@ import { isUiLanguagePreference, type UiLanguagePreference } from './uiLanguage'
 
 export type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
 export type MinimizeScope = 'standard' | 'hide-times' | 'hide-summary';
+export type SnowDisplayPreference = 'auto' | 'always' | 'hidden';
 export const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
 
 // Keep established storage keys and parsing semantics so upgrades and rollback need no migration.
@@ -16,6 +17,7 @@ const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-m
 const MINIMIZE_SCOPE_STORAGE_KEY = 'windy-plugin-sun-moon-path:minimize-scope';
 const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
 const SHOW_SKY_CHART_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-sky-chart';
+const SNOW_DISPLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:snow-display';
 const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
 const INITIAL_OVERLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:initial-overlay';
 const RADAR_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-provider';
@@ -144,6 +146,21 @@ export const loadShowSkyChartPreference = (): boolean => {
 
 export const saveShowSkyChartPreference = (value: boolean): void => {
     write(SHOW_SKY_CHART_STORAGE_KEY, String(value));
+};
+
+export const normalizeSnowDisplayPreference = (value: unknown): SnowDisplayPreference =>
+    value === 'always' || value === 'hidden' ? value : 'auto';
+
+export const loadSnowDisplayPreference = (): SnowDisplayPreference => {
+    try {
+        return normalizeSnowDisplayPreference(localStorage.getItem(SNOW_DISPLAY_STORAGE_KEY));
+    } catch {
+        return 'auto';
+    }
+};
+
+export const saveSnowDisplayPreference = (value: SnowDisplayPreference): void => {
+    write(SNOW_DISPLAY_STORAGE_KEY, value);
 };
 
 export const loadInitialOverlayPreference = (availableInitialOverlays: ReadonlyArray<WindyOverlay>): InitialOverlayPreference => {

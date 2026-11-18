@@ -1,7 +1,11 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { compileRenderer, type RenderComponent } from './test/renderSvelte';
 import { createMultiDayCalculator } from './multiDayPlanner';
+import { multiDayWeatherMetrics } from './multiDayWeatherPresentation';
 import type { WeatherPoint } from './weather';
+
+// The direct metric selection import needs the host module. Rendered unit conversions use compileRenderer's adapter.
+vi.mock('@windy/metrics', () => ({ default: {} }));
 
 let renderWeather: RenderComponent;
 beforeAll(async () => { renderWeather = await compileRenderer('MultiDayWeather.svelte'); }, 20_000);
@@ -24,6 +28,20 @@ const hourlyRain = [21, 22].map(hour => ({ ...sample(hour),
 }));
 
 describe('compiled multi-day window evidence', () => {
+    it('keeps the OM snow period that ends at the window boundary without leaking ground depth', () => {
+        const points = [
+            { ...sample(21), iconCode: 10, snowCondition: 'snow', snowIntensity: 'heavy', snowfallCm: 0, snowDepthCm: 7 },
+            { ...sample(24), snowfallCm: 1.2, snowDepthCm: 99 },
+        ] satisfies WeatherPoint[];
+        const metrics = multiDayWeatherMetrics([interval], points, 'open-meteo', 'auto');
+        const html = renderWeather({ ...props, points, source: 'open-meteo', metrics, expanded: true });
+        expect(html).toContain('1.2 cm');
+        expect(html).toContain('7 cm');
+        expect(html).not.toContain('99 cm');
+        expect(html).toContain('2027-06-12 23:00 – 2027-06-13 00:00');
+        expect(html).toContain('data-snow-intensity="heavy"');
+    });
+
     it('retains overlapping accumulated rain when a real window has no instantaneous samples', () => {
         const html = renderWeather({ ...props, interval:shortWindow, points:hourlyRain, timeZone:'Asia/Shanghai', expanded:true });
         expect(html).toContain('4 mm');

@@ -1,7 +1,10 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { compileRenderer, type RenderComponent } from './test/renderSvelte';
 import { createMultiDayCalculator } from './multiDayPlanner';
+import { multiDayWeatherMetrics } from './multiDayWeatherPresentation';
 import type { WeatherPoint } from './weather';
+
+vi.mock('@windy/metrics', () => ({ default: {} }));
 
 let renderTable: RenderComponent;
 const calculate = createMultiDayCalculator({ lat:23.06, lon:113.36 }, 'UTC', 0);
@@ -67,6 +70,24 @@ describe('compiled seven-day date axes', () => {
         expect(vertical).toEqual(horizontal);
         expect(horizontal['2027-06-12/temperatureC']).toContain('20 °C');
         expect(horizontal['2027-06-18/temperatureC']).toContain('26 °C');
+    });
+    it.each(['horizontal', 'vertical'])('shows snow accumulations and depth in the same window in %s', orientation => {
+        const [row] = rows;
+        const window = row.windows.sunset[0];
+        const [point] = points;
+        const snowy = [
+            { ...point, timestamp: window.start.getTime() - 30 * 60_000, precipitationPeriodMs: undefined,
+                snowWaterPeriodHours: 3 as const, snowWaterMm: 0.12, snowfallCm: 0.35, snowDepthCm: 99 },
+            { ...point, timestamp: window.start.getTime() + 30 * 60_000, precipitationPeriodMs: undefined,
+                snowWaterPeriodHours: 1 as const, snowWaterMm: 0, snowfallCm: 0, snowDepthCm: 8 },
+        ];
+        const metrics = multiDayWeatherMetrics([window], snowy, 'windy', 'auto');
+        const visible = cells(renderTable({ ...props, rows: [row], points: snowy, orientation, metrics, snowStatus: 'ready' }));
+        expect(visible[`${row.date}/snowWaterMm`]).toBe('0–0.12 mm');
+        expect(visible[`${row.date}/snowfallCm`]).toBe('0–0.35 cm');
+        expect(visible[`${row.date}/snowDepthCm`]).toBe('8 cm');
+        expect(multiDayWeatherMetrics([window], snowy, 'windy', 'hidden')).not.toContain('snowfallCm');
+        expect(multiDayWeatherMetrics([window], [], 'open-meteo', 'always')).toContain('snowfallCm');
     });
     it.each(['horizontal', 'vertical'])('keeps independent metric states in %s date layout', orientation => {
         const values = cells(renderTable({ ...props, orientation, aodStatus:'error', visibilityStatus:'loading' }));

@@ -12,6 +12,7 @@ import {
     loadLocationSearchProvider,
     loadMobilePanelModePreference,
     loadMinimizeScopePreference,
+    loadSnowDisplayPreference,
     loadRadarOpacityPreference,
     loadRadarProvider,
     loadLightPollutionEnabled,
@@ -27,6 +28,7 @@ import {
     saveLocationSearchProvider,
     saveMobilePanelModePreference,
     saveMinimizeScopePreference,
+    saveSnowDisplayPreference,
     saveRadarOpacityPreference,
     saveRadarProvider,
     writeLocationApiKey,
@@ -45,6 +47,17 @@ const storage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('existing plugin preferences', () => {
+    it('defaults to automatic snow display and preserves explicit choices', () => {
+        storage({ 'snow-display': 'unsupported' });
+        expect(loadSnowDisplayPreference()).toBe('auto');
+        saveSnowDisplayPreference('always');
+        expect(loadSnowDisplayPreference()).toBe('always');
+        saveSnowDisplayPreference('hidden');
+        expect(loadSnowDisplayPreference()).toBe('hidden');
+        saveSnowDisplayPreference('auto');
+        expect(loadSnowDisplayPreference()).toBe('auto');
+    });
+
     it('keeps atlas defaults and persistence independent of radar and handles unavailable storage', () => {
         storage({ 'radar-provider': 'rainviewer' });
         expect(loadLightPollutionEnabled()).toBe(false);

@@ -7,7 +7,7 @@
     "items": [
       {
         "type": "new",
-        "text": "多日总览：在「天文」中比较未来 7 天的拍摄窗口与天气，或查看 30 天天文日历，快速选择拍摄日期。所有日期选择统一从浏览器当前年份的上一年 1 月 1 日开始，跨年后自动更新。"
+        "text": "多日总览：在「天文」中比较未来 7 天的拍摄窗口与天气，包括新降雪和地面积雪，或查看 30 天天文日历。所有日期选择统一从浏览器当前年份的上一年 1 月 1 日开始，跨年后自动更新。"
       },
       {
         "type": "new",
@@ -16,6 +16,10 @@
       {
         "type": "new",
         "text": "反馈与建议：在「关于」中提交问题或功能建议，可附截图。"
+      },
+      {
+        "type": "new",
+        "text": "天气表雪况与阵风：两种来源均可查看新降雪、积雪和阵风，完整 24 小时雪水当量可按国标分级，等级见天气图例。Open-Meteo 用雪花数量表示降雪强度，并汇总 24 小时新雪厚度。雪况可设为有雪时显示、始终显示或隐藏。"
       },
       {
         "type": "improved",
@@ -29,7 +33,7 @@
     "items": [
       {
         "type": "new",
-        "text": "Multi-day overview: compare shooting windows and weather over seven days in Astro, or browse a 30-day astronomy calendar to choose a shooting date. All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year."
+        "text": "Multi-day overview: compare shooting windows and weather, including new snow and ground snow depth, over seven days in Astro, or browse a 30-day astronomy calendar. All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year."
       },
       {
         "type": "new",
@@ -38,6 +42,10 @@
       {
         "type": "new",
         "text": "Feedback: report issues or suggest features from About, with optional screenshots."
+      },
+      {
+        "type": "new",
+        "text": "Snow and gusts in the weather table: both sources show new snow, ground snow depth and gusts. The weather legend lists the Chinese national grades for complete 24-hour snow water equivalent totals. Open-Meteo uses snowflake counts for intensity and summarizes 24-hour new snow depth. Snow display can be automatic, always shown or hidden."
       },
       {
         "type": "improved",

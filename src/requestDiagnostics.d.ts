@@ -1,6 +1,6 @@
 /** Shared declarations for the browser and native Node request-diagnostics module. */
 export type DiagnosticRequest = 'windy-weather' | 'windy-timezone' | 'open-meteo-weather' | 'open-meteo-aod'
-    | 'open-meteo-visibility' | 'light-pollution' | 'update-manifest' | 'update-notes';
+    | 'open-meteo-visibility' | 'open-meteo-snow' | 'light-pollution' | 'update-manifest' | 'update-notes';
 export type RequestPhase = 'request' | 'response' | 'parse' | 'decompress';
 export type RequestFailureDetails = {
     request: DiagnosticRequest;

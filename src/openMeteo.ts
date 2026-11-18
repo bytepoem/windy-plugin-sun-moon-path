@@ -1,4 +1,4 @@
-import { WEATHER_PAST_WINDOW_MS, WEATHER_FUTURE_WINDOW_MS, type WeatherModel, type WeatherPoint } from './weather';
+import { WEATHER_PAST_WINDOW_MS, WEATHER_FUTURE_WINDOW_MS, type SnowCondition, type SnowIntensity, type WeatherModel, type WeatherPoint } from './weather';
 import { RequestFailure, withRequestDiagnostics, type DiagnosticRequest } from './requestDiagnostics';
 import type { Coordinates } from './solar';
 
@@ -24,8 +24,10 @@ export type OpenMeteoAtmospherePoint = {
     timestamp: number;
     aod550: number | null;
     visibilityKm: number | null;
+    snowDepthCm?: number | null;
+    snowfallCm?: number | null;
 };
-export type AtmosphereMetric = 'aod' | 'visibility';
+export type AtmosphereMetric = 'aod' | 'visibility' | 'snow';
 
 export type OpenMeteoFetchOptions = {
     location: Coordinates;
@@ -45,8 +47,10 @@ const buildUrl = (baseUrl: string, location: Coordinates, variable: string): URL
 };
 
 const fetchPayload = async (url: URL, signal: AbortSignal | undefined, fetcher: FetchLike): Promise<OpenMeteoPayload> => {
+    const field = url.searchParams.get('hourly');
     const request: DiagnosticRequest = url.hostname.startsWith('air-quality') ? 'open-meteo-aod'
-        : url.searchParams.get('hourly') === 'visibility' ? 'open-meteo-visibility' : 'open-meteo-weather';
+        : field === 'visibility' ? 'open-meteo-visibility'
+        : field === 'snowfall,snow_depth' ? 'open-meteo-snow' : 'open-meteo-weather';
     const response = await withRequestDiagnostics(request, 'request', signal, async () => {
         const result = await fetcher(url, { signal });
         if (!result.ok) {
@@ -64,8 +68,8 @@ const numericArray = (value: unknown): (number | null)[] =>
 
 const seriesByTimestamp = (
     payload: OpenMeteoPayload,
-    field: 'aerosol_optical_depth' | 'visibility',
-    transform: (value: number) => number,
+    field: 'aerosol_optical_depth' | 'visibility' | 'snow_depth' | 'snowfall',
+    transform: (value: number) => number | null,
 ): Map<number, number | null> => {
     const timestamps = numericArray(payload.hourly?.time);
     const values = numericArray(payload.hourly?.[field]);
@@ -79,7 +83,7 @@ const seriesByTimestamp = (
 };
 
 /** Load one independent metric. A failed endpoint cannot discard the other metric. */
-export const fetchOpenMeteoAtmosphereMetric = async (metric: AtmosphereMetric, {
+export const fetchOpenMeteoAtmosphereMetric = async (metric: 'aod' | 'visibility', {
     location,
     signal,
     fetcher = fetch,
@@ -95,12 +99,20 @@ export const fetchOpenMeteoAtmosphereMetric = async (metric: AtmosphereMetric, {
 };
 
 /** Join independent results by exact timestamp; unavailable values remain unknown. */
-export const combineAtmospherePoints = (aod: OpenMeteoAtmospherePoint[], visibility: OpenMeteoAtmospherePoint[]) => {
+export const combineAtmospherePoints = (
+    aod: OpenMeteoAtmospherePoint[],
+    visibility: OpenMeteoAtmospherePoint[],
+    snow: OpenMeteoAtmospherePoint[] = [],
+) => {
     const points = new Map<number, OpenMeteoAtmospherePoint>();
     for (const point of aod) { points.set(point.timestamp, { ...point, visibilityKm: null }); }
     for (const point of visibility) {
         points.set(point.timestamp, { timestamp: point.timestamp,
             aod550: points.get(point.timestamp)?.aod550 ?? null, visibilityKm: point.visibilityKm });
+    }
+    for (const point of snow) {
+        const current = points.get(point.timestamp);
+        points.set(point.timestamp, { ...point, ...current, snowDepthCm: point.snowDepthCm, snowfallCm: point.snowfallCm });
     }
     return [...points.values()].sort((left, right) => left.timestamp - right.timestamp);
 };
@@ -108,10 +120,23 @@ export const combineAtmospherePoints = (aod: OpenMeteoAtmospherePoint[], visibil
 export const buildOpenMeteoRequestKey = (locationKey: string, timestamp: number): string =>
     `${locationKey}|${Math.floor(timestamp / 3_600_000)}`;
 
+/** Windy labels the start of a step. Open-Meteo labels the end of each accumulated hour. */
+const snowfallOverWindyStep = (point: WeatherPoint, hourly: Map<number, OpenMeteoAtmospherePoint>): number | null => {
+    const hours = point.snowWaterPeriodHours;
+    if (!hours) { return null; }
+    let sum = 0;
+    for (let hour = 1; hour <= hours; hour++) {
+        const value = hourly.get(point.timestamp + hour * 3_600_000)?.snowfallCm;
+        if (value == null) { return null; }
+        sum += value;
+    }
+    return sum;
+};
+
 export const mergeOpenMeteoAtmosphere = (
     weatherPoints: WeatherPoint[],
     atmospherePoints: OpenMeteoAtmospherePoint[],
-    includeVisibility = true,
+    includeWindySupplements = true,
 ): WeatherPoint[] => {
     const atmosphereByTimestamp = new Map(atmospherePoints.map(point => [point.timestamp, point]));
     return weatherPoints.map(point => {
@@ -119,13 +144,32 @@ export const mergeOpenMeteoAtmosphere = (
         return {
             ...point,
             aod550: atmosphere?.aod550 ?? null,
-            visibilityKm: includeVisibility ? atmosphere?.visibilityKm ?? null : point.visibilityKm,
+            visibilityKm: includeWindySupplements ? atmosphere?.visibilityKm ?? null : point.visibilityKm,
+            snowDepthCm: includeWindySupplements ? atmosphere?.snowDepthCm ?? null : point.snowDepthCm,
+            snowfallCm: includeWindySupplements ? snowfallOverWindyStep(point, atmosphereByTimestamp) : point.snowfallCm,
         };
     });
 };
 
 export const OPEN_METEO_MODELS: Record<WeatherModel, string> = {
     ecmwf: 'ecmwf_ifs', gfs: 'gfs_global', icon: 'icon_global',
+};
+
+const snowDepthToCm = (depth: number): number | null => depth >= 0 ? depth * 100 : null;
+
+/** Request both snow fields for the selected model in a single optional request. */
+export const fetchOpenMeteoSnow = async ({
+    location, model, signal, fetcher = fetch,
+}: OpenMeteoFetchOptions & { model: WeatherModel }): Promise<OpenMeteoAtmospherePoint[]> => {
+    const url = buildUrl(FORECAST_API_URL, location, 'snowfall,snow_depth');
+    url.searchParams.set('models', OPEN_METEO_MODELS[model]);
+    // The final Windy step can extend up to three hours beyond its displayed timestamp.
+    url.searchParams.set('forecast_hours', String(FORECAST_HOURS + 3));
+    const payload = await fetchPayload(url, signal, fetcher);
+    const snowfall = seriesByTimestamp(payload, 'snowfall', value => value >= 0 ? value : null);
+    return [...seriesByTimestamp(payload, 'snow_depth', snowDepthToCm)].map(([timestamp, snowDepthCm]) => ({
+        timestamp, snowDepthCm, snowfallCm: snowfall.get(timestamp) ?? null, aod550: null, visibilityKm: null,
+    }));
 };
 
 /** Translate WMO conditions to the existing presentation icons, never pass through numeric codes. */
@@ -141,13 +185,30 @@ export const wmoWeatherIcon = (code: number | null): number | null => {
     return null;
 };
 
+const WMO_SNOW_CONDITIONS: Partial<Record<number, SnowCondition>> = {
+    71: 'snow',
+    73: 'snow',
+    75: 'snow',
+    77: 'snowGrains',
+    85: 'snowShowers',
+    86: 'snowShowers',
+};
+
+const WMO_SNOW_INTENSITIES: Partial<Record<number, SnowIntensity>> = {
+    71: 'light',
+    73: 'moderate',
+    75: 'heavy',
+    85: 'light',
+    86: 'heavy',
+};
+
 /** Fetch one explicitly selected global model. Units and timestamps match the shared weather view. */
 export const fetchOpenMeteoWeather = async ({
     location, model, requestedAt = Date.now(), signal, fetcher = fetch,
 }: OpenMeteoFetchOptions & { model: WeatherModel; requestedAt?: number }): Promise<WeatherPoint[]> => {
     const url = buildUrl(FORECAST_API_URL, location, [
-        'temperature_2m', 'dew_point_2m', 'relative_humidity_2m', 'precipitation',
-        'wind_speed_10m', 'wind_direction_10m', 'cloud_cover', 'cloud_cover_low',
+        'temperature_2m', 'dew_point_2m', 'relative_humidity_2m', 'precipitation', 'snowfall', 'snow_depth',
+        'snowfall_water_equivalent', 'wind_speed_10m', 'wind_gusts_10m', 'wind_direction_10m', 'cloud_cover', 'cloud_cover_low',
         'cloud_cover_mid', 'cloud_cover_high', 'visibility', 'weather_code', 'is_day',
     ].join(','));
     url.searchParams.set('models', OPEN_METEO_MODELS[model]);
@@ -165,9 +226,16 @@ export const fetchOpenMeteoWeather = async ({
         const timestamp = time * 1000;
         if (timestamp < requestedAt - WEATHER_PAST_WINDOW_MS || timestamp > requestedAt + WEATHER_FUTURE_WINDOW_MS) { return []; }
         const visibility = value('visibility', index);
+        const weatherCode = value('weather_code', index);
+        const snowfall = value('snowfall', index);
+        const snowDepth = value('snow_depth', index);
+        const snowWater = value('snowfall_water_equivalent', index);
+        const gust = value('wind_gusts_10m', index);
         return [{
             timestamp, precipitationPeriodMs: 3_600_000,
-            iconCode: wmoWeatherIcon(value('weather_code', index)),
+            iconCode: wmoWeatherIcon(weatherCode),
+            snowCondition: weatherCode === null ? null : WMO_SNOW_CONDITIONS[weatherCode] ?? null,
+            snowIntensity: weatherCode === null ? null : WMO_SNOW_INTENSITIES[weatherCode] ?? null,
             isDay: value('is_day', index) === 1,
             totalCloudPercent: value('cloud_cover', index),
             lowCloudPercent: value('cloud_cover_low', index),
@@ -177,7 +245,11 @@ export const fetchOpenMeteoWeather = async ({
             dewPointC: value('dew_point_2m', index),
             humidityPercent: value('relative_humidity_2m', index),
             precipMm: value('precipitation', index),
+            snowfallCm: snowfall !== null && snowfall >= 0 ? snowfall : null,
+            snowWaterMm: snowWater !== null && snowWater >= 0 ? snowWater : null,
+            snowDepthCm: snowDepth === null ? null : snowDepthToCm(snowDepth),
             windMs: value('wind_speed_10m', index),
+            windGustMs: gust !== null && gust >= 0 ? gust : null,
             windDirectionDeg: value('wind_direction_10m', index),
             visibilityKm: visibility === null ? null : Math.round(visibility / 100) / 10,
             aod550: null,

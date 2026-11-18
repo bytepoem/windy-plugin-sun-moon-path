@@ -531,8 +531,8 @@
                     <MultiDayOverview active={!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
                         contextReady={resolvedContextLocationKey === locationKey} contextError={status === 'error'}
                         location={selectedLocation} locationName={locationDisplayName} {timeZone} {elevationM} {currentInstant}
-                        bind:startDate={overviewStartDate} language={uiLanguage} points={weatherPoints}
-                        {weatherStatus} {aodStatus} {visibilityStatus} source={weatherSource} model={weatherModel} {units}
+                        bind:startDate={overviewStartDate} bind:mode={overviewMode} language={uiLanguage} points={weatherPoints}
+                        {weatherStatus} {aodStatus} {visibilityStatus} {snowStatus} {snowDisplay} source={weatherSource} model={weatherModel} {units}
                         on:select={selectOverviewDay} on:retry={retryWeather} on:contextretry={() => refreshPaths(astronomyKey)}
                         on:sourcechange={handleWeatherSourceChange} on:modelchange={handleWeatherModelChange}
                         on:atmosphereretry={retryAtmosphere} />
@@ -834,6 +834,8 @@
                     errorMessage={weatherErrorMessage}
                     {aodStatus}
                     {visibilityStatus}
+                    {snowStatus}
+                    {snowDisplay}
                     language={uiLanguage}
                     {timeZone}
                     currentTimestamp={currentInstant.getTime()}
@@ -871,6 +873,8 @@
                     {hideLocationSearch}
                     {minimizeScope}
                     {changeMinimizeScope}
+                    {snowDisplay}
+                    {changeSnowDisplay}
                     {showSkyChart}
                     {toggleSkyChart}
                     {directionLineOpacityPercent}
@@ -1040,6 +1044,8 @@
                 errorMessage={weatherErrorMessage}
                 {aodStatus}
                 {visibilityStatus}
+                {snowStatus}
+                {snowDisplay}
                 language={uiLanguage}
                 {timeZone}
                 currentTimestamp={currentInstant.getTime()}
@@ -1104,6 +1110,10 @@
         saveHideLocationSearchPreference,
         loadShowSkyChartPreference,
         saveShowSkyChartPreference,
+        loadSnowDisplayPreference,
+        normalizeSnowDisplayPreference,
+        saveSnowDisplayPreference,
+        type SnowDisplayPreference,
         loadInitialOverlayPreference,
         saveInitialOverlayPreference,
         loadRadarProvider,
@@ -1158,7 +1168,7 @@
         scheduleReopenAfterHome,
         shouldRefreshSameLocationImmediately,
     } from './location';
-    import { fetchOpenMeteoAtmosphereMetric, type AtmosphereMetric } from './openMeteo';
+    import { fetchOpenMeteoAtmosphereMetric, fetchOpenMeteoSnow, type AtmosphereMetric } from './openMeteo';
     import { createForecastController, emptyForecastState } from './forecastController';
     import { windyWeatherProvider } from './windyWeatherProvider';
     import {
@@ -1498,10 +1508,14 @@
     let latestPluginUpdateRequestId = 0;
     let weatherModel: WeatherModel = 'ecmwf';
     let weatherSource: WeatherSource = 'windy';
+    let snowDisplay: SnowDisplayPreference = 'auto';
+    let overviewMode: 'week' | 'month' = 'week';
     let forecastState = emptyForecastState();
     const forecastController = createForecastController({
         ...windyWeatherProvider,
-        atmosphere: request => fetchOpenMeteoAtmosphereMetric(request.metric, request),
+        atmosphere: request => request.metric === 'snow'
+            ? fetchOpenMeteoSnow(request)
+            : fetchOpenMeteoAtmosphereMetric(request.metric, request),
     }, state => {
         forecastState = state;
     }, (kind, error) => diagnosticRuntime?.error(kind, error));
@@ -1522,6 +1536,7 @@
         : '';
     $: aodStatus = forecastState.aodStatus;
     $: visibilityStatus = forecastState.visibilityStatus;
+    $: snowStatus = forecastState.snowStatus;
     let lightPollutionPoint: LightPollutionPoint | null = null;
     let lightPollutionStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
     let lightPollutionErrorMessage = '';
@@ -1649,6 +1664,9 @@
             requestedAt: currentInstant.getTime(),
             contextReady: resolvedContextLocationKey === locationKey,
             visible: shouldLoadVisibleWeatherData,
+            snowVisible: snowDisplay !== 'hidden' && !isMobileCollapsed
+                && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather'
+                    || (summaryTab === 'events' && eventView === 'overview' && overviewMode === 'week')),
             cloudsVisible: cloudObstructionVisible,
         });
     }
@@ -1775,6 +1793,11 @@
     const changeMinimizeScope = (event: Event) => {
         minimizeScope = normalizeMinimizeScope((event.currentTarget as HTMLSelectElement).value);
         saveMinimizeScopePreference(minimizeScope);
+    };
+
+    const changeSnowDisplay = (event: Event) => {
+        snowDisplay = normalizeSnowDisplayPreference((event.currentTarget as HTMLSelectElement).value);
+        saveSnowDisplayPreference(snowDisplay);
     };
 
     const toggleLocationSearch = (event: Event) => {
@@ -3326,6 +3349,7 @@
         hideLocationSearch = loadHideLocationSearchPreference();
         minimizeScope = loadMinimizeScopePreference();
         showSkyChart = loadShowSkyChartPreference();
+        snowDisplay = loadSnowDisplayPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         initialOverlayPreference = loadInitialOverlayPreference(availableInitialOverlays);
@@ -3521,6 +3545,7 @@
         --weather-tone-cool: #9092ba;
         --weather-tone-mild: #aff5c0;
         --weather-tone-freezing: #f7f7f7;
+        --weather-tone-neutral: #303746;
         --desktop-weather-panel-height: 592px;
 
         box-sizing: border-box;

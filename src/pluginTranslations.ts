@@ -119,6 +119,7 @@ export const translations: Record<UiLanguage, {
         | 'lightPollutionOverlay'
         | 'cloudPlanning'
         | 'weatherSources'
+        | 'weatherSnow'
         | 'units',
         { title: string; description: string }
     >;
@@ -340,6 +341,12 @@ export const translations: Record<UiLanguage, {
             units: {
                 title: '显示单位',
                 description: '温度、风速、降水、距离和海拔跟随 Windy 单位设置。手动云高输入使用当前海拔单位；离地云底与计算海拔分别标注，不能混用。',
+            },
+            weatherSnow: {
+                title: '降雪与积雪',
+                description: '天气表在有非零值时显示雪数据。Windy 显示预报时段的降雪水当量（mm），Open-Meteo 显示前一小时的新降雪和该时刻的地面积雪深度（cm）。',
+                supplement: 'Windy 模式下，Open-Meteo 按所选模型补充新降雪和积雪深度。',
+                classification: '雪水当量连续覆盖 24 小时时，按国标显示降雪等级。',
             },
 
             favorites: {
@@ -641,6 +648,12 @@ export const translations: Record<UiLanguage, {
             units: {
                 title: 'Display units',
                 description: 'Temperature, wind, precipitation, distance and elevation follow Windy preferences. Manual cloud heights use the current elevation unit. Cloud base above ground and cloud altitude above sea level are labeled separately and must not be confused.',
+            },
+            weatherSnow: {
+                title: 'Snowfall and snow depth',
+                description: 'Snow rows appear when the forecast contains positive values. Windy shows snow water equivalent (mm) per forecast step. Open-Meteo shows new snow in the preceding hour and ground snow depth at the indicated time (cm).',
+                supplement: 'In Windy mode, Open-Meteo supplies new snow and snow depth for the selected model.',
+                classification: 'Snow grades require 24 hours of snow water equivalent.',
             },
 
             favorites: {
