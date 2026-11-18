@@ -26,7 +26,7 @@
     // Keep at most four columns per strip on narrow panels.
     $: metricGroups = Array.from({ length: Math.ceil(metrics.length / 4) }, (_, index) => metrics.slice(index * 4, (index + 1) * 4));
     $: text = labels[language];
-    $: metricTitle = (metric: MultiDayMetric) => multiDayMetricTitle(metric, language);
+    $: metricTitle = (metric: MultiDayMetric) => multiDayMetricTitle(metric, language, source);
     $: presentation = createMultiDayWeatherPresentation({
         interval, points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, units,
     });

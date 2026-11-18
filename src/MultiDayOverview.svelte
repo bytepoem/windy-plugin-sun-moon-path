@@ -19,6 +19,7 @@
     import { comparisonIntervalLabels } from './favoriteComparisonPeriod';
     import MultiDayWeather from './MultiDayWeather.svelte';
     import MultiDayWeekTable from './MultiDayWeekTable.svelte';
+    import WeatherSupplementStatus from './WeatherSupplementStatus.svelte';
     import { multiDayWeatherMetrics } from './multiDayWeatherPresentation';
     import type { WeatherLoadStatus, WeatherModel, WeatherPoint, WeatherSource } from './weather';
     import type { SnowDisplayPreference } from './pluginPreferences';
@@ -232,17 +233,21 @@
         {#if mode === 'week'}
             <p>{text.range}: {weatherStatus === 'ready' && forecastRangeLabel ? forecastRangeLabel : weatherStatus === 'error' ? common.atmosphereError : weatherStatus === 'empty' ? common.missing : weatherText[language].loading}</p>
             {#if weatherStatus === 'error' || weatherStatus === 'empty'}<button on:click={() => dispatch('retry')}>{pluginText.retry}</button>{/if}
-            {#if aodStatus === 'error'}<button on:click={() => dispatch('atmosphereretry', 'aod')}>{weatherText[language].aodRetry}</button>{/if}
-            {#if source === 'windy' && visibilityStatus === 'error'}<button on:click={() => dispatch('atmosphereretry', 'visibility')}>{weatherText[language].visibilityRetry}</button>{/if}
-            {#if source === 'windy' && snowDisplay !== 'hidden' && snowStatus === 'error'}
-                <button on:click={() => dispatch('atmosphereretry', 'snow')}>{weatherText[language].snowSupplement} · {pluginText.retry}</button>
-            {/if}
         {/if}
         <details class="overview-notes"><summary>{settingsMessages[language].userGuide}</summary>
             <p>{text.nightRule}</p><p>{text.monthRule}</p><p>{common.precipitationRule}</p>
             {#if mode === 'week' && snowDisplay !== 'hidden'}<p>{text.snowRule}</p>{/if}
         </details>
     </div>
+    {#if mode === 'week'}
+        <WeatherSupplementStatus
+            {language}
+            aod={aodStatus}
+            visibility={source === 'windy' ? visibilityStatus : 'idle'}
+            snow={source === 'windy' && snowDisplay !== 'hidden' ? snowStatus : 'idle'}
+            on:retry={event => dispatch('atmosphereretry', event.detail)}
+        />
+    {/if}
     {#if failed || contextError}
         <p role="alert">{pluginText.astronomyLoadError}</p><button on:click={() => {
             if (contextError) { dispatch('contextretry'); }

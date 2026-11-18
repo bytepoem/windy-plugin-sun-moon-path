@@ -1,4 +1,6 @@
 import { defineMessages, localized } from '../localeMessages';
+import type { UiLanguage } from '../uiLanguage';
+import type { WeatherMetric, WeatherSource } from '../weather';
 export const translations = defineMessages({
     zh: {
         modelLabel: '预报模型',
@@ -10,17 +12,12 @@ export const translations = defineMessages({
         retry: '重试',
         metricLoadFailed: '加载失败',
         metricMissingData: '暂无数据',
-        snowSupplement: '降雪与积雪',
+        metricLoading: '加载中…',
+        estimatedNewSnow: '新雪估算',
         now: '当前时间',
         sun: '太阳',
         moon: '月亮',
         celestialCurve: '太阳和月亮升起降落曲线',
-        aodRetry: 'AOD 加载失败 · 重试',
-        visibilityRetry: '能见度加载失败 · 重试',
-        aodEmpty: 'AOD 暂无数据',
-        visibilityEmpty: '能见度暂无数据',
-        aodLoading: 'AOD 加载中…',
-        visibilityLoading: '能见度加载中…',
         selectedDateOutsideRange: (date: string) => `所选日期 ${date} 不在当前五天预报范围内，表格仍显示当前预报。`,
         selectedDateMissing: (date: string) => `所选日期 ${date} 暂无可用预报时次，表格仍显示当前预报。`,
         metrics: {
@@ -52,17 +49,12 @@ export const translations = defineMessages({
         retry: 'Retry',
         metricLoadFailed: 'Load failed',
         metricMissingData: 'Missing data',
-        snowSupplement: 'Snowfall and snow depth',
+        metricLoading: 'Loading…',
+        estimatedNewSnow: 'Estimated new snow',
         now: 'Current time',
         sun: 'Sun',
         moon: 'Moon',
         celestialCurve: 'Sun and moon rise and set curves',
-        aodRetry: 'AOD failed · Retry',
-        visibilityRetry: 'Visibility failed · Retry',
-        aodEmpty: 'No AOD data',
-        visibilityEmpty: 'No visibility data',
-        aodLoading: 'Loading AOD…',
-        visibilityLoading: 'Loading visibility…',
         selectedDateOutsideRange: localized((t, date: string) => t("Selected date {{0}} is outside the current five-day forecast. The table still shows the current forecast.", date)),
         selectedDateMissing: localized((t, date: string) => t("No forecast steps are available for selected date {{0}}. The table still shows the current forecast.", date)),
         metrics: {
@@ -85,6 +77,9 @@ export const translations = defineMessages({
         },
     },
 });
+export const weatherMetricLabel = (metric: WeatherMetric, language: UiLanguage, source: WeatherSource): string =>
+    metric === 'snowfallCm' && source === 'windy' ? translations[language].estimatedNewSnow : translations[language].metrics[metric][0];
+
 /** WeatherTable interface copy, checked against the same schema in every language. */
 export const messages = defineMessages({
     zh: {

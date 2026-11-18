@@ -103,17 +103,19 @@ describe('forecast session behavior', () => {
         h.controller.update({ ...base, model: 'gfs' });
         expect(h.snowRequests[0].request.signal.aborted).toBe(true);
         expect(h.snowRequests[1].request.model).toBe('gfs');
-        h.requests[1].task.resolve(result);
+        h.requests[1].task.resolve({ ...result, points: [{ ...result.points[0], snowfallCm: 2.8 }] });
         h.snowRequests[1].task.reject(new Error('unavailable'));
         await flush();
-        expect(h.state()).toMatchObject({ weatherStatus: 'ready', snowStatus: 'error' });
+        expect(h.state()).toMatchObject({
+            weatherStatus: 'ready', snowStatus: 'error', points: [{ snowfallCm: 2.8, snowDepthCm: null }],
+        });
         h.controller.retry('snow');
         expect(h.requests).toHaveLength(2);
         expect(h.visibilityRequests).toHaveLength(1);
         h.snowRequests[2].task.resolve([{ timestamp: now, snowDepthCm: 4, aod550: null, visibilityKm: null }]);
         h.snowRequests[0].task.resolve([{ timestamp: now, snowDepthCm: 99, aod550: null, visibilityKm: null }]);
         await flush();
-        expect(h.state()).toMatchObject({ snowStatus: 'ready', points: [{ snowDepthCm: 4, precipMm: 0 }] });
+        expect(h.state()).toMatchObject({ snowStatus: 'ready', points: [{ snowfallCm: 2.8, snowDepthCm: 4, precipMm: 0 }] });
         h.controller.update({ ...base, source: 'open-meteo', model: 'gfs' });
         h.requests[2].task.resolve({ points: [{ ...result.points[0], snowDepthCm: 7 }], cloudForecast: null });
         await flush();

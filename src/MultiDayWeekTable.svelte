@@ -4,7 +4,7 @@
     import { labels } from './locales/FavoriteComparison';
     import { messages } from './locales/MultiDayOverview';
     import { messages as horizonText } from './locales/EventHorizon';
-    import { translations as weatherText } from './locales/WeatherTable';
+    import { weatherMetricLabel } from './locales/WeatherTable';
     import { translations } from './pluginTranslations';
     import { createMultiDayWeatherPresentation, multiDayMetricTitle, MULTI_DAY_METRICS, type MultiDayMetric } from './multiDayWeatherPresentation';
     import { comparisonInstantLabel } from './favoriteComparisonPeriod';
@@ -39,7 +39,7 @@
     $: pluginText = translations[language];
     $: useChineseHeadingLines = language === 'zh' || language === 'zh-TW';
     $: fieldLabel = (field: Field) => field === 'weather' ? text.weather
-        : field === 'coverage' ? copy.range : multiDayMetricTitle(field, language);
+        : field === 'coverage' ? copy.range : multiDayMetricTitle(field, language, source);
     // Only the rendering axes change. Project each date once, before either
     // table branch, so orientation never changes the data or starts requests.
     $: dates = rows.map(row => {
@@ -93,7 +93,7 @@
             <tbody>{#each fields as field}
                 <tr><th class="field-header" scope="row" id={`week-field-${field}`} title={fieldLabel(field)}>
                     {#if field === 'weather' || field === 'coverage'}<span class:two-line-heading={useChineseHeadingLines && field === 'coverage'}>{fieldLabel(field)}</span>{:else}
-                        <span class="metric-heading"><WeatherMetricIcon metric={field} size={14} /><span class="metric-label">{weatherText[language].metrics[field][0]}</span></span>
+                        <span class="metric-heading"><WeatherMetricIcon metric={field} size={14} /><span class="metric-label">{weatherMetricLabel(field, language, source)}</span></span>
                     {/if}
                 </th>
                     {#each dates as date (date.date)}
@@ -112,7 +112,7 @@
             <thead><tr><th class="corner" scope="col"><span class:two-line-heading={useChineseHeadingLines}>{text.dateControl}</span></th>
                 {#each fields as field}<th class="field-header" scope="col" id={`week-field-${field}`} title={fieldLabel(field)}>
                     {#if field === 'weather' || field === 'coverage'}<span class:two-line-heading={useChineseHeadingLines && field === 'coverage'}>{fieldLabel(field)}</span>{:else}
-                        <span class="metric-heading"><WeatherMetricIcon metric={field} size={14} /><span class="metric-label">{weatherText[language].metrics[field][0]}</span></span>
+                        <span class="metric-heading"><WeatherMetricIcon metric={field} size={14} /><span class="metric-label">{weatherMetricLabel(field, language, source)}</span></span>
                     {/if}
                 </th>{/each}
             </tr></thead>

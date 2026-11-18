@@ -19,7 +19,7 @@
       },
       {
         "type": "new",
-        "text": "天气表雪况与阵风：两种来源均可查看新降雪、积雪和阵风，完整 24 小时雪水当量可按国标分级，等级见天气图例。Open-Meteo 用雪花数量表示降雪强度，并汇总 24 小时新雪厚度。雪况可设为有雪时显示、始终显示或隐藏。"
+        "text": "天气表雪况与阵风：Windy 用雪水当量估算新雪厚度。Open-Meteo 补充地面积雪。两种来源均可查看阵风，并汇总 24 小时新雪厚度。完整雪水当量可按国标分级，等级见天气图例。Open-Meteo 用雪花数量表示降雪强度。雪况可设为有雪时显示、始终显示或隐藏。天气表与 7 天总览标明 Open-Meteo 补充数据的状态，失败项可单独重试。"
       },
       {
         "type": "improved",
@@ -49,7 +49,7 @@
       },
       {
         "type": "new",
-        "text": "Snow and gusts in the weather table: both sources show new snow, ground snow depth and gusts. The weather legend lists the Chinese national grades for complete 24-hour snow water equivalent totals. Open-Meteo uses snowflake counts for intensity and summarizes 24-hour new snow depth. Snow display can be automatic, always shown or hidden."
+        "text": "Snow and gusts in the weather table: Windy estimates new snow from its snow water equivalent. Open-Meteo supplies ground snow depth. Both sources show gusts and summarize 24-hour new snow. The weather legend lists the Chinese national grades for complete water equivalent totals. Open-Meteo uses snowflake counts for intensity. Snow display can be automatic, always shown or hidden. The weather table and seven-day overview show the status of Open-Meteo supplements and let you retry failed items individually."
       },
       {
         "type": "improved",

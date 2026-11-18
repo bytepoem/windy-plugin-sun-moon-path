@@ -67,7 +67,9 @@ describe('weather forecast transformation', () => {
         payload.data.precipSnowAmount = [amount, ...Array<number>(7).fill(0)];
         const points = transformWeatherPayload(payload, now);
 
-        expect(summarizeSnowWater24h(points, 0, 'windy')).toMatchObject({ start: now, end: now + 24 * HOUR, amountMm: amount, grade });
+        expect(summarizeSnowWater24h(points, 0, 'windy')).toMatchObject({
+            start: now, end: now + 24 * HOUR, amountMm: amount, snowfallCm: amount, grade,
+        });
         expect(summarizeSnowWater24h(points, 1, 'windy')).toBeNull();
         expect(summarizeSnowWater24h(points.filter((_, index) => index !== 3), 0, 'windy')).toBeNull();
         expect(summarizeSnowWater24h(points.map((point, index) => index === 3 ? { ...point, snowWaterMm: null } : point), 0, 'windy')).toBeNull();
@@ -91,17 +93,17 @@ describe('weather forecast transformation', () => {
         expect(summarizeSnowWater24h(zeros, 0, 'open-meteo')).toMatchObject({ amountMm: 0, snowfallCm: 0, grade: null });
     });
 
-    it('retains Windy snow water equivalent and the native forecast step', () => {
+    it('estimates new snow from Windy snow water equivalent at the native forecast step', () => {
         const now = Date.UTC(2026, 10, 18, 2);
         const payload = makePayload([now, now + HOUR, now + 4 * HOUR, now + 7 * HOUR]);
         payload.data.precipSnowAmount = [0, 0.12, null, 0.41];
         payload.data.precipType = [0, 4, 5, 6];
 
         expect(transformWeatherPayload(payload, now)).toMatchObject([
-            { snowWaterMm: 0, snowWaterPeriodHours: 1, snowCondition: null },
-            { snowWaterMm: 0.12, snowWaterPeriodHours: 3, snowCondition: 'snow' },
-            { snowWaterMm: null, snowWaterPeriodHours: 3, snowCondition: 'wetSnow' },
-            { snowWaterMm: 0.41, snowWaterPeriodHours: 3, snowCondition: 'rainAndSnow' },
+            { snowWaterMm: 0, snowfallCm: 0, snowWaterPeriodHours: 1, snowCondition: null },
+            { snowWaterMm: 0.12, snowfallCm: 0.12, snowWaterPeriodHours: 3, snowCondition: 'snow' },
+            { snowWaterMm: null, snowfallCm: null, snowWaterPeriodHours: 3, snowCondition: 'wetSnow' },
+            { snowWaterMm: 0.41, snowfallCm: 0.41, snowWaterPeriodHours: 3, snowCondition: 'rainAndSnow' },
         ]);
     });
 

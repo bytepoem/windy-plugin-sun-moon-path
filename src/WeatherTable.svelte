@@ -1,13 +1,14 @@
 <script lang="ts">
     import { createEventDispatcher, tick } from 'svelte';
     import { formatDisplayDate } from './dateDisplay';
-    import { translations, messages } from './locales/WeatherTable';
+    import { translations, messages, weatherMetricLabel } from './locales/WeatherTable';
 
     import CelestialIcon from './CelestialIcon.svelte';
     import { buildCelestialCurves, type CelestialCurveSegment } from './celestialCurve';
     import { comparisonInstantLabel } from './favoriteComparisonPeriod';
     import WeatherIcon from './WeatherIcon.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
+    import WeatherSupplementStatus from './WeatherSupplementStatus.svelte';
     import {
         buildWeatherDateGroups,
         findCurrentTimePosition,
@@ -77,7 +78,6 @@
         'dewPointC',
         'humidityPercent',
         'precipMm',
-        'snowWaterMm',
         'snowfallCm',
         'snowDepthCm',
         'windMs',
@@ -99,13 +99,12 @@
     $: metricRows = allMetricRows.filter(metric => {
         if (metric === 'windGustMs') { return points.some(point => point.windGustMs != null); }
         if (!metric.startsWith('snow')) { return true; }
-        if (snowDisplay === 'hidden' || (metric === 'snowWaterMm' && source !== 'windy')) { return false; }
+        if (snowDisplay === 'hidden') { return false; }
         return snowDisplay === 'always' || points.some(point => (weatherMetricValue(point, metric) ?? 0) > 0);
     });
-    $: snowWaterPeriods = new Set(points.filter(point => point.snowWaterMm != null || point.snowfallCm != null)
+    $: snowPeriods = new Set(points.filter(point => point.snowfallCm != null)
         .map(point => point.snowWaterPeriodHours));
-    $: snowWaterPeriod = snowWaterPeriods.size === 1 ? snowWaterPeriods.values().next().value : null;
-    $: showSnowNotice = snowDisplay !== 'hidden' && source === 'windy' && ['error', 'empty'].includes(snowStatus);
+    $: snowfallPeriod = snowPeriods.size === 1 ? snowPeriods.values().next().value : null;
     $: toolbarLoading = status === 'loading' || aodStatus === 'loading' || visibilityStatus === 'loading'
         || (snowDisplay !== 'hidden' && source === 'windy' && snowStatus === 'loading');
     $: dateGroups = buildWeatherDateGroups(points, timeZone, language);
@@ -221,12 +220,10 @@
         return String(Math.round(value));
     };
 
-    const metricUnit = (metric: WeatherMetric, selectedUnits: UnitPreferences, snowPeriod?: number | null): string => {
-        if (metric === 'snowWaterMm') {
-            return snowPeriod ? `mm · ${snowPeriod}h` : 'mm';
-        }
+    const metricUnit = (metric: WeatherMetric, selectedUnits: UnitPreferences, weatherSource: WeatherSource, snowPeriod?: number | null): string => {
         if (metric === 'snowfallCm') {
-            return snowPeriod ? `OM · cm · ${snowPeriod}h` : 'OM · cm';
+            const unit = weatherSource === 'windy' ? 'cm' : 'OM · cm';
+            return snowPeriod ? `${unit} · ${snowPeriod}h` : unit;
         }
         if (metric === 'snowDepthCm') {
             return 'OM · cm';
@@ -246,21 +243,28 @@
         return text.metrics[metric][1];
     };
 
-    const metricAriaLabel = (metric: WeatherMetric, selectedUnits: UnitPreferences, snowPeriod?: number | null): string => {
-        if (metric === 'precipMm' && source === 'open-meteo') {
-            return messages[language].precipitationInThePrecedingHour;
+    const metricAriaLabel = (
+        metric: WeatherMetric,
+        selectedUnits: UnitPreferences,
+        weatherSource: WeatherSource,
+        uiLanguage: UiLanguage,
+        snowPeriod?: number | null,
+    ): string => {
+        const name = weatherMetricLabel(metric, uiLanguage, weatherSource);
+        if (metric === 'precipMm' && weatherSource === 'open-meteo') {
+            return messages[uiLanguage].precipitationInThePrecedingHour;
         }
         if (metric === 'aod550') {
-            return messages[language].aODAtNanometresOpenMeteoSourcedFrom;
+            return messages[uiLanguage].aODAtNanometresOpenMeteoSourcedFrom;
         }
         if (metric === 'visibilityKm') {
-            return `${text.metrics[metric][0]} ${selectedUnits.distance}, Open-Meteo`;
+            return `${name} ${selectedUnits.distance}, Open-Meteo`;
         }
         if (metric === 'snowDepthCm') {
-            return `${text.metrics[metric][0]} cm, Open-Meteo`;
+            return `${name} cm, Open-Meteo`;
         }
-        const unit = metricUnit(metric, selectedUnits, snowPeriod);
-        return `${text.metrics[metric][0]}${unit ? ` ${unit}` : ''}`;
+        const unit = metricUnit(metric, selectedUnits, weatherSource, snowPeriod);
+        return `${name}${unit ? ` ${unit}` : ''}`;
     };
 
     const cloudBarStyle = (metric: WeatherMetric, value: number | null): string =>
@@ -340,43 +344,23 @@
                 class={`weather-snow-grade tone-${snowSummary?.tone ?? 'neutral'}`}
                 title={snowSummary ? `${comparisonInstantLabel(snowSummary.start, timeZone)} – ${comparisonInstantLabel(snowSummary.end, timeZone)}${snowSummary.grade ? ' · GB/T 28592-2012' : ''}` : undefined}
             >
-                <WeatherMetricIcon metric="snowWaterMm" size={12} />
+                <WeatherMetricIcon metric="snowfallCm" size={12} />
                 <span>
                     24 h
-                    {#if source === 'open-meteo'} · {snowSummary?.snowfallCm ?? '—'} cm{/if}
-                    · {snowSummary?.amountMm ?? '—'} mm
+                    · {snowSummary?.snowfallCm ?? '—'} cm
+                    {#if source === 'open-meteo'} · {snowSummary?.amountMm ?? '—'} mm{/if}
                     {#if snowSummary?.grade} · {snowGradeLabel(snowSummary.grade, language)}{/if}
                 </span>
             </span>
         </div>
     {/if}
-    {#if ['loading', 'error', 'empty'].includes(aodStatus) || (source === 'windy' && ['loading', 'error', 'empty'].includes(visibilityStatus)) || showSnowNotice}
-        <div class="weather-date-notice weather-metric-notice" role="status">
-            {#if aodStatus === 'error'}
-                <button type="button" class="weather-source-retry" on:click={() => dispatch('atmosphereretry', 'aod')}>{text.aodRetry}</button>
-            {:else if aodStatus === 'empty'}
-                <span>{text.aodEmpty}</span>
-            {:else if aodStatus === 'loading'}
-                <span>{text.aodLoading}</span>
-            {/if}
-            {#if source === 'windy' && visibilityStatus === 'error'}
-                <button type="button" class="weather-source-retry" on:click={() => dispatch('atmosphereretry', 'visibility')}>{text.visibilityRetry}</button>
-            {:else if source === 'windy' && visibilityStatus === 'empty'}
-                <span>{text.visibilityEmpty}</span>
-            {:else if source === 'windy' && visibilityStatus === 'loading'}
-                <span>{text.visibilityLoading}</span>
-            {/if}
-            {#if showSnowNotice}
-                {#if snowStatus === 'error'}
-                    <button type="button" title="Open-Meteo" class="weather-source-retry" on:click={() => dispatch('atmosphereretry', 'snow')}>
-                        {text.snowSupplement} · {text.metricLoadFailed} · {text.retry}
-                    </button>
-                {:else}
-                    <span title="Open-Meteo">{text.snowSupplement} · {text.metricMissingData}</span>
-                {/if}
-            {/if}
-        </div>
-    {/if}
+    <WeatherSupplementStatus
+        {language}
+        aod={aodStatus}
+        visibility={source === 'windy' ? visibilityStatus : 'idle'}
+        snow={source === 'windy' && snowDisplay !== 'hidden' ? snowStatus : 'idle'}
+        on:retry={event => dispatch('atmosphereretry', event.detail)}
+    />
 
     {#if selectedDateNotice && points.length > 0}
         <div class="weather-date-notice" role="status">{selectedDateNotice}</div>
@@ -462,32 +446,36 @@
 
                 {#each metricRows as metric (metric)}
                     {@const snowMetric = metric.startsWith('snow')}
-                    {@const accumulationPeriod = metric === 'snowfallCm' && source === 'open-meteo' ? 1 : snowWaterPeriod}
+                    {@const estimatedSnow = metric === 'snowfallCm' && source === 'windy'}
+                    {@const accumulationPeriod = source === 'open-meteo' ? 1 : snowfallPeriod}
+                    {@const unit = metricUnit(metric, units, source, accumulationPeriod)}
+                    {@const label = metricAriaLabel(metric, units, source, language, accumulationPeriod)}
                     <div class="weather-row" role="row">
                         <div
                             class="weather-cell weather-label weather-metric-label"
                             class:weather-metric-label--snow={snowMetric}
                             role="rowheader"
-                            aria-label={metricAriaLabel(metric, units, accumulationPeriod)}
-                            title={snowMetric ? metricAriaLabel(metric, units, accumulationPeriod) : undefined}
+                            aria-label={label}
+                            title={estimatedSnow ? `${label} · 1 mm ≈ 1 cm` : snowMetric ? label : undefined}
                         >
                             <span class="weather-metric-label__name" class:weather-metric-label__name--wrap={snowMetric || metric === 'windGustMs'}>
                                 {#if !snowMetric}<WeatherMetricIcon {metric} size={10} />{/if}
-                                <span>{text.metrics[metric][0]}</span>
+                                <span>{weatherMetricLabel(metric, language, source)}</span>
                             </span>
-                            {#if metricUnit(metric, units, accumulationPeriod)}
+                            {#if unit}
                                 <small class:weather-metric-label__snow-unit={snowMetric}>
                                     {#if snowMetric}<WeatherMetricIcon {metric} size={9} />{/if}
-                                    {metricUnit(metric, units, accumulationPeriod)}
+                                    {unit}
                                 </small>
                             {/if}
                         </div>
                         {#each points as point, index}
                             {@const value = weatherMetricValue(point, metric)}
+                            {@const valueText = metricValueText(metric, value, units)}
                             {@const tone = weatherMetricTone(metric, value)}
                             {@const snowPeriod = metric === 'snowfallCm' && source === 'open-meteo' ? 1 : point.snowWaterPeriodHours}
-                            {@const snowAmountLabel = (metric === 'snowWaterMm' || metric === 'snowfallCm') && value !== null && snowPeriod
-                                ? `${metricValueText(metric, value, units)} ${metricUnit(metric, units, snowPeriod)}`
+                            {@const snowAmountLabel = metric === 'snowfallCm' && value !== null && snowPeriod
+                                ? `${valueText} ${metricUnit(metric, units, source, snowPeriod)}`
                                 : undefined}
                             <div
                                 class="weather-cell weather-value-cell"
@@ -519,7 +507,7 @@
                                         <path d="M12 2 18 20 12 16 6 20Z"></path>
                                     </svg>
                                 {:else}
-                                    <span>{metricValueText(metric, value, units)}</span>
+                                    <span>{valueText}</span>
                                 {/if}
                             </div>
                         {/each}
@@ -713,26 +701,10 @@
     }
 
     .weather-model-control button:focus-visible,
-    .weather-source-retry:focus-visible,
     .weather-state button:focus-visible,
     .weather-table-scroll:focus-visible {
         outline: 2px solid #8ed0ff;
         outline-offset: -2px;
-    }
-
-    .weather-source-retry {
-        overflow: hidden;
-        min-width: 0;
-        padding: 0;
-        border: 0;
-        color: #ffd38a;
-        background: transparent;
-        font: inherit;
-        font-size: 10px;
-        text-align: left;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        cursor: pointer;
     }
 
     .weather-date-notice {
@@ -742,22 +714,6 @@
         background: rgba(91, 60, 14, 0.42);
         font-size: 10px;
         line-height: 1.3;
-    }
-
-    .weather-metric-notice {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 12px;
-    }
-
-    .weather-metric-notice .weather-source-retry {
-        min-height: 24px;
-    }
-
-    @media (pointer: coarse) {
-        .weather-metric-notice .weather-source-retry {
-            min-height: 44px;
-        }
     }
 
     .weather-state {

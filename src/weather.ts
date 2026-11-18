@@ -295,6 +295,8 @@ export const transformWeatherPayload = (
             const humidity = valueAtTimestamp(payload.sounding, soundingIndex, 'rh-surface', timestamp);
             const precipAmount = finiteNumber(payload.data.precipAmount[dataIndex]);
             const snowWater = finiteNumber(payload.data.precipSnowAmount?.[dataIndex]);
+            const snowWaterMm = snowWater !== null && snowWater >= 0 ? snowWater : null;
+            const snowWaterPeriodHours = windySnowPeriodHours(payload.data.ts, dataIndex);
             const precipType = payload.data.precipType?.[dataIndex];
             const wind = finiteNumber(payload.data.wind[dataIndex]);
             const gust = finiteNumber(payload.data.windGust?.[dataIndex]);
@@ -315,8 +317,10 @@ export const transformWeatherPayload = (
                 dewPointC: kelvinToCelsius(dewPoint),
                 humidityPercent: normalizePercent(humidity),
                 precipMm: precipAmount === null ? null : roundTo(Math.max(0, precipAmount), 1),
-                snowWaterMm: snowWater !== null && snowWater >= 0 ? snowWater : null,
-                snowWaterPeriodHours: windySnowPeriodHours(payload.data.ts, dataIndex),
+                snowWaterMm,
+                snowWaterPeriodHours,
+                // Windy's 10:1 snow-to-water ratio gives 1 cm of new snow per 1 mm of water equivalent.
+                snowfallCm: snowWaterPeriodHours === null ? null : snowWaterMm,
                 snowCondition: precipType == null ? null : WINDY_SNOW_CONDITIONS[precipType] ?? null,
                 // Windy's point forecast already returns metres per second. Normalize once
                 // to the table's 0.1 m/s precision so values, thresholds, and colors agree.
@@ -553,7 +557,8 @@ export const summarizeSnowWater24h = (points: WeatherPoint[], startIndex: number
         : undefined;
     return {
         start, end, amountMm,
-        snowfallCm: snowfallCm === null ? null : roundTo(snowfallCm, 2),
+        // Apply the same 1 mm to 1 cm estimate to the complete Windy total.
+        snowfallCm: hourly ? (snowfallCm === null ? null : roundTo(snowfallCm, 2)) : amountMm,
         grade: classification?.grade ?? null,
         tone: classification?.tone ?? 'neutral',
     };

@@ -83,9 +83,12 @@ describe('compiled seven-day date axes', () => {
         ];
         const metrics = multiDayWeatherMetrics([window], snowy, 'windy', 'auto');
         const visible = cells(renderTable({ ...props, rows: [row], points: snowy, orientation, metrics, snowStatus: 'ready' }));
-        expect(visible[`${row.date}/snowWaterMm`]).toBe('0–0.12 mm');
+        expect(visible[`${row.date}/snowWaterMm`]).toBeUndefined();
         expect(visible[`${row.date}/snowfallCm`]).toBe('0–0.35 cm');
         expect(visible[`${row.date}/snowDepthCm`]).toBe('8 cm');
+        const failed = cells(renderTable({ ...props, rows: [row], points: snowy, orientation, metrics, snowStatus: 'error' }));
+        expect(failed[`${row.date}/snowfallCm`]).toBe('0–0.35 cm');
+        expect(failed[`${row.date}/snowDepthCm`]).toContain('加载失败');
         expect(multiDayWeatherMetrics([window], snowy, 'windy', 'hidden')).not.toContain('snowfallCm');
         expect(multiDayWeatherMetrics([window], [], 'open-meteo', 'always')).toContain('snowfallCm');
     });

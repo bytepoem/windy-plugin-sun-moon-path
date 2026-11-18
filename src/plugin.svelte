@@ -1168,7 +1168,7 @@
         scheduleReopenAfterHome,
         shouldRefreshSameLocationImmediately,
     } from './location';
-    import { fetchOpenMeteoAtmosphereMetric, fetchOpenMeteoSnow, type AtmosphereMetric } from './openMeteo';
+    import { fetchOpenMeteoAtmosphereMetric, fetchOpenMeteoSnowDepth, type AtmosphereMetric } from './openMeteo';
     import { createForecastController, emptyForecastState } from './forecastController';
     import { windyWeatherProvider } from './windyWeatherProvider';
     import {
@@ -1514,7 +1514,7 @@
     const forecastController = createForecastController({
         ...windyWeatherProvider,
         atmosphere: request => request.metric === 'snow'
-            ? fetchOpenMeteoSnow(request)
+            ? fetchOpenMeteoSnowDepth(request)
             : fetchOpenMeteoAtmosphereMetric(request.metric, request),
     }, state => {
         forecastState = state;

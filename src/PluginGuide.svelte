@@ -124,6 +124,7 @@
             <div>
                 <dt>{text.featureGuide.weatherSources.title}</dt>
                 <dd>{text.featureGuide.weatherSources.description}</dd>
+                <dd>{text.featureGuide.weatherSources.supplementRetry}</dd>
             </div>
             <div>
                 <dt>{text.featureGuide.weatherSnow.title}</dt>

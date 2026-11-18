@@ -337,6 +337,7 @@ export const translations: Record<UiLanguage, {
             weatherSources: {
                 title: '天气数据源与模型',
                 description: '天气表、观测时段与收藏对比共用所选数据源和模型。云高与地图云图来自 Windy，AOD 来自 CAMS；Windy 能见度由 Open-Meteo 补充。AOD 与补充能见度独立加载，天气表可分别重试失败项；Open-Meteo 天气保留所选模型的能见度。收藏对比保留已取得的单项数据，失败项显示「加载失败」，用「刷新对比」重新加载整个对比。缺测仍为未知。',
+                supplementRetry: '天气表和 7 天总览的 Open-Meteo 提示也支持单独重试补充雪况。',
             },
             units: {
                 title: '显示单位',
@@ -344,8 +345,8 @@ export const translations: Record<UiLanguage, {
             },
             weatherSnow: {
                 title: '降雪与积雪',
-                description: '天气表在有非零值时显示雪数据。Windy 显示预报时段的降雪水当量（mm），Open-Meteo 显示前一小时的新降雪和该时刻的地面积雪深度（cm）。',
-                supplement: 'Windy 模式下，Open-Meteo 按所选模型补充新降雪和积雪深度。',
+                description: 'Open-Meteo 显示前一小时的新降雪和该时刻的地面积雪深度（cm）。',
+                supplement: 'Windy 用雪水当量估算新雪厚度（1 mm ≈ 1 cm），地面积雪深度由 Open-Meteo 补充。',
                 classification: '雪水当量连续覆盖 24 小时时，按国标显示降雪等级。',
             },
 
@@ -644,6 +645,7 @@ export const translations: Record<UiLanguage, {
             weatherSources: {
                 title: 'Weather sources and models',
                 description: 'Weather, observing windows and comparisons share the selected source and model. Cloud heights and map clouds use Windy; AOD uses CAMS. AOD and supplementary Windy visibility load independently and can be retried separately in the weather table. Open-Meteo weather retains model visibility. Comparisons retain available metrics, mark failed ones as Load failed and use Refresh comparison to reload the entire comparison. Missing values remain unknown.',
+                supplementRetry: 'The Open-Meteo notice in Weather and the seven-day overview also lets you retry supplementary snow data on its own.',
             },
             units: {
                 title: 'Display units',
@@ -651,8 +653,8 @@ export const translations: Record<UiLanguage, {
             },
             weatherSnow: {
                 title: 'Snowfall and snow depth',
-                description: 'Snow rows appear when the forecast contains positive values. Windy shows snow water equivalent (mm) per forecast step. Open-Meteo shows new snow in the preceding hour and ground snow depth at the indicated time (cm).',
-                supplement: 'In Windy mode, Open-Meteo supplies new snow and snow depth for the selected model.',
+                description: 'Open-Meteo shows new snow in the preceding hour and ground snow depth at the indicated time (cm).',
+                supplement: 'Windy estimates new snow from snow water equivalent (1 mm ≈ 1 cm). Open-Meteo supplies ground snow depth.',
                 classification: 'Snow grades require 24 hours of snow water equivalent.',
             },
 

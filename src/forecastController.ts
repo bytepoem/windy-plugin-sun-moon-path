@@ -190,7 +190,7 @@ export const createForecastController = (
                         metric: kind,
                     }),
                 result => (result.some(point => kind === 'snow'
-                    ? point.snowDepthCm != null || point.snowfallCm != null
+                    ? point.snowDepthCm != null
                     : point[supplementFields[kind]] != null) ? 'ready' : 'empty'),
                 'atmosphere',
             );
