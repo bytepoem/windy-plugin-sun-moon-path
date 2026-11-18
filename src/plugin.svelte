@@ -1565,6 +1565,7 @@
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
     let isMounted = false;
+    let hasOpened = false;
     let latestRequestId = 0;
     let panelElement: HTMLElement | null = null;
     let mobilePluginRoot: HTMLElement | null = null;
@@ -1681,7 +1682,8 @@
             ? text.lightPollutionLoadError
             : '';
 
-    $: if (isMounted && astronomyKey) {
+    // Windy supplies the opening location after constructing the panel.
+    $: if (isMounted && hasOpened && astronomyKey) {
         void refreshPaths(astronomyKey);
     }
 
@@ -1693,6 +1695,7 @@
 
     $: if (
         isMounted
+        && hasOpened
         && !isMobileCollapsed
         && lightPollutionRequestKey
         && lightPollutionRequestKey !== lightPollutionLoadedKey
@@ -2854,7 +2857,7 @@
             lightPollutionStatus = 'idle';
         }
         const nextKey = makeAstronomyKey(nextLocation, selectedDate);
-        const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted, astronomyKey, nextKey);
+        const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted && hasOpened, astronomyKey, nextKey);
         astronomyKey = nextKey;
 
         if (isMounted) {
@@ -2976,6 +2979,10 @@
 
             lastKnownGpsLocation = gpsLocation;
             favoriteDistanceOrigin = gpsLocation;
+            // A fresh fix may confirm the cached coordinates already being loaded.
+            if (gpsLocation.lat === selectedLocation.lat && gpsLocation.lon === selectedLocation.lon) {
+                return;
+            }
             addressSelectedLocation = null;
             setLocation(gpsLocation, false);
             recenterSelectedLocationInVisibleMap(6);
@@ -3242,6 +3249,7 @@
         favoriteDistanceOrigin = cachedGpsLocation();
         const nextLocation = params ? coordinatesFromLocation(params) || defaultLocation() : defaultLocation();
         setLocation(nextLocation, false);
+        hasOpened = true;
         recenterSelectedLocationInVisibleMap(6);
         if (!params) {
             void centerOnCurrentGps(requestId);
