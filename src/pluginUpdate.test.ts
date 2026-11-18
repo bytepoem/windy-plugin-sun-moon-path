@@ -142,7 +142,7 @@ describe('plugin update reminder acknowledgement', () => {
 });
 
 describe('checkPluginUpdate', () => {
-    it('parses the actual local beta preview including external-language guidance', async () => {
+    it('loads external-language guidance from the published entry alongside the local beta preview', async () => {
         const result = await checkPluginUpdate({
             currentVersion: '0.12.5', repositoryUrl,
             betaNotesUrl: 'https://localhost:9999/release-notes/beta.json',
@@ -151,8 +151,9 @@ describe('checkPluginUpdate', () => {
         });
         expect(result.notesStatus).toBe('loaded');
         expect(result.channel).toBe('beta');
-        expect(result.notes?.zh.items.some(item => item.text.includes('按需下载'))).toBe(true);
-        expect(result.notes?.en.items.some(item => item.text.includes('download individually'))).toBe(true);
+        const publishedNotes = result.seriesNotes.find(notes => notes.version === '0.13.0');
+        expect(publishedNotes?.zh.items.some(item => item.text.includes('按需下载'))).toBe(true);
+        expect(publishedNotes?.en.items.some(item => item.text.includes('download individually'))).toBe(true);
     });
 
     it('uses an uncached local beta JSON before formal GitHub metadata', async () => {

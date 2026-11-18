@@ -19,8 +19,8 @@ describe('beta release notes development asset', () => {
         };
         const formalNotes = JSON.parse(formalNotesSource) as typeof notes;
 
-        expect(notes.version).toBe('0.13.0');
-        expect(notes.releasedAt).toBe('2026-11-16');
+        expect(notes.version).toBe('0.13.1');
+        expect(notes.releasedAt).toBe('2026-11-18');
         // Development notes retain their own version after merging a formal patch release.
         expect(formalNotes.version).toBe('0.12.6');
         expect(formalNotes.zh.items).toHaveLength(1);
@@ -46,7 +46,7 @@ describe('release note publishing contract', () => {
     const [major, minor, patch] = manifest.version.split('.').map(Number);
     const currentSeriesVersions = Array.from({ length: patch + 1 }, (_, index) => `${major}.${minor}.${patch - index}`);
 
-    it('keeps published changes out of the next-minor development preview', async () => {
+    it('keeps published changes in the prior version of the development preview', async () => {
         const result = await checkPluginUpdate({
             currentVersion: manifest.version,
             repositoryUrl: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
@@ -60,9 +60,10 @@ describe('release note publishing contract', () => {
         });
 
         expect(result.channel).toBe('beta');
-        expect(result.latestVersion).toBe('0.13.0');
+        expect(result.latestVersion).toBe('0.13.1');
         expect(result.notesStatus).toBe('loaded');
-        expect(result.seriesNotes.map(notes => notes.version)).toEqual(['0.13.0']);
+        expect(result.seriesNotes.map(notes => notes.version)).toEqual(['0.13.1', '0.13.0']);
+        expect(result.seriesNotes[1]).toEqual(JSON.parse(sources['../release-notes/0.13.0.json'] as string));
         for (const language of ['zh', 'en'] as const) {
             const publishedTexts = Object.entries(sources)
                 .filter(([path]) => !path.endsWith('/beta.json'))
@@ -70,6 +71,7 @@ describe('release note publishing contract', () => {
                 .filter(notes => compareSemanticVersions(notes.version, result.latestVersion) < 0)
                 .flatMap(notes => notes[language].items.map((item: { text: string }) => item.text));
             const preview = JSON.parse(betaNotesSource)[language];
+            expect(preview.items).toHaveLength(1);
             expect(result.notes?.[language]).toEqual(preview);
             for (const item of preview.items) {
                 expect(publishedTexts).not.toContain(item.text);
@@ -89,7 +91,7 @@ describe('release note publishing contract', () => {
         }
     });
 
-    it.each([...new Set(['0.9.1', '0.10.1', '0.10.2', '0.10.3', '0.10.4', '0.11.0', '0.11.1', '0.11.2', '0.11.3', '0.11.4', '0.12.0', '0.12.1', '0.12.2', '0.12.3', '0.12.4', '0.12.5', '0.12.6', manifest.version] as string[])])('loads the full current snapshot for installed %s', async currentVersion => {
+    it.each([...new Set(['0.9.1', '0.10.1', '0.10.2', '0.10.3', '0.10.4', '0.11.0', '0.11.1', '0.11.2', '0.11.3', '0.11.4', '0.12.0', '0.12.1', '0.12.2', '0.12.3', '0.12.4', '0.12.5', '0.12.6', ...currentSeriesVersions])])('loads the full current snapshot for installed %s', async currentVersion => {
         const requested: string[] = [];
         const base = `https://raw.githubusercontent.com/bytepoem/windy-plugin-sun-moon-path/update-metadata/${manifest.version}/`;
         const result = await checkPluginUpdate({

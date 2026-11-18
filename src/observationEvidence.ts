@@ -25,14 +25,13 @@ export const resolveObservationEvidenceState = ({
     dateCoverage: WeatherDateCoverage;
     evidence: ObservationWindowEvidence;
 }): ObservationEvidenceState => {
-    if (weatherStatus === 'idle' || weatherStatus === 'loading'
-        || visibilityStatus === 'idle' || visibilityStatus === 'loading') {
+    if (weatherStatus === 'idle' || weatherStatus === 'loading') {
         return 'loading';
     }
-    if (weatherStatus === 'error' || weatherStatus === 'empty'
-        || visibilityStatus === 'error' || visibilityStatus === 'empty') {
+    if (weatherStatus === 'error' || weatherStatus === 'empty') {
         return 'unavailable';
     }
+    // Main forecast timestamps determine coverage independently of visibility.
     if ((dateCoverage === 'before-range' || dateCoverage === 'after-range')
         && evidence.weatherCoverage === 'none') {
         return 'outside-range';
@@ -42,6 +41,12 @@ export const resolveObservationEvidenceState = ({
     }
     if (evidence.weatherCoverage === 'partial') {
         return 'partial';
+    }
+    if (visibilityStatus === 'idle' || visibilityStatus === 'loading') {
+        return 'loading';
+    }
+    if (visibilityStatus === 'error' || visibilityStatus === 'empty') {
+        return 'unavailable';
     }
     if (!evidence.totalCloudPercent || !evidence.precipitationMm || !evidence.visibilityKm) {
         return 'unavailable';

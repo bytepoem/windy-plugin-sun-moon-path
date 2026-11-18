@@ -19,12 +19,12 @@
 
 ## 安装与上手
 
-当前发布版本：**0.13.0** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.0)
+当前发布版本：**0.13.1** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.1)
 
 将以下地址填入 Windy 的外部插件加载入口，打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.0/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.1/plugin.min.js
 ```
 
 1. **选机位**：点击地图，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写自己的地图服务 API Key。
@@ -60,6 +60,8 @@ https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.0/plugin.min.
 ### 日月与银河
 
 选好机位和日期，进入「天文」查看日月升落、月相、无月和银河观测时段。点击升落按钮或事件时刻跳转，再调整当地时间条，结合方向线和天空盘判断构图方向。
+
+无月黑夜和银河时段下方显示云量、降水和能见度。预报未覆盖该时段或只覆盖一部分时，卡片会显示相应提示。
 
 从「天文」下拉菜单选择「多日总览」，按无月、银河或日落前后目标比较 7 天窗口与窗口内的天气；「月度天文」查看连续 30 天的天文条件。展开日期不改变地图时间，选择窗口内的「单日事件」才跳转到对应时刻；通过「天文」下拉菜单返回总览，保留浏览范围。7 天总览顶部使用分段按钮切换 Windy / Open-Meteo 数据源及 EC / GFS / ICON 模型。控件紧凑排列，窗口规则在「说明」中折叠展示。夜间按机位当地中午至翌日中午归属，多段窗口分别展示；月相取当日中午。天气使用当前所选来源与模型，仅描述窗口内可用预报，部分覆盖、超出范围、缺测和加载失败分别提示。月度条长只表示天文窗口时长，不是天气评分或拍摄成功概率。
 

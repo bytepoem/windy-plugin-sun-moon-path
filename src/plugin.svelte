@@ -757,11 +757,12 @@
                                             <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
                                         {:else if slot.interval}
                                             <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval)}</span>
-                                            {@const evidenceState = observationEvidenceState(slot)}
-                                            {#if evidenceState === 'loading'}
-                                                <span class="astronomy-skeleton astronomy-skeleton--evidence" aria-hidden="true"></span>
-                                                <span class="visually-hidden">{text.observationEvidenceLoading}</span>
-                                            {:else if evidenceState === 'ready'}
+                                            {@const evidenceState = resolveObservationEvidenceState({
+                                                weatherStatus, visibilityStatus,
+                                                dateCoverage: selectedWeatherDate.coverage,
+                                                evidence: slot.evidence,
+                                            })}
+                                            {#if evidenceState === 'ready'}
                                                 <div class="night-window__evidence" role="group" aria-label={text.observationEvidenceLabel}>
                                                     <span
                                                         class="night-window__metric"
@@ -790,7 +791,7 @@
                                                 </div>
                                             {:else}
                                                 <span class="night-window__evidence-state">
-                                                    {observationEvidenceStateLabel(evidenceState)}
+                                                    {observationEvidenceStateLabel(evidenceState, text)}
                                                 </span>
                                             {/if}
                                         {:else}
@@ -3098,25 +3099,20 @@
     const formatIntervalDuration = (interval: AstronomyInterval): string =>
         formatRemaining(interval.end.getTime() - interval.start.getTime());
 
-    const observationEvidenceState = (slot: ObservationWindow): ObservationEvidenceState =>
-        resolveObservationEvidenceState({
-            weatherStatus,
-            visibilityStatus,
-            dateCoverage: selectedWeatherDate.coverage,
-            evidence: slot.evidence,
-        });
-
-    const observationEvidenceStateLabel = (state: ObservationEvidenceState): string => {
+    const observationEvidenceStateLabel = (state: ObservationEvidenceState, labels: typeof text): string => {
+        if (state === 'loading') {
+            return labels.observationEvidenceLoading;
+        }
         if (state === 'outside-range') {
-            return text.observationEvidenceOutsideRange;
+            return labels.observationEvidenceOutsideRange;
         }
         if (state === 'missing') {
-            return text.observationEvidenceMissing;
+            return labels.observationEvidenceMissing;
         }
         if (state === 'partial') {
-            return text.observationEvidencePartial;
+            return labels.observationEvidencePartial;
         }
-        return text.observationEvidenceUnavailable;
+        return labels.observationEvidenceUnavailable;
     };
 
     const formatObservationRange = (range: ObservationMetricRange | null, maximumFractionDigits: number): string => {
@@ -5291,12 +5287,6 @@
         width: min(78%, 150px);
         height: 11px;
         margin-top: 2px;
-    }
-
-    .astronomy-skeleton--evidence {
-        width: min(100%, 150px);
-        height: 20px;
-        margin-top: 3px;
     }
 
     @keyframes astronomy-skeleton-pulse {

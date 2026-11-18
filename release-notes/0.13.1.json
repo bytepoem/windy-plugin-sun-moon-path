@@ -1,0 +1,24 @@
+{
+  "version": "0.13.1",
+  "releasedAt": "2026-11-18",
+  "zh": {
+    "title": "夜间观测时段天气提示",
+    "summary": "无月黑夜和银河时段及时显示预报覆盖状态。",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "修复补充能见度加载较慢时，无月黑夜和银河时段下方看起来空白的问题。主预报已确认缺测或覆盖不完整时，会直接显示对应提示。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Night observing forecast status",
+    "summary": "Moonless and Milky Way windows report forecast coverage promptly.",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed an apparently blank weather summary below moonless and Milky Way windows while supplementary visibility loads. The card reports missing or partial coverage as soon as the main forecast confirms it."
+      }
+    ]
+  }
+}

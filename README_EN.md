@@ -21,12 +21,12 @@ Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glo
 
 Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About. This describes the current repository; released behavior is listed in the release notes.
 
-Current release: **0.13.0** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.0)
+Current release: **0.13.1** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.1)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.0/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.1/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
@@ -60,6 +60,8 @@ The desktop title back button supports keyboard focus. Astro and Clouds tabs use
 ### Sun, Moon and Milky Way
 
 Choose a location and date, then open Astro for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
+
+Cloud cover, precipitation and visibility appear below the moonless and Milky Way windows. The card indicates when forecast coverage is missing or partial.
 
 Choose Multi-day overview from the Astro dropdown to compare seven days of moonless, Milky Way or sunset ±1 hour windows and weather within each window. Monthly astronomy covers 30 consecutive days. Expanding a date keeps map time; choosing Single-day events within a window jumps to that time. Return through the Astro dropdown to preserve the browsing range. Segmented buttons at the top of the seven-day overview switch between Windy / Open-Meteo sources and EC / GFS / ICON models. Controls use a compact layout, with window rules folded under Guide. Nights belong to the local-noon-to-next-noon period, with separate segments; Moon phase is calculated at noon. Weather uses the selected source and model, retaining partial coverage, out-of-range, missing-data and loading-failure states. Monthly bars show astronomical duration, not weather scores or shooting success probabilities.
 

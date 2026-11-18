@@ -44,6 +44,30 @@ describe('observation evidence presentation state', () => {
         })).toBe('unavailable');
     });
 
+    it.each([
+        ['loading', 'covered', 'none', 'missing'],
+        ['error', 'covered', 'none', 'missing'],
+        ['loading', 'before-range', 'none', 'outside-range'],
+        ['error', 'covered', 'partial', 'partial'],
+    ] as const)('resolves forecast coverage with visibility %s, date %s and window %s',
+        (visibilityStatus, dateCoverage, weatherCoverage, expected) => {
+            expect(resolveObservationEvidenceState({
+                weatherStatus: 'ready',
+                visibilityStatus,
+                dateCoverage,
+                evidence: completeEvidence({ weatherCoverage, visibilityKm: null }),
+            })).toBe(expected);
+        });
+
+    it('shows a main weather failure even while supplementary visibility is loading', () => {
+        expect(resolveObservationEvidenceState({
+            weatherStatus: 'error',
+            visibilityStatus: 'loading',
+            dateCoverage: 'missing',
+            evidence: completeEvidence({ weatherCoverage: 'none' }),
+        })).toBe('unavailable');
+    });
+
     it('distinguishes dates outside the forecast from missing in-range samples', () => {
         const noCoverage = completeEvidence({ weatherSampleCount: 0, weatherCoverage: 'none' });
         expect(resolveObservationEvidenceState({
