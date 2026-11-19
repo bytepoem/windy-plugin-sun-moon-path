@@ -750,77 +750,62 @@
 
                         <div class="night-window-list" aria-label={text.nightObservationWindowsLabel}>
                             {#each observationWindows as slot}
+                                {@const evidenceState = slot.interval && resolveObservationEvidenceState({
+                                    weatherStatus, visibilityStatus,
+                                    dateCoverage: selectedWeatherDate.coverage,
+                                    evidence: slot.evidence,
+                                })}
                                 <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
-                                    <div class="night-window__body">
-                                        <strong>{text.intervals[slot.kind]}</strong>
-                                        {#if status === 'loading'}
-                                            <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
-                                        {:else if slot.interval}
+                                    <strong>{text.intervals[slot.kind]}</strong>
+                                    {#if status === 'loading'}
+                                        <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
+                                    {:else}
+                                        {#if slot.interval}
                                             <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval)}</span>
-                                            {@const evidenceState = resolveObservationEvidenceState({
-                                                weatherStatus, visibilityStatus,
-                                                dateCoverage: selectedWeatherDate.coverage,
-                                                evidence: slot.evidence,
-                                            })}
-                                            {#if evidenceState === 'ready'}
-                                                <div class="night-window__evidence" role="group" aria-label={text.observationEvidenceLabel}>
-                                                    <span
-                                                        class="night-window__metric"
-                                                        title={text.observationMetricLabels.totalCloudPercent}
-                                                    >
-                                                        <span class="visually-hidden">{text.observationMetricLabels.totalCloudPercent}</span>
-                                                        <WeatherMetricIcon metric="totalCloudPercent" size={11} />
-                                                        {formatObservationMeasurement(slot.evidence.totalCloudPercent, 0, '%')}
-                                                    </span>
-                                                    <span
-                                                        class="night-window__metric"
-                                                        title={text.observationMetricLabels.precipMm}
-                                                    >
-                                                        <span class="visually-hidden">{text.observationMetricLabels.precipMm}</span>
-                                                        <WeatherMetricIcon metric="precipMm" size={11} />
-                                                        {formatObservationPrecipitation(slot.evidence.precipitationMm, units.precipitation)}
-                                                    </span>
-                                                    <span
-                                                        class="night-window__metric"
-                                                        title={text.observationMetricLabels.visibilityKm}
-                                                    >
-                                                        <span class="visually-hidden">{text.observationMetricLabels.visibilityKm}</span>
-                                                        <WeatherMetricIcon metric="visibilityKm" size={11} />
-                                                        {formatObservationDistance(slot.evidence.visibilityKm, units.distance)}
-                                                    </span>
-                                                </div>
-                                            {:else}
-                                                <span class="night-window__evidence-state">
-                                                    {observationEvidenceStateLabel(evidenceState, text)}
-                                                </span>
-                                            {/if}
-                                        {:else}
-                                            <span>
-                                                {status === 'error'
-                                                    ? text.intervalUnavailable
-                                                    : status === 'ready' || status === 'empty'
-                                                        ? text.noInterval
-                                                        : text.calculating}
-                                            </span>
-                                            <div
-                                                class="night-window__evidence night-window__evidence--placeholder"
-                                                aria-hidden="true"
-                                            >
-                                                <span class="night-window__metric">
+                                        {:else if status === 'ready' || status === 'empty'}
+                                            <span aria-hidden="true">—</span>
+                                        {/if}
+                                        {#if evidenceState === 'ready'}
+                                            <div class="night-window__evidence" role="group" aria-label={text.observationEvidenceLabel}>
+                                                <span
+                                                    class="night-window__metric"
+                                                    title={text.observationMetricLabels.totalCloudPercent}
+                                                >
+                                                    <span class="visually-hidden">{text.observationMetricLabels.totalCloudPercent}</span>
                                                     <WeatherMetricIcon metric="totalCloudPercent" size={11} />
-                                                    --
+                                                    {formatObservationMeasurement(slot.evidence.totalCloudPercent, 0, '%')}
                                                 </span>
-                                                <span class="night-window__metric">
+                                                <span
+                                                    class="night-window__metric"
+                                                    title={text.observationMetricLabels.precipMm}
+                                                >
+                                                    <span class="visually-hidden">{text.observationMetricLabels.precipMm}</span>
                                                     <WeatherMetricIcon metric="precipMm" size={11} />
-                                                    --
+                                                    {formatObservationPrecipitation(slot.evidence.precipitationMm, units.precipitation)}
                                                 </span>
-                                                <span class="night-window__metric">
+                                                <span
+                                                    class="night-window__metric"
+                                                    title={text.observationMetricLabels.visibilityKm}
+                                                >
+                                                    <span class="visually-hidden">{text.observationMetricLabels.visibilityKm}</span>
                                                     <WeatherMetricIcon metric="visibilityKm" size={11} />
-                                                    --
+                                                    {formatObservationDistance(slot.evidence.visibilityKm, units.distance)}
                                                 </span>
                                             </div>
+                                        {:else}
+                                            <span class="night-window__evidence-state">
+                                                {#if evidenceState}
+                                                    {observationEvidenceStateLabel(evidenceState, text)}
+                                                {:else if status === 'error'}
+                                                    {text.intervalUnavailable}
+                                                {:else if status === 'ready' || status === 'empty'}
+                                                    {text.noInterval}
+                                                {:else}
+                                                    {text.calculating}
+                                                {/if}
+                                            </span>
                                         {/if}
-                                    </div>
+                                    {/if}
                                 </article>
                             {/each}
                         </div>
@@ -5359,6 +5344,11 @@
     }
 
     .night-window {
+        display: grid;
+        /* Keep titles, times, and messages aligned even when translated text wraps. */
+        grid-row: span 3;
+        grid-template-rows: subgrid;
+        row-gap: 2px;
         min-width: 0;
         padding: 6px 8px;
         border: 1px solid rgba(115, 143, 214, 0.32);
@@ -5371,13 +5361,7 @@
         background: rgba(29, 22, 63, 0.72);
     }
 
-    .night-window__body {
-        display: grid;
-        gap: 2px;
-        min-width: 0;
-    }
-
-    .night-window__body strong {
+    .night-window strong {
         overflow: visible;
         color: var(--astronomy-text);
         font-size: 12px;
@@ -5386,7 +5370,7 @@
         line-height: 1.2;
     }
 
-    .night-window__body span {
+    .night-window span {
         overflow: visible;
         color: var(--astronomy-muted);
         font-size: 10px;
@@ -5397,6 +5381,7 @@
     }
 
     .night-window__evidence {
+        grid-row: 3;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -5406,7 +5391,7 @@
         border-top: 1px solid rgba(153, 181, 235, 0.16);
     }
 
-    .night-window__body span.night-window__metric {
+    .night-window span.night-window__metric {
         display: inline-flex;
         flex-shrink: 0;
         align-items: center;
@@ -5416,16 +5401,11 @@
         white-space: nowrap;
     }
 
-    .night-window__body span.night-window__evidence-state {
-        margin-top: 2px;
-        padding-top: 4px;
-        border-top: 1px solid rgba(153, 181, 235, 0.16);
+    .night-window span.night-window__evidence-state {
+        grid-row: 3;
         color: #93a3bc;
         font-size: 9.5px;
-    }
-
-    .night-window__evidence--placeholder {
-        opacity: 0.48;
+        overflow-wrap: anywhere;
     }
 
     /* Keep the bilingual support label readable without narrowing the project links. */
@@ -5575,11 +5555,8 @@
         }
 
         .night-window {
-            padding: 2px 6px;
-        }
-
-        .night-window__body {
-            gap: 0;
+            padding: 4px 6px;
+            row-gap: 1px;
         }
 
         .night-window__evidence {

@@ -61,7 +61,7 @@ The desktop title back button supports keyboard focus. Astro and Clouds tabs use
 
 Choose a location and date, then open Astro for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
 
-Cloud cover, precipitation and visibility appear below the moonless and Milky Way windows. The card indicates when forecast coverage is missing or partial.
+Cloud cover, precipitation and visibility appear below the moonless and Milky Way windows. A message under the time row indicates when there is no window for the date or forecast coverage is missing or partial.
 
 Choose Multi-day overview from the Astro dropdown to compare seven days of moonless, Milky Way or sunset ±1 hour windows and weather within each window. Monthly astronomy covers 30 consecutive days. Expanding a date keeps map time; choosing Single-day events within a window jumps to that time. Return through the Astro dropdown to preserve the browsing range. Segmented buttons at the top of the seven-day overview switch between Windy / Open-Meteo sources and EC / GFS / ICON models. Controls use a compact layout, with window rules folded under Guide. Nights belong to the local-noon-to-next-noon period, with separate segments; Moon phase is calculated at noon. Weather uses the selected source and model, retaining partial coverage, out-of-range, missing-data and loading-failure states. Monthly bars show astronomical duration, not weather scores or shooting success probabilities.
 

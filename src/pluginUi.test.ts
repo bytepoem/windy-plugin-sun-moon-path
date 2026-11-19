@@ -716,30 +716,15 @@ describe('plugin astronomy loading presentation', () => {
         expect(narrowMobileSource).toMatch(/\.live-position__event-azimuth\s*{[\s\S]*?display: none;/);
     });
 
-    it('keeps the evidence skeleton when no observing interval exists', () => {
-        const placeholderStart = pluginSource.indexOf(
-            'class="night-window__evidence night-window__evidence--placeholder"',
-        );
-        const placeholderEnd = pluginSource.indexOf('</div>', placeholderStart);
-        const placeholderSource = pluginSource.slice(placeholderStart, placeholderEnd);
-        const placeholderStyle = pluginSource.match(
-            /\.night-window__evidence--placeholder\s*{([\s\S]*?)\n\s*}/,
+    it('uses plain text for missing weather and missing observing intervals', () => {
+        const statusRow = pluginSource.match(
+            /<span class="night-window__evidence-state">([\s\S]*?)<\/span>/,
         )?.[1];
 
-        expect(placeholderStart).toBeGreaterThanOrEqual(0);
-        expect(placeholderEnd).toBeGreaterThan(placeholderStart);
-        expect(placeholderSource).toContain('aria-hidden="true"');
-        expect(placeholderSource.match(/class="night-window__metric"/g)).toHaveLength(3);
-        expect(Array.from(placeholderSource.matchAll(/metric="([^"]+)"/g), match => match[1])).toEqual([
-            'totalCloudPercent',
-            'precipMm',
-            'visibilityKm',
-        ]);
-        expect(placeholderSource.match(/>\s*--\s*<\/span>/g)).toHaveLength(3);
-        expect(placeholderSource).not.toContain('astronomy-skeleton');
-        expect(placeholderSource).not.toContain('aria-live');
-        expect(placeholderStyle).toContain('opacity: 0.48;');
-        expect(placeholderStyle).not.toContain('animation');
+        expect(statusRow).toContain('observationEvidenceStateLabel(evidenceState, text)');
+        expect(statusRow).toContain('text.noInterval');
+        expect(statusRow).toContain('text.intervalUnavailable');
+        expect(pluginSource).not.toContain('night-window__evidence--placeholder');
     });
 
     it('opens one native date-time picker and retains a visible keyboard focus indicator', () => {

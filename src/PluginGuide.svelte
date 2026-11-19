@@ -147,7 +147,7 @@
             <div>
                 <dt>{text.featureGuide.observationEvidence.title}</dt>
                 <dd>{text.featureGuide.observationEvidence.description}</dd>
-                <dd>{text.observationEvidenceMissing} / {text.observationEvidencePartial}</dd>
+                <dd>{text.noInterval} / {text.observationEvidenceMissing} / {text.observationEvidencePartial}</dd>
             </div>
             <div>
                 <dt>{text.featureGuide.favorites.title}</dt>
