@@ -56,14 +56,6 @@
             <a class="about-actions__issues" href={issuesUrl} target="_blank" rel="noreferrer">{text.aboutIssuesLabel}</a>
             <a class="about-actions__star" href={repositoryUrl} target="_blank" rel="noreferrer">{text.aboutStarLabel}</a>
             <a class="about-actions__xiaohongshu" href="https://xhslink.cn/o/rXpBcBK0Qy" target="_blank" rel="noopener noreferrer" aria-label={text.aboutXiaohongshuHint} title={text.aboutXiaohongshuHint}>{text.aboutXiaohongshuLabel}</a>
-            <a class="about-actions__support" href="https://afdian.com/a/bytepoem" target="_blank" rel="noopener noreferrer">
-                <svg class="about-support-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M7 7 6 2l4 2 2-3 2 3 4-2-1 5M8 14c-5 2-4 9 4 9s9-7 4-9M7 17l-4-2m14 2 4-3M19 11h4l-2 5Z" fill="#fff" stroke="#c52b38" stroke-width="1.3" stroke-linejoin="round"></path>
-                    <path d="M18 11c0-2 2-2 3-5 0 3 3 3 3 5ZM6 10a6 5 0 1 0 12 0 6 5 0 1 0-12 0" fill="#fff" stroke="#c52b38" stroke-width="1.3"></path>
-                    <path d="M9 10h.1m5.8 0h.1M10 12q2 2 4 0m-5 4h6" fill="none" stroke="#c52b38" stroke-width="1.5" stroke-linecap="round"></path>
-                </svg>
-                <span>{text.aboutSupportLabel}</span>
-            </a>
             <a class="about-actions__feedback" href="https://tally.so/r/jeoe2Q" target="_blank" rel="noopener noreferrer" title={text.aboutFeedbackHint}>
                 <span>{text.aboutFeedbackLabel}</span>
                 <svg class="about-feedback-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -553,31 +545,5 @@
         --about-action-border: #efacb8;
         --about-action-text: #992c44;
         --about-action-bg: #ffdae2;
-    }
-
-    .about-actions a.about-actions__support {
-        grid-column-start: 1;
-        grid-column-end: -1;
-        gap: 8px;
-        padding: 0 12px;
-        border-color: #f5c478;
-        color: #64330d !important;
-        background: linear-gradient(110deg, #fff2cb, #ffd394) !important;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-    }
-
-    .about-actions a.about-actions__support:hover {
-        border-color: #ffdfa0;
-        background: linear-gradient(110deg, #fff7df, #ffe1af) !important;
-    }
-
-    .about-actions a.about-actions__support:active {
-        background: #ffd394 !important;
-    }
-
-    .about-support-icon {
-        width: 22px;
-        height: 22px;
-        flex-shrink: 0;
     }
 </style>

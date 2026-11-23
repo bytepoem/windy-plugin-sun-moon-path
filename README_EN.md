@@ -21,12 +21,12 @@ Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glo
 
 Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About. This describes the current repository; released behavior is listed in the release notes.
 
-Current release: **0.13.2** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.2)
+Current release: **0.13.3** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.3)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.2/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.3/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
@@ -161,7 +161,7 @@ Run `npm run build` to generate `dist/`, including scripts, `plugin.json` and th
 
 ## Feedback and license
 
-Choose **Feedback** below the author support button in **About**, or open the [feedback form](https://tally.so/r/jeoe2Q), to report bugs, suggest features or share other feedback. Feedback type, details and plugin version are required; screenshots, device and browser details, and email are optional. Successful submissions redirect to the author support page; donations are entirely optional.
+Choose **Feedback** in **About**, or open the [feedback form](https://tally.so/r/jeoe2Q), to report bugs, suggest features or share other feedback. Feedback type, details and plugin version are required; screenshots, device and browser details, and email are optional. Successful submissions redirect to the author support page; donations are entirely optional.
 
 If the interface is incomplete or loading fails, expand **View diagnostics** at the bottom of **About**, copy the report and include it with your issue. A diagnostic entry is also shown when initialization fails. Reports include the version, environment, loading states and sanitized errors, excluding location coordinates, favorites and API keys. If the plugin file itself cannot load, provide screenshots and browser errors instead.
 

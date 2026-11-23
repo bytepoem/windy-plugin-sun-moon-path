@@ -175,7 +175,6 @@ export const translations: Record<UiLanguage, {
     aboutIssuesLabel: string;
     aboutStarLabel: string;
     aboutStarHint: string;
-    aboutSupportLabel: string;
     aboutXiaohongshuLabel: string;
     aboutXiaohongshuHint: string;
     supportGuideHint: string;
@@ -463,7 +462,6 @@ export const translations: Record<UiLanguage, {
         aboutIssuesLabel: 'Issues',
         aboutStarLabel: 'Star',
         aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
-        aboutSupportLabel: '喜欢的话，请作者喝杯蜜雪冰城',
         aboutXiaohongshuLabel: '小红书',
         aboutXiaohongshuHint: '在小红书关注我',
         supportGuideHint: '如果插件对你有帮助，可在「关于」通过爱发电自愿打赏，支持后续开发与维护，也可通过小红书入口关注作者。',
@@ -771,7 +769,6 @@ export const translations: Record<UiLanguage, {
         aboutIssuesLabel: 'Issues',
         aboutStarLabel: 'Star', // GitHub repository action; not the celestial object.
         aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
-        aboutSupportLabel: 'Like it? Treat the author to MIXUE',
         aboutXiaohongshuLabel: 'RedNote',
         aboutXiaohongshuHint: 'Follow me on Xiaohongshu (RedNote)',
         supportGuideHint: 'If this plugin helps, you can support its development and maintenance through the optional Afdian link in About, or follow the author on RedNote.',

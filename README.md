@@ -19,12 +19,12 @@
 
 ## 安装与上手
 
-当前发布版本：**0.13.2** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.2)
+当前发布版本：**0.13.3** · [更新记录](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.3)
 
 将以下地址填入 Windy 的外部插件加载入口，打开 **Sun & Moon Path**：
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.2/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.3/plugin.min.js
 ```
 
 1. **选机位**：点击地图，或输入 WGS84 / GCJ-02 坐标。中文地点搜索需在设置中填写自己的地图服务 API Key。
@@ -161,7 +161,7 @@ npm start
 
 ## 反馈与许可
 
-在「关于」的赞助入口下方点击「反馈与建议」，或打开[反馈问卷](https://tally.so/r/jeoe2Q)，提交 Bug、功能建议或其他反馈。反馈类型、详细描述和插件版本为必填；截图、设备与浏览器、联系邮箱选填。提交成功后会打开支持作者页面，打赏完全自愿。
+在「关于」点击「反馈与建议」，或打开[反馈问卷](https://tally.so/r/jeoe2Q)，提交 Bug、功能建议或其他反馈。反馈类型、详细描述和插件版本为必填；截图、设备与浏览器、联系邮箱选填。提交成功后会打开支持作者页面，打赏完全自愿。
 
 界面显示不完整或加载异常时，可展开「关于」底部的「查看诊断信息」并复制报告，随问题反馈提供。初始化失败时也会显示诊断入口。报告包含版本、运行环境、加载状态和脱敏错误，不包含机位坐标、收藏或 API Key；插件文件本身未能加载时，仍需提供截图和浏览器错误信息。
 

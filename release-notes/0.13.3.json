@@ -1,0 +1,24 @@
+{
+  "version": "0.13.3",
+  "releasedAt": "2026-11-23",
+  "zh": {
+    "title": "关于页调整",
+    "summary": "移除了「关于」页的蜜雪冰城打赏卡片。",
+    "items": [
+      {
+        "type": "improved",
+        "text": "从桌面端和移动端的「关于」页移除蜜雪冰城打赏卡片。"
+      }
+    ]
+  },
+  "en": {
+    "title": "About page update",
+    "summary": "Removed the MIXUE donation card from About.",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Removed the MIXUE donation card from About on desktop and mobile."
+      }
+    ]
+  }
+}
