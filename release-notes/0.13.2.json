@@ -1,0 +1,24 @@
+{
+  "version": "0.13.2",
+  "releasedAt": "2026-11-23",
+  "zh": {
+    "title": "夜间观测卡片提示",
+    "summary": "无月黑夜和银河时段使用简洁的文字提示。",
+    "items": [
+      {
+        "type": "improved",
+        "text": "无月黑夜和银河时段对齐标题、时间和状态提示。当天没有可用时段或预报缺测时，用文字说明原因。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Night observing card messages",
+    "summary": "Moonless and Milky Way cards use simple text for missing data.",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Moonless and Milky Way cards align their titles, times, and status messages. Text explains when there is no observing window or forecast data is missing."
+      }
+    ]
+  }
+}

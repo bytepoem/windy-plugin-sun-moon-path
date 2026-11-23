@@ -20,7 +20,7 @@ describe('beta release notes development asset', () => {
         const formalNotes = JSON.parse(formalNotesSource) as typeof notes;
 
         expect(notes.version).toBe('0.13.2');
-        expect(notes.releasedAt).toBe('2026-11-19');
+        expect(notes.releasedAt).toBe('2026-11-23');
         // Development notes retain their own version after merging a formal patch release.
         expect(formalNotes.version).toBe('0.12.6');
         expect(formalNotes.zh.items).toHaveLength(1);
@@ -64,7 +64,7 @@ describe('release note publishing contract', () => {
         expect(result.notesStatus).toBe('loaded');
         expect(result.seriesNotes.map(notes => notes.version)).toEqual(['0.13.2', '0.13.1', '0.13.0']);
         expect(result.seriesNotes.slice(1)).toEqual(
-            currentSeriesVersions.map(version => JSON.parse(sources[`../release-notes/${version}.json`] as string)),
+            currentSeriesVersions.slice(1).map(version => JSON.parse(sources[`../release-notes/${version}.json`] as string)),
         );
         for (const language of ['zh', 'en'] as const) {
             const publishedTexts = Object.entries(sources)
