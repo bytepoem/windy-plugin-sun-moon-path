@@ -66,8 +66,8 @@
         <p class="calendar-week-order"><span>{multiDayMessages[uiLanguage].month}:</span>
             {#each calendarWeekdays as weekday, index}<span class:weekend={index === 0 || index === 6}>{weekday}</span>{/each}
         </p>
-        <p>{comparisonMessages[uiLanguage].weatherSource}: Windy / Open-Meteo · {comparisonLabels[uiLanguage].modelLabel}: EC / GFS / ICON</p>
         <p>{comparisonLabels[uiLanguage].dateControl}: {multiDayMessages[uiLanguage].vertical} ↕ / {multiDayMessages[uiLanguage].horizontal} ↔</p>
+        <p>{comparisonMessages[uiLanguage].weatherSource}: Windy / Open-Meteo · {comparisonLabels[uiLanguage].modelLabel}: EC / GFS / ICON</p>
         <p class="metric-legend"><span>{comparisonLabels[uiLanguage].weather}</span>
             {#each MULTI_DAY_METRICS as metric}
                 <span class="metric-legend-item"><WeatherMetricIcon {metric} size={14} /><span>{weatherText[uiLanguage].metrics[metric][0]}</span></span>

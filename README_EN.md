@@ -21,12 +21,12 @@ Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glo
 
 Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About. This describes the current repository; released behavior is listed in the release notes.
 
-Current release: **0.13.3** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.3)
+Current release: **0.13.4** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.4)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.3/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.4/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
@@ -69,7 +69,7 @@ Monthly calendars start on Sunday. Saturdays and Sundays use warm, bold, underli
 
 Seven-day windows show weather conditions, cloud cover, wind, precipitation, temperature, humidity, visibility, AOD and dew point, with expandable original forecast samples. The Snow display setting also controls new snow and ground snow depth. Precipitation and new snow retain full overlapping source accumulations and their periods. Other ranges use samples inside the window. Short windows without instantaneous samples can still show overlapping accumulations. AOD, visibility and supplementary ground snow depth can be retried separately.
 
-Switch the date layout between Vertical and Horizontal beside the date. Horizontal is the default: seven dates form columns and metrics form rows. Vertical places dates in rows and metrics in columns. The overview keeps the same panel height as other tabs, with content scrolling inside. Scroll horizontally when needed; the first column stays fixed for reference. Chinese observing-date and forecast-range headings use two lines split at word boundaries. Select a date to view full windows and original samples below the table. Only Single-day events changes map time; separate windows retain separate weather ranges. Metrics use the weather table icons with small names below them; hover for details such as the precipitation rule.
+Choose Vertical or Horizontal after the date range controls. The buttons wrap to the next line when space is limited. The default horizontal layout displays seven dates as columns and metrics as rows. Vertical places dates in rows and metrics in columns. The overview keeps the same panel height as other tabs, with content scrolling inside. Scroll horizontally when needed; the first column stays fixed for reference. Chinese observing-date and forecast-range headings use two lines split at word boundaries. Select a date to view full windows and original samples below the table. Only Single-day events changes map time; separate windows retain separate weather ranges. Metrics use the weather table icons with small names below them; hover for details such as the precipitation rule.
 
 Toggle “Show sky chart” in Settings or use the first window button with the orbit icon; both controls stay synchronized and remember your choice.
 

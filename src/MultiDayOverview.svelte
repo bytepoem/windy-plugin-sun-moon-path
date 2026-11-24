@@ -303,7 +303,7 @@
 
 <style>
     .multi-day { padding:6px 8px; color:var(--panel-text); font-size:13px; container-type:inline-size; }
-    .location, .toolbar, .planning-controls, .range-controls, .forecast-controls, .segments { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+    .location, .toolbar, .planning-controls, .forecast-controls, .segments { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
     .location { justify-content:space-between; gap:2px 6px; margin-bottom:4px; }
     .location strong { flex:1; min-width:0; overflow-wrap:anywhere; }
     .location span, small, p { color:var(--panel-muted); font-size:11px; }
@@ -320,10 +320,17 @@
     button, select { cursor:pointer; }
     .active { background:rgba(99,185,238,.14); border-color:var(--panel-accent); }
     .planning-controls { margin-top:4px; gap:4px; }
-    .range-controls { flex-wrap:nowrap; gap:3px; max-width:100%; }
-    .range-controls button { flex:0 0 28px; padding-inline:3px; }
+    /* Include both arrow columns in the range width when the toolbar packs each row. */
+    .range-controls {
+        display:grid;
+        grid-template-columns:28px auto auto 28px;
+        align-items:center;
+        gap:3px;
+        max-width:100%;
+    }
+    .range-controls button { padding-inline:3px; }
     /* Native focus opens iOS editing; focused segments stay visible for keys. */
-    .range-date { position:relative; display:inline-flex; align-items:center; flex:0 0 auto; box-sizing:border-box; min-width:124px; min-height:30px; padding:3px 6px; border:1px solid var(--panel-border); border-radius:6px; background:#0e161f; }
+    .range-date { position:relative; display:inline-flex; align-items:center; box-sizing:border-box; min-width:124px; min-height:30px; padding:3px 6px; border:1px solid var(--panel-border); border-radius:6px; background:#0e161f; }
     .range-date > span { white-space:nowrap; }
     .range-date input { position:absolute; inset:0; width:100%; height:100%; min-width:0; margin:0; opacity:0; cursor:text; }
     .range-date input:focus { opacity:1; }
