@@ -1,0 +1,24 @@
+{
+  "version": "0.13.4",
+  "releasedAt": "2026-11-24",
+  "zh": {
+    "title": "移动端多日总览修复",
+    "summary": "修复了 7 天总览中日期导航与横竖切换按钮重叠的问题。",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "修复移动端 7 天总览中日期右箭头与「竖向 / 横向」按钮重叠的问题。"
+      }
+    ]
+  },
+  "en": {
+    "title": "Mobile multi-day overview fix",
+    "summary": "Fixed overlapping date navigation and layout controls in the 7-day overview.",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Fixed the next date-range arrow overlapping the Vertical and Horizontal buttons in the mobile 7-day overview."
+      }
+    ]
+  }
+}

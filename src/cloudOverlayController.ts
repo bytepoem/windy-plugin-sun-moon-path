@@ -1,7 +1,9 @@
+import { messages } from './locales/cloudOverlayController';
 import { manageMarkerTooltip } from './markerTooltip';
 import { cloudArc, cloudBearingPath, cloudSightDistance, cloudTwilightDistances } from './cloudGeometry';
 import { destinationPoint, splitPolylineAtDateLine, type Coordinates } from './solar';
 import { formatDistanceKm, formatElevationM, type UnitPreferences } from './unitPreferences';
+import type { UiLanguage } from './uiLanguage';
 import type { CloudLayer } from './cloudProfile';
 import type { MapOverlayRuntime } from './mapOverlayController';
 
@@ -14,7 +16,7 @@ export type CloudOverlayState = {
     layers: CloudLayer[];
     twilight: boolean;
     opacity: number;
-    language: 'zh' | 'en';
+    language: UiLanguage;
     units: UnitPreferences;
 };
 
@@ -70,7 +72,7 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
         const range = Math.max(10, ...state.layers.map(layer =>
             Math.max(cloudTwilightDistances(layer.heightM)?.[state.twilight ? 'clearKm' : 'horizonKm'] ?? 0,
                 state.position.sightlineAvailable ? cloudSightDistance(layer.heightM, state.position.altitude) ?? 0 : 0)));
-        label(state.location, '', '#6ed9ee', state.language === 'zh' ? '机位' : 'Camera', true);
+        label(state.location, '', '#6ed9ee', messages[state.language].camera, true);
         // Sample the bearing ray as a geodesic; two endpoints alone distort long lines in Mercator.
         if (state.position.sightlineAvailable) {
             line(cloudBearingPath(state.location, state.position.azimuth, range),
@@ -85,11 +87,11 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
             if (distance !== null) {
                 const point = destinationPoint(state.location, state.position.azimuth, distance);
                 label(point, '', '#6ed9ee',
-                    `${height} · ${state.language === 'zh' ? '视线与云层交点' : 'Sightline intersection'} · ${distanceLabel(distance)}`, true);
+                    `${height} · ${messages[state.language].sightlineIntersection} · ${distanceLabel(distance)}`, true);
             }
             const top = destinationPoint(state.location, 0, geometry.horizonKm);
             const labelWidth = label(top, formatDistanceKm(geometry.horizonKm, state.units.distance), '#ffffff',
-                `${height} · ${state.language === 'zh' ? '地平线云距' : 'Horizon distance'} · ${distanceLabel(geometry.horizonKm)}`, false, true);
+                `${height} · ${messages[state.language].horizonDistance} · ${distanceLabel(geometry.horizonKm)}`, false, true);
             // Leave a real opening behind the transparent label. Keep its screen
             // width stable when zooming instead of painting over the map tiles.
             const metresPerPixel = 156543.03392 * Math.cos(top.lat * Math.PI / 180) / 2 ** map.getZoom();
@@ -102,12 +104,12 @@ export const createCloudOverlayController = (map: L.LeafletGlMap, runtime: MapOv
             line(tangentArc, { color: bandColor, dashArray: '4 4', weight: 3 });
             // Match the farthest-clear label placement at the visual top of the arc.
             label(tangentArc.reduce((highest, point) => point.lat > highest.lat ? point : highest),
-                formatDistanceKm(geometry.tangentKm, state.units.distance), bandColor, `${height} · ${state.language === 'zh' ? '擦地云距' : 'Tangent distance'} · ${distanceLabel(geometry.tangentKm)}`);
+                formatDistanceKm(geometry.tangentKm, state.units.distance), bandColor, `${height} · ${messages[state.language].tangentDistance} · ${distanceLabel(geometry.tangentKm)}`);
             const farArc = cloudArc(state.location, geometry.clearKm, state.sunAzimuth, 36);
             line(farArc, { color: bandColor, weight: 3 });
             // Northmost sampled point is the visual top in Windy's north-up map.
             label(farArc.reduce((highest, point) => point.lat > highest.lat ? point : highest),
-                formatDistanceKm(geometry.clearKm, state.units.distance), bandColor, `${height} · ${state.language === 'zh' ? '最远无云距' : 'Farthest clear distance'} · ${distanceLabel(geometry.clearKm)}`);
+                formatDistanceKm(geometry.clearKm, state.units.distance), bandColor, `${height} · ${messages[state.language].farthestClearDistance} · ${distanceLabel(geometry.clearKm)}`);
         }
     };
     return { render, destroy };

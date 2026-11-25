@@ -1,14 +1,14 @@
 import type { ExternalPluginConfig } from '@windy/interfaces.d';
 
 /** Keep this date aligned with the published GitHub Release for the configured version. */
-export const currentVersionReleasedAt = '2026-11-16';
+export const currentVersionReleasedAt = '2026-11-25';
 
 const config: ExternalPluginConfig = {
     name: 'windy-plugin-sun-moon-path',
-    version: '0.12.6',
+    version: '0.13.5',
     icon: '☀️',
     title: 'Sun & Moon Path',
-    description: '在 Windy 上规划日出、日落、月亮、银河、朝晚霞、火烧云与彩虹拍摄。查看天体方位、升落时刻、天空盘与观测窗口，参考光污染、云层距离和天气信息，比较收藏机位。云层遮挡与彩虹视线均为估算，不保证可见。支持中英文。 Plan photography of the Sun, Moon, Milky Way, sunrise and sunset glow, fiery clouds and rainbows with sky views, event times, light pollution, cloud-distance estimates and weather comparisons. Visibility is not guaranteed.',
+    description: '在 Windy 上规划日出、日落、月亮和银河拍摄，查看升落时刻、天体方位和天空盘。浏览多日拍摄窗口与天气，按时段对比收藏机位。云层距离和彩虹视线为估算。支持 42 种语言，可跟随 Windy。 Plan Sun, Moon and Milky Way shoots with a sky chart, multi-day windows and weather comparisons at favorite sites. Cloud distances and rainbow sightlines are estimates. Supports 42 languages.',
     author: 'bytepoem',
     repository: 'https://github.com/bytepoem/windy-plugin-sun-moon-path',
     desktopUI: 'rhpane',

@@ -1,7 +1,10 @@
+import { messages } from './locales/radarFrameTimeLabel';
+import { formatDisplayDateTime } from './dateDisplay';
+import type { UiLanguage } from './uiLanguage';
 import type { RadarOverlayStatus, RadarProvider } from './radarOverlay';
 
 export type RadarFrameTimeLabelState = {
-    language: 'zh' | 'en';
+    language: UiLanguage;
     provider: RadarProvider;
     status: RadarOverlayStatus;
     timestampMs: number | null;
@@ -19,23 +22,13 @@ export const formatRadarFrameTimeLabel = (state: RadarFrameTimeLabelState): stri
     }
     const source = 'RainViewer';
     if (state.timestampMs !== null) {
-        const time = new Intl.DateTimeFormat(state.language === 'zh' ? 'zh-CN' : 'en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hourCycle: 'h23',
-        }).format(new Date(state.timestampMs));
+        const time = formatDisplayDateTime(state.timestampMs);
         return `${source} · ${time}`;
     }
     if (state.status === 'out-of-range') {
-        return state.language === 'zh'
-            ? `${source} · 无对应时次`
-            : `${source} · No matching frame`;
+        return messages[state.language].noFrame(source);
     }
-    return state.language === 'zh'
-        ? `${source} · 加载中…`
-        : `${source} · Loading…`;
+    return messages[state.language].loading(source);
 };
 
 const findWindyTimecode = (): HTMLElement | null => (

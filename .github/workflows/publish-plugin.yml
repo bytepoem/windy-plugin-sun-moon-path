@@ -18,6 +18,8 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: write
+        outputs:
+            update-site-artifact-id: ${{ steps.update-site.outputs.artifact-id }}
         env:
             WINDY_API_KEY: '${{ secrets.WINDY_API_KEY }}'
             GITEE_TOKEN: '${{ secrets.GITEE_TOKEN }}'
@@ -38,11 +40,36 @@ jobs:
                   # npm 10.9.8 crashes while resolving the current Vitest peer dependency tree.
                   npm exec --yes --package=npm@11.12.1 -- npm install
                   npm test
+                  npx --no-install tsc --noEmit --incremental false
+                  npx --no-install eslint src --ext .ts,.svelte
                   node --test scripts/verify-update-site.test.mjs
                   python3 scripts/test_publish_update_mirrors.py
+                  python3 scripts/test_publish_language_resources.py
+                  node --test scripts/verify-language-resources.test.mjs
                   npm run build
                   node scripts/build-update-site.mjs "$RUNNER_TEMP/update-site"
                   node scripts/verify-update-site.mjs "$RUNNER_TEMP/update-site"
+                  node scripts/language-resources.mjs --check
+                  node scripts/language-resources.mjs "$RUNNER_TEMP/language-site"
+            - name: Verify release version before external writes
+              run: |
+                  release_version=$(jq -er '.version' "$RUNNER_TEMP/update-site/latest.json")
+                  bundle_version=$(jq -er '.version' dist/plugin.json)
+                  if [ "$bundle_version" != "$release_version" ]; then
+                    echo "Plugin bundle and update snapshot versions differ" >&2
+                    exit 1
+                  fi
+                  if git show-ref --verify --quiet "refs/tags/$release_version"; then
+                    release_commit=$(git rev-parse "refs/tags/$release_version^{commit}")
+                    if [ "$release_commit" != "$(git rev-parse HEAD)" ]; then
+                      echo "Release version $release_version already belongs to another commit" >&2
+                      exit 1
+                    fi
+                  fi
+            - name: Publish and verify immutable language resources before Windy upload
+              run: |
+                  python3 scripts/publish-language-resources.py "$RUNNER_TEMP/language-site"
+                  node scripts/verify-language-resources.mjs "$RUNNER_TEMP/language-site"
             - name: Retain exact diagnostic build artifacts
               uses: actions/upload-artifact@v4
               with:
@@ -53,6 +80,14 @@ jobs:
                       dist/plugin.min.js.build.json
                   if-no-files-found: error
                   retention-days: 90
+            - name: Retain the verified update snapshot for mirror sync
+              id: update-site
+              uses: actions/upload-artifact@v4
+              with:
+                  name: update-site-${{ github.run_id }}-${{ github.run_attempt }}
+                  path: ${{ runner.temp }}/update-site
+                  if-no-files-found: error
+                  retention-days: 30
             - name: Publish Plugin
               run: |
                   if [ -z "$WINDY_API_KEY" ]; then
@@ -64,9 +99,9 @@ jobs:
                   echo "{\"repositoryName\": \"${{ github.repository }}\", \"commitSha\": \"${{ github.sha }}\", \"repositoryOwner\": \"${{ github.repository_owner }}\"}" > /tmp/plugin-info.json
                   mv plugin.json /tmp
                   jq -s '.[0] * .[1]' /tmp/plugin.json /tmp/plugin-info.json > plugin.json
-                  # Source maps are useful in local builds but are not runtime assets.
-                  # Excluding them keeps the Windy upload request below its size limit.
-                  tar --exclude='*.map' -cf ../plugin.tar .
+                  # Source maps and the readable development bundle are not runtime assets.
+                  # Dictionaries are published and verified separately before this step.
+                  tar --exclude='./languages' --exclude='*.map' --exclude='./plugin.js' --exclude='./plugin.js.build.json' -cf ../plugin.tar .
                   # Keep a safety margin below Windy's 4 MB request limit so package
                   # growth fails here with an actionable message instead of at upload.
                   max_plugin_archive_bytes=3800000
@@ -78,12 +113,29 @@ jobs:
                   fi
                   echo "Publishing plugin..."
                   curl -s --fail-with-body -XPOST 'https://node.windy.com/plugins/v1.0/upload' -H "x-windy-api-key: ${WINDY_API_KEY}" -F "plugin_archive=@../plugin.tar"
+    publish-update-mirrors:
+        needs: publish-plugin
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
+            - name: Download the snapshot from the Windy upload job
+              uses: actions/download-artifact@v5
+              with:
+                  artifact-ids: ${{ needs.publish-plugin.outputs.update-site-artifact-id }}
+                  path: ${{ runner.temp }}/update-site
             - name: Publish regional update mirrors
+              env:
+                  GITEE_TOKEN: '${{ secrets.GITEE_TOKEN }}'
+                  GITHUB_TOKEN: '${{ github.token }}'
               run: python3 scripts/publish-update-mirrors.py "$RUNNER_TEMP/update-site"
 
     verify-update-metadata:
-        needs: publish-plugin
-        if: ${{ always() && !cancelled() && (needs.publish-plugin.result == 'success' || inputs.verify_only) }}
+        needs: publish-update-mirrors
+        if: ${{ always() && !cancelled() && (needs.publish-update-mirrors.result == 'success' || inputs.verify_only) }}
         runs-on: ubuntu-latest
         timeout-minutes: 10
         permissions:

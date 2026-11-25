@@ -2,10 +2,11 @@ import { DEFAULT_INITIAL_OVERLAY, normalizeInitialOverlayPreference, type Initia
 import { DEFAULT_RADAR_OPACITY_PERCENT, normalizeRadarOpacityPercent, normalizeRadarProvider, type RadarProvider } from './radarOverlay';
 import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
 import { DEFAULT_LIGHT_POLLUTION_OPACITY_PERCENT, normalizeLightPollutionOpacity } from './lightPollutionOverlay';
-import type { UiLanguage } from './pluginTranslations';
+import { isUiLanguagePreference, type UiLanguagePreference } from './uiLanguage';
 
 export type MobileNonFullscreenPanelMode = 'collapsed' | 'compact';
 export type MinimizeScope = 'standard' | 'hide-times' | 'hide-summary';
+export type SnowDisplayPreference = 'auto' | 'always' | 'hidden';
 export const DEFAULT_DIRECTION_LINE_OPACITY_PERCENT = 100;
 
 // Keep established storage keys and parsing semantics so upgrades and rollback need no migration.
@@ -16,6 +17,7 @@ const MOBILE_PANEL_MODE_STORAGE_KEY = 'windy-plugin-sun-moon-path:mobile-panel-m
 const MINIMIZE_SCOPE_STORAGE_KEY = 'windy-plugin-sun-moon-path:minimize-scope';
 const HIDE_LOCATION_SEARCH_STORAGE_KEY = 'windy-plugin-sun-moon-path:hide-location-search';
 const SHOW_SKY_CHART_STORAGE_KEY = 'windy-plugin-sun-moon-path:show-sky-chart';
+const SNOW_DISPLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:snow-display';
 const DIRECTION_LINE_OPACITY_STORAGE_KEY = 'windy-plugin-sun-moon-path:direction-line-opacity';
 const INITIAL_OVERLAY_STORAGE_KEY = 'windy-plugin-sun-moon-path:initial-overlay';
 const RADAR_PROVIDER_STORAGE_KEY = 'windy-plugin-sun-moon-path:radar-provider';
@@ -43,13 +45,13 @@ const write = (key: string, value: string): boolean => {
     }
 };
 
-/** Missing or invalid choices require first-use confirmation; do not silently persist a default. */
-export const loadLanguagePreference = (): UiLanguage | null => {
+/** Existing manual choices survive upgrades; absent or invalid preferences follow Windy. */
+export const loadLanguagePreference = (): UiLanguagePreference => {
     try {
         const value = localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
-        return value === 'zh' || value === 'en' ? value : null;
+        return isUiLanguagePreference(value) ? value : 'auto';
     } catch {
-        return null;
+        return 'auto';
     }
 };
 
@@ -71,7 +73,7 @@ export const savePlanningViewPreference = (view: 'obstruction' | 'rainbow' | 'ho
     }
 };
 
-export const saveLanguagePreference = (value: UiLanguage) => {
+export const saveLanguagePreference = (value: UiLanguagePreference) => {
     try {
         localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, value);
     } catch {
@@ -144,6 +146,21 @@ export const loadShowSkyChartPreference = (): boolean => {
 
 export const saveShowSkyChartPreference = (value: boolean): void => {
     write(SHOW_SKY_CHART_STORAGE_KEY, String(value));
+};
+
+export const normalizeSnowDisplayPreference = (value: unknown): SnowDisplayPreference =>
+    value === 'always' || value === 'hidden' ? value : 'auto';
+
+export const loadSnowDisplayPreference = (): SnowDisplayPreference => {
+    try {
+        return normalizeSnowDisplayPreference(localStorage.getItem(SNOW_DISPLAY_STORAGE_KEY));
+    } catch {
+        return 'auto';
+    }
+};
+
+export const saveSnowDisplayPreference = (value: SnowDisplayPreference): void => {
+    write(SNOW_DISPLAY_STORAGE_KEY, value);
 };
 
 export const loadInitialOverlayPreference = (availableInitialOverlays: ReadonlyArray<WindyOverlay>): InitialOverlayPreference => {

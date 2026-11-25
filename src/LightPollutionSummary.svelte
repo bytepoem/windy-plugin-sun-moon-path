@@ -1,91 +1,18 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import { translations, messages } from './locales/LightPollutionSummary';
+    import { DEFAULT_UI_LANGUAGE, type UiLanguage } from './uiLanguage';
 
-    import type { LightPollutionPoint, ObservationConditionKey } from './lightPollution';
+    import type { LightPollutionPoint } from './lightPollution';
 
     export let point: LightPollutionPoint | null = null;
     export let status: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
     export let errorMessage = '';
     export let canRetry = true;
-    export let language: 'zh' | 'en' = 'zh';
+    export let language: UiLanguage = DEFAULT_UI_LANGUAGE;
 
     const dispatch = createEventDispatcher<{ retry: void }>();
-    const translations = {
-        zh: {
-            heading: '光污染',
-            sqm: 'SQM',
-            bortle: '估算 Bortle',
-            milkyWay: '银河',
-            zodiacalLight: '黄道光',
-            andromedaGalaxy: '仙女座星系',
-            triangulumGalaxy: '三角座星系',
-            groundVisibility: '地面亮度',
-            loading: '正在加载光污染数据…',
-            retry: '重试',
-            conditions: {
-                'not-visible': '目视不可见',
-                'averted-barely-visible': '斜视勉强可见',
-                'averted-visible': '斜视可见',
-                visible: '目视可见',
-                'very-obvious': '非常明显',
-                'zenith-faint': '天顶隐约可见',
-                'hard-to-discern': '较难辨认',
-                'broad-structure': '大体结构可见',
-                'complex-structure': '复杂结构可见',
-                'clear-structure': '结构清晰',
-                'casts-shadow': '可投射阴影',
-                faint: '隐约可见',
-                'zenith-visible': '天顶可见',
-                'clearly-visible': '明显可见',
-                'dark-yellow': '明亮暗黄色',
-                striking: '惊人可见',
-                'bright-enough-to-read': '明亮到可读报',
-                'nearby-small-objects': '可辨近处小物',
-                'distant-objects': '可辨远处物体',
-                'distant-large-objects': '可辨远处大物',
-                'faint-distant-large-objects': '隐约见远处大物',
-                'faint-nearby-large-objects': '隐约见近处大物',
-                'shadows-only': '只可见物体影子',
-            } satisfies Record<ObservationConditionKey, string>,
-        },
-        en: {
-            heading: 'Light pollution',
-            sqm: 'SQM',
-            bortle: 'Est. Bortle',
-            milkyWay: 'Milky Way',
-            zodiacalLight: 'Zodiacal light',
-            andromedaGalaxy: 'Andromeda',
-            triangulumGalaxy: 'Triangulum',
-            groundVisibility: 'Ground visibility',
-            loading: 'Loading light pollution data…',
-            retry: 'Retry',
-            conditions: {
-                'not-visible': 'Not visible',
-                'averted-barely-visible': 'Barely visible with averted vision',
-                'averted-visible': 'Visible with averted vision',
-                visible: 'Visible',
-                'very-obvious': 'Very obvious',
-                'zenith-faint': 'Faint at zenith',
-                'hard-to-discern': 'Hard to discern',
-                'broad-structure': 'Broad structure visible',
-                'complex-structure': 'Complex structure visible',
-                'clear-structure': 'Structure clearly visible',
-                'casts-shadow': 'Casts shadows',
-                faint: 'Faint',
-                'zenith-visible': 'Visible at zenith',
-                'clearly-visible': 'Clearly visible',
-                'dark-yellow': 'Bright dark-yellow glow',
-                striking: 'Strikingly visible',
-                'bright-enough-to-read': 'Bright enough to read',
-                'nearby-small-objects': 'Nearby small objects visible',
-                'distant-objects': 'Distant objects visible',
-                'distant-large-objects': 'Distant large objects visible',
-                'faint-distant-large-objects': 'Distant large objects faintly visible',
-                'faint-nearby-large-objects': 'Nearby large objects faintly visible',
-                'shadows-only': 'Only object shadows visible',
-            } satisfies Record<ObservationConditionKey, string>,
-        },
-    };
+
 
     $: text = translations[language];
 </script>
@@ -112,7 +39,7 @@
                 <dt>{text.bortle}</dt>
                 <dd class="light-pollution__level">{point.estimatedBortle.toFixed(1)}</dd>
             </div>
-            <div title={language === 'zh' ? '仅依据天顶光污染估算' : 'Estimated from zenith brightness only'}>
+            <div title={messages[language].estimatedFromZenithBrightnessOnly}>
                 <dt>{text.milkyWay}</dt>
                 <dd>{text.conditions[point.observingConditions.milkyWay]}</dd>
             </div>

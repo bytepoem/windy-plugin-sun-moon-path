@@ -1,15 +1,20 @@
 <script lang="ts">
+    import { messages } from './locales/PluginSettings';
     import PluginGuide from './PluginGuide.svelte';
-    import { translations, type UiLanguage } from './pluginTranslations';
+    import { translations } from './pluginTranslations';
+    import { UI_LANGUAGES, UI_LANGUAGE_OPTIONS, automaticLanguageLabel, type UiLanguage, type UiLanguagePreference } from './uiLanguage';
     import { KEEP_CURRENT_OVERLAY, initialOverlayLabel, type InitialOverlayPreference, type WindyOverlay } from './initialOverlay';
     import { RADAR_PROVIDERS, RAINVIEWER_WEBSITE_URL, type RadarProvider, type RadarOverlayStatus } from './radarOverlay';
     import { LOCATION_PROVIDERS, type LocationProvider, type LocationProviderApiKeys } from './locationProvider';
     import { formatDistanceKm, type UnitPreferences } from './unitPreferences';
     import { LIGHT_POLLUTION_ATLAS_URL, type LightPollutionOverlayStatus } from './lightPollutionOverlay';
-    import type { MinimizeScope } from './pluginPreferences';
+    import type { MinimizeScope, SnowDisplayPreference } from './pluginPreferences';
 
     // Controlled settings: the shell owns persistence and map side effects.
     export let uiLanguage: UiLanguage;
+    export let languagePreference: UiLanguagePreference = uiLanguage;
+    export let languageLoading = false;
+    export let languageLoadError = false;
     export let units: UnitPreferences;
     // Bound to the shell so unmounting this Tab does not reset the selected page.
     export let settingsPage: 'preferences' | 'guide';
@@ -27,6 +32,8 @@
     export let hideLocationSearch: boolean;
     export let minimizeScope: MinimizeScope;
     export let changeMinimizeScope: (event: Event) => void;
+    export let snowDisplay: SnowDisplayPreference;
+    export let changeSnowDisplay: (event: Event) => void;
     export let showSkyChart: boolean;
     export let toggleSkyChart: () => void;
     export let directionLineOpacityPercent: number;
@@ -34,7 +41,8 @@
     export let savedApiKeyProvider: LocationProvider | null;
     export let locationApiKeyDrafts: LocationProviderApiKeys;
     export let locationApiKeys: LocationProviderApiKeys;
-    export let toggleLanguage: () => void;
+    export let changeLanguage: (event: Event) => void;
+    export let retryLanguage: () => void = () => undefined;
     export let changeInitialOverlayPreference: (event: Event) => void;
     export let changeRadarProvider: (event: Event) => void;
     export let changeRadarOpacity: (event: Event) => void;
@@ -51,26 +59,43 @@
         tencent: 'https://lbs.qq.com/webApi/javascriptGL/glGuide/glBasic',
     };
     $: text = translations[uiLanguage];
+    $: selectedLanguageName = languagePreference === 'auto'
+        ? text.followWindyLanguageLabel : UI_LANGUAGES[languagePreference].nativeName;
     $: radarStatusText = text.radarStatusLabels[radarOverlayStatus];
     $: extendedDistanceLabel = `${formatDistanceKm(600, units.distance)} ${units.distance}`;
 </script>
 
+<div class="settings-panel">
 <div class="settings-header">
     <div class="settings-pages" role="group" aria-label={text.settingsTab}>
-        <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{uiLanguage === 'zh' ? '偏好设置' : 'Preferences'}</button>
-        <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{uiLanguage === 'zh' ? '使用说明' : 'User guide'}</button>
+        <button type="button" class:active={settingsPage === 'preferences'} aria-pressed={settingsPage === 'preferences'} on:click={() => (settingsPage = 'preferences')}>{messages[uiLanguage].preferences}</button>
+        <button type="button" class:active={settingsPage === 'guide'} aria-pressed={settingsPage === 'guide'} on:click={() => (settingsPage = 'guide')}>{messages[uiLanguage].userGuide}</button>
     </div>
-    <button
-        type="button"
-        class="language-toggle"
-        aria-label={text.languageToggleLabel}
-        title={text.languageToggleLabel}
-        on:click={toggleLanguage}
-    >
-        <span class="language-toggle__option" class:active={uiLanguage === 'zh'}>中文</span>
-        <span class="language-toggle__option" class:active={uiLanguage === 'en'}>EN</span>
-    </button>
+    <div class="language-control">
+        <select
+            class="language-toggle"
+            aria-label={text.languageLabel}
+            title={`${text.languageLabel}: ${selectedLanguageName}`}
+            value={languagePreference}
+            aria-busy={languageLoading}
+            on:change={changeLanguage}
+        >
+            <option value="auto" aria-label={`${automaticLanguageLabel(uiLanguage)}: ${text.followWindyLanguageLabel}`}>{automaticLanguageLabel(uiLanguage)}</option>
+            {#each UI_LANGUAGE_OPTIONS as option}
+                <option value={option.value}>{option.nativeName}</option>
+            {/each}
+        </select>
+        <svg class="language-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="m4 6 4 4 4-4"></path>
+        </svg>
+    </div>
 </div>
+{#if languageLoading || languageLoadError}
+    <p role="status" class="language-status">
+        {languageLoading ? text.languageLoadingLabel : text.languageLoadErrorLabel}
+        {#if languageLoadError && !languageLoading}<button type="button" on:click={retryLanguage}>{text.retry}</button>{/if}
+    </p>
+{/if}
 {#if settingsPage === 'guide'}
     <PluginGuide {uiLanguage} {units} {showExtendedDistanceMarker} />
 {:else}
@@ -83,6 +108,14 @@
             <option value="hide-summary">{text.minimizeScopeHideSummary}</option>
         </select>
         <span id="minimize-scope-description" class="settings-select__description">{text.minimizeScopeDescription}</span>
+    </div>
+    <div class="settings-select">
+        <label for="snow-display">{messages[uiLanguage].snowDisplay}</label>
+        <select id="snow-display" value={snowDisplay} on:change={changeSnowDisplay}>
+            <option value="auto">{messages[uiLanguage].snowDisplayAuto}</option>
+            <option value="always">{messages[uiLanguage].snowDisplayAlways}</option>
+            <option value="hidden">{messages[uiLanguage].snowDisplayHidden}</option>
+        </select>
     </div>
     <label class="settings-toggle">
         <span class="settings-toggle__copy">
@@ -238,7 +271,7 @@
         {/if}
         <a class="atlas-source" href={LIGHT_POLLUTION_ATLAS_URL} target="_blank" rel="noreferrer">Light Pollution Atlas · David Lorenz · 2025</a>
     </div>
-    {#if uiLanguage === 'zh'}
+    {#if UI_LANGUAGES[uiLanguage].placeSearch}
         <div class="settings-api-keys" aria-label={text.locationApiKeyLabel}>
             {#each LOCATION_PROVIDERS as providerOption}
                 <form
@@ -300,8 +333,30 @@
     {/if}
 </section>
 {/if}
+</div>
 
 <style>
+    /* Keep the header fixed; preferences and guide each own one vertical scroller. */
+    .settings-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .settings-panel > :global(.module-about) {
+        flex: 1;
+        min-height: 0;
+        height: auto;
+    }
+
+    .language-status { margin: 4px 12px 8px; font-size: 12px; line-height: 1.4; }
+    .language-status button {
+        margin-inline-start: 6px; min-height: 36px; padding: 4px 8px;
+        color: var(--panel-text); background: var(--panel-surface);
+        border: 1px solid var(--panel-border); border-radius: 6px; font: inherit; cursor: pointer;
+    }
+    .language-status button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: 2px; }
     .atlas-source {
         color: var(--panel-accent);
         font-size: 12px;
@@ -322,55 +377,35 @@
     }
 
     .language-toggle {
-        min-height: 36px;
-        padding: 0 4px;
-        border: 0;
-        color: var(--panel-muted);
-        background: transparent;
-        font: inherit;
-        font-size: 14px;
-        cursor: pointer;
-        transition: color 160ms ease, background 160ms ease;
-    }
-
-    .language-toggle {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-items: center;
-        gap: 2px;
+        appearance: none;
+        box-sizing: border-box;
         width: 100%;
-        padding: 2px;
+        min-width: 0;
+        min-height: 36px;
+        /* Keep the arrow clear while long selected names end with an ellipsis. */
+        padding: 4px 26px 4px 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
+        color: var(--panel-text);
         background: #0e161f;
-        font-size: 12px;
-        font-weight: 700;
+        font: inherit;
+        cursor: pointer;
+        transition: color 160ms ease, background 160ms ease;
     }
 
     .language-toggle:hover {
         background: rgba(73, 169, 232, 0.12);
     }
 
-    .language-toggle__option {
-        display: grid;
-        place-items: center;
-        min-width: 0;
-        min-height: 30px;
-        border-radius: 5px;
-        color: var(--panel-muted);
-        line-height: 1;
-        white-space: nowrap;
-        transition: color 160ms ease, background 160ms ease;
-    }
-
-    .language-toggle__option.active {
-        color: #07131c;
-        background: #67c5ff;
-    }
 
     .settings-header {
         flex-shrink: 0;
         display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
         gap: 8px;
         padding: 8px 12px;
         border-bottom: 1px solid var(--panel-border);
@@ -379,23 +414,49 @@
     .settings-pages {
         display: flex;
         flex: 1;
-        min-width: 0;
+        /* Move the language selector to the next row before splitting a page name. */
+        min-width: min-content;
         gap: 8px;
     }
 
-    .settings-header .language-toggle {
-        flex: 0 0 80px;
-        width: 80px;
+    .language-control {
+        position: relative;
+        display: flex;
+        /* Fit the Chinese choices without growing for other languages. */
+        flex: 0 0 96px;
+        width: 96px;
+        max-width: 100%;
+        margin-left: auto;
+        /* The arrow must track the select, not the height of wrapped page buttons. */
+        align-self: flex-start;
+    }
+
+    .language-chevron {
+        position: absolute;
+        top: 50%;
+        right: 6px;
+        width: 16px;
+        height: 16px;
+        transform: translateY(-50%);
+        fill: none;
+        stroke: var(--panel-text);
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        pointer-events: none;
     }
 
     .settings-pages button {
         flex: 1;
+        min-width: 0;
         min-height: 36px;
+        padding: 4px 6px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
         background: transparent;
         color: var(--panel-muted);
         font: inherit;
+        white-space: nowrap;
         cursor: pointer;
     }
 

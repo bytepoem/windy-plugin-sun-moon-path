@@ -160,7 +160,7 @@ describe('geometric horizon', () => {
         expect(line).toHaveBeenCalledTimes(2);
         expect(marker).toHaveBeenCalledTimes(2);
         expect(marker.mock.calls[0][0]).toEqual([location.lat, location.lon]);
-        expect(icon.mock.calls[0][0].html).toContain('当前定位点');
+        expect(icon.mock.calls[0][0].html).toContain('所选位置');
         expect(icon.mock.calls[0][0].className).toContain('event-horizon-origin');
         // Windy scales the SVG container during zoom, then resets it after
         // reprojecting. Both stroke width and dash spacing must stay in pixels.

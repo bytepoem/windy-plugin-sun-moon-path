@@ -121,6 +121,19 @@ describe('cloud planning time', () => {
         expect(cloudTimeInstant('2026-03-08', '02:30', 'America/New_York')).toBeNull();
         expect(cloudTimeInstant('2026-11-01', '01:30', 'America/New_York')).toBe(Date.parse('2026-11-01T05:30Z'));
     });
+    it.each(['0100-01-03', '0999-12-31', '1000-01-01', '9999-12-31'])(
+        'resolves %s without reparsing an Intl year as ISO', date => {
+            expect(cloudTimeInstant(date, '18:00', 'UTC')).toBe(Date.parse(`${date}T18:00:00Z`));
+            const instant = cloudTimeInstant(date, '18:00', 'Asia/Shanghai');
+            expect(Number.isFinite(instant)).toBe(true);
+            const parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Shanghai', hourCycle: 'h23', hour: '2-digit', minute: '2-digit', second: '2-digit',
+            }).formatToParts(instant!);
+            expect(parts.find(part => part.type === 'hour')?.value).toBe('18');
+            expect(parts.find(part => part.type === 'minute')?.value).toBe('00');
+            expect(parts.find(part => part.type === 'second')?.value).toBe('00');
+        },
+    );
     it('rejects cleared and invalid inputs', () => {
         expect(cloudTimeInstant('2026-02-30', '12:00', 'UTC')).toBeNull();
         expect(cloudTimeInstant('2026-09-05', '', 'UTC')).toBeNull();

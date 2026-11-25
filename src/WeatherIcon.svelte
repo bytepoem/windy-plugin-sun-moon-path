@@ -1,19 +1,29 @@
 <script lang="ts">
+    import type { SnowIntensity } from './weather';
+
     export let code: number | null = null;
     export let isDay = true;
     export let label = '';
+    export let snowIntensity: SnowIntensity | null = null;
 
-    const hasCode = (values: number[]): boolean => code !== null && values.includes(code);
+    const snowflakePositions: Record<SnowIntensity, number[]> = {
+        light: [24],
+        moderate: [18, 30],
+        heavy: [12, 24, 36],
+    };
 
-    $: showCelestial = hasCode([1, 2, 3, 5, 6, 8, 9, 11, 12, 18, 19, 21, 22, 24]);
-    $: showCloud = code === null || hasCode([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24]);
-    $: showRain = hasCode([5, 6, 7, 11, 12, 13, 14, 16, 18, 19, 20, 21]);
-    $: showSnow = hasCode([8, 9, 10, 11, 12, 13, 15, 16]);
-    $: showThunder = hasCode([14, 15, 16, 21, 23, 24]);
-    $: showFog = hasCode([17, 22]);
+    const hasCode = (value: number | null, values: number[]): boolean => value !== null && values.includes(value);
+
+    $: showCelestial = hasCode(code, [1, 2, 3, 5, 6, 8, 9, 11, 12, 18, 19, 21, 22, 24]);
+    $: showCloud = code === null || hasCode(code, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24]);
+    $: showRain = hasCode(code, [5, 6, 7, 11, 12, 13, 14, 16, 18, 19, 20, 21]);
+    $: showSnow = hasCode(code, [8, 9, 10, 11, 12, 13, 15, 16]);
+    $: snowflakeColumns = snowIntensity ? snowflakePositions[snowIntensity] : [19, 32];
+    $: showThunder = hasCode(code, [14, 15, 16, 21, 23, 24]);
+    $: showFog = hasCode(code, [17, 22]);
 </script>
 
-<svg class="weather-icon" viewBox="0 0 48 48" role="img" aria-label={label}>
+<svg class="weather-icon" viewBox="0 0 48 48" role="img" aria-label={label} data-snow-intensity={snowIntensity ?? undefined}>
     {#if showCelestial}
         {#if isDay}
             <circle class="weather-icon__sun" cx="17" cy="17" r="8"></circle>
@@ -32,7 +42,9 @@
     {/if}
 
     {#if showSnow}
-        <path class="weather-icon__snow" d="M19 37v7M16 39l6 3M22 39l-6 3M32 37v7M29 39l6 3M35 39l-6 3"></path>
+        {#each snowflakeColumns as column (column)}
+            <path class="weather-icon__snow" d="M0 37v7M-3 39l6 3M3 39l-6 3" transform={`translate(${column} 0)`}></path>
+        {/each}
     {/if}
 
     {#if showThunder}

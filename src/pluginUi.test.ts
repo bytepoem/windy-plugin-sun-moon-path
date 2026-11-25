@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { translations } from './pluginTranslations';
+import { messages as pluginMessages } from './locales/plugin';
+import { labels as favoriteLocationLabels } from './locales/FavoriteLocations';
+import { labels as locationSearchLabels } from './locales/LocationSearch';
 import guideSource from './PluginGuide.svelte?raw';
 import timelineSource from './CloudTimeline.svelte?raw';
 
 import favoriteComparisonSource from './FavoriteComparison.svelte?raw';
 import favoriteLocationsSource from './FavoriteLocations.svelte?raw';
 import locationSearchSource from './LocationSearch.svelte?raw';
-import pluginConfigSource from './pluginConfig.ts?raw';
 import pluginSource from './plugin.svelte?raw';
 import settingsSource from './PluginSettings.svelte?raw';
 import aboutSource from './PluginAbout.svelte?raw';
@@ -213,8 +215,7 @@ describe('plugin astronomy loading presentation', () => {
 
     it('adds delayed native hints to compact and icon-only controls', () => {
         expect(pluginSource).toContain(': text.eventButtonTitles[option.value]}');
-        expect(pluginSource).toContain('Cloud planning requires a single event');
-        expect(settingsSource).toContain('title={text.languageToggleLabel}');
+        expect(pluginMessages.en.cloudPlanningRequiresASingleEvent).toBe('Cloud planning requires a single event');
         expect(pluginSource).toContain(
             'title={text.locationCopyLabel(\n                                    locationDisplayName || text.locationResolvingLabel,\n                                )}',
         );
@@ -274,7 +275,6 @@ describe('plugin astronomy loading presentation', () => {
         expect(aboutSource).toContain('{text.aboutAuthorLabel}');
         expect(aboutSource).toContain('{text.aboutVersionLabel}');
         expect(aboutSource).toContain('{text.aboutCurrentVersionDateLabel}');
-        expect(pluginConfigSource).toContain("export const currentVersionReleasedAt = '2026-11-16';");
         expect(aboutSource).toContain("import config, { currentVersionReleasedAt } from './pluginConfig';");
         expect(aboutSource).toContain('class="about-meta__date"');
         expect(aboutSource).toContain('<time datetime={currentVersionReleasedAt}>{currentVersionReleasedAt}</time>');
@@ -300,7 +300,6 @@ describe('plugin astronomy loading presentation', () => {
         expect(aboutSource).toMatch(
             /:global\(\.sun-path-panel\.mobile_ui\) \.about-update button\s*{[\s\S]*?min-height: 32px;/,
         );
-        expect(pluginConfigSource).toContain("version: '0.12.6'");
         expect(pluginSource).toMatch(
             /\.summary-tab__badge\s*{[\s\S]*?white-space: nowrap;[\s\S]*?background: var\(--panel-accent\);/,
         );
@@ -326,7 +325,6 @@ describe('plugin astronomy loading presentation', () => {
         const compactScrollLockStart = pluginSource.indexOf(
             '.sun-path-panel.mobile_ui.mobile_compact:not(.mobile_fullscreen) .mobile-scroll-content',
         );
-        const landscapeMediaStart = pluginSource.indexOf('@media (orientation: landscape)');
 
         expect(pluginSource).toContain("&& mobilePanelMode === 'compact'");
         expect(pluginSource).toContain("&& summaryTab === 'events'");
@@ -339,7 +337,6 @@ describe('plugin astronomy loading presentation', () => {
             "'sun-path-mobile-compact',\n            isMobileOrTablet && !isMobileCollapsed && !isMobileFullscreen,",
         );
         expect(compactScrollLockStart).toBeGreaterThanOrEqual(0);
-        expect(compactScrollLockStart).toBeLessThan(landscapeMediaStart);
         expect(pluginSource).toMatch(
             /\.sun-path-panel\.mobile_ui\.mobile_compact:not\(\.mobile_fullscreen\) \.mobile-scroll-content\s*{[\s\S]*?overflow: clip;[\s\S]*?overscroll-behavior-y: none;/,
         );
@@ -433,7 +430,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(settingsSource).toContain('{radarOpacityPercent}%');
         expect(settingsSource).toContain('on:input={changeRadarOpacity}');
         expect(pluginSource).toContain('radarOverlayController.setOpacity(radarOpacityPercent);');
-        expect(translations.zh.radarOpacityLabel).toBe('雷达图层透明度');
+        expect(translations.zh.radarOpacityLabel).toBe('雷达图层不透明度');
         expect(translations.en.radarOpacityLabel).toBe('Radar overlay opacity');
 
         const radarOpacityStart = settingsSource.indexOf('class="settings-range settings-range--radar-opacity"');
@@ -590,12 +587,8 @@ describe('plugin astronomy loading presentation', () => {
     });
 
     it('supports two to five comparison targets with horizontally scrollable location columns', () => {
-        expect(favoriteLocationsSource).toContain(
-            '选择 2–${FAVORITE_COMPARISON_MAX_TARGETS} 个收藏地点',
-        );
-        expect(favoriteLocationsSource).toContain(
-            '`已选 ${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS}`',
-        );
+        expect(favoriteLocationLabels.zh.compareHint).toContain('选择 2–5 个收藏地点');
+        expect(favoriteLocationLabels.zh.compareSelection(2)).toBe('已选 2/5');
         expect(favoriteLocationsSource).toContain(
             'comparisonIds.length >= FAVORITE_COMPARISON_MAX_TARGETS',
         );
@@ -698,7 +691,7 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).toContain('visible: shouldLoadVisibleWeatherData');
     });
 
-    it('reserves desktop Events headroom and separates live direction metrics', () => {
+    it('separates live direction metrics within the shared Tab viewport', () => {
         const desktopMetricRule = pluginSource.match(
             /\.live-position \.live-position__metric\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
@@ -711,23 +704,9 @@ describe('plugin astronomy loading presentation', () => {
         const mobileMetricRule = mobileSource.match(
             /\.live-position \.live-position__metric\s*{([\s\S]*?)\n\s*}/,
         )?.[1];
-        const landscapeStart = pluginSource.indexOf('@media (orientation: landscape)');
-        const landscapeEnd = pluginSource.indexOf('@media (prefers-reduced-motion: reduce)', landscapeStart);
-        const landscapeSource = pluginSource.slice(landscapeStart, landscapeEnd);
-
-        expect(pluginSource).toContain("class:summary-panel-frame--events={isMobileCollapsed || summaryTab === 'events'}");
         expect(pluginSource).toContain(
             'grid-template-columns: minmax(112px, 1fr) max-content minmax(112px, 1fr);',
         );
-        expect(pluginSource).toContain(
-            '--summary-panel-height: 268px;\n        --events-summary-panel-height: 280px;',
-        );
-        expect(pluginSource).toContain(
-            '--summary-panel-height: 250px;\n        --events-summary-panel-height: 270px;',
-        );
-        expect(landscapeSource).toContain('--summary-panel-height: 256px;');
-        expect(landscapeSource).toContain('--events-summary-panel-height: 276px;');
-        expect(pluginSource).toContain('height: var(--events-summary-panel-height);');
         expect(pluginSource).toContain('column-gap: 0.5ch;');
         expect(desktopMetricRule).toContain('grid-template-columns: 7ch 4.4ch 5.1ch;');
         expect(desktopMetricRule).toContain('column-gap: 4px;');
@@ -737,30 +716,15 @@ describe('plugin astronomy loading presentation', () => {
         expect(narrowMobileSource).toMatch(/\.live-position__event-azimuth\s*{[\s\S]*?display: none;/);
     });
 
-    it('keeps the evidence skeleton when no observing interval exists', () => {
-        const placeholderStart = pluginSource.indexOf(
-            'class="night-window__evidence night-window__evidence--placeholder"',
-        );
-        const placeholderEnd = pluginSource.indexOf('</div>', placeholderStart);
-        const placeholderSource = pluginSource.slice(placeholderStart, placeholderEnd);
-        const placeholderStyle = pluginSource.match(
-            /\.night-window__evidence--placeholder\s*{([\s\S]*?)\n\s*}/,
+    it('uses plain text for missing weather and missing observing intervals', () => {
+        const statusRow = pluginSource.match(
+            /<span class="night-window__evidence-state">([\s\S]*?)<\/span>/,
         )?.[1];
 
-        expect(placeholderStart).toBeGreaterThanOrEqual(0);
-        expect(placeholderEnd).toBeGreaterThan(placeholderStart);
-        expect(placeholderSource).toContain('aria-hidden="true"');
-        expect(placeholderSource.match(/class="night-window__metric"/g)).toHaveLength(3);
-        expect(Array.from(placeholderSource.matchAll(/metric="([^"]+)"/g), match => match[1])).toEqual([
-            'totalCloudPercent',
-            'precipMm',
-            'visibilityKm',
-        ]);
-        expect(placeholderSource.match(/>\s*--\s*<\/span>/g)).toHaveLength(3);
-        expect(placeholderSource).not.toContain('astronomy-skeleton');
-        expect(placeholderSource).not.toContain('aria-live');
-        expect(placeholderStyle).toContain('opacity: 0.48;');
-        expect(placeholderStyle).not.toContain('animation');
+        expect(statusRow).toContain('observationEvidenceStateLabel(evidenceState, text)');
+        expect(statusRow).toContain('text.noInterval');
+        expect(statusRow).toContain('text.intervalUnavailable');
+        expect(pluginSource).not.toContain('night-window__evidence--placeholder');
     });
 
     it('opens one native date-time picker and retains a visible keyboard focus indicator', () => {
@@ -777,8 +741,8 @@ describe('plugin astronomy loading presentation', () => {
         expect(pluginSource).not.toContain('hideDomesticLocationSearch');
         expect(locationSearchSource).toContain('? [...LOCATION_PROVIDERS, ...COORDINATE_SYSTEMS]');
         expect(locationSearchSource).toContain(': [...COORDINATE_SYSTEMS]');
-        expect(locationSearchSource).toContain("latitude: 'Lat'");
-        expect(locationSearchSource).toContain("longitude: 'Lon'");
+        expect(locationSearchLabels.en.latitude).toBe('Lat');
+        expect(locationSearchLabels.en.longitude).toBe('Lon');
         expect(locationSearchSource).toContain('id="location-search-latitude"');
         expect(locationSearchSource).toContain('id="location-search-longitude"');
         expect(locationSearchSource).toContain('inputmode="text"');
@@ -869,8 +833,9 @@ describe('plugin astronomy loading presentation', () => {
         expect(mobileModeStart).toBeGreaterThan(comparisonStart);
         expect(translations.zh.featureGuideHeading).toBe('功能说明');
         expect(translations.en.featureGuideHeading).toBe('Feature guide');
-        expect(JSON.stringify(translations)).not.toContain('0.8.0 新增功能');
-        expect(JSON.stringify(translations)).not.toContain('What’s new in 0.8.0');
+        const bilingualCopy = JSON.stringify({ zh: translations.zh, en: translations.en });
+        expect(bilingualCopy).not.toContain('0.8.0 新增功能');
+        expect(bilingualCopy).not.toContain('What’s new in 0.8.0');
         expect(translations.zh.featureGuide.comparison.title).toBe('收藏地点对比');
         expect(translations.en.featureGuide.comparison.title).toBe('Favorite location comparison');
         expect(translations.zh.featureGuide.mapControls.title).toBe('地图视图按钮');

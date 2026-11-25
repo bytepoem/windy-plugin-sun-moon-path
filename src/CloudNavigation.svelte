@@ -1,9 +1,11 @@
 <script lang="ts">
     import { createEventDispatcher, tick } from 'svelte';
+    import { messages } from './locales/CloudNavigation';
+    import type { UiLanguage } from './uiLanguage';
 
     export let active: boolean;
     export let view: 'obstruction' | 'rainbow' | 'horizon' | 'tide' = 'obstruction';
-    export let language: 'zh' | 'en';
+    export let language: UiLanguage;
 
     const dispatch = createEventDispatcher<{ activate: void; tabkeydown: KeyboardEvent }>();
     const views = ['obstruction', 'rainbow', 'horizon', 'tide'] as const;
@@ -11,7 +13,7 @@
     let root: HTMLDivElement;
     let trigger: HTMLButtonElement;
     let menu: HTMLDivElement;
-    $: labels = language === 'zh' ? ['云层遮挡', '彩虹', '地平线', '潮汐'] : ['Clouds', 'Rainbow', 'Horizon', 'Tides'];
+    $: labels = messages[language].views;
     $: if (!active) { open = false; }
 
     // Opening only exposes choices; selecting an item activates its planning tab.
@@ -72,12 +74,20 @@
         tabindex={active ? 0 : -1}
         on:click={() => dispatch('activate')}
         on:keydown={event => dispatch('tabkeydown', event)}
-    ><span class="tab-label">{labels[views.indexOf(view)]}</span></button>
+    >
+        <span class="tab-label">
+            {#each views as candidate}
+                <span class:current={candidate === view} aria-hidden={candidate !== view ? 'true' : undefined} title={labels[candidate]}>
+                    {labels[candidate]}
+                </span>
+            {/each}
+        </span>
+    </button>
     <button
         class="arrow"
         bind:this={trigger}
         type="button"
-        aria-label={language === 'zh' ? '选择云层、彩虹、地平线或潮汐功能' : 'Choose clouds, rainbow, horizon or tides'}
+        aria-label={messages[language].chooseCloudsRainbowHorizonOrTides}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="cloud-function-menu"
@@ -94,10 +104,10 @@
         </svg>
     </button>
     {#if open}
-        <div id="cloud-function-menu" class="menu" role="menu" tabindex="-1" aria-label={language === 'zh' ? '摄影规划功能' : 'Photography planning'} bind:this={menu} on:keydown={menuKeydown}>
-            {#each views as value, index}
+        <div id="cloud-function-menu" class="menu" role="menu" tabindex="-1" aria-label={messages[language].photographyPlanning} bind:this={menu} on:keydown={menuKeydown}>
+            {#each views as value}
                 <button type="button" role="menuitemradio" aria-checked={view === value} tabindex="-1" data-view={value} on:click={() => select(value)}>
-                    <span class="menu-check" aria-hidden="true">{view === value ? '✓' : ''}</span><span class="menu-label">{labels[index]}</span>
+                    <span class="menu-check" aria-hidden="true">{view === value ? '✓' : ''}</span><span class="menu-label">{labels[value]}</span>
                 </button>
             {/each}
         </div>
@@ -126,9 +136,19 @@
     button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: -2px; }
     button:hover, .active > button { color: var(--panel-text); }
     button[role='tab'] { flex: 1; min-width: 0; padding: 0; text-align: center; }
-    .tab-label { display: block; width: 100%; text-align: center; }
+    /* Keep every planner label on one line so switching preserves the Tab bar height. */
+    .tab-label {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+        width: 100%;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .tab-label > span { grid-area: 1 / 1; visibility: hidden; overflow: hidden; text-overflow: ellipsis; }
+    .tab-label > span.current { visibility: visible; }
     /* Reserve real layout space so the entire button, not just its glyph, clears the title. */
-    .arrow { flex: 0 0 28px; align-self: center; display: flex; align-items: center; justify-content: center; width: 28px; min-height: 28px; margin: 4px 5px 4px 6px; padding: 0; border-radius: 4px; color: var(--panel-text); background: rgba(255, 255, 255, 0.06); }
+    .arrow { flex: 0 0 24px; align-self: center; display: flex; align-items: center; justify-content: center; width: 24px; min-height: 28px; margin: 4px 2px; padding: 0; border-radius: 4px; color: var(--panel-text); background: rgba(255, 255, 255, 0.06); }
     .arrow:hover, .arrow[aria-expanded='true'] { background: rgba(99, 185, 238, 0.2); }
     .chevron { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     .arrow[aria-expanded='true'] .chevron { transform: rotate(180deg); }
@@ -138,6 +158,7 @@
         right: 0;
         z-index: 20;
         min-width: 164px;
+        max-width: min(260px, 80vw);
         padding: 4px;
         border: 1px solid var(--panel-border);
         border-radius: 6px;
@@ -150,6 +171,7 @@
         min-height: 30px;
         padding: 0 24px;
         text-align: center;
+        overflow-wrap: break-word;
     }
     .menu button[aria-checked='true'], .menu button:hover { color: var(--panel-text); background: rgba(99, 185, 238, 0.14); }
     .menu-check { position: absolute; left: 6px; top: 50%; width: 16px; transform: translateY(-50%); text-align: center; }

@@ -19,6 +19,7 @@ export type ForecastInput = Omit<WeatherRequest, 'signal'> & {
     source: WeatherSource;
     contextReady: boolean;
     visible: boolean;
+    snowVisible: boolean;
     cloudsVisible: boolean;
 };
 
@@ -30,6 +31,7 @@ export type ForecastState = {
     atmosphereStatus: WeatherLoadStatus;
     aodStatus: WeatherLoadStatus;
     visibilityStatus: WeatherLoadStatus;
+    snowStatus: WeatherLoadStatus;
     cloudStatus: WeatherLoadStatus;
     cloudForecast: WeatherForecastPayload | null;
 };
@@ -42,6 +44,7 @@ export const emptyForecastState = (): ForecastState => ({
     atmosphereStatus: 'idle',
     aodStatus: 'idle',
     visibilityStatus: 'idle',
+    snowStatus: 'idle',
     cloudStatus: 'idle',
     cloudForecast: null,
 });
@@ -65,7 +68,7 @@ const channel = <Value>(): Channel<Value> => ({
 /**
  * Owns one panel's forecast lifetimes. Keys identify reusable results; controller
  * identity distinguishes retries of the same key, even when a provider ignores abort.
- * Weather, AOD, visibility and clouds settle independently. Destroy is terminal and never emits.
+ * Weather, supplements and clouds settle independently. Destroy is terminal and never emits.
  */
 export const createForecastController = (
     provider: WeatherProvider & {
@@ -79,7 +82,10 @@ export const createForecastController = (
     const weather = channel<WeatherResult>();
     const aod = channel<OpenMeteoAtmospherePoint[]>();
     const visibility = channel<OpenMeteoAtmospherePoint[]>();
+    const snow = channel<OpenMeteoAtmospherePoint[]>();
     const clouds = channel<WeatherForecastPayload>();
+    const supplements = { aod, visibility, snow };
+    const supplementFields = { aod: 'aod550', visibility: 'visibilityKm' } as const;
     let input: ForecastInput | null = null;
     let destroyed = false;
     let state = emptyForecastState();
@@ -93,7 +99,7 @@ export const createForecastController = (
             requestKey: weather.key,
             points: mergeOpenMeteoAtmosphere(
                 weather.data?.points ?? [],
-                combineAtmospherePoints(aod.data ?? [], visibility.data ?? []),
+                combineAtmospherePoints(aod.data ?? [], visibility.data ?? [], snow.data ?? []),
                 input?.source === 'windy',
             ),
             weatherStatus: weather.status,
@@ -105,6 +111,7 @@ export const createForecastController = (
                 : atmosphereStates.includes('empty') ? 'empty' : 'ready',
             aodStatus: aod.status,
             visibilityStatus: input?.source === 'windy' ? visibility.status : weather.status,
+            snowStatus: input?.source === 'windy' ? snow.status : weather.status,
             cloudStatus: input?.source === 'windy' ? weather.status : clouds.status,
             cloudForecast:
                 input?.source === 'windy' ? (weather.data?.cloudForecast ?? null) : clouds.data,
@@ -171,17 +178,20 @@ export const createForecastController = (
                 result => (result.points.length ? 'ready' : 'empty'),
                 'weather',
             );
-        } else if (kind === 'aod' || kind === 'visibility') {
-            if (kind === 'visibility' && request.source !== 'windy') { return; }
+        } else if (kind !== 'clouds') {
+            if (kind !== 'aod' && request.source !== 'windy') { return; }
+            if (kind === 'snow' && !request.snowVisible) { return; }
             void load(
-                kind === 'aod' ? aod : visibility,
+                supplements[kind],
                 signal =>
                     provider.atmosphere({
                         ...request,
                         signal,
                         metric: kind,
                     }),
-                result => (result.some(point => kind === 'aod' ? point.aod550 !== null : point.visibilityKm !== null) ? 'ready' : 'empty'),
+                result => (result.some(point => kind === 'snow'
+                    ? point.snowDepthCm != null
+                    : point[supplementFields[kind]] != null) ? 'ready' : 'empty'),
                 'atmosphere',
             );
         } else {
@@ -214,6 +224,7 @@ export const createForecastController = (
                 [weather, weatherKey],
                 [aod, atmosphereKey],
                 [visibility, next.source === 'windy' ? atmosphereKey : ''],
+                [snow, next.source === 'windy' ? weatherKey : ''],
                 [clouds, weatherKey],
             ] as const) {
                 if (target.key !== key || (!next.contextReady && target.status !== 'idle')) {
@@ -232,6 +243,7 @@ export const createForecastController = (
             }
             if (next.visible && aod.status === 'idle') { start('aod'); }
             if (next.visible && next.source === 'windy' && visibility.status === 'idle') { start('visibility'); }
+            if (next.snowVisible && next.source === 'windy' && snow.status === 'idle') { start('snow'); }
             if (next.cloudsVisible && next.source === 'open-meteo' && clouds.status === 'idle') {
                 start('clouds');
             }
@@ -239,8 +251,8 @@ export const createForecastController = (
             return state;
         },
         retry(kind: 'weather' | AtmosphereMetric | 'clouds') {
-            if ((kind === 'aod' || kind === 'visibility')
-                && !['error', 'empty'].includes((kind === 'aod' ? aod : visibility).status)) { return; }
+            if (kind !== 'weather' && kind !== 'clouds'
+                && !['error', 'empty'].includes(supplements[kind].status)) { return; }
             start(kind === 'clouds' && input?.source === 'windy' ? 'weather' : kind);
         },
         /** Explicit relocation, including the same coordinates, refreshes the whole forecast context. */
@@ -252,6 +264,7 @@ export const createForecastController = (
             reset(weather);
             reset(aod);
             reset(visibility);
+            reset(snow);
             reset(clouds);
             publish();
         },
@@ -265,6 +278,7 @@ export const createForecastController = (
             }
             if (aod.status === 'loading') { reset(aod); }
             if (visibility.status === 'loading') { reset(visibility); }
+            if (snow.status === 'loading') { reset(snow); }
             publish();
         },
         destroy() {
@@ -273,6 +287,7 @@ export const createForecastController = (
             reset(weather);
             reset(aod);
             reset(visibility);
+            reset(snow);
             reset(clouds);
         },
     };

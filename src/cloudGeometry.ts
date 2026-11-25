@@ -1,4 +1,5 @@
 import { Body, Equator, Horizon, KM_PER_AU, Observer } from 'astronomy-engine';
+import { resolveCivilMinute } from './dateSelection';
 import { EARTH_RADIUS_KM, GALACTIC_CENTER_RIGHT_ASCENSION_DEG, GALACTIC_CENTER_DECLINATION_DEG,
     CURRENT_DIRECTION_LENGTH_KM, destinationPoint, type Coordinates } from './solar';
 
@@ -107,25 +108,8 @@ export const cloudArc = (location: Coordinates, distanceKm: number, bearing: num
 };
 
 /** Resolve local wall time without accepting invalid dates or silently shifting a DST gap. */
-export const cloudTimeInstant = (date: string, clock: string, timeZone: string): number | null => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(clock)) {return null;}
-    const naive = Date.parse(`${date}T${clock}:00Z`);
-    if (!Number.isFinite(naive)) {return null;}
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    });
-    const local = (instant: number) => {
-        const p = Object.fromEntries(formatter.formatToParts(instant).map(part => [part.type, part.value]));
-        return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
-    };
-    // Sample offsets on both sides of a transition; choose the first occurrence of an ambiguous time.
-    const candidates = [-36, 0, 36].map(hours => {
-        const probe = naive + hours * 3_600_000;
-        return naive - (Date.parse(`${local(probe)}:00Z`) - probe);
-    }).filter(value => local(value) === `${date}T${clock}`);
-    return candidates.length ? Math.min(...candidates) : null;
-};
+export const cloudTimeInstant = (date: string, clock: string, timeZone: string): number | null =>
+    resolveCivilMinute(`${date}T${clock}`, timeZone, 'earlier');
 
 /** Map live-bearing layers use the same planning instant as cloud intersections.
  * An unavailable planning time must clear these lines, never fall back to now.

@@ -5,6 +5,9 @@ import nodeResolve from '@rollup/plugin-node-resolve';
 import rollupSvelte from 'rollup-plugin-svelte';
 import rollupSwc from 'rollup-plugin-swc3';
 import sveltePreprocess from 'svelte-preprocess';
+import { createRequire } from 'node:module';
+import { languageResourceFixture } from './languageResourceFixture';
+import { UI_LANGUAGE_OPTIONS } from '../uiLanguage';
 
 export type RenderComponent = (props: Record<string, unknown>) => string;
 
@@ -39,7 +42,7 @@ const hostMetrics = {
  */
 export const compileRenderer = async (component: string): Promise<RenderComponent> => {
     const bundle = await rollup({
-        input: resolve('src', component),
+        input: '\0test-component-entry',
         onwarn(warning, warn) {
             if (warning.code !== 'CIRCULAR_DEPENDENCY' && warning.code !== 'UNUSED_EXTERNAL_IMPORT') {
                 warn(warning);
@@ -47,11 +50,31 @@ export const compileRenderer = async (component: string): Promise<RenderComponen
         },
         plugins: [
             {
-                name: 'test-windy-metrics',
-                resolveId: id => id === '@windy/metrics' ? '\0test-windy-metrics' : null,
-                load: id => id === '\0test-windy-metrics'
-                    ? 'export default globalThis.__testMetrics;'
+                name: 'test-language-preparation',
+                resolveId: id => id === '\0test-component-entry' ? id : null,
+                load: id => id === '\0test-component-entry'
+                    ? `export { default } from ${JSON.stringify(resolve('src', component))}; export { prepareUiLanguage } from ${JSON.stringify(resolve('src/localeMessages.ts'))};`
                     : null,
+            },
+            {
+                name: 'test-windy-metrics',
+                resolveId: id => id === '@windy/metrics' ? '\0test-windy-metrics'
+                    : id === '@windy/fetch' ? '\0test-windy-fetch'
+                    : id === '@windy/map' ? '\0test-windy-map' : null,
+                load: id => {
+                    if (id === '\0test-windy-metrics') {
+                        return 'export default globalThis.__testMetrics;';
+                    }
+                    if (id === '\0test-windy-fetch') {
+                        // SSR exercises construction/rendering; a network call is a test failure.
+                        return 'export const getElevation = () => { throw new Error("Unexpected SSR elevation request"); };';
+                    }
+                    if (id === '\0test-windy-map') {
+                        // Server rendering must not attach layers or subscribe to the map.
+                        return 'export const map = new Proxy({}, {get(){throw new Error("Unexpected SSR map operation");}});';
+                    }
+                    return null;
+                },
             },
             rollupSvelte({
                 emitCss: false,
@@ -63,14 +86,25 @@ export const compileRenderer = async (component: string): Promise<RenderComponen
         ],
     });
     try {
-        const { output } = await bundle.generate({ format: 'cjs' });
+        const { output } = await bundle.generate({ format: 'cjs', exports: 'named' });
         const entry = output.find(item => item.type === 'chunk' && item.isEntry);
         if (!entry || entry.type !== 'chunk') {
             throw new Error('Missing compiled component');
         }
-        const module = { exports: {} as { render: (props: Record<string, unknown>) => { html: string } } };
-        runInNewContext(entry.code, { module, exports: module.exports, __testMetrics: hostMetrics }, { timeout: 1000 });
-        return props => module.exports.render(props).html;
+        const module = { exports: {} as {
+            default: { render: (props: Record<string, unknown>) => { html: string } };
+            prepareUiLanguage: (language: string) => Promise<void>;
+        } };
+        runInNewContext(entry.code, {
+            module, exports: module.exports, __testMetrics: hostMetrics,
+            atob, Blob, Response, DecompressionStream, AbortController, DOMException,
+            crypto, TextEncoder, TextDecoder, URL, setTimeout, clearTimeout,
+            fetch: async (url: string) => languageResourceFixture(url),
+            require: createRequire(import.meta.url), __filename: resolve('src/test/compiled.cjs'),
+        }, { timeout: 1000 });
+        // Exercise the verified remote resource path before rendering a translated component.
+        for (const { value } of UI_LANGUAGE_OPTIONS) { await module.exports.prepareUiLanguage(value); }
+        return props => module.exports.default.render(props).html;
     } finally {
         await bundle.close();
     }

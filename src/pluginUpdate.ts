@@ -96,11 +96,14 @@ export type PluginUpdateResult =
         notesStatus: PluginUpdateNotesStatus;
     };
 
-/** Use the installed version while current; use the remote version only for a real update. */
+/** A public install link is available only for formal update results. */
 export const selectPluginLinkVersion = (
     currentVersion: string,
-    result: Pick<PluginUpdateResult, 'status' | 'latestVersion'>,
-): string => result.status === 'current' ? currentVersion : result.latestVersion;
+    result: Pick<PluginUpdateResult, 'status' | 'latestVersion' | 'channel'>,
+): string => {
+    if (result.channel !== 'formal') { return ''; }
+    return result.status === 'current' ? currentVersion : result.latestVersion;
+};
 
 interface UpdateManifest {
     name: string;

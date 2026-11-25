@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { compileRenderer, type RenderComponent } from './test/renderSvelte';
+import { UI_LANGUAGE_OPTIONS } from './uiLanguage';
 import type { PluginUpdateResult } from './pluginUpdate';
 
 let renderAbout: RenderComponent;
@@ -28,15 +29,26 @@ const aboutProps = {
 };
 
 describe('compiled about panel states', () => {
+    it('marks reused historical notes with their actual language inside an Arabic UI', () => {
+        const html = renderAbout({ ...aboutProps, uiLanguage: 'ar' });
+        expect(html).toMatch(/class="about-update__release-note[^"]*"[^>]*lang="en"[^>]*dir="ltr"/);
+        expect(html).toContain('Planning improvements');
+    });
     it('distinguishes formal updates, beta previews and the current version', () => {
-        expect(renderAbout(aboutProps)).toContain('发现新版本');
-        const beta = renderAbout({ ...aboutProps, pluginUpdateResult: { ...available, channel: 'beta' } });
+        const formal = renderAbout(aboutProps);
+        expect(formal).toContain('发现新版本');
+        expect(formal).toContain('复制 0.11.0 插件链接');
+        const beta = renderAbout({ ...aboutProps, latestPluginVersion: '', pluginLinkCopyStatus: 'copied',
+            pluginUpdateResult: { ...available, channel: 'beta' } });
         expect(beta).toContain('测试版更新预览');
+        expect(beta).toContain('修正视线');
         expect(beta).not.toContain('发现新版本');
+        expect(beta).not.toContain('about-update__actions');
         const current = renderAbout({ ...aboutProps, pluginUpdateStatus: 'current',
             pluginUpdateResult: { ...available, status: 'current' } });
         expect(current).not.toContain('发现新版本');
         expect(current).toContain('修正视线');
+        expect(current).toContain('复制 0.11.0 插件链接');
     });
 
     it('renders the selected language and only that language in the release notes', () => {
@@ -81,11 +93,14 @@ const settingsProps = {
     units: { wind: 'm/s', temperature: '°C', precipitation: 'mm', distance: 'km', elevation: 'm' },
     initialOverlayPreference: 'satellite', initialOverlayOptions: [{ value: 'satellite' }],
     radarProvider: 'none', radarOverlayStatus: 'disabled', radarOpacityPercent: 65,
+    lightPollutionEnabled: false, lightPollutionOverlayStatus: 'disabled', lightPollutionOpacityPercent: 85,
+    toggleLightPollutionOverlay: () => undefined, changeLightPollutionOpacity: () => undefined,
+    retryLightPollutionOverlay: () => undefined,
     hideLocationSearch: false, directionLineOpacityPercent: 85, showExtendedDistanceMarker: false,
     minimizeScope: 'standard', changeMinimizeScope: () => undefined,
     savedApiKeyProvider: null, locationApiKeyDrafts: { amap: '', baidu: '', tencent: '' },
     locationApiKeys: { amap: '', baidu: '', tencent: '' },
-    toggleLanguage: () => undefined, changeInitialOverlayPreference: () => undefined,
+    changeLanguage: () => undefined, changeInitialOverlayPreference: () => undefined,
     changeRadarProvider: () => undefined, changeRadarOpacity: () => undefined,
     toggleLocationSearch: () => undefined, changeDirectionLineOpacity: () => undefined,
     toggleExtendedDistanceMarker: () => undefined, saveLocationApiKey: () => undefined,
@@ -93,6 +108,16 @@ const settingsProps = {
 };
 
 describe('compiled settings panel states', () => {
+    it.each(UI_LANGUAGE_OPTIONS)('renders all registered language choices while displaying $nativeName', option => {
+        const html = renderSettings({ ...settingsProps, uiLanguage: option.value });
+        expect(html).toMatch(/<select[^>]*class="language-toggle(?:\s[^"]*)?"/);
+        const languageTitle = html.match(/<select[^>]*class="language-toggle(?:\s[^"]*)?"[^>]*title="([^"]*)"/)?.[1];
+        expect(languageTitle?.endsWith(`: ${option.nativeName}`)).toBe(true);
+        for (const language of UI_LANGUAGE_OPTIONS) {
+            expect(html).toContain(`<option value="${language.value}">${language.nativeName}</option>`);
+        }
+        expect(html).not.toContain('undefined');
+    });
     it.each(['zh', 'en'])('renders the live flight dangers option in %s', uiLanguage => {
         const html = renderSettings({ ...settingsProps, uiLanguage,
             initialOverlayOptions: [{ value: 'satellite' }, { value: 'flightDangers' }],
@@ -122,6 +147,6 @@ describe('compiled settings panel states', () => {
         expect(chinese).toMatch(/<button[^>]*type="submit"[^>]*disabled/);
         const english = renderSettings({ ...settingsProps, uiLanguage: 'en' });
         expect(english).not.toContain('id="amap-api-key"');
-        expect(english).toContain('Preferences');
+        expect(english).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Settings<\/button>/);
     });
 });

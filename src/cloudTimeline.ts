@@ -1,5 +1,7 @@
+import { messages } from './locales/cloudEvents';
 import { cloudGalacticCenterPosition, type CloudDirectionBody } from './cloudGeometry';
 import { addDaysToDateInput, dateInputToUtcMidnight, type Coordinates, type SolarEvent } from './solar';
+import type { UiLanguage } from './uiLanguage';
 
 export type CloudTimelineEventType = SolarEvent | 'milkywayrise' | 'milkywayset';
 export type CloudTimelineEvent = { type: CloudTimelineEventType; timestamp: number };
@@ -39,11 +41,8 @@ export const galacticCenterEvents = (date: string, timeZone: string, location: C
     return events;
 };
 
-export const cloudTimelineLabel = (type: CloudTimelineEventType, zh: boolean): string => ({
-    sunrise: zh ? '日出' : 'Sunrise', sunset: zh ? '日落' : 'Sunset',
-    moonrise: zh ? '月升' : 'Moonrise', moonset: zh ? '月落' : 'Moonset',
-    milkywayrise: zh ? '银心升' : 'GC rise', milkywayset: zh ? '银心落' : 'GC set',
-})[type];
+export const cloudTimelineLabel = (type: CloudTimelineEventType, language: UiLanguage): string =>
+    messages[language].events[type];
 
 export const cloudClockMinute = (clock: string): number => {
     const [hour, minute] = clock.split(':').map(Number);

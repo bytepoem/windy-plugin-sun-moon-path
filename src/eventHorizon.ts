@@ -1,16 +1,18 @@
+import { messages } from './locales/horizonOverlay';
 import { destinationPoint, EARTH_RADIUS_KM, splitPolylineAtDateLine, type Coordinates } from './solar';
 import { renderHorizonIcon } from './horizonIcon';
+import type { UiLanguage } from './uiLanguage';
 import type { DirectionEvent, DirectionPath } from './eventDirections';
 import type { DirectionLineFitBounds } from './mapView';
 
 export const MAX_OBSERVER_HEIGHT_M = 12_000;
 export const HORIZON_EVENTS = [
-    { event: 'sunrise', body: 'sun', zh: '日出', en: 'Sunrise' },
-    { event: 'sunset', body: 'sun', zh: '日落', en: 'Sunset' },
-    { event: 'moonrise', body: 'moon', zh: '月出', en: 'Moonrise' },
-    { event: 'moonset', body: 'moon', zh: '月落', en: 'Moonset' },
-    { event: 'milkywayrise', body: 'galactic', zh: '银心升起', en: 'Galactic centre rise' },
-    { event: 'milkywayset', body: 'galactic', zh: '银心落下', en: 'Galactic centre set' },
+    { event: 'sunrise', body: 'sun' },
+    { event: 'sunset', body: 'sun' },
+    { event: 'moonrise', body: 'moon' },
+    { event: 'moonset', body: 'moon' },
+    { event: 'milkywayrise', body: 'galactic' },
+    { event: 'milkywayset', body: 'galactic' },
 ] as const;
 
 /** Surface distance to the tangent point on a smooth reference sphere.
@@ -150,13 +152,13 @@ export const createEventHorizonOverlay = (map: L.LeafletGlMap) => {
     };
     return {
         destroy,
-        render(location: Coordinates, points: ReturnType<typeof eventHorizonPoints>, distanceLabel: string, language: 'zh' | 'en', opacityPercent: number) {
+        render(location: Coordinates, points: ReturnType<typeof eventHorizonPoints>, distanceLabel: string, language: UiLanguage, opacityPercent: number) {
             destroy();
             group = new L.LayerGroup().addTo(map);
             const opacity = Number.isFinite(opacityPercent) ? Math.max(0, Math.min(100, opacityPercent)) / 100 : 1;
             // The observing point remains visible while elevation/events load or
             // no selected event exists. Place its label first so ray labels avoid it.
-            const originLabel = language === 'zh' ? '当前定位点' : 'Selected location';
+            const originLabel = messages[language].selectedLocation;
             const originIcon = new L.DivIcon({
                 className: 'sun-path-marker sun-path-marker--origin event-horizon-origin',
                 iconSize: [16, 16], iconAnchor: [8, 8],
@@ -169,13 +171,10 @@ export const createEventHorizonOverlay = (map: L.LeafletGlMap) => {
                 const definition = HORIZON_EVENTS.find(event => event.event === item.event)!;
                 const sun = definition.body === 'sun';
                 const color = sun ? '#ffd166' : definition.body === 'moon' ? '#8ec5ff' : '#9de0b7';
-                const name = language === 'zh' ? `${definition.zh}地平线` : `${definition.en} horizon`;
+                const name = messages[language].horizon(messages[language].events[item.event]);
                 const label = escapeText(`${name} · ${distanceLabel}`);
                 const labelSide = Math.sin(item.azimuth * Math.PI / 180) >= 0 ? 'right' : 'left';
-                const shortName = definition.body === 'galactic'
-                    ? (language === 'zh' ? (item.event === 'milkywayrise' ? '银心升' : '银心落')
-                        : (item.event === 'milkywayrise' ? 'GC rise' : 'GC set'))
-                    : language === 'zh' ? definition.zh : definition.en;
+                const shortName = messages[language].shortEvents[item.event];
                 for (const segment of splitPolylineAtDateLine(item.line)) {
                     new L.Polyline(segment.map(point => [point.lat, point.lon] as [number, number]), {
                         color, weight: LINE_WIDTH_PX, dashArray: `${LINE_DASH_PX} ${LINE_GAP_PX}`, opacity, interactive: false,

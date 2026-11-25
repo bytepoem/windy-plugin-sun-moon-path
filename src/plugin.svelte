@@ -1,6 +1,8 @@
 <section
     id="sun-moon-path-panel"
     class="sun-path-panel"
+    lang={UI_LANGUAGES[uiLanguage].locale}
+    dir="ltr"
     class:plugin__content={!isMobileOrTablet}
     class:mobile_ui={isMobileOrTablet}
     class:mobile_collapsed={isMobileCollapsed}
@@ -256,12 +258,12 @@
     {/if}
 
     <div class="planning-datetime">
-        <CloudTimeline clock={planningTime.clock} date={selectedDate}
-            dateLabel={formatDateControlLabel(selectedDate)} zh={uiLanguage === 'zh'}
+        <CloudTimeline clock={planningTime.clock} date={selectedDate} minimumDate={minimumDate}
+            dateLabel={formatDateControlLabel(selectedDate)} language={uiLanguage}
             on:now={jumpToNow}
             on:datetime={event => selectPlanningDateTime(event.detail)}
             on:preview={event => previewPlanningTime(event.detail)}
-            on:commit={() => { planningTimePreview = false; }} />
+            on:commit={() => { planningState = transitionPlanningState(planningState, { type: 'commit' }); }} />
     </div>
 
     <div class="control-grid control-grid--favorites">
@@ -276,16 +278,18 @@
                         disabled={eventSkyReadyKey !== astronomyKey || (option.value === 'all'
                             ? summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)
                             : !solarPaths.some(path => path.event === option.value && path.status === 'ok'))}
-                        aria-label={text.events[option.value]}
+                        aria-label={option.value === 'all' && compactAllLabel !== text.events.all
+                            ? `${compactAllLabel}: ${text.events.all}` : text.events[option.value]}
                         title={summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible) && option.value === 'all'
                             ? (rainbowVisible
-                                ? (uiLanguage === 'zh' ? '彩虹规划需选择单个事件' : 'Rainbow planning requires a single event')
-                                : (uiLanguage === 'zh' ? '云层规划需选择单个事件' : 'Cloud planning requires a single event'))
+                                ? (messages[uiLanguage].rainbowPlanningRequiresASingleEvent)
+                                : (messages[uiLanguage].cloudPlanningRequiresASingleEvent))
                             : text.eventButtonTitles[option.value]}
                         on:click={() => selectEvent(option.value)}
                     >
                         {#if option.value === 'all'}
-                            <span class="event-button__text">{text.events.all}</span>
+                            <!-- Short visible labels keep all seven event controls equal in width. -->
+                            <span class="event-button__text">{compactAllLabel}</span>
                         {:else}
                             <span
                                 class:event-button__icon--moon={option.value === 'moonrise' || option.value === 'moonset'}
@@ -321,8 +325,8 @@
                         type="button"
                         class:active={highlightedEvent === event}
                         aria-pressed={highlightedEvent === event}
-                        aria-label={cloudTimelineLabel(event, uiLanguage === 'zh')}
-                        title={cloudTimelineLabel(event, uiLanguage === 'zh')}
+                        aria-label={cloudTimelineLabel(event, uiLanguage)}
+                        title={cloudTimelineLabel(event, uiLanguage)}
                         disabled={eventSkyReadyKey !== astronomyKey || !galacticEvents.some(item => item.type === event)}
                         on:click={() => selectGalacticEvent(event)}
                     >
@@ -421,7 +425,7 @@
         {:else if selectedEvent !== 'all' && activeSolarPath?.status === 'ok'}
             <div class="event-summary">
                 <div>
-                    <span class="control-label">{eventDisplayName(selectedEvent, text)}{text.eventTimeSuffix}</span>
+                    <span class="control-label">{text.eventTimeLabel(eventDisplayName(selectedEvent, text))}</span>
                     <strong>{formatLocalDateTime(activeSolarPath.eventTime, timeZone)}</strong>
                 </div>
                 <div class="event-summary__meta">
@@ -468,9 +472,10 @@
         aria-label={text.sunMoonPanelLabel}
     >
         <div class="summary-tabs" class:summary-tabs--weather={isMobileOrTablet && !isMobileFullscreen} role="tablist" aria-label={text.summaryViewsLabel}>
-            <button id="summary-tab-events" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'events'} aria-selected={summaryTab === 'events'} tabindex={summaryTab === 'events' ? 0 : -1} on:click={() => selectSummaryTab('events')} on:keydown={event => handleSummaryTabKeydown(event, 'events')}>{text.eventTab}</button>
+            <EventNavigation active={summaryTab === 'events'} bind:view={eventView} language={uiLanguage}
+                on:activate={activateEventView} on:tabkeydown={event => handleSummaryTabKeydown(event.detail, 'events')} />
             {#if isMobileOrTablet && !isMobileFullscreen}
-                <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}>{text.weatherTab}</button>
+                <button id="summary-tab-weather" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'weather'} aria-selected={summaryTab === 'weather'} tabindex={summaryTab === 'weather' ? 0 : -1} on:click={() => selectSummaryTab('weather')} on:keydown={event => handleSummaryTabKeydown(event, 'weather')}><span class="summary-tab__label" title={text.weatherTab}>{text.weatherTab}</span></button>
             {/if}
             <CloudNavigation
                 active={summaryTab === 'clouds'}
@@ -479,7 +484,7 @@
                 on:activate={() => selectSummaryTab('clouds')}
                 on:tabkeydown={event => handleSummaryTabKeydown(event.detail, 'clouds')}
             />
-            <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => selectSummaryTab('settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}>{text.settingsTab}</button>
+            <button id="summary-tab-settings" type="button" role="tab" aria-controls="summary-panel" class:active={summaryTab === 'settings'} aria-selected={summaryTab === 'settings'} tabindex={summaryTab === 'settings' ? 0 : -1} on:click={() => selectSummaryTab('settings')} on:keydown={event => handleSummaryTabKeydown(event, 'settings')}><span class="summary-tab__label" title={text.settingsTab}>{text.settingsTab}</span></button>
             <button
                 id="summary-tab-about"
                 type="button"
@@ -497,7 +502,7 @@
                 }}
                 on:keydown={event => handleSummaryTabKeydown(event, 'about')}
             >
-                <span>{text.aboutTab}</span>
+                <span class="summary-tab__label" title={text.aboutTab}>{text.aboutTab}</span>
                 {#if pluginUpdateReminderVersion}
                     <span class="summary-tab__badge" aria-hidden="true">{text.aboutTabUpdateBadge}</span>
                 {/if}
@@ -509,17 +514,33 @@
             </span>
         {/if}
 
-        <div
+        <TabPanelFrame
             id="summary-panel"
-            class="summary-panel-frame"
-            class:summary-panel-frame--settings={!isMobileCollapsed && summaryTab === 'settings'}
-            class:summary-panel-frame--events={isMobileCollapsed || summaryTab === 'events'}
-            class:summary-panel-frame--clouds={!isMobileCollapsed && summaryTab === 'clouds'}
-            role={isMobileCollapsed ? 'region' : 'tabpanel'}
-            aria-label={isMobileCollapsed ? text.eventTab : undefined}
-            aria-labelledby={isMobileCollapsed ? undefined : `summary-tab-${summaryTab}`}
+            mode={isMobileCollapsed ? 'collapsed' : isMobileOrTablet ? 'mobile' : 'desktop'}
+            labelledBy={`summary-tab-${summaryTab}`}
+            collapsedLabel={text.eventTab}
         >
-            {#if isMobileCollapsed || summaryTab === 'events'}
+            {#if isMounted && overviewStartDate}
+                <!-- Keep the range, expanded rows and scroll container mounted while visiting a single day. -->
+                <div class="multi-day-frame" bind:this={overviewFrame} hidden={isMobileCollapsed || summaryTab !== 'events' || eventView !== 'overview'}
+                    on:scroll={() => {
+                        if (!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview') {
+                            overviewScrollTop = overviewFrame.scrollTop;
+                        }
+                    }}>
+                    <MultiDayOverview active={!isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
+                        contextReady={resolvedContextLocationKey === locationKey} contextError={status === 'error'}
+                        location={selectedLocation} locationName={locationDisplayName} {timeZone} {elevationM} {currentInstant}
+                        bind:startDate={overviewStartDate} bind:mode={overviewMode} language={uiLanguage} points={weatherPoints}
+                        {weatherStatus} {aodStatus} {visibilityStatus} {snowStatus} {snowDisplay} source={weatherSource} model={weatherModel} {units}
+                        on:select={selectOverviewDay} on:retry={retryWeather} on:contextretry={() => refreshPaths(astronomyKey)}
+                        on:sourcechange={handleWeatherSourceChange} on:modelchange={handleWeatherModelChange}
+                        on:atmosphereretry={retryAtmosphere} />
+                </div>
+            {/if}
+            {#if !isMobileCollapsed && summaryTab === 'events' && eventView === 'overview'}
+                <!-- The mounted overview above owns this view. -->
+            {:else if isMobileCollapsed || summaryTab === 'events'}
                 <span class="visually-hidden" role="status" aria-live="polite">
                     {status === 'loading' ? text.calculating : ''}
                 </span>
@@ -578,7 +599,7 @@
                                 </span>
                             </button>
                             <span class="astronomy-location__actions">
-                                <span class="coordinate-copy-toast" class:visible={coordinateCopyStatus !== 'idle'} aria-live="polite" aria-atomic="true">{coordinateCopyStatus === 'copied' ? (uiLanguage === 'zh' ? '经纬度已复制' : 'Coordinates copied') : coordinateCopyStatus === 'error' ? (uiLanguage === 'zh' ? '复制失败，请重试' : 'Copy failed. Try again') : ''}</span>
+                                <span class="coordinate-copy-toast" class:visible={coordinateCopyStatus !== 'idle'} aria-live="polite" aria-atomic="true">{coordinateCopyStatus === 'copied' ? (messages[uiLanguage].coordinatesCopied) : coordinateCopyStatus === 'error' ? (messages[uiLanguage].copyFailedTryAgain) : ''}</span>
                                 <button
                                     type="button"
                                     class="astronomy-location__favorite"
@@ -729,76 +750,62 @@
 
                         <div class="night-window-list" aria-label={text.nightObservationWindowsLabel}>
                             {#each observationWindows as slot}
+                                {@const evidenceState = slot.interval && resolveObservationEvidenceState({
+                                    weatherStatus, visibilityStatus,
+                                    dateCoverage: selectedWeatherDate.coverage,
+                                    evidence: slot.evidence,
+                                })}
                                 <article class:night-window--milky-way={slot.kind === 'milky-way'} class="night-window">
-                                    <div class="night-window__body">
-                                        <strong>{text.intervals[slot.kind]}</strong>
-                                        {#if status === 'loading'}
-                                            <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
-                                        {:else if slot.interval}
+                                    <strong>{text.intervals[slot.kind]}</strong>
+                                    {#if status === 'loading'}
+                                        <span class="astronomy-skeleton astronomy-skeleton--window" aria-hidden="true"></span>
+                                    {:else}
+                                        {#if slot.interval}
                                             <span>{formatInterval(slot.interval)} · {formatIntervalDuration(slot.interval)}</span>
-                                            {@const evidenceState = observationEvidenceState(slot)}
-                                            {#if evidenceState === 'loading'}
-                                                <span class="astronomy-skeleton astronomy-skeleton--evidence" aria-hidden="true"></span>
-                                                <span class="visually-hidden">{text.observationEvidenceLoading}</span>
-                                            {:else if evidenceState === 'ready'}
-                                                <div class="night-window__evidence" role="group" aria-label={text.observationEvidenceLabel}>
-                                                    <span
-                                                        class="night-window__metric"
-                                                        title={text.observationMetricLabels.totalCloudPercent}
-                                                    >
-                                                        <span class="visually-hidden">{text.observationMetricLabels.totalCloudPercent}</span>
-                                                        <WeatherMetricIcon metric="totalCloudPercent" size={11} />
-                                                        {formatObservationMeasurement(slot.evidence.totalCloudPercent, 0, '%')}
-                                                    </span>
-                                                    <span
-                                                        class="night-window__metric"
-                                                        title={text.observationMetricLabels.precipMm}
-                                                    >
-                                                        <span class="visually-hidden">{text.observationMetricLabels.precipMm}</span>
-                                                        <WeatherMetricIcon metric="precipMm" size={11} />
-                                                        {formatObservationPrecipitation(slot.evidence.precipitationMm, units.precipitation)}
-                                                    </span>
-                                                    <span
-                                                        class="night-window__metric"
-                                                        title={text.observationMetricLabels.visibilityKm}
-                                                    >
-                                                        <span class="visually-hidden">{text.observationMetricLabels.visibilityKm}</span>
-                                                        <WeatherMetricIcon metric="visibilityKm" size={11} />
-                                                        {formatObservationDistance(slot.evidence.visibilityKm, units.distance)}
-                                                    </span>
-                                                </div>
-                                            {:else}
-                                                <span class="night-window__evidence-state">
-                                                    {observationEvidenceStateLabel(evidenceState)}
-                                                </span>
-                                            {/if}
-                                        {:else}
-                                            <span>
-                                                {status === 'error'
-                                                    ? text.intervalUnavailable
-                                                    : status === 'ready' || status === 'empty'
-                                                        ? text.noInterval
-                                                        : text.calculating}
-                                            </span>
-                                            <div
-                                                class="night-window__evidence night-window__evidence--placeholder"
-                                                aria-hidden="true"
-                                            >
-                                                <span class="night-window__metric">
+                                        {:else if status === 'ready' || status === 'empty'}
+                                            <span aria-hidden="true">—</span>
+                                        {/if}
+                                        {#if evidenceState === 'ready'}
+                                            <div class="night-window__evidence" role="group" aria-label={text.observationEvidenceLabel}>
+                                                <span
+                                                    class="night-window__metric"
+                                                    title={text.observationMetricLabels.totalCloudPercent}
+                                                >
+                                                    <span class="visually-hidden">{text.observationMetricLabels.totalCloudPercent}</span>
                                                     <WeatherMetricIcon metric="totalCloudPercent" size={11} />
-                                                    --
+                                                    {formatObservationMeasurement(slot.evidence.totalCloudPercent, 0, '%')}
                                                 </span>
-                                                <span class="night-window__metric">
+                                                <span
+                                                    class="night-window__metric"
+                                                    title={text.observationMetricLabels.precipMm}
+                                                >
+                                                    <span class="visually-hidden">{text.observationMetricLabels.precipMm}</span>
                                                     <WeatherMetricIcon metric="precipMm" size={11} />
-                                                    --
+                                                    {formatObservationPrecipitation(slot.evidence.precipitationMm, units.precipitation)}
                                                 </span>
-                                                <span class="night-window__metric">
+                                                <span
+                                                    class="night-window__metric"
+                                                    title={text.observationMetricLabels.visibilityKm}
+                                                >
+                                                    <span class="visually-hidden">{text.observationMetricLabels.visibilityKm}</span>
                                                     <WeatherMetricIcon metric="visibilityKm" size={11} />
-                                                    --
+                                                    {formatObservationDistance(slot.evidence.visibilityKm, units.distance)}
                                                 </span>
                                             </div>
+                                        {:else}
+                                            <span class="night-window__evidence-state">
+                                                {#if evidenceState}
+                                                    {observationEvidenceStateLabel(evidenceState, text)}
+                                                {:else if status === 'error'}
+                                                    {text.intervalUnavailable}
+                                                {:else if status === 'ready' || status === 'empty'}
+                                                    {text.noInterval}
+                                                {:else}
+                                                    {text.calculating}
+                                                {/if}
+                                            </span>
                                         {/if}
-                                    </div>
+                                    {/if}
                                 </article>
                             {/each}
                         </div>
@@ -813,6 +820,8 @@
                     errorMessage={weatherErrorMessage}
                     {aodStatus}
                     {visibilityStatus}
+                    {snowStatus}
+                    {snowDisplay}
                     language={uiLanguage}
                     {timeZone}
                     currentTimestamp={currentInstant.getTime()}
@@ -830,6 +839,10 @@
             {:else if summaryTab === 'settings'}
                 <PluginSettings
                     {uiLanguage}
+                    {languagePreference}
+                    {languageLoading}
+                    {languageLoadError}
+                    {retryLanguage}
                     {units}
                     bind:settingsPage
                     {initialOverlayPreference}
@@ -846,6 +859,8 @@
                     {hideLocationSearch}
                     {minimizeScope}
                     {changeMinimizeScope}
+                    {snowDisplay}
+                    {changeSnowDisplay}
                     {showSkyChart}
                     {toggleSkyChart}
                     {directionLineOpacityPercent}
@@ -853,7 +868,7 @@
                     {savedApiKeyProvider}
                     {locationApiKeyDrafts}
                     {locationApiKeys}
-                    {toggleLanguage}
+                    {changeLanguage}
                     {changeInitialOverlayPreference}
                     {changeRadarProvider}
                     {changeRadarOpacity}
@@ -1002,11 +1017,11 @@
                     />
                 </div>
             {/if}
-        </div>
+        </TabPanelFrame>
     </section>
 
     {#if !isMobileOrTablet || isMobileFullscreen}
-        <section class="desktop-weather-module" aria-label={uiLanguage === 'zh' ? '天气模式预报' : 'Weather model forecast'}>
+        <section class="desktop-weather-module" aria-label={messages[uiLanguage].weatherModelForecast}>
             <WeatherTable
                 points={weatherPoints}
                 model={weatherModel}
@@ -1015,6 +1030,8 @@
                 errorMessage={weatherErrorMessage}
                 {aodStatus}
                 {visibilityStatus}
+                {snowStatus}
+                {snowDisplay}
                 language={uiLanguage}
                 {timeZone}
                 currentTimestamp={currentInstant.getTime()}
@@ -1036,14 +1053,6 @@
     </div>
 </section>
 
-{#if showLanguageChoice}
-    <LanguageChoice on:confirm={event => {
-        uiLanguage = event.detail;
-        saveLanguagePreference(uiLanguage);
-        showLanguageChoice = false;
-    }} />
-{/if}
-
 <script lang="ts">
     import bcast from '@windy/broadcast';
     import { getElevation, getTimezoneInfo } from '@windy/fetch';
@@ -1057,18 +1066,24 @@
     import store from '@windy/store';
     import { tick } from 'svelte';
     import betaReleaseNotesUrl from 'virtual:beta-release-notes-url';
+    import { UI_LANGUAGES, DEFAULT_UI_LANGUAGE, isUiLanguagePreference } from './uiLanguage';
+    import { formatDisplayDate } from './dateDisplay';
+    import { createLanguageController, type LanguageSelection } from './languageController';
+    import { messages } from './locales/plugin';
     import { loadObservationTimeZone } from './observationTimeZone';
     import { onPluginDestroy as onDestroy, onPluginMount as onMount, currentPluginLifecycle } from './pluginLifecycle';
 
     import CloudNavigation from './CloudNavigation.svelte';
+    import EventNavigation from './EventNavigation.svelte';
+    import MultiDayOverview from './MultiDayOverview.svelte';
     import CloudTimeline from './CloudTimeline.svelte';
-    import LanguageChoice from './LanguageChoice.svelte';
-    import { resolvePlanningTime, type PlanningTimeSelection } from './planningTime';
+    import { isSelectableDate, minimumSelectableDate } from './dateSelection';
+    import { resolvePlanningTime } from './planningTime';
+    import { constrainPlanningDate, createPlanningState, planningDateForLocation, transitionPlanningState } from './planningState';
     import TimelineEventIcon from './TimelineEventIcon.svelte';
     import { cloudMapDirections, type CloudDirectionBody } from './cloudGeometry';
-    import { translations, type UiLanguage } from './pluginTranslations';
+    import { translations } from './pluginTranslations';
     import {
-        loadLanguagePreference,
         loadPlanningViewPreference,
         savePlanningViewPreference,
         saveLanguagePreference,
@@ -1081,6 +1096,10 @@
         saveHideLocationSearchPreference,
         loadShowSkyChartPreference,
         saveShowSkyChartPreference,
+        loadSnowDisplayPreference,
+        normalizeSnowDisplayPreference,
+        saveSnowDisplayPreference,
+        type SnowDisplayPreference,
         loadInitialOverlayPreference,
         saveInitialOverlayPreference,
         loadRadarProvider,
@@ -1108,6 +1127,7 @@
     } from './pluginPreferences';
     import config from './pluginConfig';
     import PluginSettings from './PluginSettings.svelte';
+    import TabPanelFrame from './TabPanelFrame.svelte';
     import TidePlanning from './TidePlanning.svelte';
     import PluginAbout from './PluginAbout.svelte';
     import CloudObstruction from './CloudObstruction.svelte';
@@ -1134,7 +1154,7 @@
         scheduleReopenAfterHome,
         shouldRefreshSameLocationImmediately,
     } from './location';
-    import { fetchOpenMeteoAtmosphereMetric, type AtmosphereMetric } from './openMeteo';
+    import { fetchOpenMeteoAtmosphereMetric, fetchOpenMeteoSnowDepth, type AtmosphereMetric } from './openMeteo';
     import { createForecastController, emptyForecastState } from './forecastController';
     import { windyWeatherProvider } from './windyWeatherProvider';
     import {
@@ -1187,9 +1207,9 @@
     import {
         calculateCurrentMoonInfo,
         calculateCurrentSolarDirection,
-        compassDirection,
         dateInputForInstant,
         dateInputToUtcNoon,
+        dateInputToUtcMidnight,
         formatLocalClock,
         formatLocalDateTime,
         coordinatesFromLocation,
@@ -1241,6 +1261,7 @@
         type PrecipitationUnit,
         type UnitPreferences,
     } from './unitPreferences';
+    import type { UiLanguage } from './uiLanguage';
     import type { DiagnosticRuntime } from './diagnosticRuntime';
     import type { FavoriteComparisonTarget } from './favoriteComparison';
 
@@ -1288,7 +1309,7 @@
             const crossing = galacticEvents.find(event => event.type === kind);
             return {
                 kind,
-                label: cloudTimelineLabel(kind, uiLanguage === 'zh'),
+                label: cloudTimelineLabel(kind, uiLanguage),
                 body: 'milkyway',
                 time: crossing ? new Date(crossing.timestamp) : null,
             };
@@ -1364,9 +1385,13 @@
     let favoriteDistanceOrigin: Coordinates | null = cachedGpsLocation();
     let selectedDate = dateInputForInstant(new Date(), systemTimeZone);
     let selectedEvent: DirectionEvent = 'sunset';
-    let uiLanguage: UiLanguage = 'zh';
-    let showLanguageChoice = false;
-    let text = translations.zh;
+    export let initialLanguageSelection: LanguageSelection = { language: DEFAULT_UI_LANGUAGE, preference: 'auto' };
+    export const recordInitialLanguageChoice = () => pluginUsage?.recordInitialLanguageChoice();
+    let uiLanguage: UiLanguage = initialLanguageSelection.language;
+    let languagePreference = initialLanguageSelection.preference;
+    let languageLoading = false;
+    let languageLoadError = false;
+    let text = translations[uiLanguage];
     let timeZone = systemTimeZone;
     let elevationM = 0;
     let groundElevationM: number | null = null;
@@ -1377,7 +1402,8 @@
     let currentMoonInfo: CurrentMoonInfo | null = null;
     let displayedMoonIllumination: { fraction: number; waxing: boolean } | null = null;
     let currentInstant = new Date();
-    let timelineLeadLabel = '正在计算…';
+    $: minimumDate = minimumSelectableDate(currentInstant);
+    let timelineLeadLabel = text.calculating;
     let timelineLeadTime = '';
     let locationDisplayName = '';
     let eventLocationDisplayName = '';
@@ -1399,6 +1425,10 @@
     let moonsetAzimuthLabel = '';
     let moonShadowCenterValue = 24;
     let summaryTab: SummaryTab = 'events';
+    let eventView: 'single' | 'overview' = 'single';
+    let overviewStartDate = '';
+    let overviewFrame: HTMLDivElement;
+    let overviewScrollTop = 0;
     // Only map-planning tabs take ownership of layers. Settings, About and Weather
     // keep the preceding planner alive, including its local time and asynchronous work.
     let mapTab: SummaryTab = 'events';
@@ -1411,9 +1441,11 @@
     $: cloudObstructionVisible = mapTab === 'clouds' && cloudView === 'obstruction';
     $: rainbowVisible = mapTab === 'clouds' && cloudView === 'rainbow';
     $: horizonVisible = mapTab === 'clouds' && cloudView === 'horizon';
-    let planningSelection: PlanningTimeSelection = { mode: 'instant', timestamp: Date.now() };
-    let planningTimePreview = false;
-    let hostTimeSelectionActive = false;
+    let planningState = createPlanningState(Date.now());
+    let planningSelection = planningState.selection;
+    // Preview/host-input flags alone must not invalidate the civil-date derivation.
+    $: if (planningSelection !== planningState.selection) { planningSelection = planningState.selection; }
+    $: planningTimePreview = planningState.preview;
     let rainbowBody: 'sun' | 'moon' = 'sun';
     let rainbowSecondary = false;
     let rainbowFullCircle = false;
@@ -1434,11 +1466,17 @@
     let cloudMapEvent: SolarEvent | null = 'sunset';
     let cloudPlanningBody: CloudDirectionBody = 'sun';
     $: cloudPlanningTimestamp = planningTime.timestamp;
+    $: {
+        const constrained = constrainPlanningDate(planningState, timeZone, minimumDate, resolvedContextLocationKey === locationKey);
+        if (constrained !== planningState) { planningState = constrained; }
+    }
     // Host and one-shot current instants remain absolute across time-zone resolution; derive their
     // civil date only after the selected location's context has arrived.
-    $: if ((planningSelection.mode === 'windy' || planningSelection.mode === 'instant')
-        && resolvedContextLocationKey === locationKey) {
-        selectedDate = dateInputForInstant(new Date(planningSelection.timestamp), timeZone);
+    $: {
+        const instantDate = planningDateForLocation(planningSelection, timeZone, resolvedContextLocationKey === locationKey);
+        // Do not depend on selectedDate here: comparison binds its input before
+        // the change handler releases an absolute instant to a civil clock.
+        if (instantDate !== null) { selectedDate = instantDate; }
     }
     let cloudDirectionRangeKm = 0;
     let cloudBounds: [[number, number], [number, number]] | null = null;
@@ -1456,10 +1494,14 @@
     let latestPluginUpdateRequestId = 0;
     let weatherModel: WeatherModel = 'ecmwf';
     let weatherSource: WeatherSource = 'windy';
+    let snowDisplay: SnowDisplayPreference = 'auto';
+    let overviewMode: 'week' | 'month' = 'week';
     let forecastState = emptyForecastState();
     const forecastController = createForecastController({
         ...windyWeatherProvider,
-        atmosphere: request => fetchOpenMeteoAtmosphereMetric(request.metric, request),
+        atmosphere: request => request.metric === 'snow'
+            ? fetchOpenMeteoSnowDepth(request)
+            : fetchOpenMeteoAtmosphereMetric(request.metric, request),
     }, state => {
         forecastState = state;
     }, (kind, error) => diagnosticRuntime?.error(kind, error));
@@ -1480,6 +1522,7 @@
         : '';
     $: aodStatus = forecastState.aodStatus;
     $: visibilityStatus = forecastState.visibilityStatus;
+    $: snowStatus = forecastState.snowStatus;
     let lightPollutionPoint: LightPollutionPoint | null = null;
     let lightPollutionStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
     let lightPollutionErrorMessage = '';
@@ -1508,6 +1551,7 @@
     let status: 'idle' | 'loading' | 'ready' | 'empty' | 'error' = 'idle';
     let errorMessage = '';
     let isMounted = false;
+    let hasOpened = false;
     let latestRequestId = 0;
     let panelElement: HTMLElement | null = null;
     let mobilePluginRoot: HTMLElement | null = null;
@@ -1529,6 +1573,7 @@
     let canFitDirectionLines = false;
 
     $: text = translations[uiLanguage];
+    $: compactAllLabel = uiLanguage === 'zh' || uiLanguage === 'zh-TW' ? text.events.all : translations.en.events.all;
     /** Mirror Windy's global units without mutating the host preferences. */
     const handleMetricChange = (ident?: string, unit?: string) => {
         // Windy broadcasts the new unit before every consumer can safely reread
@@ -1556,7 +1601,7 @@
 
     $: selectedDateIsToday = dateInputForInstant(currentInstant, timeZone) === selectedDate;
 
-    $: accessibleSelectedDateLabel = formatAccessibleDateLabel(selectedDate, uiLanguage);
+    $: accessibleSelectedDateLabel = formatAccessibleDateLabel(selectedDate);
 
     $: isMobileCollapsed = isMobileOrTablet && mobilePanelMode === 'collapsed';
 
@@ -1606,6 +1651,9 @@
             requestedAt: currentInstant.getTime(),
             contextReady: resolvedContextLocationKey === locationKey,
             visible: shouldLoadVisibleWeatherData,
+            snowVisible: snowDisplay !== 'hidden' && !isMobileCollapsed
+                && (!isMobileOrTablet || isMobileFullscreen || summaryTab === 'weather'
+                    || (summaryTab === 'events' && eventView === 'overview' && overviewMode === 'week')),
             cloudsVisible: cloudObstructionVisible,
         });
     }
@@ -1620,7 +1668,8 @@
             ? text.lightPollutionLoadError
             : '';
 
-    $: if (isMounted && astronomyKey) {
+    // Windy supplies the opening location after constructing the panel.
+    $: if (isMounted && hasOpened && astronomyKey) {
         void refreshPaths(astronomyKey);
     }
 
@@ -1632,6 +1681,7 @@
 
     $: if (
         isMounted
+        && hasOpened
         && !isMobileCollapsed
         && lightPollutionRequestKey
         && lightPollutionRequestKey !== lightPollutionLoadedKey
@@ -1703,7 +1753,7 @@
 
     const eventDisplayName = (event: DirectionEvent, labels = text): string => {
         if (isGalacticEvent(event)) {
-            return cloudTimelineLabel(event, uiLanguage === 'zh');
+            return cloudTimelineLabel(event, uiLanguage);
         }
         return labels.events[event] || event;
     };
@@ -1732,6 +1782,11 @@
     const changeMinimizeScope = (event: Event) => {
         minimizeScope = normalizeMinimizeScope((event.currentTarget as HTMLSelectElement).value);
         saveMinimizeScopePreference(minimizeScope);
+    };
+
+    const changeSnowDisplay = (event: Event) => {
+        snowDisplay = normalizeSnowDisplayPreference((event.currentTarget as HTMLSelectElement).value);
+        saveSnowDisplayPreference(snowDisplay);
     };
 
     const toggleLocationSearch = (event: Event) => {
@@ -1771,11 +1826,33 @@
         } catch { /* Storage access may be blocked; retain the current session's controls. */ }
     }
 
-    const toggleLanguage = () => {
-        favoritesOpen = false;
-        favoriteReturnFocus = null;
-        uiLanguage = uiLanguage === 'zh' ? 'en' : 'zh';
-        saveLanguagePreference(uiLanguage);
+    const languageController = createLanguageController({
+        initial: initialLanguageSelection,
+        usedLang: () => store.get('usedLang'),
+        apply: selection => {
+            favoritesOpen = false;
+            favoriteReturnFocus = null;
+            uiLanguage = selection.language;
+            languagePreference = selection.preference;
+        },
+        status: (loading, failed) => {
+            languageLoading = loading;
+            languageLoadError = failed;
+        },
+        persist: saveLanguagePreference,
+        committed: (selection, userInitiated) => pluginUsage?.setLanguage(selection, userInitiated),
+    });
+    const syncHostLanguage = () => { void languageController.syncHost(); };
+    const retryLanguage = () => { void languageController.retry(); };
+    let languageSubscriptionId: number | null = null;
+
+    /** Validate the DOM boundary before starting the asynchronous selection transaction. */
+    const changeLanguage = (event: Event) => {
+        const select = event.currentTarget as HTMLSelectElement;
+        const value = select.value;
+        // Keep the DOM aligned with committed state while the selected catalog loads.
+        select.value = languagePreference;
+        if (isUiLanguagePreference(value)) { void languageController.select(value); }
     };
 
     const setMobilePanelMode = async (value: MobilePanelMode) => {
@@ -1907,10 +1984,35 @@
         pluginUpdateReminderVersion = null;
     };
 
+    /** Navigation selects only the view. Range browsing never writes planning time. */
+    const activateEventView = () => {
+        if (eventView === 'overview' && !overviewStartDate) { overviewStartDate = selectedDate; }
+        if (eventView === 'overview' && overviewFrame?.hidden) { void showOverview(); }
+        void selectSummaryTab('events');
+    };
+
+    /** A chosen segment uses its absolute instant, including the following civil date. */
+    const selectOverviewDay = (event: CustomEvent<{ timestamp: number; date: string }>) => {
+        overviewScrollTop = overviewFrame?.scrollTop ?? 0;
+        planningState = transitionPlanningState(planningState, { type: 'instant', timestamp: event.detail.timestamp });
+        eventView = 'single';
+    };
+
+    const showOverview = async () => {
+        eventView = 'overview';
+        await tick();
+        if (isMounted && eventView === 'overview' && overviewFrame) { overviewFrame.scrollTop = overviewScrollTop; }
+    };
+
     const selectSummaryTab = async (nextTab: SummaryTab) => {
+        const returningToOverview = nextTab === 'events' && eventView === 'overview' && summaryTab !== 'events';
+        if (summaryTab === 'events' && eventView === 'overview' && nextTab !== 'events') {
+            overviewScrollTop = overviewFrame?.scrollTop ?? 0;
+        }
         const fitRequestId = ++horizonFitRequestId;
         pluginUsage?.setTab(nextTab, true, cloudView);
         summaryTab = nextTab;
+        if (returningToOverview) { void showOverview(); }
         // Recheck on entry even if this mounted plugin previously found no update.
         // The update service reuses fresh results and revalidates expired metadata.
         if (nextTab === 'about' && pluginUpdateStatus !== 'loading') {
@@ -1953,11 +2055,11 @@
         return mapEvent === null ? [] : selectDirectionPaths(paths, galacticPaths, mapEvent);
     };
 
-    $: fitMapControlLabel = rainbowVisible ? (uiLanguage === 'zh' ? '居中彩虹方向图' : 'Centre rainbow sky chart')
-        : horizonVisible ? (uiLanguage === 'zh' ? '适配地平线范围' : 'Fit horizon radius')
-        : cloudObstructionVisible && cloudBounds ? (uiLanguage === 'zh' ? '显示全部云层参考线' : 'Fit all cloud reference lines')
+    $: fitMapControlLabel = rainbowVisible ? (messages[uiLanguage].centreRainbowSkyChart)
+        : horizonVisible ? (messages[uiLanguage].fitHorizonRadius)
+        : cloudObstructionVisible && cloudBounds ? (messages[uiLanguage].fitAllCloudReferenceLines)
         : text.fitDirectionLinesLabel(formatDistanceLabel(showExtendedDistanceMarker ? 600 : 400, units.distance));
-    $: detailMapControlLabel = cloudObstructionVisible && cloudDetailBounds ? (uiLanguage === 'zh' ? '聚焦云层地平线与遮挡交点' : 'Focus cloud horizon and intersections')
+    $: detailMapControlLabel = cloudObstructionVisible && cloudDetailBounds ? (messages[uiLanguage].focusCloudHorizonAndIntersections)
         : text.restoreSearchZoomLabel;
 
     // Event rays remain visible when cloud heights are unavailable; fit those real lines independently.
@@ -2056,27 +2158,17 @@
 
     /** Capture now once; the resolved location supplies its local date and clock. */
     const jumpToNow = () => {
-        hostTimeSelectionActive = false;
-        planningTimePreview = false;
-        planningSelection = { mode: 'instant', timestamp: Date.now() };
+        planningState = transitionPlanningState(planningState, { type: 'instant', timestamp: Date.now() });
     };
 
     /** Model samples and estimated events use UTC timestamps; preserve that instant in the shared clock. */
     const selectTideTime = (timestamp: number) => {
-        hostTimeSelectionActive = false;
-        planningTimePreview = false;
-        planningSelection = { mode: 'instant', timestamp };
+        planningState = transitionPlanningState(planningState, { type: 'instant', timestamp });
     };
 
     /** A manual date edit releases an absolute instant but retains its displayed clock. */
     const selectPlanningDate = () => {
-        hostTimeSelectionActive = false;
-        if (planningSelection.mode === 'windy' || planningSelection.mode === 'instant') {
-            planningSelection = {
-                mode: 'clock',
-                clock: formatLocalClock(new Date(planningSelection.timestamp), timeZone),
-            };
-        }
+        planningState = transitionPlanningState(planningState, { type: 'date', timeZone });
     };
 
     /** Manual edits keep the selected body/long rays, but clear event highlighting. */
@@ -2084,25 +2176,24 @@
         // Keep the civil date and clock together; the location resolver, not the
         // browser's system zone, converts them to an instant once context is ready.
         const [date, clock] = value.split('T');
+        if (!isSelectableDate(date, minimumDate) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(clock ?? '')) { return; }
         selectedDate = date;
-        hostTimeSelectionActive = false;
-        planningTimePreview = false;
-        planningSelection = { mode: 'clock', clock };
+        if (summaryTab === 'events' && eventView === 'overview') { overviewStartDate = date; }
+        planningState = transitionPlanningState(planningState, { type: 'clock', clock, preview: false });
     };
 
     /** Slider edits preview locally until committed. */
     const previewPlanningTime = (clock: string) => {
-        hostTimeSelectionActive = false;
-        planningTimePreview = true;
-        planningSelection = { mode: 'clock', clock };
+        planningState = transitionPlanningState(planningState, { type: 'clock', clock, preview: true });
     };
 
     /** Both shortcut rows select one exact event instant without changing Tab. */
     const jumpPlanningEvent = (event: string) => {
-        if (eventSkyReadyKey !== astronomyKey || !summaryTimelineItems.some(item => item.kind === event && item.time)) {return;}
-        hostTimeSelectionActive = false;
-        planningSelection = { mode: 'event', event };
-        planningTimePreview = false;
+        const nextState = transitionPlanningState(planningState, {
+            type: 'event', event, events: summaryTimelineItems, ready: eventSkyReadyKey === astronomyKey,
+        });
+        if (nextState === planningState) { return; }
+        planningState = nextState;
         const directionEvent = event === 'dawn' ? 'sunrise' : event === 'dusk' ? 'sunset' : event as CloudTimelineEventType;
         selectedEvent = directionEvent;
         cloudTimelineEvent = directionEvent;
@@ -2118,10 +2209,8 @@
             if (summaryTab === 'clouds' && (cloudObstructionVisible || rainbowVisible)) {return;}
             // Explicitly requesting all directions releases the previous hidden cloud planner.
             if (summaryTab !== 'clouds') {mapTab = 'events';}
-            hostTimeSelectionActive = false;
             selectedEvent = event;
-            planningSelection = { mode: 'current' };
-            planningTimePreview = false;
+            planningState = transitionPlanningState(planningState, { type: 'current' });
         } else {
             jumpPlanningEvent(event);
         }
@@ -2177,13 +2266,13 @@
      */
     const syncRadarTimestamp = (timestampMs: number, source?: string) => {
         radarOverlayController.setTimestamp(timestampMs);
-        if (!isMounted || source === name || !Number.isFinite(timestampMs) || !Number.isFinite(new Date(timestampMs).getTime())
-            || timestampMs === planningTime.timestamp) {return;}
+        if (!isMounted) { return; }
         // Windy's forecast and radar/satellite initialization publish times without
         // a source. Keep local selections until the user operates a host timeline.
-        if (planningSelection.mode !== 'windy' && !source && !hostTimeSelectionActive) {return;}
-        planningTimePreview = false;
-        planningSelection = { mode: 'windy', timestamp: timestampMs };
+        const nextState = transitionPlanningState(planningState, {
+            type: 'host-time', timestamp: timestampMs, source, pluginName: name, currentTimestamp: planningTime.timestamp,
+        });
+        if (nextState !== planningState) { planningState = nextState; }
     };
 
     /** Distinguish host timeline input from automatic time/frame initialization. */
@@ -2192,7 +2281,7 @@
         if (event instanceof KeyboardEvent) {
             if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight')
                 && !event.target.closest('input, textarea, select, [contenteditable]')) {
-                hostTimeSelectionActive = true;
+                planningState = transitionPlanningState(planningState, { type: 'host-input' });
             }
         } else if (event.target.closest([
             '#plugin-progress-bar',
@@ -2201,7 +2290,7 @@
             '#plugin-radar-plus .play-pause',
             '#plugin-radar-plus .radsat__segments',
         ].join(', '))) {
-            hostTimeSelectionActive = true;
+            planningState = transitionPlanningState(planningState, { type: 'host-input' });
         }
     };
 
@@ -2376,10 +2465,7 @@
     const lineColorForEvent = directionLineColor;
 
     const compassDirectionLabel = (azimuth: number, language = uiLanguage): string => {
-        if (language === 'zh') {
-            return compassDirection(azimuth);
-        }
-        const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        const labels = messages[language].compass;
         return labels[Math.round(((azimuth % 360) + 360) % 360 / 45) % labels.length];
     };
 
@@ -2391,9 +2477,7 @@
         : {
             currentSun: currentSolarDirection,
             currentMoon: currentMoonInfo,
-            liveLabels: uiLanguage === 'zh'
-                ? { sun: '太阳 · 实时', moon: '月亮 · 实时' }
-                : { sun: 'Sun · Live', moon: 'Moon · Live' },
+            liveLabels: messages[uiLanguage].liveBodies,
         };
 
     const renderMapFeatures = (paths: DirectionPath[], directionRangeKm = cloudObstructionVisible ? cloudDirectionRangeKm : null,
@@ -2422,6 +2506,13 @@
 
     const refreshCurrentDirectionValues = () => {
         currentInstant = new Date();
+        const minimum = minimumSelectableDate(currentInstant);
+        // A year rollover expires the earliest selectable year. Release an old
+        // absolute instant before recalculating the newly valid civil date.
+        if (selectedDate < minimum) {
+            selectedDate = minimum;
+            planningState = createPlanningState(dateInputToUtcMidnight(minimum, timeZone).getTime());
+        }
         try {
             currentSolarDirection = calculateCurrentSolarDirection({
                 date: currentInstant,
@@ -2686,23 +2777,7 @@
         reason: 'always-up' | 'always-down' | 'not-available',
     ): string => {
         const nameForEvent = eventDisplayName(event, text);
-        if (uiLanguage === 'en') {
-            const body = event === 'moonrise' || event === 'moonset' ? 'moon' : 'sun';
-            if (reason === 'always-up') {
-                return `The ${body} stays above the horizon today; no ${nameForEvent} time is available.`;
-            }
-            if (reason === 'always-down') {
-                return `The ${body} stays below the horizon today; no ${nameForEvent} time is available.`;
-            }
-            return `No ${nameForEvent} time is available today.`;
-        }
-        if (reason === 'always-up') {
-            return `当天${nameForEvent === '月升' || nameForEvent === '月落' ? '月亮' : '太阳'}始终在地平线以上，没有可用的${nameForEvent}时刻。`;
-        }
-        if (reason === 'always-down') {
-            return `当天${nameForEvent === '月升' || nameForEvent === '月落' ? '月亮' : '太阳'}始终在地平线以下，没有可用的${nameForEvent}时刻。`;
-        }
-        return `当天没有可用的${nameForEvent}时刻。`;
+        return messages[uiLanguage].unavailableEvent(nameForEvent, event === 'moonrise' || event === 'moonset', reason);
     };
 
     const coordinateLocationLabel = (location: Coordinates): string =>
@@ -2768,7 +2843,7 @@
             lightPollutionStatus = 'idle';
         }
         const nextKey = makeAstronomyKey(nextLocation, selectedDate);
-        const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted, astronomyKey, nextKey);
+        const needsImmediateRefresh = shouldRefreshSameLocationImmediately(isMounted && hasOpened, astronomyKey, nextKey);
         astronomyKey = nextKey;
 
         if (isMounted) {
@@ -2890,6 +2965,10 @@
 
             lastKnownGpsLocation = gpsLocation;
             favoriteDistanceOrigin = gpsLocation;
+            // A fresh fix may confirm the cached coordinates already being loaded.
+            if (gpsLocation.lat === selectedLocation.lat && gpsLocation.lon === selectedLocation.lon) {
+                return;
+            }
             addressSelectedLocation = null;
             setLocation(gpsLocation, false);
             recenterSelectedLocationInVisibleMap(6);
@@ -2960,9 +3039,7 @@
 
     const timelineEventLabel = (item: { kind: string; label: string }, labels = text): string => {
         if (item.kind === 'dawn' || item.kind === 'dusk') {
-            return uiLanguage === 'zh'
-                ? (item.kind === 'dawn' ? '晨间蓝调' : '暮间蓝调')
-                : (item.kind === 'dawn' ? 'Morning blue hour' : 'Evening blue hour');
+            return messages[uiLanguage].blueHours[item.kind];
         }
         return labels.timeline[item.kind] || item.label;
     };
@@ -3007,32 +3084,27 @@
     const formatIntervalDuration = (interval: AstronomyInterval): string =>
         formatRemaining(interval.end.getTime() - interval.start.getTime());
 
-    const observationEvidenceState = (slot: ObservationWindow): ObservationEvidenceState =>
-        resolveObservationEvidenceState({
-            weatherStatus,
-            visibilityStatus,
-            dateCoverage: selectedWeatherDate.coverage,
-            evidence: slot.evidence,
-        });
-
-    const observationEvidenceStateLabel = (state: ObservationEvidenceState): string => {
+    const observationEvidenceStateLabel = (state: ObservationEvidenceState, labels: typeof text): string => {
+        if (state === 'loading') {
+            return labels.observationEvidenceLoading;
+        }
         if (state === 'outside-range') {
-            return text.observationEvidenceOutsideRange;
+            return labels.observationEvidenceOutsideRange;
         }
         if (state === 'missing') {
-            return text.observationEvidenceMissing;
+            return labels.observationEvidenceMissing;
         }
         if (state === 'partial') {
-            return text.observationEvidencePartial;
+            return labels.observationEvidencePartial;
         }
-        return text.observationEvidenceUnavailable;
+        return labels.observationEvidenceUnavailable;
     };
 
     const formatObservationRange = (range: ObservationMetricRange | null, maximumFractionDigits: number): string => {
         if (!range) {
             return '--';
         }
-        const formatter = new Intl.NumberFormat(uiLanguage === 'zh' ? 'zh-CN' : 'en-US', {
+        const formatter = new Intl.NumberFormat(UI_LANGUAGES[uiLanguage].locale, {
             maximumFractionDigits,
         });
         const minimum = formatter.format(range.minimum);
@@ -3079,17 +3151,12 @@
             : dateInput;
     };
 
-    const formatAccessibleDateLabel = (dateInput: string, language: UiLanguage): string => {
+    const formatAccessibleDateLabel = (dateInput: string): string => {
         const [year, month, day] = dateInput.split('-').map(value => Number.parseInt(value, 10));
         if (![year, month, day].every(Number.isFinite)) {
             return dateInput;
         }
-        return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            timeZone: 'UTC',
-        }).format(Date.UTC(year, month - 1, day, 12));
+        return formatDisplayDate(dateInput, true);
     };
 
     const formatRemaining = (milliseconds: number): string => {
@@ -3103,10 +3170,7 @@
         const totalMinutes = Math.max(1, Math.round(milliseconds / 60_000));
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        if (language === 'en') {
-            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-        }
-        return hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
+        return messages[language].compactRemaining(hours, minutes);
     };
 
     // 今日使用实时月相；选择其他日期时，使用该日当地中午的天文时间线月相。
@@ -3132,16 +3196,10 @@
 
     const nextWindowParts = (item: { kind: string; label: string; time?: Date | null }, language = uiLanguage): { label: string; time: string } => {
         if (!item.time) {
-            return { label: language === 'en' ? 'Ended' : '已结束', time: '' };
-        }
-        if (language === 'en') {
-            return {
-                label: 'Next',
-                time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime(), language),
-            };
+            return { label: messages[language].ended, time: '' };
         }
         return {
-            label: '倒计时',
+            label: messages[language].countdown,
             time: formatCompactRemaining(item.time.getTime() - currentInstant.getTime(), language),
         };
     };
@@ -3172,6 +3230,7 @@
         favoriteDistanceOrigin = cachedGpsLocation();
         const nextLocation = params ? coordinatesFromLocation(params) || defaultLocation() : defaultLocation();
         setLocation(nextLocation, false);
+        hasOpened = true;
         recenterSelectedLocationInVisibleMap(6);
         if (!params) {
             void centerOnCurrentGps(requestId);
@@ -3180,6 +3239,11 @@
 
     const overlayOwner = {
         deactivateForReplacement: () => {
+            languageController.destroy();
+            if (languageSubscriptionId !== null) {
+                store.off(languageSubscriptionId);
+                languageSubscriptionId = null;
+            }
             if (diagnosticRuntime?.diagnostics.state !== 'failed') { diagnosticRuntime?.stop('replacement'); }
             // Replacement mounts continue the logical use, with no live old resources.
             pluginUsage?.stop(true);
@@ -3257,9 +3321,6 @@
             ? panelElement?.closest<HTMLElement>('#plugin-windy-plugin-sun-moon-path') || null
             : null;
         mobileBottomWrapper = mobilePluginRoot?.closest<HTMLElement>('#bottom-wrapper') || null;
-        const savedLanguage = loadLanguagePreference();
-        uiLanguage = savedLanguage ?? 'zh';
-        showLanguageChoice = savedLanguage === null;
         cloudView = loadPlanningViewPreference();
         // Retire the previous provider's browser credential without reading or retaining its value.
         try { localStorage.removeItem('windy-plugin-sun-moon-path:qweather'); } catch { /* Storage may be disabled. */ }
@@ -3277,6 +3338,7 @@
         hideLocationSearch = loadHideLocationSearchPreference();
         minimizeScope = loadMinimizeScopePreference();
         showSkyChart = loadShowSkyChartPreference();
+        snowDisplay = loadSnowDisplayPreference();
         showExtendedDistanceMarker = loadExtendedDistancePreference();
         directionLineOpacityPercent = loadDirectionLineOpacityPreference();
         initialOverlayPreference = loadInitialOverlayPreference(availableInitialOverlays);
@@ -3292,8 +3354,14 @@
         locationApiKeys = loadLocationApiKeys();
         locationApiKeyDrafts = { ...locationApiKeys };
         isMounted = true;
-        pluginUsage = startPluginUsage({ localBuild: betaReleaseNotesUrl !== null, tab: summaryTab, cloudView });
+        pluginUsage = startPluginUsage({
+            localBuild: betaReleaseNotesUrl !== null, tab: summaryTab, cloudView,
+            language: { language: uiLanguage, preference: languagePreference },
+        });
         radarTimestampSubscriptionId = store.on('timestamp', syncRadarTimestamp);
+        languageSubscriptionId = store.on('usedLang', syncHostLanguage);
+        // Catch a host change that occurred while the entry was preparing the first catalog.
+        syncHostLanguage();
         void applyRadarProvider();
         singleclick.on(name, setLocationFromMapClick);
         lightPollutionOverlayController.setEnabled(lightPollutionEnabled);
@@ -3466,8 +3534,7 @@
         --weather-tone-cool: #9092ba;
         --weather-tone-mild: #aff5c0;
         --weather-tone-freezing: #f7f7f7;
-        --summary-panel-height: 268px;
-        --events-summary-panel-height: 280px;
+        --weather-tone-neutral: #303746;
         --desktop-weather-panel-height: 592px;
 
         box-sizing: border-box;
@@ -3548,9 +3615,6 @@
     }
 
     .sun-path-panel.mobile_ui {
-        --summary-panel-height: 250px;
-        --events-summary-panel-height: 270px;
-
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -3760,11 +3824,11 @@
     }
 
     .sun-path-panel.mobile_ui .summary-tabs {
-        grid-template-columns: minmax(0, 1fr) minmax(108px, 1fr) repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(74px, 1fr) minmax(96px, 1fr) repeat(2, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui .summary-tabs.summary-tabs--weather {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(108px, 1.4fr) repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(74px, 1fr) minmax(0, 1fr) minmax(96px, 1.4fr) repeat(2, minmax(0, 1fr));
     }
 
     .sun-path-panel.mobile_ui.mobile_collapsed .mobile-scroll-content {
@@ -3858,7 +3922,7 @@
     }
 
     .sun-path-panel.mobile_ui.mobile_fullscreen .summary-tabs {
-        grid-template-columns: minmax(0, 1fr) minmax(108px, 1fr) repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(74px, 1fr) minmax(96px, 1fr) repeat(2, minmax(0, 1fr));
     }
 
     .panel-intro,
@@ -3888,10 +3952,6 @@
         min-height: 0;
     }
 
-    .map-bottom-module--mobile-collapsed .summary-panel-frame {
-        height: auto;
-    }
-
     .map-bottom-module--mobile-collapsed .astronomy-panel {
         height: auto;
         min-height: 0;
@@ -3902,7 +3962,8 @@
         min-height: 36px;
         padding: 0 3px;
         font-size: 13px;
-        white-space: nowrap;
+        /* Long localized names must stay inside their own tap target. */
+        white-space: normal;
         min-width: 0;
     }
 
@@ -3919,6 +3980,7 @@
         height: 10px;
         padding: 0 3px;
         font-size: 7px;
+        line-height: 10px;
     }
 
     .panel-title {
@@ -4612,18 +4674,7 @@
     }
 
     .summary-tabs.summary-tabs--weather {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-    }
-
-    .summary-panel-frame--settings {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .summary-panel-frame--settings > :global(.module-about) {
-        flex: 1;
-        min-height: 0;
-        height: auto;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
     }
 
     .summary-tabs button {
@@ -4640,24 +4691,34 @@
         font: inherit;
         font-size: 15px;
         cursor: pointer;
-        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+
+    /* Keep translated navigation names whole; the accessible name retains all text. */
+    .summary-tab__label {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .summary-tab__badge {
         box-sizing: border-box;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+        display: block;
         min-width: 16px;
+        max-width: 100%;
         height: 14px;
         padding: 0 3px;
         border-radius: 999px;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         color: #0b1e2b;
         background: var(--panel-accent);
         font-size: 8px;
         font-weight: 800;
-        line-height: 1;
+        line-height: 14px;
     }
 
     .summary-tabs button + button {
@@ -4680,32 +4741,15 @@
         box-shadow: inset 0 0 0 2px var(--panel-accent);
     }
 
-    .summary-panel-frame {
-        height: var(--summary-panel-height);
-        overflow: hidden;
-        background: #1d263d;
+    /* The shared Tab frame owns height; long overview content scrolls inside it. */
+    .multi-day-frame {
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
     }
 
-    .summary-panel-frame--events {
-        height: var(--events-summary-panel-height);
-    }
-
-    .summary-panel-frame--clouds {
-        height: 440px;
-        max-height: 65dvh;
-    }
-
-    /* Desktop summary Tabs share the event height; the standalone weather module has its own frame. */
-    .sun-path-panel:not(.mobile_ui) .summary-panel-frame {
-        height: var(--events-summary-panel-height);
-        max-height: none;
-    }
-
-    /* All expanded mobile Tabs share the event frame; collapsed mode keeps its content-sized summary. */
-    .sun-path-panel.mobile_ui:not(.mobile_collapsed) .summary-panel-frame {
-        height: var(--events-summary-panel-height);
-        max-height: none;
-    }
+    .multi-day-frame[hidden] { display: none; }
 
     .desktop-weather-module {
         flex: 0 0 auto;
@@ -5230,12 +5274,6 @@
         margin-top: 2px;
     }
 
-    .astronomy-skeleton--evidence {
-        width: min(100%, 150px);
-        height: 20px;
-        margin-top: 3px;
-    }
-
     @keyframes astronomy-skeleton-pulse {
         0%, 100% {
             opacity: 0.34;
@@ -5306,6 +5344,11 @@
     }
 
     .night-window {
+        display: grid;
+        /* Keep titles, times, and messages aligned even when translated text wraps. */
+        grid-row: span 3;
+        grid-template-rows: subgrid;
+        row-gap: 2px;
         min-width: 0;
         padding: 6px 8px;
         border: 1px solid rgba(115, 143, 214, 0.32);
@@ -5318,13 +5361,7 @@
         background: rgba(29, 22, 63, 0.72);
     }
 
-    .night-window__body {
-        display: grid;
-        gap: 2px;
-        min-width: 0;
-    }
-
-    .night-window__body strong {
+    .night-window strong {
         overflow: visible;
         color: var(--astronomy-text);
         font-size: 12px;
@@ -5333,7 +5370,7 @@
         line-height: 1.2;
     }
 
-    .night-window__body span {
+    .night-window span {
         overflow: visible;
         color: var(--astronomy-muted);
         font-size: 10px;
@@ -5344,6 +5381,7 @@
     }
 
     .night-window__evidence {
+        grid-row: 3;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -5353,7 +5391,7 @@
         border-top: 1px solid rgba(153, 181, 235, 0.16);
     }
 
-    .night-window__body span.night-window__metric {
+    .night-window span.night-window__metric {
         display: inline-flex;
         flex-shrink: 0;
         align-items: center;
@@ -5363,16 +5401,11 @@
         white-space: nowrap;
     }
 
-    .night-window__body span.night-window__evidence-state {
-        margin-top: 2px;
-        padding-top: 4px;
-        border-top: 1px solid rgba(153, 181, 235, 0.16);
+    .night-window span.night-window__evidence-state {
+        grid-row: 3;
         color: #93a3bc;
         font-size: 9.5px;
-    }
-
-    .night-window__evidence--placeholder {
-        opacity: 0.48;
+        overflow-wrap: anywhere;
     }
 
     /* Keep the bilingual support label readable without narrowing the project links. */
@@ -5522,11 +5555,8 @@
         }
 
         .night-window {
-            padding: 2px 6px;
-        }
-
-        .night-window__body {
-            gap: 0;
+            padding: 4px 6px;
+            row-gap: 1px;
         }
 
         .night-window__evidence {
@@ -5621,13 +5651,6 @@
 
         .astronomy-panel__heading {
             min-height: 38px;
-        }
-    }
-
-    @media (orientation: landscape) {
-        .sun-path-panel.mobile_ui {
-            --summary-panel-height: 256px;
-            --events-summary-panel-height: 276px;
         }
     }
 

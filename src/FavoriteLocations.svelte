@@ -3,6 +3,7 @@
     import { getElevation } from '@windy/fetch';
     import * as userFavs from '@windy/userFavs';
     import { createEventDispatcher, tick } from 'svelte';
+    import { labels } from './locales/FavoriteLocations';
     import { onPluginDestroy as onDestroy, onPluginMount as onMount } from './pluginLifecycle';
 
     import {
@@ -39,6 +40,7 @@
         FAVORITE_COMPARISON_MAX_TARGETS,
         type FavoriteComparisonTarget,
     } from './favoriteComparison';
+    import { DEFAULT_UI_LANGUAGE, type UiLanguage } from './uiLanguage';
     import type { LocationSearchSelection } from './locationProvider';
     import type { Coordinates } from './solar';
 
@@ -48,7 +50,7 @@
     export let locationName = '';
     export let locationNameResolved = false;
     export let distanceOrigin: Coordinates | null = null;
-    export let language: 'zh' | 'en' = 'zh';
+    export let language: UiLanguage = DEFAULT_UI_LANGUAGE;
     export let mobile = false;
     export let fullscreen = false;
     export let returnFocus: HTMLElement | null = null;
@@ -63,68 +65,11 @@
         select: LocationSearchSelection;
         compare: FavoriteComparisonTarget[];
     }>();
-    const labels = {
-        zh: {
-            panel: '收藏',
-            orderedByDistance: '距离最近',
-            orderedByRecent: '最近收藏',
-            orderedByElevation: '海拔最高',
-            orderedByLightPollution: '光污染最低',
-            sortLabel: '收藏排序方式',
-            close: '关闭收藏地点',
-            current: '当前',
-            search: '搜索收藏地点',
-            searchResults: (totalMatches: number) => `找到 ${totalMatches} 个收藏地点。`,
-            noMatches: '没有匹配的收藏地点。',
-            loading: '正在读取收藏地点…',
-            empty: '还没有收藏地点，可以先收藏当前观测地点。',
-            loadError: '无法读取收藏地点。',
-            retry: '重试',
-            saved: '已收藏当前地点',
-            removed: '已取消收藏当前地点',
-            actionError: '收藏操作失败，请稍后重试。',
-            elevation: '海拔',
-            bortle: '光污染',
-            compare: '对比',
-            compareHint: `选择 2–${FAVORITE_COMPARISON_MAX_TARGETS} 个收藏地点，对比同一观测日期。`,
-            compareSelection: (selectedCount: number) => `已选 ${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS}`,
-            compareStart: '开始对比',
-            compareCancel: '取消选择',
-            compareLimit: `最多选择 ${FAVORITE_COMPARISON_MAX_TARGETS} 个地点。`,
-        },
-        en: {
-            panel: 'Favorites',
-            orderedByDistance: 'Nearest',
-            orderedByRecent: 'Most recent',
-            orderedByElevation: 'Highest elevation',
-            orderedByLightPollution: 'Lowest pollution',
-            sortLabel: 'Sort favorites',
-            close: 'Close favorite locations',
-            current: 'Current',
-            search: 'Search favorites',
-            searchResults: (totalMatches: number) => `${totalMatches} favorite locations found.`,
-            noMatches: 'No matching favorite locations.',
-            loading: 'Loading favorite locations…',
-            empty: 'No favorite locations yet. Save the current observing location first.',
-            loadError: 'Unable to load favorite locations.',
-            retry: 'Retry',
-            saved: 'Current location saved',
-            removed: 'Current location removed from favorites',
-            actionError: 'Favorite action failed. Try again later.',
-            elevation: 'Elevation',
-            bortle: 'Bortle',
-            compare: 'Compare',
-            compareHint: `Select 2–${FAVORITE_COMPARISON_MAX_TARGETS} favorites for the same observing date.`,
-            compareSelection: (selectedCount: number) => `${selectedCount}/${FAVORITE_COMPARISON_MAX_TARGETS} selected`,
-            compareStart: 'Compare now',
-            compareCancel: 'Cancel selection',
-            compareLimit: `You can compare up to ${FAVORITE_COMPARISON_MAX_TARGETS} locations.`,
-        },
-    } as const;
+
     const sortModes: FavoriteSortMode[] = ['distance', 'recent', 'elevation', 'lightPollution'];
     const sortModeLabel = (
         mode: FavoriteSortMode,
-        currentText: typeof labels.zh | typeof labels.en,
+        currentText: typeof labels[UiLanguage],
     ): string => {
         if (mode === 'distance') {
             return currentText.orderedByDistance;
@@ -145,7 +90,7 @@
     };
     const favoriteMetricsCache = createFavoriteMetricsCache(browserStorage());
 
-    let text = labels.zh;
+    let text = labels[language];
     let favorites: LocationFavorite[] = [];
     let items: FavoritePlaceItem[] = [];
     let filteredItems: FavoritePlaceItem[] = [];

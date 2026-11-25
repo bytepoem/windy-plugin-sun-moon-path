@@ -36,6 +36,9 @@ jobs:
               run: |
                   npm test
                   python3 scripts/test_publish_update_mirrors.py
+                  python3 scripts/test_publish_language_resources.py
+                  node scripts/language-resources.mjs --check
+                  node --test scripts/verify-language-resources.test.mjs
             - name: Production build and update-site validation
               run: |
                   npm run build

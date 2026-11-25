@@ -1,19 +1,40 @@
+import { defineMessages, localized } from './localeMessages';
+
+/** Startup recovery is displayed in a built-in language before remote copy is ready. */
+export const temporaryEnglishAction = {
+    zh: '临时使用英语（不更改语言偏好）',
+    en: 'Use English for now (keep language preference)',
+};
+
+/** Network-dependent language guidance remains available in both built-in languages. */
+export const languageResourceHelp = {
+    zh: '简体中文和英语无需下载。其他语言首次使用时联网加载，成功后缓存在此浏览器。加载失败可重试；启动时也可临时使用英语，不改变已保存的偏好。选择“自动”可跟随 Windy 的语言。短日期统一为“月/日”，完整日期保留“年-月-日”，不随界面语言切换。非中文界面的“全部”和“现在”按钮使用 All 和 Now，完整提示仍使用所选语言。语言框的长名称以省略号显示，展开可查看完整选项。',
+    en: 'Simplified Chinese and English need no download. Other languages load online on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup without changing your saved preference. Choose auto to follow Windy’s language. Short dates always use month/day; full dates retain year-month-day, regardless of interface language. Non-Chinese interfaces use All and Now for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.',
+};
 import type { ObservationEvent as DirectionEvent } from './observationPlanner';
 import type { AstronomyInterval } from './solar';
 import type { RadarProvider, RadarOverlayStatus } from './radarOverlay';
 import type { LightPollutionOverlayStatus } from './lightPollutionOverlay';
 import type { LocationProvider } from './locationProvider';
 import type { UpdateNoteKind } from './pluginUpdate';
+
+export const dateSelectionHelp = {
+    zh: '在多日总览中，点按起始日期打开日历，或用左右箭头翻页。所有日期选择最早从浏览器当前年份的上一年 1 月 1 日开始，跨年后自动更新。日期和时间按所选机位的当地时区解释。超出预报范围的日期可能没有天气数据。',
+    en: 'In Multi-day overview, select the start date to open the calendar or use the arrows to move between ranges. All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year. Dates and times use the selected site’s local time zone. Dates outside the forecast range may have no weather data.',
+};
 import type { TemperatureUnit, PrecipitationUnit, WindUnit, DistanceUnit } from './unitPreferences';
 
-export type UiLanguage = 'zh' | 'en';
+import type { UiLanguage } from './uiLanguage';
 
-/** Shared bilingual copy; presentation modules own rendering, not duplicate translations. */
+/** Shared interface copy; feature-specific catalogs live in locales/. */
 export const translations: Record<UiLanguage, {
     dateLabel: string;
     eventSelectorLabel: string;
     eventButtonTitles: Record<DirectionEvent, string>;
-    languageToggleLabel: string;
+    languageLabel: string;
+    followWindyLanguageLabel: string;
+    languageLoadingLabel: string;
+    languageLoadErrorLabel: string;
     collapsePanelLabel: string;
     expandCompactPanelLabel: string;
     expandPanelLabel: string;
@@ -62,7 +83,8 @@ export const translations: Record<UiLanguage, {
     aboutTabUpdateBadge: string;
     aboutTabUpdateLabel: (version: string) => string;
     retry: string;
-    eventTimeSuffix: string;
+    /** Format the complete label so each language owns word order and spacing. */
+    eventTimeLabel: (eventName: string) => string;
     now: string;
     currentDirectionsLabel: string;
     sun: string;
@@ -90,12 +112,14 @@ export const translations: Record<UiLanguage, {
         | 'comparison'
         | 'coordinates'
         | 'observationEvidence'
+        | 'multiDay'
         | 'mobileMode'
         | 'mapControls'
         | 'radarOverlay'
         | 'lightPollutionOverlay'
         | 'cloudPlanning'
         | 'weatherSources'
+        | 'weatherSnow'
         | 'units',
         { title: string; description: string }
     >;
@@ -144,11 +168,13 @@ export const translations: Record<UiLanguage, {
     aboutVersionLabel: string;
     aboutCurrentVersionDateLabel: string;
     aboutLinksLabel: string;
+    aboutFeedbackLabel: string;
+    aboutFeedbackHint: string;
+    feedbackGuideHint: string;
     aboutGithubLabel: string;
     aboutIssuesLabel: string;
     aboutStarLabel: string;
     aboutStarHint: string;
-    aboutSupportLabel: string;
     aboutXiaohongshuLabel: string;
     aboutXiaohongshuHint: string;
     supportGuideHint: string;
@@ -208,7 +234,7 @@ export const translations: Record<UiLanguage, {
     intervals: Record<AstronomyInterval['kind'], string>;
     legend: Record<string, string>;
     phases: string[];
-}> = {
+}> = defineMessages({
     zh: {
         dateLabel: '观测日期',
         eventSelectorLabel: '选择日月或银心事件',
@@ -219,7 +245,10 @@ export const translations: Record<UiLanguage, {
             moonrise: '只显示月升方位线',
             moonset: '只显示月落方位线',
         },
-        languageToggleLabel: '切换到英文',
+        languageLabel: '显示语言',
+        followWindyLanguageLabel: '跟随 Windy',
+        languageLoadingLabel: '正在切换语言…',
+        languageLoadErrorLabel: '语言暂时无法加载，请重新选择后重试。',
         collapsePanelLabel: '收起为方位线模式',
         expandCompactPanelLabel: '展开面板',
         expandPanelLabel: '全屏显示',
@@ -229,9 +258,9 @@ export const translations: Record<UiLanguage, {
         enableRadarOverlayLabel: '开启气象雷达叠加',
         showSkyChartLabel: '显示天空盘',
         hideSkyChartLabel: '隐藏天空盘',
-        showSkyChartDescription: '控制事件视图的天空盘显示，与窗口栏首个按钮同步，并记住选择。',
+        showSkyChartDescription: '控制天文视图的天空盘显示，与窗口栏首个按钮同步，并记住选择。',
         disableRadarOverlayLabel: '关闭气象雷达叠加',
-        panelIntro: '日月关键时刻、事件前后 30m方位线和夜间观测时段。',
+        panelIntro: '日月关键时刻、各事件前后 30 分钟的方位线和夜间观测时段。',
         sunMoonPanelLabel: '日月信息面板',
         summaryViewsLabel: '日月信息视图',
         astronomyPanelLabel: (date, isToday) => isToday ? '今日天文时段' : `${date}天文时段`,
@@ -258,7 +287,7 @@ export const translations: Record<UiLanguage, {
         removeCurrentLocationFavoriteLabel: '取消收藏当前地点',
         pinCurrentLocationLabel: '钉住当前地点',
         unpinCurrentLocationLabel: '取消钉住当前地点',
-        eventTab: '事件',
+        eventTab: '天文',
         weatherTab: '天气',
         guideTab: '说明',
         settingsTab: '设置',
@@ -272,7 +301,7 @@ export const translations: Record<UiLanguage, {
         aboutTabUpdateBadge: '新',
         aboutTabUpdateLabel: version => `关于，发现新版本 ${version}`,
         retry: '重试',
-        eventTimeSuffix: '时间',
+        eventTimeLabel: eventName => `${eventName}时间`,
         now: '现在',
         currentDirectionsLabel: '当前太阳和月亮方位',
         sun: '太阳',
@@ -281,7 +310,7 @@ export const translations: Record<UiLanguage, {
         locationResolvingLabel: '地点解析中…',
         elevationLabel: '海拔',
         calculating: '正在计算…',
-        noInterval: '当天无可用时段',
+        noInterval: '所选日期无可用时段',
         intervalUnavailable: '暂不可用',
         timelineEnded: '今日天文时段已结束',
         timelinePrefix: '距离',
@@ -289,13 +318,17 @@ export const translations: Record<UiLanguage, {
         moonPhaseLoading: '月相计算中',
         lightPollutionLoadError: '无法取得光污染数据，请稍后重试。',
         lightPollutionOutOfBounds: '该地点超出光污染数据范围（南纬 65° 至北纬 75°）。',
-        aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30m、事件时刻和后 30m三个方位。',
+        aboutDescription: '太阳事件线使用实线，月升/月落事件线使用虚线。每个事件包含前 30 分钟、事件时刻和后 30 分钟三个方位。',
         guideHeading: '地图说明',
         keyboardNavigationDescription: '桌面标题返回按钮支持键盘聚焦；云层功能菜单用方向键选择、Enter 确认、Escape 关闭。横向表格可聚焦后使用键盘滚动。',
         featureGuideHeading: '功能说明',
         buttonHintsHeading: '按钮提示',
         buttonHintsDescription: '将鼠标停留在图标或紧凑型按钮上片刻，可查看该按钮的功能说明；按钮的键盘和屏幕阅读器名称保持一致。',
         featureGuide: {
+            multiDay: {
+                title: '多日总览',
+                description: '天文 → 多日总览：查看 7 天窗口与天气，或按月度天文选日期。选择窗口进入单日事件。',
+            },
             cloudPlanning: {
                 title: '云层遮挡与时间规划',
                 description: '云高支持预报云底、云量剖面、温湿剖面或手动海拔。单层显示最低检出层，分层按离地高度归类；温湿剖面是估算，卫星图使用独立实况时间。',
@@ -303,10 +336,17 @@ export const translations: Record<UiLanguage, {
             weatherSources: {
                 title: '天气数据源与模型',
                 description: '天气表、观测时段与收藏对比共用所选数据源和模型。云高与地图云图来自 Windy，AOD 来自 CAMS；Windy 能见度由 Open-Meteo 补充。AOD 与补充能见度独立加载，天气表可分别重试失败项；Open-Meteo 天气保留所选模型的能见度。收藏对比保留已取得的单项数据，失败项显示「加载失败」，用「刷新对比」重新加载整个对比。缺测仍为未知。',
+                supplementRetry: '天气表和 7 天总览的 Open-Meteo 提示也支持单独重试补充雪况。',
             },
             units: {
                 title: '显示单位',
                 description: '温度、风速、降水、距离和海拔跟随 Windy 单位设置。手动云高输入使用当前海拔单位；离地云底与计算海拔分别标注，不能混用。',
+            },
+            weatherSnow: {
+                title: '降雪与积雪',
+                description: 'Open-Meteo 显示前一小时的新降雪和该时刻的地面积雪深度（cm）。',
+                supplement: 'Windy 用雪水当量估算新雪厚度（1 mm ≈ 1 cm），地面积雪深度由 Open-Meteo 补充。',
+                classification: '雪水当量连续覆盖 24 小时时，按国标显示降雪等级。',
             },
 
             favorites: {
@@ -315,7 +355,7 @@ export const translations: Record<UiLanguage, {
             },
             comparison: {
                 title: '收藏地点对比',
-                description: '从收藏中选择 2–5 个地点，在同一观测日期下对比无月、银河时段、天气、光污染和月相。天气统计所选当地日期的可用预报，不限于夜间窗口；覆盖可能不完整，缺测保持未知。',
+                description: '从收藏中选择 2–5 个地点，按整天、目标窗口或自选时段对比。目标可选无月、银河或日落前后各一小时；展开条件变化查看原始云量、风速与累计降水。',
             },
             coordinates: {
                 title: '坐标精确定位',
@@ -327,7 +367,7 @@ export const translations: Record<UiLanguage, {
             },
             mobileMode: {
                 title: '移动端方位线模式',
-                description: '收起面板默认保留搜索、日期、事件、实时方位和当天事件时间。在设置的“最小化范围”中可进一步隐藏时间栏，或同时隐藏地点日月栏。展开后恢复完整内容，并记住方位线模式或小窗口的选择。',
+                description: '收起面板默认保留搜索、日期、事件、实时方位和所选日期的事件时间。在设置的“最小化范围”中可隐藏事件时间栏，或同时隐藏事件时间栏与地点日月栏。展开后恢复完整内容，并记住方位线模式或小窗口的选择。',
             },
             mapControls: {
                 title: '地图视图按钮',
@@ -335,7 +375,7 @@ export const translations: Record<UiLanguage, {
             },
             radarOverlay: {
                 title: '气象雷达叠加',
-                description: '使用标题栏或移动端窗口上方的降雨云按钮快速开关 RainViewer；开启后按钮高亮，雷达跟随 Windy 时间条切换，透明度可在设置中调整。回波按中央气象台分段色阶显示，数据来源仍为 RainViewer，回波范围和更新时间可能与 Windy 原生雷达不同。',
+                description: '使用标题栏或移动端窗口上方的降雨云按钮快速开关 RainViewer；开启后按钮高亮，雷达跟随 Windy 时间条切换，不透明度可在设置中调整。回波按中央气象台分段色阶显示，数据来源仍为 RainViewer，回波范围和更新时间可能与 Windy 原生雷达不同。',
             },
             lightPollutionOverlay: {
                 title: '光污染地图',
@@ -380,16 +420,16 @@ export const translations: Record<UiLanguage, {
             error: '雷达图层加载失败，请检查网络',
         },
         rainViewerDescription: 'RainViewer 使用无需 Key 的公共接口并按中央气象台色阶显示；拖动 Windy 底部时间条可切换可用历史帧。',
-        radarOpacityLabel: '雷达图层透明度',
+        radarOpacityLabel: '雷达图层不透明度',
         radarOpacityDescription: '实时调整第三方雷达图层的显示强度。0% 为完全透明，100% 为完全不透明。设置会保存在当前浏览器。',
-        lineOpacityLabel: '线条透明度',
+        lineOpacityLabel: '线条不透明度',
         lineOpacityDescription: '调整地图上全部日月方位线、银心视线及云层参考线的显示强度。设置会保存在当前浏览器。',
         show600Label: distance => `显示 ${distance} 点`,
         show600Description: distance => `开启后事件方向线会延伸到 ${distance}，并在该距离增加一个参考点。设置会保存在当前浏览器。`,
         locationSearchHiddenNotice: '地点搜索已隐藏，可在设置中关闭“隐藏地点搜索框”重新显示。',
         hideLocationSearchLabel: '隐藏地点搜索框',
         hideLocationSearchDescription: '开启后不再显示面板顶部的名称和经纬度搜索；已保存的地图 API Key 不会清除。设置会保存在当前浏览器。',
-        locationApiKeyLabel: '国内地址搜索 API Key',
+        locationApiKeyLabel: '中国地点搜索 API Key',
         locationApiKeyPlaceholder: '请输入 API Key',
         locationApiKeyDescription: '可配置高德、百度和腾讯，并在搜索框中切换。各 Key 仅保存在当前浏览器。',
         locationApiKeySave: '保存',
@@ -415,11 +455,13 @@ export const translations: Record<UiLanguage, {
         aboutVersionLabel: '版本',
         aboutCurrentVersionDateLabel: '更新日期',
         aboutLinksLabel: '项目链接',
+        aboutFeedbackLabel: '反馈与建议',
+        aboutFeedbackHint: '报告 Bug、提出功能建议或其他反馈',
+        feedbackGuideHint: '在「关于 → 反馈与建议」提交 Bug、功能建议或其他反馈，请填写插件版本。',
         aboutGithubLabel: 'GitHub',
         aboutIssuesLabel: 'Issues',
         aboutStarLabel: 'Star',
         aboutStarHint: '喜欢这个插件的话，欢迎在 GitHub 给一个 Star。',
-        aboutSupportLabel: '喜欢的话，请作者喝杯蜜雪冰城',
         aboutXiaohongshuLabel: '小红书',
         aboutXiaohongshuHint: '在小红书关注我',
         supportGuideHint: '如果插件对你有帮助，可在「关于」通过爱发电自愿打赏，支持后续开发与维护，也可通过小红书入口关注作者。',
@@ -510,24 +552,27 @@ export const translations: Record<UiLanguage, {
             moonrise: 'Show only moonrise direction lines',
             moonset: 'Show only moonset direction lines',
         },
-        languageToggleLabel: 'Switch to Chinese',
+        languageLabel: 'Display language',
+        followWindyLanguageLabel: 'Follow Windy',
+        languageLoadingLabel: 'Changing language…',
+        languageLoadErrorLabel: 'This language could not be loaded. Select it again to retry.',
         collapsePanelLabel: 'Collapse to direction-line mode',
         expandCompactPanelLabel: 'Expand panel',
         expandPanelLabel: 'Show fullscreen',
         restorePanelLabel: 'Restore compact window',
-        fitDirectionLinesLabel: distance => `Fit ${distance} direction lines`,
+        fitDirectionLinesLabel: localized((t, distance: string) => t("Fit {{0}} direction lines", distance)),
         restoreSearchZoomLabel: 'Restore search-location zoom',
         enableRadarOverlayLabel: 'Enable radar overlay',
         showSkyChartLabel: 'Show sky chart',
         hideSkyChartLabel: 'Hide sky chart',
-        showSkyChartDescription: 'Show the sky chart in the Events view. This setting stays synchronized with the first window button and remembers your choice.',
+        showSkyChartDescription: 'Show the sky chart in the Astro view. This setting stays synchronized with the first window button and remembers your choice.',
         disableRadarOverlayLabel: 'Disable radar overlay',
         panelIntro: 'Key sun and moon times, direction lines 30m before and after each event, and night observing windows.',
         sunMoonPanelLabel: 'Sun and moon information panel',
         summaryViewsLabel: 'Sun and moon information views',
-        astronomyPanelLabel: (date, isToday) => isToday ? 'Today’s astronomy windows' : `Astronomy windows for ${date}`,
+        astronomyPanelLabel: localized((t, date: string, isToday: boolean) => isToday ? t("Today’s astronomy windows") : t("Astronomy windows for {{0}}", date)),
         currentMoonPhaseLabel: 'Moon phase',
-        astronomyEventsLabel: (date, isToday) => isToday ? 'Today’s astronomy events' : `Astronomy events for ${date}`,
+        astronomyEventsLabel: localized((t, date: string, isToday: boolean) => isToday ? t("Today’s astronomy events") : t("Astronomy events for {{0}}", date)),
         nightObservationWindowsLabel: 'Night observing windows',
         observationEvidenceLabel: 'Weather evidence for the observing window',
         observationEvidenceLoading: 'Matching forecast to this window…',
@@ -541,15 +586,15 @@ export const translations: Record<UiLanguage, {
             visibilityKm: 'Visibility',
         },
         mapLegendLabel: 'Map legend',
-        eventDirectionLinesLabel: event => `${event} direction-line data`,
+        eventDirectionLinesLabel: localized((t, event: string) => t("{{0}} direction-line data", event)),
         favoriteLocationsLabel: 'Favorite locations',
-        locationCopyLabel: location => `${location}. Copy coordinates`,
-        favoriteLocationsCountLabel: count => `Open ${count} favorite locations`,
+        locationCopyLabel: localized((t, location: string) => t("{{0}}. Copy coordinates", location)),
+        favoriteLocationsCountLabel: localized((t, count: number) => t("Open {{0}} favorite locations", count)),
         saveCurrentLocationFavoriteLabel: 'Save current location',
         removeCurrentLocationFavoriteLabel: 'Remove current location from favorites',
         pinCurrentLocationLabel: 'Pin current location',
         unpinCurrentLocationLabel: 'Unpin current location',
-        eventTab: 'Events',
+        eventTab: 'Astro',
         weatherTab: 'Weather',
         guideTab: 'Guide',
         settingsTab: 'Settings',
@@ -561,9 +606,9 @@ export const translations: Record<UiLanguage, {
         diagnosticCopyError: 'Copy failed. Select and copy the text manually.',
         diagnosticStartupFailed: 'The plugin could not finish initializing. Copy the diagnostics to report the problem. Close and reopen to try again.',
         aboutTabUpdateBadge: 'NEW',
-        aboutTabUpdateLabel: version => `About, version ${version} is available`,
+        aboutTabUpdateLabel: localized((t, version: string) => t("About, version {{0}} is available", version)),
         retry: 'Retry',
-        eventTimeSuffix: ' time',
+        eventTimeLabel: localized((t, eventName: string) => t("{{0}} time", eventName)),
         now: 'Now',
         currentDirectionsLabel: 'Current sun and moon directions',
         sun: 'Sun',
@@ -572,7 +617,7 @@ export const translations: Record<UiLanguage, {
         locationResolvingLabel: 'Resolving place…',
         elevationLabel: 'Elevation',
         calculating: 'Calculating…',
-        noInterval: 'No window today',
+        noInterval: 'No window on the selected date',
         intervalUnavailable: 'Unavailable',
         timelineEnded: 'Today’s astronomy windows have ended',
         timelinePrefix: '',
@@ -587,6 +632,10 @@ export const translations: Record<UiLanguage, {
         buttonHintsHeading: 'Button hints',
         buttonHintsDescription: 'Pause the pointer over an icon or compact control to see what it does. The same name is also exposed to keyboard and screen-reader users.',
         featureGuide: {
+            multiDay: {
+                title: 'Multi-day overview',
+                description: 'Astro → Multi-day overview: seven days of windows and weather, or monthly astronomy. Choose a window to open single-day events.',
+            },
             cloudPlanning: {
                 title: 'Cloud planning and time controls',
                 description: 'Choose forecast base, cloud-cover profile, temperature/dew-point profile or manual altitude. Single mode uses the lowest detected layer; layered mode groups by height above ground. Profiles are estimates; satellite images use their own observation time.',
@@ -594,10 +643,17 @@ export const translations: Record<UiLanguage, {
             weatherSources: {
                 title: 'Weather sources and models',
                 description: 'Weather, observing windows and comparisons share the selected source and model. Cloud heights and map clouds use Windy; AOD uses CAMS. AOD and supplementary Windy visibility load independently and can be retried separately in the weather table. Open-Meteo weather retains model visibility. Comparisons retain available metrics, mark failed ones as Load failed and use Refresh comparison to reload the entire comparison. Missing values remain unknown.',
+                supplementRetry: 'The Open-Meteo notice in Weather and the seven-day overview also lets you retry supplementary snow data on its own.',
             },
             units: {
                 title: 'Display units',
                 description: 'Temperature, wind, precipitation, distance and elevation follow Windy preferences. Manual cloud heights use the current elevation unit. Cloud base above ground and cloud altitude above sea level are labeled separately and must not be confused.',
+            },
+            weatherSnow: {
+                title: 'Snowfall and snow depth',
+                description: 'Open-Meteo shows new snow in the preceding hour and ground snow depth at the indicated time (cm).',
+                supplement: 'Windy estimates new snow from snow water equivalent (1 mm ≈ 1 cm). Open-Meteo supplies ground snow depth.',
+                classification: 'Snow grades require 24 hours of snow water equivalent.',
             },
 
             favorites: {
@@ -606,7 +662,7 @@ export const translations: Record<UiLanguage, {
             },
             comparison: {
                 title: 'Favorite location comparison',
-                description: 'Select 2–5 favorites to compare moonless and Milky Way windows, weather, light pollution, and moon phase for the same observing date. Weather summarizes available forecasts for the selected local date, independently of night windows; coverage may be partial and missing values remain unknown.',
+                description: 'Choose Whole day, Target window or Custom period for 2–5 favorites. Targets: moonless, Milky Way or sunset ±1 hour. Expand original cloud, wind and precipitation samples.',
             },
             coordinates: {
                 title: 'Exact coordinate location',
@@ -638,7 +694,7 @@ export const translations: Record<UiLanguage, {
         minimizeScopeLabel: 'Minimize scope',
         minimizeScopeStandard: 'Default: keep event times and location / Sun / Moon',
         minimizeScopeHideTimes: 'Smaller: hide event times',
-        minimizeScopeHideSummary: 'Smallest: also hide location / Sun / Moon',
+        minimizeScopeHideSummary: 'Smallest: hide event times and location / Sun / Moon',
         minimizeScopeDescription: 'Choose what the minimize button hides on phones and tablets. Expanding restores all content. This setting is saved in this browser.',
         initialOverlayLabel: 'Layer when opening the plugin',
         initialOverlayDescription: 'Lists layers supported by the plugin and available in Windy. Switch immediately and keep using the selected layer whenever the plugin opens. Choose “Keep Windy’s current layer” to leave it unchanged. This setting is saved in this browser.',
@@ -675,16 +731,16 @@ export const translations: Record<UiLanguage, {
         radarOpacityDescription: 'Adjust the third-party radar layer immediately. 0% is fully transparent and 100% is fully opaque. This setting is saved in this browser.',
         lineOpacityLabel: 'Line opacity',
         lineOpacityDescription: 'Adjust all sun/moon bearings, galactic centre sightlines and cloud reference lines on the map. This setting is saved in this browser.',
-        show600Label: distance => `Show ${distance} point`,
-        show600Description: distance => `When enabled, event direction lines extend to ${distance} and add a reference point there. This setting is saved in this browser.`,
+        show600Label: localized((t, distance: string) => t("Show {{0}} point", distance)),
+        show600Description: localized((t, distance: string) => t("When enabled, event direction lines extend to {{0}} and add a reference point there. This setting is saved in this browser.", distance)),
         locationSearchHiddenNotice: 'Location search hidden. Turn off “Hide location search” in Settings to show it again.',
         hideLocationSearchLabel: 'Hide location search',
         hideLocationSearchDescription: 'Hide place-name and coordinate search without removing saved map API keys. This setting is saved in this browser.',
-        locationApiKeyLabel: 'Domestic location search API keys',
+        locationApiKeyLabel: 'China location search API keys',
         locationApiKeyPlaceholder: 'Enter API Key',
         locationApiKeyDescription: 'Configure Amap, Baidu, and Tencent, then switch providers in search. Keys stay in this browser.',
         locationApiKeySave: 'Save',
-        locationApiKeyClear: 'Clear',
+        locationApiKeyClear: 'Clear API key',
         locationApiKeySaved: 'Saved',
         locationProviderLabels: {
             amap: 'Amap Web Service API Key',
@@ -706,11 +762,13 @@ export const translations: Record<UiLanguage, {
         aboutVersionLabel: 'Version',
         aboutCurrentVersionDateLabel: 'Updated',
         aboutLinksLabel: 'Project links',
+        aboutFeedbackLabel: 'Feedback',
+        aboutFeedbackHint: 'Report a bug, suggest a feature, or share other feedback.',
+        feedbackGuideHint: 'Use About → Feedback to report bugs, suggest features, or share other feedback. Include your plugin version.',
         aboutGithubLabel: 'GitHub',
         aboutIssuesLabel: 'Issues',
-        aboutStarLabel: 'Star',
+        aboutStarLabel: 'Star', // GitHub repository action; not the celestial object.
         aboutStarHint: 'If this plugin helps, please consider starring it on GitHub.',
-        aboutSupportLabel: 'Like it? Treat the author to MIXUE',
         aboutXiaohongshuLabel: 'RedNote',
         aboutXiaohongshuHint: 'Follow me on Xiaohongshu (RedNote)',
         supportGuideHint: 'If this plugin helps, you can support its development and maintenance through the optional Afdian link in About, or follow the author on RedNote.',
@@ -723,8 +781,8 @@ export const translations: Record<UiLanguage, {
         aboutUpdateNotesUnavailable: 'The user-facing update notes could not be loaded.',
         aboutUpdateNotesRetry: 'Reload update notes',
         aboutUpdateNotesRetrying: 'Reloading…',
-        aboutCopyLatestPluginLink: version => `Copy ${version} plugin link`,
-        aboutPluginLinkCopied: version => `Copied ${version} plugin link`,
+        aboutCopyLatestPluginLink: localized((t, version: string) => t("Copy {{0}} plugin link", version)),
+        aboutPluginLinkCopied: localized((t, version: string) => t("Copied {{0}} plugin link", version)),
         aboutPluginLinkCopyError: 'Copy failed. Try again.',
         aboutUpdateTypeLabels: {
             new: 'New',
@@ -740,21 +798,19 @@ export const translations: Record<UiLanguage, {
             cloud: 'Cloud cover',
             cloudDescription: 'More white fill means more cloud. Total cover shows overall obstruction; high, medium, and low show cloud-layer height.',
             temperature: 'Temperature',
-            temperatureDescription: unit => `Colors progress from colder to hotter. Values are in ${unit}.`,
+            temperatureDescription: localized((t, unit: TemperatureUnit) => t("Colors progress from colder to hotter. Values are in {{0}}.", unit)),
             dewPoint: 'Dew point',
-            dewPointDescription: unit => `Green means lower condensation risk, yellow needs attention, and red means condensation is likely. Values are in ${unit}.`,
+            dewPointDescription: localized((t, unit: TemperatureUnit) => t("Green means lower condensation risk, yellow needs attention, and red means condensation is likely. Values are in {{0}}.", unit)),
             humidity: 'Humidity',
             humidityDescription: 'Higher humidity means a greater need to watch for condensation.',
             precipitation: 'Precipitation',
-            precipitationDescription: (warning, danger, unit) =>
-                `Yellow is below ${warning} ${unit}, orange is ${warning}–${danger} ${unit}, and red is above ${danger} ${unit}.`,
+            precipitationDescription: localized((t, warning: string, danger: string, unit: PrecipitationUnit) => t("Yellow is below {{0}} {{1}}, orange is {{2}}–{{3}} {{4}}, and red is above {{5}} {{6}}.", warning, unit, warning, danger, unit, danger, unit)),
             windSpeed: 'Wind speed',
-            windSpeedDescription: (warning, danger, unit, beaufort) =>
-                `Green is up to ${warning} ${unit}, yellow is above ${warning} through ${danger} ${unit}, and red is above ${danger} ${unit}.${beaufort ? ' When Windy uses bft, cells show bft/m/s together and colors use exact m/s.' : ''}`,
+            windSpeedDescription: localized((t, warning: string, danger: string, unit: WindUnit, beaufort: boolean) => t("Green is up to {{0}} {{1}}, yellow is above {{2}} through {{3}} {{4}}, and red is above {{5}} {{6}}.{{7}}", warning, unit, warning, danger, unit, danger, unit, beaufort ? t(" When Windy uses bft, cells show bft/m/s together and colors use exact m/s.") : '')),
             windDirection: 'Wind direction',
             windDirectionDescription: 'The arrow points toward the direction the wind comes from.',
             visibility: 'Visibility',
-            visibilityDescription: unit => `Sample values are in ${unit}. Higher values usually mean clearer air over longer distances.`,
+            visibilityDescription: localized((t, unit: DistanceUnit) => t("Sample values are in {{0}}. Higher values usually mean clearer air over longer distances.", unit)),
             aerosolAod: 'Aerosol AOD',
             aerosolAodDescription: 'AOD is total-column aerosol optical depth at 550 nm. From left to right, the samples mean very low, low, elevated, and high. Lower values usually mean less light attenuation by aerosols, but AOD cannot be converted directly into visibility. AOD is supplied by Open-Meteo from CAMS independently of the EC, GFS, or ICON selection. Visibility follows the selected weather source as described above.',
             celestialEvents: 'Sun and moon rise/set times',
@@ -768,6 +824,7 @@ export const translations: Record<UiLanguage, {
             moonset: 'Moonset',
         },
         timeline: {
+            // Compact label for the blue-hour interval, not a selectable colour.
             dawn: 'Blue',
             sunrise: 'Sunrise',
             sunset: 'Sunset',
@@ -789,8 +846,8 @@ export const translations: Record<UiLanguage, {
             currentSun: 'Current sun',
             currentMoon: 'Current moon',
         },
-        phases: ['New', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full', 'Waning gibbous', 'Last quarter', 'Waning crescent'],
+        phases: ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'],
     },
-};
+});
 
-export type PluginText = typeof translations.zh;
+export type PluginText = typeof translations[UiLanguage];

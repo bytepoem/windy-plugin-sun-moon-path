@@ -1,12 +1,12 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import { messages } from './locales/CloudHelp';
+    import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import { onPluginMount as onMount } from './pluginLifecycle';
 
-    export let zh: boolean;
+    export let language: UiLanguage;
 
-    $: imageUrl = zh
-        ? 'https://community.windy.com/assets/uploads/files/1788950340643-74dd941b-faef-4f81-b2a6-7471c71b5d2e-download.png'
-        : 'https://community.windy.com/assets/uploads/files/1788952298003-bccb52a8-6794-482b-888f-2274e302e450-download-1.png';
+    $: imageUrl = UI_LANGUAGES[language].cloudHelpImage;
     const dispatch = createEventDispatcher<{ close: void }>();
     let dialog: HTMLDialogElement;
     let image: HTMLImageElement | undefined;
@@ -45,43 +45,42 @@
     on:click={event => { if (event.target === dialog) {close();} }}>
     <div class="help-shell">
         <header>
-            <h2 id="cloud-help-title">{zh ? '云层遮挡说明' : 'Cloud planning guide'}</h2>
-            <button class="close" type="button" aria-label={zh ? '关闭说明' : 'Close guide'} on:click={close}>
+            <h2 id="cloud-help-title">{messages[language].cloudPlanningGuide}</h2>
+            <button class="close" type="button" aria-label={messages[language].closeGuide} on:click={close}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
             </button>
         </header>
         <div class="diagram">
             <div class="image-toolbar">
-                <span>{zh ? '示例：太阳日落 · 云高 2000 m' : 'Sunset example · 2,000 m clouds'}</span>
+                <span>{messages[language].sunsetExampleMClouds}</span>
                 <div class="image-actions">
                     <button type="button" disabled={imageState !== 'ready'} aria-pressed={zoomed}
                         on:click={() => { zoomed = !zoomed; }}>
-                        {zoomed ? (zh ? '适应宽度' : 'Fit width') : (zh ? '放大查看' : 'Zoom in')}
+                        {zoomed ? (messages[language].fitWidth) : (messages[language].zoomIn)}
                     </button>
-                    <a href={imageUrl} target="_blank" rel="noopener noreferrer">{zh ? '打开原图' : 'Open image'}</a>
+                    <a href={imageUrl} target="_blank" rel="noopener noreferrer">{messages[language].openImage}</a>
                 </div>
             </div>
             <!-- Keyboard users need a focusable scroll region for the enlarged image. -->
             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
             <div class="image-scroll" class:image-pending={imageState !== 'ready'} tabindex="0" role="region"
-                aria-busy={imageState === 'loading'} aria-label={zh ? '可滚动图解' : 'Scrollable diagram'}>
+                aria-busy={imageState === 'loading'} aria-label={messages[language].scrollableDiagram}>
                 {#if imageState === 'loading'}
                     <div class="image-loading" role="status">
                         <span class="loading-spinner" aria-hidden="true"></span>
-                        <p class="loading-title">{zh ? '正在加载图解' : 'Loading diagram'}</p>
-                        <p class="loading-hint">{zh ? '图片加载后可放大查看' : 'Zoom in to explore once the image is ready'}</p>
+                        <p class="loading-title">{messages[language].loadingDiagram}</p>
+                        <p class="loading-hint">{messages[language].zoomInToExploreOnceTheImage}</p>
                     </div>
                 {/if}
                 {#if imageState === 'error'}
                     <div class="image-error" role="status">
-                        <p>{zh ? '图解加载失败，请重试或打开原图。' : 'Could not load the diagram. Retry or open the image directly.'}</p>
-                        <button type="button" on:click={retry}>{zh ? '重试' : 'Retry'}</button>
+                        <p>{messages[language].couldNotLoadTheDiagramRetryOr}</p>
+                        <button type="button" on:click={retry}>{messages[language].retry}</button>
                     </div>
                 {/if}
                 {#key `${imageUrl}:${attempt}`}
                     <img bind:this={image} src={imageUrl} class:zoomed hidden={imageState !== 'ready'}
-                        alt={zh ? '云层遮挡侧视与地图图解：云高 2000 米，地平线云距 160 公里，遮蔽太阳云距 185.80 公里，擦地云距 319 公里，最远无云距 479 公里。'
-                            : 'Side and map views: 2,000 m clouds; horizon 160 km, sightline intersection 185.80 km, tangent 319 km, farthest clear reference 479 km.'}
+                        alt={messages[language].sideAndMapViewsMCloudsHorizon}
                         on:load={() => { imageState = 'ready'; }} on:error={() => { imageState = 'error'; }} />
                 {/key}
             </div>

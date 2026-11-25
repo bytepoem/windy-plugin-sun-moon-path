@@ -1,3 +1,4 @@
+import { messages } from './locales/eventDirections';
 import { cloudGalacticCenterPosition } from './cloudGeometry';
 import { cloudTimelineLabel, type CloudTimelineEvent } from './cloudTimeline';
 import {
@@ -5,6 +6,7 @@ import {
     type Coordinates, type SolarEvent, type SolarPath, type SolarPathSuccess,
     type SolarPathUnavailable, type SolarSampleKind,
 } from './solar';
+import type { UiLanguage } from './uiLanguage';
 
 export type GalacticEvent = 'milkywayrise' | 'milkywayset';
 export type DirectionEvent = SolarEvent | GalacticEvent | 'all';
@@ -23,18 +25,18 @@ export const isGalacticEvent = (event: DirectionEvent): event is GalacticEvent =
 
 /** Build all three bearings even below the horizon: these are direction references, not visibility claims. */
 export const galacticDirectionPaths = (
-    events: CloudTimelineEvent[], location: Coordinates, language: 'zh' | 'en',
+    events: CloudTimelineEvent[], location: Coordinates, language: UiLanguage,
 ): GalacticPath[] => (['milkywayrise', 'milkywayset'] as const).map(event => {
-    const eventLabel = cloudTimelineLabel(event, language === 'zh');
+    const eventLabel = cloudTimelineLabel(event, language);
     const crossing = events.find(item => item.type === event);
     if (!crossing) {
         return { status: 'unavailable', event, eventLabel, reason: 'not-available' };
     }
     const name = eventLabel;
     const samples = ([
-        { kind: 'before', offsetMinutes: -30, label: language === 'zh' ? `${name}前 30m` : `30m before ${name}` },
+        { kind: 'before', offsetMinutes: -30, label: messages[language].before(name) },
         { kind: 'event', offsetMinutes: 0, label: name },
-        { kind: 'after', offsetMinutes: 30, label: language === 'zh' ? `${name}后 30m` : `30m after ${name}` },
+        { kind: 'after', offsetMinutes: 30, label: messages[language].after(name) },
     ] satisfies { kind: SolarSampleKind; offsetMinutes: number; label: string }[]).map(sample => {
         const time = new Date(crossing.timestamp + sample.offsetMinutes * 60_000);
         const { azimuth } = cloudGalacticCenterPosition(time.getTime(), location);

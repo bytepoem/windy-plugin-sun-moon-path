@@ -12,6 +12,7 @@ import {
     formatWeatherHour,
     isWeatherResponseCurrent,
     shouldLoadWeather,
+    summarizeSnowWater24h,
     transformWeatherPayload,
     weatherConditionLabel,
     weatherMetricTone,
@@ -56,10 +57,61 @@ const makePayload = (timestamps: number[]): WeatherForecastPayload => ({
 });
 
 describe('weather forecast transformation', () => {
+    it.each([
+        [0.01, 'trace'], [0.1, 'light'], [2.5, 'moderate'], [5, 'heavy'],
+        [10, 'snowstorm'], [20, 'heavySnowstorm'], [30, 'extremeSnowstorm'],
+    ])('classifies %s mm of snow water equivalent over exactly 24 hours', (amount, grade) => {
+        const now = Date.UTC(2026, 10, 18);
+        const ts = Array.from({ length: 8 }, (_, index) => now + index * 3 * HOUR);
+        const payload = makePayload(ts);
+        payload.data.precipSnowAmount = [amount, ...Array<number>(7).fill(0)];
+        const points = transformWeatherPayload(payload, now);
+
+        expect(summarizeSnowWater24h(points, 0, 'windy')).toMatchObject({
+            start: now, end: now + 24 * HOUR, amountMm: amount, snowfallCm: amount, grade,
+        });
+        expect(summarizeSnowWater24h(points, 1, 'windy')).toBeNull();
+        expect(summarizeSnowWater24h(points.filter((_, index) => index !== 3), 0, 'windy')).toBeNull();
+        expect(summarizeSnowWater24h(points.map((point, index) => index === 3 ? { ...point, snowWaterMm: null } : point), 0, 'windy')).toBeNull();
+    });
+
+    it('uses the next 24 hourly accumulations for OM and preserves missing water independently of depth', () => {
+        const start = Date.UTC(2026, 10, 18);
+        const times = Array.from({ length: 25 }, (_, index) => start + index * HOUR);
+        const points = transformWeatherPayload(makePayload(times), start).map((point, index) => ({
+            ...point, precipitationPeriodMs: HOUR, snowWaterMm: index === 0 ? 100 : 0.5, snowfallCm: index === 0 ? 70 : 0.35,
+        }));
+        expect(summarizeSnowWater24h(points, 0, 'open-meteo')).toMatchObject({
+            start, end: start + 24 * HOUR, amountMm: 12, snowfallCm: 8.4, grade: 'snowstorm',
+        });
+        expect(summarizeSnowWater24h(points.slice(0, -1), 0, 'open-meteo')).toBeNull();
+        const missingWater = points.map((point, index) => index === 2 ? { ...point, snowWaterMm: null } : point);
+        expect(summarizeSnowWater24h(missingWater, 0, 'open-meteo')).toMatchObject({
+            amountMm: null, snowfallCm: 8.4, grade: null,
+        });
+        const zeros = points.map(point => ({ ...point, snowWaterMm: 0, snowfallCm: 0 }));
+        expect(summarizeSnowWater24h(zeros, 0, 'open-meteo')).toMatchObject({ amountMm: 0, snowfallCm: 0, grade: null });
+    });
+
+    it('estimates new snow from Windy snow water equivalent at the native forecast step', () => {
+        const now = Date.UTC(2026, 10, 18, 2);
+        const payload = makePayload([now, now + HOUR, now + 4 * HOUR, now + 7 * HOUR]);
+        payload.data.precipSnowAmount = [0, 0.12, null, 0.41];
+        payload.data.precipType = [0, 4, 5, 6];
+
+        expect(transformWeatherPayload(payload, now)).toMatchObject([
+            { snowWaterMm: 0, snowfallCm: 0, snowWaterPeriodHours: 1, snowCondition: null },
+            { snowWaterMm: 0.12, snowfallCm: 0.12, snowWaterPeriodHours: 3, snowCondition: 'snow' },
+            { snowWaterMm: null, snowfallCm: null, snowWaterPeriodHours: 3, snowCondition: 'wetSnow' },
+            { snowWaterMm: 0.41, snowfallCm: 0.41, snowWaterPeriodHours: 3, snowCondition: 'rainAndSnow' },
+        ]);
+    });
+
     it('normalizes weather values and aggregates pressure-level cloud coverage', () => {
         const now = Date.UTC(2026, 7, 19, 6);
         const payload = makePayload([now]);
         payload.data.wind[0] = 4.56;
+        payload.data.windGust = [9.27];
         const points = transformWeatherPayload(payload, now);
 
         expect(points).toEqual([
@@ -72,6 +124,7 @@ describe('weather forecast transformation', () => {
                 humidityPercent: 64,
                 precipMm: 0,
                 windMs: 4.6,
+                windGustMs: 9.3,
                 windDirectionDeg: 350,
                 aod550: null,
                 visibilityKm: null,
@@ -144,8 +197,8 @@ describe('weather forecast transformation', () => {
         const points = transformWeatherPayload(makePayload(timestamps), timestamps[0]);
 
         expect(buildWeatherDateGroups(points, 'Asia/Shanghai', 'zh')).toEqual([
-            { key: '2026-08-19', label: '8.19', startIndex: 0, length: 1 },
-            { key: '2026-08-20', label: '8.20', startIndex: 1, length: 2 },
+            { key: '2026-08-19', label: '8/19', startIndex: 0, length: 1 },
+            { key: '2026-08-20', label: '8/20', startIndex: 1, length: 2 },
         ]);
         expect(buildWeatherDateGroups(points, 'Asia/Shanghai', 'en')).toEqual([
             { key: '2026-08-19', label: '8/19', startIndex: 0, length: 1 },

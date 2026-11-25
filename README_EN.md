@@ -7,7 +7,7 @@
 
 [中文](README.md) · **English**
 
-Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glow, fiery clouds and rainbows on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Available in Chinese and English on desktop and mobile.
+Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glow, fiery clouds and rainbows on Windy. Use celestial directions, cloud distances, weather and favorite-location comparisons to choose when and where to shoot. Supports the 42 languages in Windy Settings on desktop and mobile.
 
 **Mobile**
 
@@ -21,42 +21,55 @@ Plan photography of sunrise, sunset, the Moon, Milky Way, sunrise and sunset glo
 
 Update checks use Gitee for mainland China or an unknown network region, and GitHub for other known regions. Proxies may affect detection; failed checks can be retried in About. This describes the current repository; released behavior is listed in the release notes.
 
-Current release: **0.12.6** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.12.6)
+Current release: **0.13.5** · [Release notes](https://github.com/bytepoem/windy-plugin-sun-moon-path/releases/tag/0.13.5)
 
 Paste this URL into Windy's external plugin loader, then open **Sun & Moon Path**:
 
 ```text
-https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.12.6/plugin.min.js
+https://windy-plugins.com/17629746/windy-plugin-sun-moon-path/0.13.5/plugin.min.js
 ```
 
 1. **Choose a location:** click the map or enter WGS84 / GCJ-02 coordinates. Chinese place-name search requires your own map-service API Key in Settings.
-2. **Choose a time:** select a date, then use the local time strip or Sun, Moon and galactic centre rise/set shortcuts.
+2. **Choose a time:** select a date, then use the local time strip or Sun, Moon and galactic centre rise/set shortcuts. All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year.
 3. **Check conditions:** explore events and weather, use cloud or rainbow planning, or compare 2–5 favorite locations.
 
-Language and display options are in Settings; detailed legends are under Settings → User guide. The features below describe the current repository; refer to release notes for published-version availability.
+The plugin follows the language actually used by Windy by default and supports the 42 languages in Windy Settings. Choose a separate language at the top of Settings, or switch back to `auto` to follow Windy. Manual choices, including existing ones, are remembered. New languages are machine translated with AI language checks and have not been reviewed by native speakers of every language; cloud-guide images and historical update notes remain in Chinese or English. Display options are also in Settings, with detailed legends under Settings → Guide. The features below describe the current repository; refer to release notes for published-version availability.
 
-Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers. You can also keep Windy's current layer.
+Simplified Chinese and English are built in and need no language download. The other 40 languages load individually on first use and are cached in this browser after validation. Retry a failed load, or temporarily use English at startup while keeping your saved language preference. Short dates always use month/day; full dates retain year-month-day, regardless of interface language. Non-Chinese interfaces use `All` and `Now` for the compact buttons, with full descriptions in the selected language. Long language names end with an ellipsis; open the selector to see the full options.
 
-The desktop title back button supports keyboard focus. In the cloud function menu, use arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
+Startup layer choices include layers supported by the plugin and available in the current Windy runtime, including Flight dangers, City heatmaps, Thermals and Outdoor map. You can also keep Windy's current layer.
+
+The desktop title back button supports keyboard focus. Astro and Clouds tabs use narrow dropdown arrow buttons with compact spacing; their menus support arrow keys to choose, Enter to confirm and Escape to close. Horizontal tables remain focusable for keyboard scrolling.
 
 ## Features
 
 | Feature | Purpose |
 | --- | --- |
-| Sun, Moon and Milky Way | Rise/set times, direction lines, Moon phase, moonless and Milky Way observing windows, plus a sky chart for composition |
+| Sun, Moon and Milky Way | Rise/set times, direction lines, Moon phase, moonless and Milky Way observing windows, plus a sky chart; compare seven days of windows or pick astronomical dates in a month |
 | Cloud planning | Select the Sun, Moon or galactic centre and use forecast or manual cloud heights to view distances and sightline intersections as cloud-region references for sunrise/sunset glow, fiery clouds and other photography; supports single/layered views and satellite comparison |
 | Rainbow planning | Sunbow/moonbow directions and altitudes, double bows, full circles and primary-bow condition assessment |
 | Tide planning | Automatically load Open-Meteo model water levels, compare sunlight events and synchronize shooting time without an API key |
-| Weather and observing | Windy / Open-Meteo sources and forecast models, with observing windows informed by weather, moonlight and target position; independent loading and retry for AOD and supplementary visibility |
-| Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution |
+| Weather and observing | Choose a Windy / Open-Meteo forecast model, check clouds, precipitation, snowfall and ground snow depth, and find observing windows using moonlight and target position |
+| Favorite comparisons | Reuse Windy favorites to compare weather, astronomical events, elevation and light pollution by whole day, target window or custom period |
 | Light pollution map | Overlay Lorenz 2025 sky brightness and use location SQM and estimated Bortle values to shortlist dark-sky photography sites |
 | Radar and display | RainViewer overlays using the China NMC stepped reflectivity palette, Windy units, and collapsed, compact or fullscreen mobile views |
+| Feedback | Open the bilingual form in About to report bugs, suggest features or share other feedback |
 
 ## How to use the features
 
 ### Sun, Moon and Milky Way
 
-Choose a location and date, then open Events for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
+Choose a location and date, then open Astro for Sun/Moon rise and set times, Moon phase, moonless periods and Milky Way observing windows. Select a rise/set shortcut or event time, then adjust the local time strip and use direction lines and the sky chart to plan your composition.
+
+Cloud cover, precipitation and visibility appear below the moonless and Milky Way windows. A message under the time row indicates when there is no window for the date or forecast coverage is missing or partial.
+
+Choose Multi-day overview from the Astro dropdown to compare seven days of moonless, Milky Way and Sun or Moon rise/set windows and their weather. Monthly astronomy covers 30 consecutive days. Sunrise, sunset, moonrise and moonset windows span an hour on either side and belong to the local date of the event. Expand a date to see its window and choose Single-day events to move map time. Return through the Astro dropdown to preserve the browsing range. The seven-day overview can switch among Windy / Open-Meteo and EC / GFS / ICON. Window rules appear under Guide. Nights belong to the local-noon-to-next-noon period, with separate segments. Moon phase is calculated at noon. Monthly bars show astronomical window duration.
+
+Select the start date to open the calendar, or use the arrows to move between ranges. Monthly calendars start on Sunday. Saturdays and Sundays use warm, bold, underlined dates in both the monthly grid and seven-day overview.
+
+Seven-day windows show weather conditions, cloud cover, wind, precipitation, temperature, humidity, visibility, AOD and dew point, with expandable original forecast samples. When a rise/set window has no original samples and the event is within forecast coverage, the nearest sample up to 90 minutes away may be shown with its original timestamp. Precipitation and new snow retain full overlapping source accumulations and their periods. Ground snow depth uses samples inside the window. The Snow display setting controls new snow and ground snow depth. AOD, visibility and supplementary Windy snow depth can be retried separately.
+
+Choose Vertical or Horizontal after the date range controls. The buttons wrap to the next line when space is limited. The default horizontal layout displays seven dates as columns and metrics as rows. Vertical places dates in rows and metrics in columns. The overview keeps the same panel height as other tabs, with content scrolling inside. Scroll horizontally when needed; the first column stays fixed for reference. Chinese observing-date and forecast-range headings use two lines split at word boundaries. Select a date to view full windows and original samples below the table. Only Single-day events changes map time; separate windows retain separate weather ranges. Metrics use the weather table icons with small names below them; hover for details such as the precipitation rule.
 
 Toggle “Show sky chart” in Settings or use the first window button with the orbit icon; both controls stay synchronized and remember your choice.
 
@@ -94,15 +107,27 @@ Choose dates within ten days from today at the camera location; actual coverage 
 
 ### Weather and observing
 
-Open Weather and choose a data source and forecast model in the weather table. Check cloud cover, precipitation, wind and visibility for your target period, alongside observing windows, moonlight and target position. Compare again after changing sources or models, and treat missing values as unknown.
+Open Weather and choose a data source and forecast model. Check cloud cover, precipitation, wind speed, gusts and visibility for your target period, alongside observing windows, moonlight and target position. Compare again after changing sources or models, and treat missing values as unknown.
 
-AOD and supplementary visibility for Windy load independently; a failure leaves the other metric available. Select Retry in the corresponding weather-table notice to reload only that metric. Open-Meteo weather retains visibility from the selected model. Favorite comparisons also retain available metrics and mark failed ones as Load failed; Refresh comparison reloads the entire comparison.
+Snow rows appear below precipitation. Windy estimates new snow for each forecast step using 1 mm of snow water equivalent to represent about 1 cm of new snow. The values appear in the Estimated new snow row. The selected Open-Meteo model supplies ground snow depth. The Open-Meteo weather table shows new snow for the preceding hour. Ground snow depth is valid at the labeled time. Open-Meteo shows one, two or three snowflakes for light, moderate or heavy snow according to the weather code.
+
+Both sources can summarize 24 hours of new snow from the first forecast step of the selected date. Windy shows its estimated depth, and Open-Meteo also shows snow water equivalent. Complete positive water equivalent totals are graded under GB/T 28592—2012. Under Settings → Snow display, choose Show when snow is forecast, Always show or Hide. By default, each snow row or summary appears when it has a positive value.
+
+The weather table and seven-day overview show the status of supplementary data in the Open-Meteo notice. AOD, supplementary visibility and ground snow depth can each be retried independently while loaded values remain available. Open-Meteo weather uses visibility from the selected model. Favorite comparisons also retain available metrics and mark failed ones as Load failed. Refresh comparison reloads the entire comparison.
+
+See Settings → Guide → Weather legend for 24-hour snow water equivalent grades.
 
 ### Favorite comparisons
 
 Use the top favorites button to save the current location or search and open existing Windy favorites. Select Compare, choose 2–5 locations and start the comparison to check weather, observing windows, elevation and light pollution for the same date and shortlist alternative shooting locations.
 
-Weather rows summarize available forecasts for each location's selected local date, independently of moonless or Milky Way windows. Coverage may be partial; missing values remain unknown. After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.
+Whole day summarizes weather for each site's local date. Open-Meteo precipitation includes accumulation periods that overlap that local date. Target window supports moonless or Milky Way windows, or one hour before and after sunset. All windows intersecting the selected date are included by default, with a per-site option to select one segment. Windows crossing midnight show both dates.
+
+OM in Data source means Open-Meteo. Data source, Period and the target-window selector share a compact toolbar and wrap when space is limited.
+
+Custom period uses local dates and times for sites in one time zone. Use the next date when crossing midnight. For sites in different time zones, choose Whole day or Target window. Custom periods begin no earlier than January 1 of the previous year, based on the browser’s current year; dates outside the forecast range may still have no weather data. Expand Conditions through the period to inspect original cloud, wind and precipitation samples without interpolation. Precipitation retains complete source accumulation periods without proration or summation. Forecast range, partial coverage, outside range, missing data and loading failures are shown separately; unknown conditions do not mean good weather.
+
+After leaving cloud planning, All restores event directions. When cloud heights are unknown, the fit button fits existing direction lines and the zoom-in button restores the location zoom.
 
 ### Light pollution map, radar and display
 
@@ -110,7 +135,7 @@ Use the sparkles button beside the rain-cloud icon to overlay the Lorenz 2025 li
 
 Use the rain-cloud button to toggle RainViewer radar, or select the source and adjust opacity in Settings. Echoes use the China NMC stepped reflectivity palette; use Windy's timeline and the displayed radar timestamp to examine changes in rainfall. Recoloring does not change the data source, so echo coverage and update times may differ from Windy's native radar. Settings also contains language and display options, while measurement units follow Windy. On mobile, use the panel controls to switch between collapsed, compact and fullscreen views.
 
-Minimize scope keeps the standard collapsed layout by default. You can also hide the daily event times, or hide both event times and the location, Sun/Moon directions and Moon phase row. Expanding restores all content, and your choice is saved in this browser.
+Minimize scope keeps the standard collapsed layout by default. Choose to hide event times for the selected date, or hide both event times and the location, Sun/Moon directions and Moon phase row. Expanding restores all content, and your choice is saved in this browser.
 
 ## Usage limits
 
@@ -136,6 +161,8 @@ Run `npm run build` to generate `dist/`, including scripts, `plugin.json` and th
 
 ## Feedback and license
 
+Choose **Feedback** in **About**, or open the [feedback form](https://tally.so/r/jeoe2Q), to report bugs, suggest features or share other feedback. Feedback type, details and plugin version are required; screenshots, device and browser details, and email are optional. Successful submissions redirect to the author support page; donations are entirely optional.
+
 If the interface is incomplete or loading fails, expand **View diagnostics** at the bottom of **About**, copy the report and include it with your issue. A diagnostic entry is also shown when initialization fails. Reports include the version, environment, loading states and sanitized errors, excluding location coordinates, favorites and API keys. If the plugin file itself cannot load, provide screenshots and browser errors instead.
 
-[Report a problem or suggestion](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [RedNote](https://xhslink.cn/o/rXpBcBK0Qy) · [Optional support on Afdian](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)
+[Feedback form](https://tally.so/r/jeoe2Q) · [GitHub Issues](https://github.com/bytepoem/windy-plugin-sun-moon-path/issues) · [Author: bytepoem](https://github.com/bytepoem) · [RedNote](https://xhslink.cn/o/rXpBcBK0Qy) · [Optional support on Afdian](https://afdian.com/a/bytepoem) · [MIT License](LICENSE)

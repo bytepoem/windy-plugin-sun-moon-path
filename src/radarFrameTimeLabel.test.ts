@@ -9,7 +9,7 @@ describe('radar frame time label', () => {
             provider: 'rainviewer',
             status: 'ready',
             timestampMs: Date.parse('2026-08-30T11:10:00Z'),
-        })).toMatch(/^RainViewer · 08\/30 \d{2}:10$/);
+        })).toMatch(/^RainViewer · 8\/30 \d{2}:10$/);
     });
 
     it('distinguishes loading, out-of-range and hidden states', () => {

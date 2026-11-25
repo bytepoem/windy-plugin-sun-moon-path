@@ -1,6 +1,8 @@
 import { EquatorFromVector, Horizon, MakeTime, Observer, RotateVector, Rotation_GAL_EQJ, Vector } from 'astronomy-engine';
+import { messages } from './locales/eventSkyOverlay';
 import { cloudBodyPosition, cloudGalacticCenterPosition } from './cloudGeometry';
 import { projectRainbowDirection, type SkyDirection } from './rainbowGeometry';
+import type { UiLanguage } from './uiLanguage';
 import type { Coordinates } from './solar';
 
 const HORIZON_RADIUS = 106;
@@ -22,7 +24,7 @@ export interface EventSkyState {
     location: Coordinates;
     timestamp: number;
     timeLabel: string;
-    language: 'zh' | 'en';
+    language: UiLanguage;
     opacity: number;
 }
 
@@ -50,14 +52,13 @@ const escapeText = (value: string) => value.replace(/[&<>"']/g, character =>
  */
 export const eventSkySvg = (state: EventSkyState): string => {
     const geometry = eventSkyGeometry(state.timestamp, state.location);
-    const zh = state.language === 'zh';
     const project = (direction: SkyDirection) => projectRainbowDirection(direction, HORIZON_RADIUS);
     const grid = [0, 30, 60].map(altitude => {
         const radius = -project({ azimuth: 0, altitude }).y;
         return `<circle r="${radius}" stroke-opacity="${altitude === 0 ? 0.8 : 0.3}"/><text x="4" y="${-radius + 12}">${altitude}°</text>`;
     }).join('');
-    const cardinal = [[0, -118, zh ? '北' : 'N'], [119, 4, zh ? '东' : 'E'],
-        [0, 121, zh ? '南' : 'S'], [-119, 4, zh ? '西' : 'W']]
+    const cardinal = [[0, -118, messages[state.language].n], [119, 4, messages[state.language].e],
+        [0, 121, messages[state.language].s], [-119, 4, messages[state.language].w]]
         .map(([x, y, name]) => `<text x="${x}" y="${y}" text-anchor="middle">${name}</text>`).join('');
     // Split at the horizon before styling. Adjacent 1° samples bound crossing
     // error; interpolation places the shared endpoint on the horizon ring.
@@ -92,9 +93,9 @@ export const eventSkySvg = (state: EventSkyState): string => {
             <path d="${path}" stroke="#57c58b" stroke-width="9" stroke-opacity="0.25" ${segment.below ? 'stroke-dasharray="3 5"' : ''}/>
             <path d="${path}" stroke="#a3ebc1" stroke-width="1.5" ${segment.below ? 'stroke-dasharray="3 5"' : ''}/></g>`;
     }).join('');
-    const bodies = ([['sun', geometry.sun, '#ffd166', zh ? '太阳' : 'Sun'],
-        ['moon', geometry.moon, '#f5efcf', zh ? '月亮' : 'Moon'],
-        ['center', geometry.center, '#9de0b7', zh ? '银心' : 'GC']] as const).map(([body, direction, color, name]) => {
+    const bodies = ([['sun', geometry.sun, '#ffd166', messages[state.language].sun],
+        ['moon', geometry.moon, '#f5efcf', messages[state.language].moon],
+        ['center', geometry.center, '#9de0b7', messages[state.language].gC]] as const).map(([body, direction, color, name]) => {
         const { x, y } = project(direction);
         const below = direction.altitude < 0;
         const fill = below ? '#17212a' : color;
@@ -111,7 +112,7 @@ export const eventSkySvg = (state: EventSkyState): string => {
             <text x="${x + (x >= 0 ? -10 : 10)}" y="${y + (body === 'moon' ? -12 : 18)}" text-anchor="${x >= 0 ? 'end' : 'start'}">${name}${below ? ' ↓' : ''} ${direction.altitude.toFixed(1)}°</text></g>`;
     }).join('');
     const opacity = Number.isFinite(state.opacity) ? Math.min(100, Math.max(0, state.opacity)) / 100 : 1;
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${ICON_SIZE}" height="${ICON_SIZE}" viewBox="-140 -140 280 280" style="overflow:visible;pointer-events:none" role="img" aria-label="${zh ? '日月银河天空方向图' : 'Sun, Moon and Milky Way sky chart'}">
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${ICON_SIZE}" height="${ICON_SIZE}" viewBox="-140 -140 280 280" style="overflow:visible;pointer-events:none" role="img" aria-label="${messages[state.language].sunMoonAndMilkyWaySkyChart}">
         <style>.event-sky-overlay text{fill:#f2f4fa;stroke:#17212a;stroke-width:3px;paint-order:stroke;font:11px sans-serif}</style>
         <g opacity="${opacity}" fill="none" stroke="#e6edf4" stroke-width="1">
             <circle r="106" fill="#17212a" fill-opacity="0.12"/>${grid}${cardinal}${band}${bodies}<circle r="3" fill="#f2f4fa"/>

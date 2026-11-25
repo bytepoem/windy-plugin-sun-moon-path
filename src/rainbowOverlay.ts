@@ -1,4 +1,6 @@
+import { messages } from './locales/rainbowOverlay';
 import { calculateRainbow, PRIMARY_RAINBOW_RADIUS, projectRainbowDirection, rainbowSourceAboveHorizon, SECONDARY_RAINBOW_RADIUS, type SkyDirection } from './rainbowGeometry';
+import type { UiLanguage } from './uiLanguage';
 import type { Coordinates } from './solar';
 
 const HORIZON_RADIUS = 106;
@@ -33,22 +35,21 @@ export interface RainbowOverlayState {
     secondary: boolean;
     fullCircle: boolean;
     opacity: number;
-    language: 'zh' | 'en';
+    language: UiLanguage;
 }
 
 /** Draw a non-interactive sky chart anchored to the selected map location.
  * A single SVG marker avoids geographic-distance implications and owns no map listeners.
  */
 export const rainbowOverlaySvg = (state: RainbowOverlayState): string => {
-    const zh = state.language === 'zh';
     const opacity = Number.isFinite(state.opacity) ? Math.min(100, Math.max(0, state.opacity)) / 100 : 1;
     const grid = [0, 30, 60].map(altitude => {
         // Grid and rainbow must use the same projection, including its nonlinear altitude spacing.
         const radius = -projectRainbowDirection({ azimuth: 0, altitude }, HORIZON_RADIUS).y;
         return `<circle r="${radius}" stroke-opacity="${altitude === 0 ? 0.85 : 0.35}"/><text x="4" y="${-radius + 12}">${altitude}°</text>`;
     }).join('');
-    const labels = [[0, -HORIZON_RADIUS - 9, zh ? '北' : 'N'], [HORIZON_RADIUS + 12, 4, zh ? '东' : 'E'],
-        [0, HORIZON_RADIUS + 16, zh ? '南' : 'S'], [-HORIZON_RADIUS - 12, 4, zh ? '西' : 'W']]
+    const labels = [[0, -HORIZON_RADIUS - 9, messages[state.language].n], [HORIZON_RADIUS + 12, 4, messages[state.language].e],
+        [0, HORIZON_RADIUS + 16, messages[state.language].s], [-HORIZON_RADIUS - 12, 4, messages[state.language].w]]
         .map(([x, y, label]) => `<text x="${x}" y="${y}" text-anchor="middle">${label}</text>`).join('');
     const aboveHorizonPaths: string[] = [];
     const belowHorizonPaths: string[] = [];
@@ -74,7 +75,7 @@ export const rainbowOverlaySvg = (state: RainbowOverlayState): string => {
     if (rainbowSourceAboveHorizon(state.source)) {
         const direction = { azimuth: (state.source.azimuth + 180) % 360, altitude: -state.source.altitude };
         const position = projectRainbowDirection(direction, HORIZON_RADIUS);
-        const name = state.body === 'sun' ? (zh ? '反太阳点' : 'Antisolar point') : (zh ? '反月亮点' : 'Antilunar point');
+        const name = state.body === 'sun' ? (messages[state.language].antisolarPoint) : (messages[state.language].antilunarPoint);
         const rings = COLORS.map((color, index) => `<circle r="${(COLORS.length - index) * 0.75}" fill="${color}"/>`).join('');
         oppositeSource = `<g class="rainbow-opposite-source" transform="translate(${position.x},${position.y})" stroke="none"><title>${name}</title><circle r="6.25" fill="#e6edf4" fill-opacity="0.7"/>${rings}</g>`;
     }
@@ -90,7 +91,7 @@ export const rainbowOverlaySvg = (state: RainbowOverlayState): string => {
             const angle = index * Math.PI / 4;
             return `<line x1="${5 * Math.cos(angle)}" y1="${5 * Math.sin(angle)}" x2="${8 * Math.cos(angle)}" y2="${8 * Math.sin(angle)}"/>`;
         }).join('');
-        const name = state.body === 'sun' ? (zh ? '太阳' : 'Sun') : (zh ? '月亮' : 'Moon');
+        const name = state.body === 'sun' ? (messages[state.language].sun) : (messages[state.language].moon);
         const label = `${name} ${belowHorizon ? '↓ ' : ''}${((state.source.azimuth % 360 + 360) % 360).toFixed(1)}°`;
         const icon = state.body === 'sun' ? `<circle r="3" fill="${belowHorizon ? '#17212a' : color}"/>${rays}`
             : `<path class="rainbow-moon-icon" d="M5 3A6 6 0 0 1-3-5A6.5 6.5 0 1 0 5 3Z" fill="${belowHorizon ? '#17212a' : color}"/>`;
