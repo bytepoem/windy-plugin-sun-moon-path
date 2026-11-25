@@ -145,6 +145,7 @@
   "m_2bb756e10a34": "Ugyldig lokal dato, tid eller periode. Juster inndata slik at slutt er etter start.",
   "m_2c85ca9fa647": "Snøkorn",
   "m_2d111b404799": "Moderat snø",
+  "m_35df66910517": "Tidsvinduer for solens og månens oppgang og nedgang dekker én time før og etter hendelsen. Hvis ingen prognose faller i vinduet, kan den nærmeste prognosen innen 90 minutter fra hendelsen vises som referanse.",
   "m_47e781679e63": "Våt snø",
   "m_4f946da92e82": "Snø",
   "m_55928ecaa49b": "Snøfall og snødybde",

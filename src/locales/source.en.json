@@ -187,6 +187,7 @@
   "m_35328d2de6ad": "Amap",
   "m_357f85ab1794": "More favourable",
   "m_35d214efff35": "Hourly weather data table",
+  "m_35df66910517": "Sun and Moon rise/set windows span one hour on either side. If no forecast sample falls in the window, the closest sample within 90 minutes of the event may be shown for reference.",
   "m_3601bc337284": "Unpin current location",
   "m_371348b3b92a": "Choose a location, then set the local date and time above. Now returns to the current instant; rise/set shortcuts jump to events. The Windy timeline also updates planning time. Tabs preserve your selection; reopening starts at the current instant.",
   "m_37239384257e": "Unable to load the observer time zone. Please try again.",

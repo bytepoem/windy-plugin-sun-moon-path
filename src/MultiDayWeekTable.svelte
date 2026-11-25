@@ -8,7 +8,7 @@
     import { translations } from './pluginTranslations';
     import { createMultiDayWeatherPresentation, multiDayMetricTitle, MULTI_DAY_METRICS, type MultiDayMetric } from './multiDayWeatherPresentation';
     import { comparisonInstantLabel } from './favoriteComparisonPeriod';
-    import { formatLocalClock } from './solar';
+    import { formatLocalClock, type SolarEvent } from './solar';
     import { weatherConditionLabel, type WeatherLoadStatus, type WeatherPoint, type WeatherSource } from './weather';
     import WeatherIcon from './WeatherIcon.svelte';
     import WeatherMetricIcon from './WeatherMetricIcon.svelte';
@@ -45,14 +45,14 @@
     $: dates = rows.map(row => {
         const intervals = row.windows[target];
         const weather = intervals.length === 1 ? createMultiDayWeatherPresentation({
-            interval:intervals[0], points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, units,
+            interval:intervals[0], points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, timeZone, units,
         }) : null;
         const weekdayLabel = new Intl.DateTimeFormat(UI_LANGUAGES[language].locale, {
             timeZone:'UTC', weekday:'short',
         }).format(new Date(row.date + 'T12:00:00Z'));
         const label = `${formatDisplayDate(row.date)} ${weekdayLabel}`;
         const weekday = new Date(row.date + 'T12:00:00Z').getUTCDay();
-        const clock = (kind: 'sunrise' | 'sunset') => {
+        const clock = (kind: SolarEvent) => {
             const time = row.timeline.items.find(item => item.kind === kind)?.time;
             return time ? formatLocalClock(time, timeZone) : horizonText[language].noEventThisDay;
         };
@@ -61,6 +61,10 @@
         const phase = `${Math.round(row.timeline.moonIllumination.fraction * 100)}%`;
         const coverage = weather?.stateLabel ?? (intervals.length ? `${text.allSegments} · ${intervals.length}` : text.noWindow);
         const period = intervals.map(interval => `${comparisonInstantLabel(interval.start.getTime(), timeZone)} – ${comparisonInstantLabel(interval.end.getTime(), timeZone)}`).join('; ');
+        const sunrise = clock('sunrise');
+        const sunset = clock('sunset');
+        const lunarTime = target === 'moonrise' || target === 'moonset' ? `${pluginText.events[target]} ${clock(target)}` : '';
+        const eventsLabel = lunarTime || `${pluginText.events.sunrise} ${sunrise} · ${pluginText.events.sunset} ${sunset}`;
         const coverageTitle = weather?.evidence.state === 'partial'
             && weather.evidence.coveredStart !== null && weather.evidence.coveredEnd !== null
             ? `${coverage}: ${comparisonInstantLabel(weather.evidence.coveredStart, timeZone)} – ${comparisonInstantLabel(weather.evidence.coveredEnd, timeZone)}` : coverage;
@@ -69,10 +73,11 @@
                 : weather?.hasMetricEvidence(field)
                     ? weather.values[field] : '—'])) as Record<Field, string>;
         return {
-            date:row.date, label, weekend:weekday === 0 || weekday === 6, sunrise:clock('sunrise'), sunset:clock('sunset'),
-            duration, phase, values, conditions:weather?.available ? weather.conditions : [],
+            date:row.date, label, weekend:weekday === 0 || weekday === 6, sunrise, sunset,
+            duration, phase, lunarTime, values, referenceTime:weather?.referenceTime, conditions:weather?.available ? weather.conditions : [],
             missingConditions:weather?.available && weather.missingConditions, coverageTitle,
-            title:`${label} · ${pluginText.events.sunrise} ${clock('sunrise')} · ${pluginText.events.sunset} ${clock('sunset')} · ${duration} · ${text.moonIllumination} ${phase}${period ? ` · ${period}` : ''}`,
+            title: [label, eventsLabel, duration, `${text.moonIllumination} ${phase}`, period, weather?.referenceTime ? coverage : '']
+                .filter(Boolean).join(' · '),
         };
     });
 </script>
@@ -85,7 +90,8 @@
                 {#each dates as date (date.date)}
                     <th class="date-header" class:weekend={date.weekend} scope="col" id={`week-date-${date.date}`}>
                         <button type="button" data-date={date.date} class:selected={selectedDate === date.date} title={date.title} aria-label={date.title} aria-expanded={selectedDate === date.date} aria-controls="multi-day-week-details" on:click={() => dispatch('select', date.date)}>
-                            <strong>{date.label}</strong><small>{date.duration} · {date.phase}</small><small>↑{date.sunrise} ↓{date.sunset}</small>
+                            <strong>{date.label}</strong><small>{date.duration} · {date.phase}</small><small>{date.lunarTime || `↑${date.sunrise} ↓${date.sunset}`}</small>
+                            {#if date.referenceTime}<small class="reference-time">{date.referenceTime}</small>{/if}
                         </button>
                     </th>
                 {/each}
@@ -119,7 +125,8 @@
             <tbody>{#each dates as date (date.date)}
                 <tr><th class="date-header" class:weekend={date.weekend} scope="row" id={`week-date-${date.date}`}>
                     <button type="button" data-date={date.date} class:selected={selectedDate === date.date} title={date.title} aria-label={date.title} aria-expanded={selectedDate === date.date} aria-controls="multi-day-week-details" on:click={() => dispatch('select', date.date)}>
-                        <strong>{date.label}</strong><small>{date.duration} · {date.phase}</small><small>↑{date.sunrise} ↓{date.sunset}</small>
+                        <strong>{date.label}</strong><small>{date.duration} · {date.phase}</small><small>{date.lunarTime || `↑${date.sunrise} ↓${date.sunset}`}</small>
+                        {#if date.referenceTime}<small class="reference-time">{date.referenceTime}</small>{/if}
                     </button>
                 </th>
                     {#each fields as field}<td class:weekend={date.weekend} headers={`week-date-${date.date} week-field-${field}`} title={date.coverageTitle}>
@@ -154,6 +161,7 @@
     strong, small { display:block; }
     strong { font-size:12px; font-weight:500; }
     small { margin-top:2px; font-size:10px; color:var(--panel-muted); }
+    .reference-time { color:var(--panel-warning); }
     .date-header.weekend button strong { color:var(--panel-warning); font-weight:600; text-decoration:underline; text-underline-offset:2px; }
     .weekend { background:rgba(246,182,92,.06); }
     .date-header.weekend { background:#252a3b; }

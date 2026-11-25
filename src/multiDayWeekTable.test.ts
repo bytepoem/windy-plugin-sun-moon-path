@@ -47,6 +47,18 @@ describe('compiled seven-day date axes', () => {
         expect(values['2027-01-10/temperatureC']).toBe('—');
         expect(values['2027-01-10/coverage']).toBe('缺测');
     });
+    it.each(['horizontal', 'vertical'])('labels out-of-window event samples and keeps rain separate in %s', orientation => {
+        const [row] = rows;
+        const event = row.windows.sunset[0];
+        const before = { ...points[0], timestamp: event.start.getTime() - 37 * 60_000, temperatureC: 9 };
+        const after = { ...points[0], timestamp: event.end.getTime() + 23 * 60_000, temperatureC: 3, precipMm: 7 };
+        const html = renderTable({ ...props, rows: [row], points: [before, after], orientation });
+        const values = cells(html);
+        expect(html).toContain('class="reference-time');
+        expect(values[`${row.date}/coverage`]).toMatch(/参考.*日落.*\+83/);
+        expect(values[`${row.date}/temperatureC`]).toBe('3 °C');
+        expect(values[`${row.date}/precipMm`]).toBe('7 mm');
+    });
     it('puts all seven dates in column headers horizontally', () => {
         const html = renderTable({ ...props, orientation:'horizontal' });
         const head = html.match(/<thead\b[^>]*>([\s\S]*?)<\/thead>/)![1];

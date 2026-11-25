@@ -11,7 +11,7 @@
     import { messages as settingsMessages } from './locales/PluginSettings';
     import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
     import {
-        createMultiDayCalculator, isValidMultiDayRange, type MultiDayRow, type MultiDayTarget, type MultiDayInterval,
+        createMultiDayCalculator, isValidMultiDayRange, MULTI_DAY_EVENTS, type MultiDayRow, type MultiDayTarget, type MultiDayInterval,
     } from './multiDayPlanner';
     import {
         addDaysToDateInput, dateInputForInstant, dateInputToUtcNoon, formatLocalClock, type Coordinates,
@@ -87,6 +87,7 @@
     $: text = messages[language];
     $: common = labels[language];
     $: pluginText = translations[language];
+    $: hourLabel = new Intl.NumberFormat(UI_LANGUAGES[language].locale, { style: 'unit', unit: 'hour' }).format(1);
     $: count = mode === 'week' ? 7 : 30;
     $: metrics = multiDayWeatherMetrics(rows.flatMap(row => row.windows[target]), points, source, snowDisplay);
     $: requestBuild(active && contextReady, `${location.lat}|${location.lon}|${timeZone}|${elevationM}|${startDate}|${count}`);
@@ -161,7 +162,7 @@
         const time = row.timeline.items.find(item => item.kind === kind)?.time;
         return time ? formatLocalClock(time, timeZone) : horizonText[language].noEventThisDay;
     };
-    const continues = (interval: MultiDayInterval, date: string) => target !== 'sunset'
+    const continues = (interval: MultiDayInterval, date: string) => !interval.event
         && (interval.start.getTime() === dateInputToUtcNoon(date, timeZone).getTime()
             || interval.end.getTime() === dateInputToUtcNoon(addDaysToDateInput(date, 1), timeZone).getTime());
     const openDay = (row: MultiDayRow, interval?: MultiDayInterval) => dispatch('select', {
@@ -189,19 +190,34 @@
             <button class:active={mode === 'week'} aria-pressed={mode === 'week'} on:click={() => mode = 'week'}>{text.week}</button>
             <button class:active={mode === 'month'} aria-pressed={mode === 'month'} on:click={() => mode = 'month'}>{text.month}</button>
         </div>
-        <label>{common.target}<select bind:value={target}><option value="moonless-night">{common.moonless}</option><option value="milky-way">{common.milkyWay}</option><option value="sunset">{common.sunset}</option></select></label>
+        <label>{common.target}
+            <select bind:value={target}>
+                <option value="moonless-night">{common.moonless}</option>
+                <option value="milky-way">{common.milkyWay}</option>
+                {#each MULTI_DAY_EVENTS as event}
+                    <option value={event}>{pluginText.events[event]} ±{hourLabel}</option>
+                {/each}
+            </select>
+        </label>
     </div>
     <div class="planning-controls">
       <div class="range-controls">
         <button aria-label={common.start} disabled={!isValidMultiDayRange(addDaysToDateInput(startDate, -count), 30, minimumDate)} on:click={() => changeRange(addDaysToDateInput(startDate, -count))}>‹</button>
-        <div class="range-date">
+        <label class="range-date">
             <span aria-hidden="true">{formatDisplayDate(startDate, true)}</span>
             <input type="date" aria-label={common.dateControl} value={startDate} min={minimumDate} max={maximumSelectableDate(30)} aria-invalid={invalidRange}
+                on:click={event => event.currentTarget.showPicker?.()}
+                on:keydown={event => {
+                    if ((event.key === 'Enter' || event.key === ' ') && event.currentTarget.showPicker) {
+                        event.preventDefault();
+                        event.currentTarget.showPicker();
+                    }
+                }}
                 on:change={event => {
                     changeRange(event.currentTarget.value);
                     event.currentTarget.value = startDate;
                 }} />
-        </div>
+        </label>
         <span>– {dateLabel(addDaysToDateInput(startDate, count - 1))}</span>
         <button aria-label={common.end} disabled={!isValidMultiDayRange(addDaysToDateInput(startDate, count), 30, minimumDate)} on:click={() => changeRange(addDaysToDateInput(startDate, count))}>›</button>
       </div>
@@ -235,7 +251,7 @@
             {#if weatherStatus === 'error' || weatherStatus === 'empty'}<button on:click={() => dispatch('retry')}>{pluginText.retry}</button>{/if}
         {/if}
         <details class="overview-notes"><summary>{settingsMessages[language].userGuide}</summary>
-            <p>{text.nightRule}</p><p>{text.monthRule}</p><p>{common.precipitationRule}</p>
+            <p>{text.nightRule}</p><p>{text.monthRule}</p><p>{text.eventForecastRule}</p><p>{common.precipitationRule}</p>
             {#if mode === 'week' && snowDisplay !== 'hidden'}<p>{text.snowRule}</p>{/if}
         </details>
     </div>
@@ -329,11 +345,10 @@
         max-width:100%;
     }
     .range-controls button { padding-inline:3px; }
-    /* Native focus opens iOS editing; focused segments stay visible for keys. */
-    .range-date { position:relative; display:inline-flex; align-items:center; box-sizing:border-box; min-width:124px; min-height:30px; padding:3px 6px; border:1px solid var(--panel-border); border-radius:6px; background:#0e161f; }
+    /* Match the top time strip: the native input covers the date text and opens its picker. */
+    .range-date { position:relative; display:flex; justify-content:center; box-sizing:border-box; min-width:96px; min-height:30px; padding:3px 6px; border:1px solid var(--panel-border); border-radius:6px; background:#0e161f; font-variant-numeric:tabular-nums; cursor:pointer; }
     .range-date > span { white-space:nowrap; }
-    .range-date input { position:absolute; inset:0; width:100%; height:100%; min-width:0; margin:0; opacity:0; cursor:text; }
-    .range-date input:focus { opacity:1; }
+    .range-date input { position:absolute; inset:0; width:100%; height:100%; min-width:0; margin:0; padding:0; border:0; opacity:0; cursor:pointer; color-scheme:dark; }
     .range-date:focus-within { outline:2px solid var(--panel-accent); outline-offset:2px; }
     .range-controls > span { white-space:nowrap; font-size:12px; }
     .forecast-controls { gap:4px; }

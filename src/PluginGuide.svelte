@@ -63,6 +63,7 @@
         <p>{messages[uiLanguage].toggleShowSkyChartInSettingsOr}</p>
         <p>{messages[uiLanguage].viewSunMoonAndGalacticCentreEvents}</p>
         <p>{text.featureGuide.multiDay.description} {multiDayMessages[uiLanguage].nightRule} {multiDayMessages[uiLanguage].monthRule}</p>
+        <p>{multiDayMessages[uiLanguage].eventForecastRule}</p>
         <p class="calendar-week-order"><span>{multiDayMessages[uiLanguage].month}:</span>
             {#each calendarWeekdays as weekday, index}<span class:weekend={index === 0 || index === 6}>{weekday}</span>{/each}
         </p>

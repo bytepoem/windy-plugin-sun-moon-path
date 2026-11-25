@@ -2,11 +2,13 @@ import { labels } from './locales/FavoriteComparison';
 import { translations as weatherText, messages as weatherMessages, weatherMetricLabel } from './locales/WeatherTable';
 import { messages as cloudText } from './locales/CloudObstruction';
 import { messages as overviewText } from './locales/MultiDayOverview';
+import { translations } from './pluginTranslations';
+import { formatLocalClock } from './solar';
 import { multiDayMetricRange, multiDayPrecipitationPoints, multiDayWindowWeather, type MultiDayInterval } from './multiDayPlanner';
 import { formatPrecipitationRangeMm, formatTemperatureRangeC, formatVisibilityRangeKm, formatWindSpeedRange, type UnitPreferences } from './unitPreferences';
 import { weatherMetricValue, type WeatherLoadStatus, type WeatherMetric, type WeatherPoint, type WeatherSource } from './weather';
+import { UI_LANGUAGES, type UiLanguage } from './uiLanguage';
 import type { SnowDisplayPreference } from './pluginPreferences';
-import type { UiLanguage } from './uiLanguage';
 
 export type MultiDayMetric = Exclude<WeatherMetric, 'windDirectionDeg' | 'snowWaterMm'>;
 export const MULTI_DAY_METRICS: MultiDayMetric[] = [
@@ -59,32 +61,48 @@ export const multiDayMetricTitle = (metric: MultiDayMetric, language: UiLanguage
  * details. Display direction cannot change samples, units or channel states.
  */
 export const createMultiDayWeatherPresentation = ({
-    interval, points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, units,
+    interval, points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, timeZone, units,
 }: {
     interval: MultiDayInterval; points: WeatherPoint[]; status: WeatherLoadStatus;
     aodStatus: WeatherLoadStatus; visibilityStatus: WeatherLoadStatus; snowStatus: WeatherLoadStatus; source: WeatherSource;
-    metrics: MultiDayMetric[]; language: UiLanguage; units: UnitPreferences;
+    metrics: MultiDayMetric[]; language: UiLanguage; timeZone: string; units: UnitPreferences;
 }) => {
     const text = labels[language];
     const evidence = multiDayWindowWeather(interval, points, status);
+    const { reference } = evidence;
+    const instantPoints = reference ? [reference.point] : evidence.points;
+    const referenceTime = reference
+        ? `${cloudText[language].reference} ${formatLocalClock(new Date(reference.point.timestamp), timeZone)}` : '';
+    const referenceOffset = reference ? new Intl.NumberFormat(UI_LANGUAGES[language].locale, {
+        style: 'unit', unit: 'minute', signDisplay: 'always',
+    }).format(Math.round(reference.offsetMs / 60_000)) : '';
     const precipitation = multiDayPrecipitationPoints(interval, points);
     const snowMetrics = metrics.filter(isSnowAccumulation);
     const snow = snowMetrics.length ? points.filter(point => snowOverlaps(interval, point, source)) : [];
     const snowSamples = snow.filter(point => snowMetrics.some(metric => weatherMetricValue(point, metric) !== null));
-    const samples = [...new Map([...evidence.points, ...precipitation, ...snowSamples].map(point => [point.timestamp, point])).values()]
+    const samples = [...new Map([...instantPoints, ...precipitation, ...snowSamples].map(point => [point.timestamp, point])).values()]
         .sort((a, b) => a.timestamp - b.timestamp);
-    const conditions = [...new Map(evidence.points.filter(point => point.iconCode !== null)
+    const conditions = [...new Map(instantPoints.filter(point => point.iconCode !== null)
         .map(point => [`${point.iconCode}|${point.isDay}|${point.snowCondition}|${point.snowIntensity}`, point])).values()];
-    const missingConditions = evidence.points.some(point => point.iconCode === null);
-    const available = evidence.state === 'full' || evidence.state === 'partial';
+    const missingConditions = instantPoints.some(point => point.iconCode === null);
+    const hasWindowSamples = evidence.state === 'full' || evidence.state === 'partial';
+    const available = hasWindowSamples || reference !== null;
     // Accumulations cover periods, so valid rain can overlap a short window
     // even when none of the source's instantaneous timestamps falls inside it.
-    const samplesForMetric = (metric: MultiDayMetric): WeatherPoint[] =>
-        metric === 'precipMm' ? precipitation : isSnowAccumulation(metric) ? snow : evidence.points;
-    const hasMetricEvidence = (metric: MultiDayMetric): boolean => available || (status === 'ready'
-        && (metric === 'precipMm' || isSnowAccumulation(metric))
-        && multiDayMetricRange(samplesForMetric(metric), metric) !== null);
-    const stateLabel = evidence.state === 'loading' ? weatherText[language].loading
+    const samplesForMetric = (metric: MultiDayMetric): WeatherPoint[] => {
+        if (metric === 'precipMm') { return precipitation; }
+        if (isSnowAccumulation(metric)) { return snow; }
+        return metric === 'snowDepthCm' ? evidence.points : instantPoints;
+    };
+    const hasMetricEvidence = (metric: MultiDayMetric): boolean => {
+        if (hasWindowSamples) { return true; }
+        if (metric === 'precipMm' || isSnowAccumulation(metric)) {
+            return status === 'ready' && multiDayMetricRange(samplesForMetric(metric), metric) !== null;
+        }
+        return reference !== null && metric !== 'snowDepthCm';
+    };
+    const stateLabel = reference ? `${referenceTime} · ${translations[language].events[reference.event]} ${referenceOffset}`
+        : evidence.state === 'loading' ? weatherText[language].loading
         : evidence.state === 'error' ? text.atmosphereError : evidence.state === 'outside' ? text.outsideForecast
         : evidence.state === 'missing' ? text.missing : evidence.state === 'partial' ? text.partial : text.full;
     const formatRange = (metric: MultiDayMetric, range: NonNullable<ReturnType<typeof multiDayMetricRange>>) => {
@@ -114,5 +132,6 @@ export const createMultiDayWeatherPresentation = ({
     const values = Object.fromEntries(metrics.map(metric => [
         metric, metricValue(metric, samplesForMetric(metric)),
     ])) as Record<MultiDayMetric, string>;
-    return { evidence, samples, conditions, missingConditions, available, hasMetricEvidence, samplesForMetric, stateLabel, values, metricValue };
+    return { evidence, instantPoints, samples, conditions, missingConditions, available, hasMetricEvidence,
+        samplesForMetric, stateLabel, referenceTime, values, metricValue };
 };

@@ -19,8 +19,8 @@ import type { LocationProvider } from './locationProvider';
 import type { UpdateNoteKind } from './pluginUpdate';
 
 export const dateSelectionHelp = {
-    zh: '所有日期选择最早从浏览器当前年份的上一年 1 月 1 日开始，跨年后自动更新。日期和时间按所选机位的当地时区解释；超出预报范围的日期可能没有天气数据。',
-    en: 'All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year. Dates and times use the selected site’s local time zone; dates outside the forecast range may have no weather data.',
+    zh: '在多日总览中，点按起始日期打开日历，或用左右箭头翻页。所有日期选择最早从浏览器当前年份的上一年 1 月 1 日开始，跨年后自动更新。日期和时间按所选机位的当地时区解释。超出预报范围的日期可能没有天气数据。',
+    en: 'In Multi-day overview, select the start date to open the calendar or use the arrows to move between ranges. All date selectors start no earlier than January 1 of the previous year, based on the browser’s current year, and advance at New Year. Dates and times use the selected site’s local time zone. Dates outside the forecast range may have no weather data.',
 };
 import type { TemperatureUnit, PrecipitationUnit, WindUnit, DistanceUnit } from './unitPreferences';
 

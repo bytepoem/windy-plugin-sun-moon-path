@@ -1,5 +1,6 @@
 <script lang="ts">
     import { labels } from './locales/FavoriteComparison';
+    import { messages } from './locales/MultiDayOverview';
     import { comparisonInstantLabel } from './favoriteComparisonPeriod';
     import { createMultiDayWeatherPresentation, isSnowAccumulation, multiDayMetricTitle, multiDaySnowPeriod, MULTI_DAY_METRICS, type MultiDayMetric } from './multiDayWeatherPresentation';
     import { weatherConditionLabel, type WeatherPoint, type WeatherLoadStatus, type WeatherSource } from './weather';
@@ -28,7 +29,7 @@
     $: text = labels[language];
     $: metricTitle = (metric: MultiDayMetric) => multiDayMetricTitle(metric, language, source);
     $: presentation = createMultiDayWeatherPresentation({
-        interval, points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, units,
+        interval, points, status, aodStatus, visibilityStatus, snowStatus, source, metrics, language, timeZone, units,
     });
     $: evidence = presentation.evidence;
     $: samples = presentation.samples;
@@ -62,23 +63,23 @@
         </div>
     {/if}
     {#if showSummary || showCoverage}
-        <small class="coverage-state" class:warning={evidence.state === 'partial'}>{stateLabel}</small>
+        <small class="coverage-state" class:warning={evidence.state === 'partial' || evidence.reference !== null}>{stateLabel}</small>
         {#if evidence.state === 'partial' && evidence.coveredStart !== null && evidence.coveredEnd !== null}
             <small class="coverage-period">{text.period}: {comparisonInstantLabel(evidence.coveredStart, timeZone)} – {comparisonInstantLabel(evidence.coveredEnd, timeZone)}</small>
         {/if}
     {/if}
     {#if expanded && samples.length && hasWindowEvidence}
         <details><summary>{text.samples} · {samples.length}</summary>
-            <p>{text.resolution} {text.precipitationRule}</p>
+            <p>{evidence.reference ? messages[language].eventForecastRule : text.resolution} {text.precipitationRule}</p>
             <!-- Keyboard users need a focus target to scroll the original-sample table. -->
             <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
             <div class="samples" role="region" aria-label={text.samples} tabindex="0">
                 <table><thead><tr><th scope="col">{text.period}</th><th scope="col">{text.weather}</th>{#each metrics as metric}<th scope="col" title={metricTitle(metric)}><span class="metric-heading"><WeatherMetricIcon {metric} size={14} /></span><span class="visually-hidden">{metricTitle(metric)}</span></th>{/each}</tr></thead><tbody>
                     {#each samples as point}
-                        {@const inside = evidence.points.includes(point)}
+                        {@const instantaneous = presentation.instantPoints.includes(point)}
                         {@const label = weatherConditionLabel(point.iconCode, language, point.snowCondition, point.snowIntensity)}
                         <tr><th scope="row">{comparisonInstantLabel(point.timestamp, timeZone)}</th>
-                            <td>{#if inside && point.iconCode !== null}<span class="condition" title={label}><WeatherIcon code={point.iconCode} isDay={point.isDay} snowIntensity={point.snowIntensity} {label} /></span>{:else}{text.missing}{/if}</td>
+                            <td>{#if instantaneous && point.iconCode !== null}<span class="condition" title={label}><WeatherIcon code={point.iconCode} isDay={point.isDay} snowIntensity={point.snowIntensity} {label} /></span>{:else}{text.missing}{/if}</td>
                             {#each metrics as metric}
                                 {@const matches = presentation.samplesForMetric(metric).includes(point)}
                                 {@const isAccumulation = metric === 'precipMm' || isSnowAccumulation(metric)}

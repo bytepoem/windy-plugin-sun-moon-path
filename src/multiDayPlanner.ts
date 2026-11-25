@@ -1,12 +1,15 @@
 import {
     addDaysToDateInput, calculateAstronomyTimeline, dateInputToUtcNoon,
-    type AstronomyInterval, type AstronomyTimeline, type Coordinates,
+    type AstronomyInterval, type AstronomyTimeline, type Coordinates, type SolarEvent,
 } from './solar';
 import { isSelectableDate, maximumSelectableDate, minimumSelectableDate } from './dateSelection';
 import type { WeatherLoadStatus, WeatherMetric, WeatherPoint } from './weather';
 
-export type MultiDayTarget = 'moonless-night' | 'milky-way' | 'sunset';
-export type MultiDayInterval = { start: Date; end: Date };
+export const MULTI_DAY_EVENTS = ['sunrise', 'sunset', 'moonrise', 'moonset'] as const satisfies ReadonlyArray<SolarEvent>;
+export type MultiDayTarget = 'moonless-night' | 'milky-way' | SolarEvent;
+export type MultiDayInterval = { start: Date; end: Date; event?: SolarEvent };
+const EVENT_WINDOW_RADIUS_MS = 3_600_000;
+const MAX_REFERENCE_DISTANCE_MS = 90 * 60_000;
 /** Include the neighbouring dates scanned by the existing daily calculator. */
 export const isValidMultiDayRange = (date: string, count: number, minimumDate = minimumSelectableDate()): boolean =>
     (count === 7 || count === 30) && isSelectableDate(date, minimumDate, maximumSelectableDate(count));
@@ -57,14 +60,22 @@ export const createMultiDayCalculator = (location: Coordinates, timeZone: string
         const collect = (kind: 'moonless-night' | 'milky-way') => nightBucketIntervals(
             [...current.intervals, ...adjacent.intervals].filter(interval => interval.kind === kind), date, timeZone,
         );
-        const sunset = current.items.find(item => item.kind === 'sunset')?.time;
+        // The event owns the window even when one endpoint crosses local midnight.
+        const eventWindow = (event: SolarEvent): MultiDayInterval[] => {
+            const time = current.items.find(item => item.kind === event)?.time;
+            if (!time) { return []; }
+            const timestamp = time.getTime();
+            return [{ start: new Date(timestamp - EVENT_WINDOW_RADIUS_MS), end: new Date(timestamp + EVENT_WINDOW_RADIUS_MS), event }];
+        };
         return {
             date, timeline: current,
             windows: {
                 'moonless-night': collect('moonless-night'),
                 'milky-way': collect('milky-way'),
-                sunset: sunset ? [{ start: new Date(sunset.getTime() - 3_600_000),
-                    end: new Date(sunset.getTime() + 3_600_000) }] : [],
+                sunrise: eventWindow('sunrise'),
+                sunset: eventWindow('sunset'),
+                moonrise: eventWindow('moonrise'),
+                moonset: eventWindow('moonset'),
             },
         };
     };
@@ -73,12 +84,13 @@ export const createMultiDayCalculator = (location: Coordinates, timeZone: string
 export type WindowWeather = {
     state: 'loading' | 'error' | 'missing' | 'outside' | 'partial' | 'full';
     points: WeatherPoint[];
+    reference: { point: WeatherPoint; event: SolarEvent; offsetMs: number } | null;
     coveredStart: number | null;
     coveredEnd: number | null;
 };
 
-/** Original samples only: never extend the forecast endpoints, fill holes or
- * substitute whole-day weather. Accumulated precipitation is shown separately.
+/** Keep original in-window samples distinct from an optional event reference.
+ * A reference uses the nearest original point and requires the event to be in range.
  */
 export const multiDayWindowWeather = (
     interval: MultiDayInterval, points: WeatherPoint[], status: WeatherLoadStatus,
@@ -93,7 +105,19 @@ export const multiDayWindowWeather = (
         : first === undefined || last === undefined ? 'missing'
         : end <= first || start > last ? 'outside'
         : !samples.length ? 'missing' : start < first || end > last ? 'partial' : 'full';
-    return { state, points: samples,
+    let reference: WindowWeather['reference'] = null;
+    const eventTime = start + (end - start) / 2;
+    if (status === 'ready' && state === 'missing' && interval.event && first !== undefined && last !== undefined
+        && first <= eventTime && eventTime <= last) {
+        // Sorted timestamps make an exact tie select the earlier forecast.
+        const nearest = forecast.reduce((best, point) =>
+            Math.abs(point.timestamp - eventTime) < Math.abs(best.timestamp - eventTime) ? point : best);
+        const offsetMs = nearest.timestamp - eventTime;
+        if (Math.abs(offsetMs) <= MAX_REFERENCE_DISTANCE_MS) {
+            reference = { point: nearest, event: interval.event, offsetMs };
+        }
+    }
+    return { state, points: samples, reference,
         coveredStart: first === undefined ? null : Math.max(start, first),
         coveredEnd: last === undefined ? null : Math.min(end, last) };
 };

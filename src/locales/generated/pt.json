@@ -145,6 +145,7 @@
   "m_2bb756e10a34": "Data, hora local ou período inválido. Ajuste os valores para que o fim seja posterior ao início.",
   "m_2c85ca9fa647": "Grãos de neve",
   "m_2d111b404799": "Queda de neve moderada",
+  "m_35df66910517": "As janelas de nascer e pôr do Sol e da Lua abrangem uma hora antes e uma hora depois do evento. Se não houver uma amostra na janela, a amostra mais próxima, até 90 minutos do evento, pode ser mostrada como referência.",
   "m_47e781679e63": "Neve húmida",
   "m_4f946da92e82": "Neve",
   "m_55928ecaa49b": "Queda e profundidade da neve",

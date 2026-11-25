@@ -145,6 +145,7 @@
   "m_2bb756e10a34": "Neplatné místní datum, čas nebo období. Upravte vstupy tak, aby konec byl po začátku.",
   "m_2c85ca9fa647": "Sněhová zrna",
   "m_2d111b404799": "Mírné sněžení",
+  "m_35df66910517": "Okna východu a západu Slunce a Měsíce zahrnují hodinu před událostí i po ní. Pokud v okně není žádná předpověď, může se pro orientaci zobrazit nejbližší předpověď do 90 minut od události.",
   "m_47e781679e63": "Mokrý sníh",
   "m_4f946da92e82": "Sníh",
   "m_55928ecaa49b": "Sněžení a výška sněhu",

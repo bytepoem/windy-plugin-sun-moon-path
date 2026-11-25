@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMultiDayCalculator, isValidMultiDayRange, multiDayMetricRange, multiDayPrecipitationPoints, multiDayWindowWeather, nightBucketIntervals } from './multiDayPlanner';
+import { createMultiDayCalculator, isValidMultiDayRange, MULTI_DAY_EVENTS, multiDayMetricRange, multiDayPrecipitationPoints, multiDayWindowWeather, nightBucketIntervals } from './multiDayPlanner';
 import { addDaysToDateInput, dateInputToUtcNoon, type AstronomyInterval } from './solar';
 import { maximumSelectableDate } from './dateSelection';
 import type { WeatherPoint } from './weather';
@@ -65,7 +65,14 @@ describe('night ownership', () => {
         for (const target of ['moonless-night', 'milky-way'] as const) {
             expect(row.windows[target].every(value => value.start.getTime() >= start && value.end.getTime() <= end)).toBe(true);
         }
-        expect(row.windows.sunset[0].end.getTime() - row.windows.sunset[0].start.getTime()).toBe(2 * 3_600_000);
+        for (const event of MULTI_DAY_EVENTS) {
+            const time = row.timeline.items.find(item => item.kind === event)?.time;
+            expect(time).toBeInstanceOf(Date);
+            const timestamp = time!.getTime();
+            expect(row.windows[event]).toEqual([{
+                start: new Date(timestamp - 3_600_000), end: new Date(timestamp + 3_600_000), event,
+            }]);
+        }
     });
 });
 
@@ -89,6 +96,25 @@ describe('target-only forecast evidence', () => {
         expect(multiDayWindowWeather(window, [], 'loading').state).toBe('loading');
         expect(multiDayWindowWeather(window, [], 'error').state).toBe('error');
         expect(multiDayWindowWeather(window, [point(20), point(25)], 'ready').state).toBe('missing');
+    });
+    it('keeps the original window empty and separately references the nearest real step at Woyimoke', () => {
+        const sunset = { event: 'sunset' as const, start: new Date('2026-11-24T09:37Z'), end: new Date('2026-11-24T11:37Z') };
+        const before = { ...point(15), timestamp: Date.parse('2026-11-24T09:00Z') };
+        const after = { ...point(18), timestamp: Date.parse('2026-11-24T12:00Z') };
+        expect(multiDayWindowWeather(sunset, [after, before], 'ready')).toMatchObject({
+            state: 'missing', points: [], reference: { event: 'sunset', point: after, offsetMs: 83 * 60_000 },
+        });
+        const inside = { ...before, timestamp: sunset.start.getTime() };
+        expect(multiDayWindowWeather(sunset, [before, inside, after], 'ready')).toMatchObject({ points: [inside], reference: null });
+        expect(multiDayWindowWeather(sunset, [before, after], 'loading').reference).toBeNull();
+        expect(multiDayWindowWeather(sunset, [before, after], 'error').reference).toBeNull();
+        expect(multiDayWindowWeather(sunset, [after], 'ready').reference).toBeNull();
+    });
+    it('uses the earlier point on a 90-minute tie and leaves larger gaps empty', () => {
+        const moonrise = { event: 'moonrise' as const, start: new Date('2027-06-12T12:30Z'), end: new Date('2027-06-12T14:30Z') };
+        expect(multiDayWindowWeather(moonrise, [point(15), point(12)], 'ready').reference?.point).toEqual(point(12));
+        expect(multiDayWindowWeather(moonrise, [point(11), point(16)], 'ready').reference).toBeNull();
+        expect(multiDayWindowWeather({ start: moonrise.start, end: moonrise.end }, [point(12), point(15)], 'ready').reference).toBeNull();
     });
     it('preserves missing metrics instead of treating them as zero', () => {
         expect(multiDayMetricRange([point(21, null)], 'totalCloudPercent')).toBeNull();

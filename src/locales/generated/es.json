@@ -145,6 +145,7 @@
   "m_2bb756e10a34": "Fecha, hora local o período inválido. Ajuste las entradas para que el final sea posterior al inicio.",
   "m_2c85ca9fa647": "Granos de nieve",
   "m_2d111b404799": "Nevada moderada",
+  "m_35df66910517": "Las ventanas de salida y puesta del Sol y la Luna abarcan una hora antes y otra después del evento. Si no hay ninguna muestra dentro de la ventana, puede mostrarse como referencia la más cercana a menos de 90 minutos o a 90 minutos del evento.",
   "m_47e781679e63": "Nieve húmeda",
   "m_4f946da92e82": "Nieve",
   "m_55928ecaa49b": "Nevada y profundidad de nieve",

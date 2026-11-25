@@ -1,23 +1,23 @@
 {
-  "version": "0.13.4",
-  "releasedAt": "2026-11-24",
+  "version": "0.13.5",
+  "releasedAt": "2026-11-25",
   "zh": {
-    "title": "移动端多日总览修复",
-    "summary": "修复了 7 天总览中日期导航与横竖切换按钮重叠的问题。",
+    "title": "多日日月升落窗口",
+    "summary": "在多日总览规划日出、日落、月升和月落。",
     "items": [
       {
-        "type": "fixed",
-        "text": "修复移动端 7 天总览中日期右箭头与「竖向 / 横向」按钮重叠的问题。"
+        "type": "new",
+        "text": "新增日出、月升和月落目标窗口。日月升落均取事件前后各一小时。7 天总览在窗口缺少预报时次时，可标注距事件不超过 90 分钟的最近一笔作为参考。点按起始日期即可打开日历。"
       }
     ]
   },
   "en": {
-    "title": "Mobile multi-day overview fix",
-    "summary": "Fixed overlapping date navigation and layout controls in the 7-day overview.",
+    "title": "Multi-day Sun and Moon rise/set windows",
+    "summary": "Plan sunrise, sunset, moonrise and moonset in the multi-day overview.",
     "items": [
       {
-        "type": "fixed",
-        "text": "Fixed the next date-range arrow overlapping the Vertical and Horizontal buttons in the mobile 7-day overview."
+        "type": "new",
+        "text": "Added sunrise, moonrise and moonset targets. All Sun and Moon rise/set windows span an hour on either side. If the 7-day overview has no sample in a window, it can label the nearest forecast up to 90 minutes from the event as a reference. Select the start date to open the calendar."
       }
     ]
   }
